@@ -21,12 +21,13 @@ public:
 	{
 		return &Surface;
 	}
+
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("TelemetrySurface Wroter"));
+		serial->print(F("TelemetrySurface Writer"));
 	}
-#endif // DEBUG_LOLA
+#endif
 };
 
 #endif
