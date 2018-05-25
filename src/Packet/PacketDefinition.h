@@ -72,11 +72,11 @@ public:
 #ifdef DEBUG_LOLA
 	void Debug(Stream* serial)
 	{
-		serial->print(F("Header: "));
-		serial->print(GetHeader(), HEX);
+		//serial->print(F("Header: "));
+		//serial->print(GetHeader(), HEX);
 		serial->print(F(" Size: "));
 		serial->print(GetTotalSize());
-		serial->print(F(" Configuration: |"));
+		serial->print(F(" |"));
 
 		if (HasACK())
 		{
