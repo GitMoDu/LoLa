@@ -43,7 +43,7 @@ private:
 	}
 
 public:
-	ILoLaService(Scheduler* scheduler, uint16_t defaultPeriod, ILoLa* loLa)
+	ILoLaService(Scheduler* scheduler, const uint16_t defaultPeriod, ILoLa* loLa)
 		: Task(defaultPeriod, TASK_FOREVER, scheduler, false)
 	{
 		DefaultPeriod = max(1, defaultPeriod);
