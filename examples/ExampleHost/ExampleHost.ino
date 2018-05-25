@@ -6,6 +6,7 @@
 * Ringbuffer: https://github.com/wizard97/Embedded_RingBuf_CPP
 * Generic Callbacks: https://github.com/tomstewart89/Callback
 * OO TaskScheduler: https://github.com/arkhipenko/TaskScheduler
+* Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git
 *
 */
 
