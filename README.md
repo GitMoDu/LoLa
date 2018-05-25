@@ -4,6 +4,8 @@ Low Latency Radio System
 
 For Arduino compatible boards.
 
+THIS PROJECT IS A WORKING IN PROGRESS, DO NOT EXPECT ANYTHING TO WORK OUT OF THE BOX
+
 This project would not be possible (and actually won't compile) without the contributions for:
 
 Radio Driver for Si446x: https://github.com/zkemble/Si446x
