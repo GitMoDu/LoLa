@@ -55,8 +55,9 @@ void LoLaSi4463DriverOnReceived(void)
 
 LoLaSi446xPacketDriver::LoLaSi446xPacketDriver(Scheduler* scheduler)
 	: LoLaPacketDriver()
-	, EventQueueSource(scheduler)
 {
+
+	EventQueueSource = new AsyncActor(scheduler);
 	StaticSi446LoLa = this;
 }
 
@@ -103,7 +104,7 @@ void LoLaSi446xPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t 
 	InterruptStatus = Si446x_irq_off();
 #endif
 
-	EventQueueSource.AppendEventToQueue(LoLaSi4463DriverOnReceived);
+	EventQueueSource->AppendEventToQueue(LoLaSi4463DriverOnReceived);
 }
 
 void LoLaSi446xPacketDriver::OnStart()

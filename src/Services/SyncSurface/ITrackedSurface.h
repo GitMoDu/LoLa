@@ -4,7 +4,6 @@
 #define _ITRACKEDSURFACE_h
 
 #include <BitTracker.h>
-#include <ProcessEventQueue.h>
 #include <Callback.h>
 
 #define SYNC_SURFACE_BLOCK_SIZE 4 //4 bytes per block, enough for a 32 bit value (uint32_t, int32_t);

@@ -6,8 +6,8 @@
 #define _TASK_OO_CALLBACKS
 
 #include <TaskSchedulerDeclarations.h>
-#include <ProcessEventQueue.h>
 #include <PacketDriver\LoLaPacketDriver.h>
+#include <RingBufCPP.h>
 
 
 #ifndef MOCK_RADIO
@@ -30,10 +30,72 @@
 
 #define PART_NUMBER_SI4463X 17507
 
+#define _TASK_OO_CALLBACKS
+#define PROCESS_EVENT_QUEUE_MAX_QUEUE_DEPTH 5
+
+class AsyncActor : Task
+{
+private:
+	RingBufCPP<void(*)(void), PROCESS_EVENT_QUEUE_MAX_QUEUE_DEPTH> EventQueue;
+
+	void(*GruntFunction)(void) = nullptr;
+
+public:
+	AsyncActor(Scheduler* scheduler)
+		: Task(0, TASK_FOREVER, scheduler, false)
+	{
+	}
+
+	void AppendEventToQueue(void(*callFunction)(void))
+	{
+		if (callFunction != nullptr)
+		{
+			EventQueue.addForce(callFunction);
+		}
+
+		if (!EventQueue.isEmpty())
+		{
+			enable();
+		}
+	}
+
+
+	bool OnEnable()
+	{
+		if (EventQueue.isEmpty())
+		{
+			disable();
+		}
+
+		return true;
+	}
+
+	void OnDisable()
+	{
+	}
+
+	bool Callback()
+	{
+		EventQueue.pull(GruntFunction);
+
+		if (GruntFunction != nullptr)
+		{
+			GruntFunction();
+		}
+
+		if (EventQueue.isEmpty())
+		{
+			disable();
+		}
+
+		return false;
+	}
+};
+
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
 private:
-	ProcessEventQueue EventQueueSource;
+	AsyncActor* EventQueueSource;
 
 protected:
 	bool Transmit();
@@ -47,7 +109,6 @@ public:
 	bool Setup();
 	void OnWakeUpTimer();
 	void OnReceiveBegin(const uint8_t length, const  int16_t rssi);
-	
-};
 
+};
 #endif
