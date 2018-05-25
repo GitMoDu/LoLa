@@ -14,13 +14,6 @@
 
 class LoLaBuffer : public LoLaCrypto
 {
-private:
-
-	////Function to copy 'length' elements from 'src' to 'dst'
-	//void Copy(uint8_t* source, uint8_t* destination, uint8_t length) {
-	//	memcpy(destination, source, sizeof(source[0])*length);
-	//}
-
 protected:
 	///Packet Mapper reuses the same object.
 	LoLaPacketMap * PacketMap;
@@ -89,70 +82,6 @@ public:
 		serial->println();
 	}
 #endif // DEBUG_LOLA
-
-	/*uint8_t* GetBuffer()
-	{
-		return &Buffer[0];
-	}
-
-	bool CopyToBuffer(uint8_t* buffer, uint8_t length)
-	{
-		if (length < PACKET_DEFINITION_MAX_PACKET_SIZE)
-		{
-			memcpy(&Buffer, buffer, sizeof(uint8_t)*length);
-			BufferSize = length;
-			return true;
-		}
-		else
-		{
-			BufferSize = 0;
-			return false;
-		}
-	}
-
-	bool CopyFromBuffer(uint8_t* buffer)
-	{
-		if (BufferSize > 0)
-		{
-			memcpy(buffer, &Buffer, sizeof(uint8_t)*BufferSize);
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	bool CopyFromBuffer(uint8_t* buffer, const uint8_t startIndex)
-	{
-		if (BufferSize > 0)
-		{
-			memcpy(buffer, &Buffer[startIndex], (sizeof(uint8_t)*(BufferSize - startIndex)));
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	bool CopyFromBuffer(uint8_t* buffer, const uint8_t startIndex, const uint8_t length)
-	{
-		if (length == 0)
-		{
-			return true;
-		}
-		if (BufferSize > 0 && (BufferSize - startIndex) >= length)
-		{
-			memcpy(buffer, &Buffer[startIndex], (sizeof(uint8_t)*length));
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}*/
 };
-
 #endif
 
