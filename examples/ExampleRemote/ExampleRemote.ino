@@ -36,7 +36,7 @@ Scheduler SchedulerBase, SchedulerHighPriority;
 
 ///Radio manager and driver.
 LoLaSi446xPacketDriver LoLaDriver(&SchedulerHighPriority);
-LoLaManagerRCReceiver LoLa(&SchedulerBase, &LoLaDriver);
+RemoteManager LoLa(&SchedulerBase, &LoLaDriver);
 ///
 
 ///Communicated Data
@@ -95,11 +95,6 @@ void setup()
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
 	CommandInput->NotifyDataChanged();
-#endif
-
-
-#ifdef DEBUG_LOG
-	Serial.println(F("Scheduler Start"));
 #endif
 }
 

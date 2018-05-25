@@ -7,7 +7,7 @@
 #include <Services\SyncSurface\CommandInput\CommandInputSurfaceReader.h>
 #include <Services\SyncSurface\Telemetry\TelemetrySurfaceWriter.h>
 
-class LoLaManagerRCReceiver : public LoLaManagerRemote
+class RemoteManager : public LoLaManagerRemote
 {
 protected:
 	CommandInputSurfaceReader* CommandInput;
@@ -30,7 +30,7 @@ protected:
 	}
 
 public:
-	LoLaManagerRCReceiver(Scheduler* scheduler, LoLaPacketDriver* loLa)
+	RemoteManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManagerRemote(scheduler, loLa)
 	{
 		CommandInput = new CommandInputSurfaceReader(scheduler, loLa);
