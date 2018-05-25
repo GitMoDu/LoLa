@@ -29,7 +29,7 @@ void LoLaPacketDriver::OnWakeUpTimer()
 //When RF detects incoming packet.
 void LoLaPacketDriver::OnIncoming(const int16_t rssi)
 {
-	LastReceived = millis();
+	LastReceived = GetMillis();
 	LastReceivedRssi = rssi;
 }
 
@@ -71,7 +71,7 @@ void LoLaPacketDriver::OnReceived()
 			{
 				if (Transmit())
 				{
-					LastSent = millis();
+					LastSent = GetMillis();
 				}
 			}
 		}
@@ -101,9 +101,9 @@ bool LoLaPacketDriver::AllowedSend()
 {
 	return Enabled &&
 		SendPermission &&
-		(millis() - LastSent > LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS)
+		(GetMillis() - LastSent > LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS)
 		&&
-		(millis() - LastReceived > LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS)
+		(GetMillis() - LastReceived > LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS)
 		&&
 		CanTransmit();
 }
@@ -117,7 +117,7 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 		{
 			if (Transmit())
 			{
-				LastSent = millis();
+				LastSent = GetMillis();
 				return true;
 			}
 		}
