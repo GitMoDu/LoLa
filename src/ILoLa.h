@@ -4,7 +4,7 @@
 #define _ILOLA_h
 
 #define DEBUG_LOLA
-//#define MOCK_RADIO
+#define MOCK_RADIO
 
 #define ILOLA_DEFAULT_CHANNEL 20
 
