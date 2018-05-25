@@ -60,10 +60,10 @@ public:
 
 	virtual bool Setup(LoLaPacketMap* packetMap)
 	{
-	/*	for (uint8_t i = 0; i < PACKET_DEFINITION_MAX_PACKET_SIZE; i++)
+		for (uint8_t i = 0; i < GetBufferSize(); i++)
 		{
-			Buffer[i] = 0;
-		}*/
+			GetBuffer()[i] = 0;
+		}
 
 		PacketMap = packetMap;
 
