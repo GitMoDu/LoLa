@@ -108,6 +108,7 @@ public:
 			break;
 		case SendStatusEnum::Done:
 		default:
+			SetNextRunDefault();
 			OnService();
 			break;
 		}

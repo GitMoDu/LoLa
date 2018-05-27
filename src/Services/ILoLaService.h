@@ -44,14 +44,14 @@ private:
 
 public:
 	ILoLaService(Scheduler* scheduler, const uint16_t defaultPeriod, ILoLa* loLa)
-		: Task(defaultPeriod, TASK_FOREVER, scheduler, false)
+		: Task(0, TASK_FOREVER, scheduler, false)
 	{
 		DefaultPeriod = max(1, defaultPeriod);
 		InitializeState(loLa);
 	}
 
 	ILoLaService(Scheduler* scheduler, ILoLa* loLa)
-		: Task(LOLA_SERVICE_DEFAULT_PERIOD_MILLIS, TASK_FOREVER, scheduler, false)
+		: Task(0, TASK_FOREVER, scheduler, false)
 	{
 		DefaultPeriod = LOLA_SERVICE_DEFAULT_PERIOD_MILLIS;
 		InitializeState(loLa);
@@ -169,7 +169,6 @@ protected:
 
 	void SetNextRunDelay(const unsigned long duration)
 	{
-
 		Task::delay(duration);
 	}
 
