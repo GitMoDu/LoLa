@@ -210,16 +210,6 @@ protected:
 		}
 	}
 
-	bool ProcessNack(const uint8_t header, const uint8_t id)
-	{
-		if (header == PACKET_DEFINITION_PING_HEADER)
-		{
-			return true;
-		}
-
-		return false;
-	}
-
 	bool OnSetup()
 	{
 		if (!IPacketSendService::OnSetup())
