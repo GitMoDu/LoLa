@@ -84,16 +84,16 @@ class LoLaManagerHost : public LoLaManager
 {
 protected:
 	//Host base services.
-	LoLaConnectionHostService * ConnectionService;
+	LoLaConnectionHostService ConnectionService;
 
 protected:
-	LoLaConnectionService * GetConnectionService() { return ConnectionService; }
+	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
 
 public:
 	LoLaManagerHost(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManager(loLa)
+		, ConnectionService(scheduler, loLa)
 	{
-		ConnectionService = new LoLaConnectionHostService(scheduler, loLa);
 	}
 };
 
@@ -101,16 +101,16 @@ class LoLaManagerRemote : public LoLaManager
 {
 protected:
 	//Remote base services.
-	LoLaConnectionRemoteService* ConnectionService;
+	LoLaConnectionRemoteService ConnectionService;
 
 protected:
-	LoLaConnectionService * GetConnectionService() { return ConnectionService; }
+	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
 
 public:
 	LoLaManagerRemote(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManager(loLa)
+		, ConnectionService(scheduler, loLa)
 	{
-		ConnectionService = new LoLaConnectionRemoteService(scheduler, loLa);
 	}
 };
 

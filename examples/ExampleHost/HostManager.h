@@ -5,27 +5,41 @@
 
 #include <LoLaManager.h>
 
+#define USE_TELEMETRY
+
+#if defined(ARDUINO_ARCH_AVR)//Poor old ATmega's 2k of RAM is not enough.
+#undef USE_TELEMETRY
+#endif
+
 #include <Services\SyncSurface\CommandInput\CommandInputSurfaceWriter.h>
+#ifdef USE_TELEMETRY
 #include <Services\SyncSurface\Telemetry\TelemetrySurfaceReader.h>
+#endif
+
 
 class HostManager : public LoLaManagerHost
 {
 protected:
-	CommandInputSurfaceWriter* CommandInput;
-	TelemetrySurfaceReader* Telemetry;
+	CommandInputSurfaceWriter CommandInput;
+
+#ifdef USE_TELEMETRY
+	TelemetrySurfaceReader Telemetry;
+#endif
 
 protected:
 	virtual bool OnSetupServices()
 	{
-		if (!LoLa->GetServices()->Add(CommandInput))
+		if (!LoLa->GetServices()->Add(&CommandInput))
 		{
 			return false;
 		}
 
-		if (!LoLa->GetServices()->Add(Telemetry))
+#ifdef USE_TELEMETRY
+		if (!LoLa->GetServices()->Add(&Telemetry))
 		{
 			return false;
 		}
+#endif
 
 		return true;
 	}
@@ -33,17 +47,17 @@ protected:
 public:
 	HostManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManagerHost(scheduler, loLa)
+		, CommandInput(scheduler, loLa)
+#ifdef USE_TELEMETRY
+		, Telemetry(scheduler, loLa)
+#endif
 	{
-		CommandInput = new CommandInputSurfaceWriter(scheduler, loLa);
-		Telemetry = new TelemetrySurfaceReader(scheduler, loLa);
 	}
 
 	CommandInputSurface* GetCommandInputSurface()
 	{
-		return (CommandInputSurface*)CommandInput->GetSurface();//TODO: Make sure this cast does not cause problems.
+		return (CommandInputSurface*)CommandInput.GetSurface();
 	}
 };
-
-
 #endif
 
