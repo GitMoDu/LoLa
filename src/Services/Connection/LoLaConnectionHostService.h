@@ -54,7 +54,6 @@ protected:
 			SetNextRunDefault();
 			break;
 		case HostStateAwaitingConnectionEnum::StartingDiagnostics:
-			Serial.println(F("RequestRefreshPing"));
 			HostState = HostStateAwaitingConnectionEnum::MeasuringLatency;
 			LatencyService.RequestRefreshPing();
 			StartTime = Millis();
@@ -72,7 +71,6 @@ protected:
 			SetNextRunASAP();
 			break;
 		case HostStateAwaitingConnectionEnum::ConnectionEscalationFailed:
-			Serial.println(F("Connection Failed"));
 			HostState = HostStateAwaitingConnectionEnum::BroadcastingOpenSession;
 			SetNextRunDelay(5000);
 			break;
@@ -91,7 +89,6 @@ protected:
 	void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
 	{
 		LoLaConnectionService::OnKeepingConnected(elapsedSinceLastReceived);
-		//DemoteToDisconnected();
 	}
 
 private:
@@ -108,12 +105,10 @@ private:
 		}
 	}
 
-
 	void NewSessionId()
 	{
 		SessionId = 1 + random(0xFE);
 	}
-
 
 	void PreparePacketBroadcast()
 	{
@@ -123,6 +118,5 @@ private:
 		PacketHolder.GetPayload()[0] = 1;
 	}
 };
-
 #endif
 
