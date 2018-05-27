@@ -25,7 +25,7 @@
 #include <TaskScheduler.h>
 
 #include <Callback.h>
-#include <LoLaDriver.h>
+#include <LoLaDriverSi446x.h>
 #include "HostManager.h"
 
 

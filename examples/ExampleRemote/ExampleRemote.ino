@@ -27,7 +27,7 @@
 #include <Arduino.h>
 
 #include <Callback.h>
-#include <LoLaDriver.h>
+#include <LoLaDriverSi446x.h>
 #include "RemoteManager.h"
 
 ///Process scheduler.
