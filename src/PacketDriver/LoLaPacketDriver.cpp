@@ -10,9 +10,6 @@ LoLaPacketDriver::LoLaPacketDriver() : ILoLa()
 
 void LoLaPacketDriver::OnBatteryAlarm()
 {
-//#ifdef DEBUG_LOLA
-//	Serial.println(F("Low battery."));
-//#endif // DEBUG_LOLA
 }
 
 void LoLaPacketDriver::OnSentOk()
@@ -21,9 +18,6 @@ void LoLaPacketDriver::OnSentOk()
 
 void LoLaPacketDriver::OnWakeUpTimer()
 {
-//#ifdef DEBUG_LOLA
-//	Serial.println(F("OnWakeUpTimer"));
-//#endif // DEBUG_LOLA
 }
 
 //When RF detects incoming packet.
@@ -36,18 +30,12 @@ void LoLaPacketDriver::OnIncoming(const int16_t rssi)
 //When RF has packet to read.
 void LoLaPacketDriver::OnReceiveBegin(const uint8_t length, const  int16_t rssi)
 {
-#ifdef DEBUG_LOLA
-	Serial.println('-');
-#endif // DEBUG_LOLA
 	Receiver.SetBufferSize(length);	
 }
 
 //When RF has received a garbled packet.
 void LoLaPacketDriver::OnReceivedFail(const int16_t rssi)
 {
-#ifdef DEBUG_LOLA
-	Serial.println('!');
-#endif // DEBUG_LOLA
 	LastReceivedRssi = rssi;
 }
 
@@ -125,4 +113,3 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 
 	return false;
 }
-
