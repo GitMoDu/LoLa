@@ -229,14 +229,14 @@ protected:
 
 	void OnSendDelayed()
 	{
-		LastSentTimeStamp = micros();
+		LastSentTimeStamp = Micros();
 #ifdef DEBUG_LOLA
 		SendDelays++;
 #endif		
 	}
 	void OnSendRetrying()
 	{
-		LastSentTimeStamp = micros();
+		LastSentTimeStamp = Micros();
 #ifdef DEBUG_LOLA
 		SendFails++;
 #endif
@@ -356,7 +356,7 @@ protected:
 				State = LatencyServiceStateEnum::Sending;
 				PreparePacket();
 				RequestSendPacket((uint8_t)(LATENCY_SERVICE_PING_TIMEOUT_MICROS / 1000));
-				LastSentTimeStamp = micros();
+				LastSentTimeStamp = Micros();
 			}
 			break;
 		case LatencyServiceStateEnum::Sending:
