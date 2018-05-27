@@ -89,7 +89,7 @@ public:
 
 	bool Init()
 	{
-		if (OnSetup() && OnAddPacketMap(LoLa->GetPacketMap()))
+		if (OnAddPacketMap(LoLa->GetPacketMap()) && Setup())
 		{
 			return true;
 		}
