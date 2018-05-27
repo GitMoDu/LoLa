@@ -171,10 +171,13 @@ bool LoLaSi446xPacketDriver::Setup()
 		SetTransmitPower(TRANSMIT_POWER);
 		SetChannel(CHANNEL);
 
-#ifndef MOCK_RADIO		
-#if defined(ARDUINO_ARCH_STM32)
+#ifndef MOCK_RADIO
 		//The SPI interface is designed to operate at a maximum of 10 MHz.
-		SPI.setClockDivider(SPI_CLOCK_DIV4); // (72 MHz / 8 = 9 MHz)
+#if defined(ARDUINO_ARCH_AVR)
+		SPI.setClockDivider(SPI_CLOCK_DIV2); // 16 MHz / 2 = 8 MHz
+#elif defined(ARDUINO_ARCH_STM32)
+		
+		SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 MHz / 8 = 9 MHz
 #endif
 
 		// Start up
