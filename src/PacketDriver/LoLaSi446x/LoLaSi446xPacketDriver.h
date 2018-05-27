@@ -5,9 +5,12 @@
 
 #define _TASK_OO_CALLBACKS
 
+#include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
 #include <PacketDriver\LoLaPacketDriver.h>
 #include <RingBufCPP.h>
+
+#include <SPI.h>
 
 
 #ifndef MOCK_RADIO
@@ -15,17 +18,17 @@
 #endif // !MOCK_RADIO
 
 
-
 //Channel to listen to(0 - 255)
 #define CHANNEL 100
 
 
-//*0 = -32dBm(<1uW)\n
-//* 7 = 0dBm(1mW)\n
-//* 12 = 5dBm(3.2mW)\n
-//* 22 = 10dBm(10mW)\n
-//* 40 = 15dBm(32mW)\n
-//* 100 = 20dBm(100mW)
+//   0 = -32dBm	(<1uW)
+//   7 =  0dBm	(1mW)
+//  12 =  5dBm	(3.2mW)
+//  22 =  10dBm	(10mW)
+//  40 =  15dBm	(32mW)
+// 100 = 20dBm	(100mW)
+
 #define TRANSMIT_POWER 7
 
 #define PART_NUMBER_SI4463X 17507
@@ -58,7 +61,6 @@ public:
 			enable();
 		}
 	}
-
 
 	bool OnEnable()
 	{
@@ -99,16 +101,23 @@ private:
 
 protected:
 	bool Transmit();
-
 	bool CanTransmit();
 	void OnStart();
 
+private:
+	void CheckForPendingAsync();
 
 public:
 	LoLaSi446xPacketDriver(Scheduler* scheduler);
 	bool Setup();
+	void CheckForPending();
+	void DisableInterrupts();
+	void EnableInterrupts();
+
 	void OnWakeUpTimer();
 	void OnReceiveBegin(const uint8_t length, const  int16_t rssi);
 
+	void OnReceivedFail(const int16_t rssi);
+	void OnReceived();
 };
 #endif

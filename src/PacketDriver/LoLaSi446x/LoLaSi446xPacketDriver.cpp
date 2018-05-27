@@ -5,11 +5,10 @@
 
 
 //Static handlers for interrupts.
-ILoLa* StaticSi446LoLa = nullptr;
-volatile uint8_t InterruptStatus = 0;
+LoLaSi446xPacketDriver* StaticSi446LoLa = nullptr;
+#define UNINITIALIZED_INTERRUPT 0XFF
+volatile uint8_t InterruptStatus = UNINITIALIZED_INTERRUPT;
 volatile bool Busy = false;
-
-
 
 void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
 {
@@ -42,21 +41,22 @@ void SI446X_CB_LOWBATT(void)
 	StaticSi446LoLa->OnBatteryAlarm();
 }
 
-void LoLaSi4463DriverOnReceived(void)
-{
-	Busy = false;
-	StaticSi446LoLa->OnReceived();
-#ifndef MOCK_RADIO
-	Si446x_irq_on(InterruptStatus);
-#endif
-}
 ///////////////////////
 
+void LoLaSi4463DriverOnReceived(void)
+{
+	StaticSi446LoLa->OnReceived();
+	Busy = false;
+}
+
+void LoLaSi4463DriverCheckForPending(void)
+{
+	StaticSi446LoLa->CheckForPending();
+}
 
 LoLaSi446xPacketDriver::LoLaSi446xPacketDriver(Scheduler* scheduler)
 	: LoLaPacketDriver()
 {
-
 	EventQueueSource = new AsyncActor(scheduler);
 	StaticSi446LoLa = this;
 }
@@ -64,6 +64,39 @@ LoLaSi446xPacketDriver::LoLaSi446xPacketDriver(Scheduler* scheduler)
 void LoLaSi446xPacketDriver::OnWakeUpTimer()
 {
 	LoLaPacketDriver::OnWakeUpTimer();
+	CheckForPendingAsync();
+}
+
+void LoLaSi446xPacketDriver::CheckForPending()
+{
+#ifndef MOCK_RADIO
+	Si446x_SERVICE();
+#endif
+}
+void LoLaSi446xPacketDriver::DisableInterrupts()
+{
+#ifndef MOCK_RADIO
+	InterruptStatus = Si446x_irq_off();
+#endif
+	CheckForPending();
+}
+
+void LoLaSi446xPacketDriver::EnableInterrupts()
+{
+#ifndef MOCK_RADIO
+	if (InterruptStatus != UNINITIALIZED_INTERRUPT)
+	{
+		Si446x_irq_on(InterruptStatus);
+	}
+	InterruptStatus = UNINITIALIZED_INTERRUPT;
+#endif
+	CheckForPendingAsync(); //Take this chance to make sure there are no pending interrupts.
+}
+
+void LoLaSi446xPacketDriver::CheckForPendingAsync()
+{
+	//Asynchronously process the received packet.
+	EventQueueSource->AppendEventToQueue(LoLaSi4463DriverCheckForPending);
 }
 
 bool LoLaSi446xPacketDriver::Transmit()
@@ -72,12 +105,16 @@ bool LoLaSi446xPacketDriver::Transmit()
 	delayMicroseconds(500);
 	return true;
 #else
+	bool Result = false;
 	if (Sender.GetBufferSize() > 0)
 	{
 		//On success(has begun transmitting).
-		return Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX) == 1;
+		Result = Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX);
 	}
-	return false;
+
+	CheckForPendingAsync(); //Take this chance to make sure there are no pending interrupts.
+
+	return Result;
 #endif
 }
 
@@ -92,25 +129,37 @@ bool LoLaSi446xPacketDriver::CanTransmit()
 
 void LoLaSi446xPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t rssi)
 {
+	LoLaPacketDriver::OnReceiveBegin(length, rssi);
+
+	//Disable Si interrupts until we have processed the received packet.
+	DisableInterrupts();
+
+	//Asynchronously process the received packet.
+	EventQueueSource->AppendEventToQueue(LoLaSi4463DriverOnReceived);
+}
+
+void LoLaSi446xPacketDriver::OnReceived()
+{
 #ifndef MOCK_RADIO
-	Si446x_read(Receiver.GetBuffer(), length);
+	Si446x_read(Receiver.GetBuffer(), Receiver.GetBufferSize());
 	Si446x_RX(CurrentChannel);
 #endif
 
-	LoLaPacketDriver::OnReceiveBegin(length, rssi);
+	LoLaPacketDriver::OnReceived();
+	EnableInterrupts();
+}
 
-#ifndef MOCK_RADIO
-	//Disable Si interrupts until we have processed the received packet.
-	InterruptStatus = Si446x_irq_off();
-#endif
-
-	EventQueueSource->AppendEventToQueue(LoLaSi4463DriverOnReceived);
+void LoLaSi446xPacketDriver::OnReceivedFail(const int16_t rssi)
+{
+	LoLaPacketDriver::OnReceivedFail(rssi);
+	EnableInterrupts();
 }
 
 void LoLaSi446xPacketDriver::OnStart()
 {
 #ifndef MOCK_RADIO
-	//Si446x_clearFIFO();
+	InterruptStatus = UNINITIALIZED_INTERRUPT;
+	CheckForPending();
 	Si446x_RX(CurrentChannel);
 #endif
 }
@@ -123,6 +172,11 @@ bool LoLaSi446xPacketDriver::Setup()
 		SetChannel(CHANNEL);
 
 #ifndef MOCK_RADIO		
+#if defined(ARDUINO_ARCH_STM32)
+		//The SPI interface is designed to operate at a maximum of 10 MHz.
+		SPI.setClockDivider(SPI_CLOCK_DIV4); // (72 MHz / 8 = 9 MHz)
+#endif
+
 		// Start up
 		Si446x_init();
 		si446x_info_t info;
@@ -135,6 +189,9 @@ bool LoLaSi446xPacketDriver::Setup()
 			Si446x_setLowBatt(3000); // Set low battery voltage to 3000mV
 			Si446x_setupWUT(1, 8192, 0, SI446X_WUT_RUN | SI446X_WUT_BATT); // Run WUT and check battery every 2 seconds
 
+			CheckForPending();
+
+			Si446x_sleep();
 #ifdef DEBUG_LOLA
 			Serial.println(F("Si4463 Present"));
 			//Serial.println(info.revBranch);
