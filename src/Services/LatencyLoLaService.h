@@ -184,7 +184,7 @@ protected:
 
 	bool ProcessAck(const uint8_t header, const uint8_t id)
 	{
-		ReceivingDuration = micros() - LastSentTimeStamp;
+		ReceivingDuration = Micros() - LastSentTimeStamp;
 
 		if (header == PACKET_DEFINITION_PING_HEADER)
 		{
