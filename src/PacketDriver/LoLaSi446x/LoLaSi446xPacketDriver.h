@@ -106,12 +106,14 @@ protected:
 
 private:
 	void CheckForPendingAsync();
+	void DisableInterruptsInternal();
 
 public:
 	LoLaSi446xPacketDriver(Scheduler* scheduler);
 	bool Setup();
 	void CheckForPending();
-	void DisableInterrupts();
+	bool DisableInterrupts();
+
 	void EnableInterrupts();
 
 	void OnWakeUpTimer();

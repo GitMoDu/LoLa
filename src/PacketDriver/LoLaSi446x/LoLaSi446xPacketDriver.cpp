@@ -73,7 +73,20 @@ void LoLaSi446xPacketDriver::CheckForPending()
 	Si446x_SERVICE();
 #endif
 }
-void LoLaSi446xPacketDriver::DisableInterrupts()
+bool LoLaSi446xPacketDriver::DisableInterrupts()
+{
+	if (!Busy)
+	{
+#ifndef MOCK_RADIO
+		InterruptStatus = Si446x_irq_off();
+#endif
+		return true;
+	}
+
+	return false;
+}
+
+void LoLaSi446xPacketDriver::DisableInterruptsInternal()
 {
 #ifndef MOCK_RADIO
 	InterruptStatus = Si446x_irq_off();
@@ -132,7 +145,7 @@ void LoLaSi446xPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t 
 	LoLaPacketDriver::OnReceiveBegin(length, rssi);
 
 	//Disable Si interrupts until we have processed the received packet.
-	DisableInterrupts();
+	DisableInterruptsInternal();
 
 	//Asynchronously process the received packet.
 	EventQueueSource->AppendEventToQueue(LoLaSi4463DriverOnReceived);
