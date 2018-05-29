@@ -18,18 +18,17 @@ This project would not be possible (and actually won't compile) without the cont
 
 Radio Driver for Si446x: https://github.com/zkemble/Si446x 
 
-
 Ring Buffer: https://github.com/wizard97/Embedded_RingBuf_CPP 
-
 
 Generic Callbacks: https://github.com/tomstewart89/Callback 
 
+OO TaskScheduler: https://github.com/arkhipenko/TaskScheduler
 
-OO TaskScheduler: https://github.com/arkhipenko/TaskScheduler 
+Tiny CRC calculator: https://github.com/FrankBoesing/FastCRC.git
 
 Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git 
 
-  
+ 
 
   
 
