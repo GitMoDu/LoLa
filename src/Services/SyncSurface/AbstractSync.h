@@ -123,12 +123,10 @@ protected:
 
 	void OnService()
 	{
-		//Make sure hash is up to date and send any pending packet.
+		//Make sure hash is up to date.
 		if (HashNeedsUpdate)
 		{
 			UpdateHash();
-			SetNextRunASAP();
-			return;
 		}
 
 		switch (SyncState)
