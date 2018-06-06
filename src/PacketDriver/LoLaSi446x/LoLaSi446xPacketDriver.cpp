@@ -8,11 +8,11 @@
 LoLaSi446xPacketDriver* StaticSi446LoLa = nullptr;
 #define UNINITIALIZED_INTERRUPT 0XFF
 volatile uint8_t InterruptStatus = UNINITIALIZED_INTERRUPT;
-volatile bool Busy = false;
+volatile bool Receiving = false;
 
 void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
 {
-	Busy = true;
+	Receiving = true;
 	StaticSi446LoLa->OnReceiveBegin(length, rssi);
 }
 
@@ -46,7 +46,7 @@ void SI446X_CB_LOWBATT(void)
 void LoLaSi4463DriverOnReceived(void)
 {
 	StaticSi446LoLa->OnReceived();
-	Busy = false;
+	Receiving = false;
 }
 
 void LoLaSi4463DriverCheckForPending(void)
@@ -75,7 +75,7 @@ void LoLaSi446xPacketDriver::CheckForPending()
 }
 bool LoLaSi446xPacketDriver::DisableInterrupts()
 {
-	if (!Busy)
+	if (!Receiving)
 	{
 #ifndef MOCK_RADIO
 		InterruptStatus = Si446x_irq_off();
@@ -136,7 +136,7 @@ bool LoLaSi446xPacketDriver::CanTransmit()
 #ifdef MOCK_RADIO
 	return true;
 #else
-	return !Busy && LoLaPacketDriver::CanTransmit();
+	return !Receiving && LoLaPacketDriver::CanTransmit();
 #endif		
 }
 
