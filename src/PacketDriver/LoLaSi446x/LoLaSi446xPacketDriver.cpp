@@ -56,8 +56,8 @@ void LoLaSi4463DriverCheckForPending(void)
 
 LoLaSi446xPacketDriver::LoLaSi446xPacketDriver(Scheduler* scheduler)
 	: LoLaPacketDriver()
-{
-	EventQueueSource = new AsyncActor(scheduler);
+	, EventQueue(scheduler)
+{	
 	StaticSi446LoLa = this;
 }
 
@@ -108,8 +108,8 @@ void LoLaSi446xPacketDriver::EnableInterrupts()
 
 void LoLaSi446xPacketDriver::CheckForPendingAsync()
 {
-	//Asynchronously process the received packet.
-	EventQueueSource->AppendEventToQueue(LoLaSi4463DriverCheckForPending);
+	//Asynchronously check for pending messages from the radio IC.
+	EventQueue.AppendEventToQueue(LoLaSi4463DriverCheckForPending);
 }
 
 bool LoLaSi446xPacketDriver::Transmit()
@@ -148,7 +148,7 @@ void LoLaSi446xPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t 
 	DisableInterruptsInternal();
 
 	//Asynchronously process the received packet.
-	EventQueueSource->AppendEventToQueue(LoLaSi4463DriverOnReceived);
+	EventQueue.AppendEventToQueue(LoLaSi4463DriverOnReceived);
 }
 
 void LoLaSi446xPacketDriver::OnReceived()

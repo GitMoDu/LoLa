@@ -97,7 +97,7 @@ public:
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
 private:
-	AsyncActor* EventQueueSource;
+	AsyncActor EventQueue;
 
 protected:
 	bool Transmit();
