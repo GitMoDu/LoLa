@@ -93,6 +93,7 @@ public:
 	{
 		PreparePacket();
 		RequestSendPacket(LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS);
+		State = LatencyServiceStateEnum::Done;
 		Enable();
 	}
 
@@ -219,6 +220,7 @@ protected:
 
 		State = LatencyServiceStateEnum::Done;
 		SetNextRunDefault();
+		Disable();
 		return true;
 	}
 
