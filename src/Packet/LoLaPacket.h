@@ -21,6 +21,9 @@ protected:
 	PacketDefinition * Definition = nullptr;
 
 public:
+	virtual uint8_t * GetRaw() { return nullptr; }
+
+public:
 	PacketDefinition * GetDefinition()
 	{
 		return Definition;
@@ -31,45 +34,11 @@ public:
 		Definition = nullptr;
 	}
 
-public:
-	virtual void SetDefinition(PacketDefinition* definition) { Definition = definition; }
-	virtual uint8_t * GetRaw() { return nullptr; }
-	virtual uint8_t GetDataHeader() { return 0; }
-	virtual uint8_t * GetPayload() { return nullptr; }
-	virtual uint8_t GetId() { return 0; }
-	virtual uint8_t GetMACCRC() { return 0; }
-	virtual bool SetId(const uint8_t id) { return false; }
-};
-
-class LoLaPacketNoPayload : public ILoLaPacket
-{
-private:
-	uint8_t Data[LOLA_PACKET_NO_PAYLOAD_SIZE];
-public:
-	void SetDefinition(PacketDefinition* definition)
-	{
-		if (definition != nullptr)
-		{
-			Data[LOLA_PACKET_HEADER_INDEX] = definition->GetHeader();
-		}
-		ILoLaPacket::SetDefinition(definition);
-	}
-
-	uint8_t * GetRaw()
-	{
-		return &Data[LOLA_PACKET_HEADER_INDEX];
-	}
-
-	uint8_t GetDataHeader()
-	{
-		return Data[LOLA_PACKET_HEADER_INDEX];
-	}
-
 	uint8_t GetId()
 	{
 		if (Definition != nullptr && Definition->HasId())
 		{
-			return Data[LOLA_PACKET_SUB_HEADER_START];
+			return GetRaw()[LOLA_PACKET_SUB_HEADER_START];
 		}
 		else
 		{
@@ -77,22 +46,58 @@ public:
 		}
 	}
 
-	uint8_t GetMACCRC()
-	{
-		return Data[LOLA_PACKET_MACCRC_INDEX];
-	}
-
 	bool SetId(const uint8_t id)
 	{
 		if (Definition != nullptr && Definition->HasId())
 		{
-			Data[LOLA_PACKET_SUB_HEADER_START] = id;
+			GetRaw()[LOLA_PACKET_SUB_HEADER_START] = id;
 			return true;
 		}
 		else
 		{
 			return false;
 		}
+	}
+
+	uint8_t GetMACCRC()
+	{
+		return GetRaw()[LOLA_PACKET_MACCRC_INDEX];
+	}
+
+	uint8_t GetDataHeader()
+	{
+		return GetRaw()[LOLA_PACKET_HEADER_INDEX];
+	}
+
+	void SetDefinition(PacketDefinition* definition)
+	{
+		if (definition != nullptr)
+		{
+			GetRaw()[LOLA_PACKET_HEADER_INDEX] = definition->GetHeader();
+		}
+		Definition = definition;
+	}
+
+	uint8_t * GetPayload()
+	{
+		uint8_t Offset = LOLA_PACKET_SUB_HEADER_START;
+		if (Definition != nullptr && Definition->HasId())
+		{
+			Offset++;
+		}
+
+		return &GetRaw()[Offset];
+	}
+};
+
+class LoLaPacketNoPayload : public ILoLaPacket
+{
+private:
+	uint8_t Data[LOLA_PACKET_NO_PAYLOAD_SIZE];
+public:
+	uint8_t * GetRaw()
+	{
+		return &Data[LOLA_PACKET_HEADER_INDEX];
 	}
 };
 
@@ -106,61 +111,6 @@ public:
 	{
 		return &Data[LOLA_PACKET_HEADER_INDEX];
 	}
-
-	uint8_t GetDataHeader()
-	{
-		return Data[LOLA_PACKET_HEADER_INDEX];
-	}
-
-	void SetDefinition(PacketDefinition* definition)
-	{
-		if (definition != nullptr)
-		{
-			Data[LOLA_PACKET_HEADER_INDEX] = definition->GetHeader();
-		}
-		ILoLaPacket::SetDefinition(definition);
-	}
-
-	uint8_t * GetPayload()
-	{
-		uint8_t Offset = LOLA_PACKET_SUB_HEADER_START;
-		if (Definition->HasId())
-		{
-			Offset++;
-		}
-
-		return &Data[Offset];
-	}
-
-	uint8_t GetId()
-	{
-		if (Definition != nullptr && Definition->HasId())
-		{
-			return Data[LOLA_PACKET_SUB_HEADER_START];
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
-	uint8_t GetMACCRC()
-	{
-		return Data[LOLA_PACKET_MACCRC_INDEX];
-	}
-
-	bool SetId(const uint8_t id)
-	{
-		if (Definition != nullptr && Definition->HasId())
-		{
-			Data[LOLA_PACKET_SUB_HEADER_START] = id;
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
 };
 
 class LoLaPacketFull : public ILoLaPacket
@@ -173,62 +123,5 @@ public:
 	{
 		return &Data[LOLA_PACKET_HEADER_INDEX];
 	}
-
-	uint8_t GetDataHeader()
-	{
-		return Data[LOLA_PACKET_HEADER_INDEX];
-	}
-
-	void SetDefinition(PacketDefinition* definition)
-	{
-		if (definition != nullptr)
-		{
-			Data[LOLA_PACKET_HEADER_INDEX] = definition->GetHeader();
-		}
-		ILoLaPacket::SetDefinition(definition);
-	}
-
-	uint8_t * GetPayload()
-	{
-		uint8_t Offset = LOLA_PACKET_SUB_HEADER_START;
-		if (Definition->HasId())
-		{
-			Offset++;
-		}
-
-		return &Data[Offset];
-	}
-
-	uint8_t GetId()
-	{
-		if (Definition != nullptr && Definition->HasId())
-		{
-			return Data[LOLA_PACKET_SUB_HEADER_START];
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
-	uint8_t GetMACCRC()
-	{
-		return Data[LOLA_PACKET_MACCRC_INDEX];
-	}
-
-	bool SetId(const uint8_t id)
-	{
-		if (Definition != nullptr && Definition->HasId())
-		{
-			Data[LOLA_PACKET_SUB_HEADER_START] = id;
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
 };
-
 #endif
-
