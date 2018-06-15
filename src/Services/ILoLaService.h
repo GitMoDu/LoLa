@@ -167,7 +167,7 @@ protected:
 		Task::delay(LOLA_SERVICE_HOUR_PERIOD_MILLIS);
 	}
 
-	void SetNextRunDelay(const unsigned long duration)
+	void SetNextRunDelay(const uint32_t duration)
 	{
 		Task::delay(duration);
 	}
