@@ -8,6 +8,8 @@
 
 #define ILOLA_DEFAULT_CHANNEL 20
 
+#define ILOLA_DEFAULT_MIN_RSSI (int16_t(-100))
+
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
@@ -23,7 +25,7 @@ protected:
 	///
 
 	///Configurations
-	int16_t TransmitPower = 0;
+	uint8_t TransmitPower = 0;
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
 	bool SendPermission = true;
 	bool Enabled = false;
@@ -67,17 +69,26 @@ public:
 		return LastSent;
 	}
 
+	uint8_t GetRSSI()
+	{
+		return LastReceivedRssi;
+	}
 	uint32_t GetLastReceivedMillis()
 	{
 		return LastReceived;
 	}
 
-	int16_t GetTransmitPower()
+	int16_t GetLastRSSI()
+	{
+		return LastReceivedRssi;
+	}
+
+	uint8_t GetTransmitPower()
 	{
 		return TransmitPower;
 	}
 
-	virtual bool SetTransmitPower(const int16_t transmitPower)
+	virtual bool SetTransmitPower(const uint8_t transmitPower)
 	{
 		TransmitPower = transmitPower;
 
@@ -86,7 +97,7 @@ public:
 
 	uint8_t GetChannel()
 	{
-		return CurrentChannel;	
+		return CurrentChannel;
 	}
 
 	virtual bool SetChannel(const int16_t channel)
@@ -103,7 +114,7 @@ public:
 
 protected:
 
-	int16_t* GetTransmitPowerPointer()
+	uint8_t * GetTransmitPowerPointer()
 	{
 		return &TransmitPower;
 	}
@@ -118,9 +129,13 @@ public:
 	virtual bool Setup() { return true; }
 	virtual bool AllowedSend() { return true; }
 	virtual void OnStart() {}
+	virtual uint8_t GetTransmitPowerMax() { return 0xFF; }
+	virtual uint8_t GetTransmitPowerMin() { return 0; }
+	virtual int16_t GetRSSIMax() { return 0; }
+	virtual int16_t GetRSSIMin() { return ILOLA_DEFAULT_MIN_RSSI; }
 
 #ifdef DEBUG_LOLA
-	virtual void Debug(Stream* serial) 
+	virtual void Debug(Stream* serial)
 	{
 		PacketMap.Debug(serial);
 	}

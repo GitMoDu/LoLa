@@ -57,7 +57,7 @@ void LoLaSi4463DriverCheckForPending(void)
 LoLaSi446xPacketDriver::LoLaSi446xPacketDriver(Scheduler* scheduler)
 	: LoLaPacketDriver()
 	, EventQueue(scheduler)
-{	
+{
 	StaticSi446LoLa = this;
 }
 
@@ -177,6 +177,29 @@ void LoLaSi446xPacketDriver::OnStart()
 #endif
 }
 
+uint8_t LoLaSi446xPacketDriver::GetRSSI()
+{
+	return map((int16_t)min(SI4463_MAX_RSSI, max(SI4463_MIN_RSSI, LastReceivedRssi)), (int16_t)SI4463_MIN_RSSI, SI4463_MAX_RSSI, 0, 255);
+}
+
+uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMax()
+{
+	return SI4463_MAX_TRANSMIT_POWER;
+}
+uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMin()
+{
+	return 0;
+}
+
+int16_t LoLaSi446xPacketDriver::GetRSSIMax() 
+{ 
+	return SI4463_MAX_RSSI;
+}
+int16_t LoLaSi446xPacketDriver::GetRSSIMin()
+{ 
+	return SI4463_MIN_RSSI;
+}
+
 bool LoLaSi446xPacketDriver::Setup()
 {
 	if (LoLaPacketDriver::Setup())
@@ -189,7 +212,7 @@ bool LoLaSi446xPacketDriver::Setup()
 #if defined(ARDUINO_ARCH_AVR)
 		SPI.setClockDivider(SPI_CLOCK_DIV2); // 16 MHz / 2 = 8 MHz
 #elif defined(ARDUINO_ARCH_STM32)
-		
+
 		SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 MHz / 8 = 9 MHz
 #endif
 
@@ -235,7 +258,7 @@ bool LoLaSi446xPacketDriver::Setup()
 #else 
 		return true;
 #endif
-	}
+		}
 
 	return false;
 }
