@@ -86,15 +86,14 @@ protected:
 	//Host base services.
 	LoLaConnectionHostService ConnectionService;
 
-protected:
-	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
-
 public:
 	LoLaManagerHost(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManager(loLa)
 		, ConnectionService(scheduler, loLa)
 	{
 	}
+
+	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
 };
 
 class LoLaManagerRemote : public LoLaManager
@@ -103,15 +102,14 @@ protected:
 	//Remote base services.
 	LoLaConnectionRemoteService ConnectionService;
 
-protected:
-	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
-
 public:
 	LoLaManagerRemote(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManager(loLa)
 		, ConnectionService(scheduler, loLa)
 	{
 	}
+
+	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
 };
 
 #endif
