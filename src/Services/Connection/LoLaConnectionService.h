@@ -6,19 +6,52 @@
 #include <Services\IPacketSendService.h>
 #include <Services\LatencyLoLaService.h>
 #include <Services\LoLaServicesManager.h>
+#include <LoLaLinkInfo.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <Callback.h>
+#include <Crypto\TinyCRC.h>
 
-#define PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE 4
+#define PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE 5  //1 byte Sub-header + 4 byte pseudo-MAC +4 bytes for uint32_t
 #define LOLA_CONNECTION_SERVICE_POLL_PERIOD_MILLIS 1000
 
-#define LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD 1000
+#define LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD 3000
+#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING 2000
+#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP 30000
+#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT (CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING*3 + 1000)
 
+
+
+#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST	0x01
+#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY		0x02
+#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED	0x03
+#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO		0x04
+//#define LOLA_CONNECTION_SERVICE_SUBHEADER_
+
+//TODO: Replace with one time random number.
+#define LOLA_CONNECTION_HOST_PMAC 0x0E0F
+#define LOLA_CONNECTION_REMOTE_PMAC 0x1A1B
 
 class LoLaConnectionService : public IPacketSendService
 {
+private:
+	uint32_t StartTime = 0;
+
+
+
 protected:
+	class LoLaPacketConnection : public ILoLaPacket
+	{
+	private:
+		uint8_t Data[PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE];
+
+	protected:
+		uint8_t * GetRaw()
+		{
+			return &Data[LOLA_PACKET_HEADER_INDEX];
+		}
+	};
+	bool LogSend = false;
 	class ConnectionPacketDefinition : public PacketDefinition
 	{
 	public:
@@ -27,22 +60,22 @@ protected:
 		uint8_t GetPayloadSize() { return PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE; }
 	} ConnectionDefinition;
 
-	enum LoLaConnectionState
-	{
-		Disabled,
-		Setup,
-		AwaitingConnection,
-		Connected
-	} ConnectionState = Disabled;
+	uint32_t LinkPMAC = 0;
+	uint32_t RemotePMAC = 0;
 
+	uint32_t TimeHelper = 0;
+	uint8_t ConnectingState = 0;
 
-	LoLaPacketSlim PacketHolder;//Optimized memory usage grunt packet.
+	//TinyCrc CalculatorCRC;
+	LoLaLinkInfo ConnectionInfo;
+
+	LoLaPacketConnection PacketHolder;//Optimized memory usage grunt packet.
 
 	//Subservices.
 	LatencyLoLaService LatencyService;
 
 	uint8_t SessionId = 0;
-	uint32_t StartTime = 0;
+
 
 	//Callback handler
 	Signal<const bool> ConnectionStatusUpdated;
@@ -52,7 +85,11 @@ public:
 		: IPacketSendService(scheduler, LOLA_CONNECTION_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
 		, LatencyService(scheduler, loLa)
 	{
+		ConnectionInfo.SetDriver(loLa);
+		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::Disabled;
 		AttachCallbacks();
+		StartTime = Millis();
+		RemotePMAC = 0;
 	}
 
 	bool AddSubServices(LoLaServicesManager * servicesManager)
@@ -73,8 +110,19 @@ public:
 
 	bool OnEnable()
 	{
-		ConnectionState = LoLaConnectionState::Setup;
+		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::Setup;
+		SetNextRunASAP();
 		return true;
+	}
+
+	uint32_t GetElapsedSinceStart()
+	{
+		return Millis() - StartTime;
+	}
+
+	void StartTimeReset()
+	{
+		StartTime = Millis();
 	}
 
 	void OnDisable()
@@ -84,6 +132,11 @@ public:
 	void OnLatencyMeasurementCompleteInternal(const bool success)
 	{
 		OnLatencyMeasurementComplete(success);
+	}
+
+	LoLaLinkInfo* GetConnectionInfo()
+	{
+		return &ConnectionInfo;
 	}
 
 private:
@@ -96,11 +149,6 @@ private:
 		LatencyService.SetMeasurementCompleteCallback(memFunSlot);
 	}
 
-	bool ShouldProcessPackets()
-	{
-		return (SessionId != 0);
-	}
-
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -109,26 +157,57 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
+protected:
+	virtual void OnReceivedBroadcast(const uint8_t sessionId, uint8_t* data) {}
+	virtual void OnChallengeReply(uint8_t* data) {}
+	virtual void OnChallengeAccepted(uint8_t* data) {}
+	virtual void OnHelloReceived(uint8_t* data) {}
+
+	virtual void OnConnectionSetup() {}
+	virtual void OnAwaitingConnection() {}
+	virtual void OnConnecting() {}
+
+protected:
 	void PromoteToConnected()
 	{
 		//Connection ready, notify waiting services.
-		if (ConnectionState != LoLaConnectionState::Connected)
+		if (ConnectionInfo.State != LoLaLinkInfo::ConnectionState::Connected)
 		{
 			ConnectionStatusUpdated.fire(true);
 		}
 
-		ConnectionState = LoLaConnectionState::Connected;
+		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::Connected;
 	}
+
+	void PromoteToConnecting()
+	{
+		//Connecting, notify waiting services.
+		if (ConnectionInfo.State != LoLaLinkInfo::ConnectionState::Connecting)
+		{
+			ConnectionStatusUpdated.fire(true);
+		}
+
+		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::Connecting;
+	}
+
+	void DemoteToAwaiting()
+	{
+		//Awaiting connection, notify waiting services.
+		if (ConnectionInfo.State != LoLaLinkInfo::ConnectionState::AwaitingConnection)
+		{
+			ConnectionStatusUpdated.fire(true);
+		}
+
+		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::AwaitingConnection;
+	}
+
 
 	void DemoteToDisconnected()
 	{
 		//Connection lost, notify waiting services.
-		if (ConnectionState == LoLaConnectionState::Connected)
-		{
-			ConnectionStatusUpdated.fire(false);
-		}
+		ConnectionStatusUpdated.fire(false);
 
-		ConnectionState = LoLaConnectionState::Setup;
+		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::Setup;
 	}
 
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
@@ -140,9 +219,35 @@ protected:
 	{
 		if (header == PACKET_DEFINITION_CONNECTION_HEADER)
 		{
+#ifdef DEBUG_LOLA
+			Serial.print(F("Packet: "));
+			Serial.println(incomingPacket->GetPayload()[0]);
+#endif
 			if (ShouldProcessPackets())
 			{
-
+				switch (incomingPacket->GetPayload()[0])
+				{
+				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST:
+					OnReceivedBroadcast(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
+					break;
+				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY:
+					OnChallengeReply(&incomingPacket->GetPayload()[1]);
+					break;
+				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
+					OnChallengeAccepted(&incomingPacket->GetPayload()[1]);
+					break;
+				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO:
+					OnHelloReceived(&incomingPacket->GetPayload()[1]);
+					break;
+				default:
+					break;
+				}
+			}
+			else
+			{
+#ifdef DEBUG_LOLA
+				Serial.println(F("Denied: "));
+#endif
 			}
 
 			return true;
@@ -175,36 +280,50 @@ protected:
 
 	void OnSendOk()
 	{
+#ifdef DEBUG_LOLA
+		if (LogSend)
+			Serial.println(F("OnSendOk: "));
+#endif
 	}
 
 	void OnSendDelayed()
 	{
+#ifdef DEBUG_LOLA
+		if (LogSend)
+			Serial.println(F("OnSendDelayed: "));
+#endif
 	}
 
 	void OnSendRetrying()
 	{
+#ifdef DEBUG_LOLA
+		if (LogSend)
+			Serial.println(F("OnSendRetrying: "));
+#endif
 	}
 
 	void OnSendFailed()
 	{
+#ifdef DEBUG_LOLA
+		if (LogSend)
+			Serial.println(F("OnSendFailed: "));
+#endif
 	}
 
 	void OnSendTimedOut()
 	{
+#ifdef DEBUG_LOLA
+		if (LogSend)
+			Serial.println(F("OnSendTimedOut: "));
+#endif
 	}
 
-	virtual void OnConnectionSetup()
+
+	virtual bool ShouldProcessPackets()
 	{
-
+		return (SessionId != 0);
 	}
 
-	virtual void OnAwaitingConnection()
-	{
-
-	}
-
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING 2000
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT (CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING*3 + 1000)
 	virtual void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
 	{
 #ifndef MOCK_RADIO
@@ -223,7 +342,7 @@ protected:
 #ifdef DEBUG_LOLA
 			Serial.println(F("Keep alive Ping"));
 #endif
-			LatencyService.RequestSinglePing();
+			//LatencyService.RequestSinglePing();
 			SetNextRunDelay(CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING);
 		}
 		else
@@ -233,23 +352,35 @@ protected:
 		}
 	}
 
+	void OnTookTooLong()
+	{
+		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::Setup;
+		SetNextRunDelay((uint32_t)CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING * 40);
+	}
+
 	void OnService()
 	{
-		switch (ConnectionState)
+		switch (ConnectionInfo.State)
 		{
-		case LoLaConnectionState::Setup:
+		case LoLaLinkInfo::ConnectionState::Setup:
+			StartTime = Millis();
 			SetNextRunASAP();
 			OnConnectionSetup();
-			ConnectionState = LoLaConnectionState::AwaitingConnection;
+			ConnectionInfo.State = LoLaLinkInfo::ConnectionState::AwaitingConnection;
 			break;
-		case LoLaConnectionState::AwaitingConnection:
+		case LoLaLinkInfo::ConnectionState::AwaitingConnection:
+			SetNextRunDefault();
 			OnAwaitingConnection();
 			break;
-		case LoLaConnectionState::Connected:
+		case LoLaLinkInfo::ConnectionState::Connecting:
+			SetNextRunASAP();
+			OnConnecting();
+			break;
+		case LoLaLinkInfo::ConnectionState::Connected:
 			SetNextRunDelay(3000);
 			OnKeepingConnected(Millis() - GetLoLa()->GetLastReceivedMillis());
 			break;
-		case LoLaConnectionState::Disabled:
+		case LoLaLinkInfo::ConnectionState::Disabled:
 #ifdef DEBUG_LOLA
 			Serial.println(F("LoLaConnectionState::Disabled"));
 #endif
