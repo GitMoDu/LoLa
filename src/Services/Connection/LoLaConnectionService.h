@@ -12,12 +12,13 @@
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
 
-#define PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE 5  //1 byte Sub-header + 4 byte pseudo-MAC +4 bytes for uint32_t
-#define LOLA_CONNECTION_SERVICE_POLL_PERIOD_MILLIS 1000
+#define PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE 5  //1 byte Sub-header + 4 byte pseudo-MAC or other uint32_t
+#define LOLA_CONNECTION_SERVICE_POLL_PERIOD_MILLIS 500
 
-#define LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD 3000
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING 2000
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP 30000
+#define LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD			1000
+#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING			5000
+#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP			30000
+#define CONNECTION_SERVICE_SLEEP_PERIOD						60000
 #define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT (CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING*3 + 1000)
 
 
@@ -26,7 +27,8 @@
 #define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY		0x02
 #define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED	0x03
 #define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO		0x04
-//#define LOLA_CONNECTION_SERVICE_SUBHEADER_
+//#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO				0X05
+//#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP					0X06
 
 //TODO: Replace with one time random number.
 #define LOLA_CONNECTION_HOST_PMAC 0x0E0F
@@ -37,20 +39,7 @@ class LoLaConnectionService : public IPacketSendService
 private:
 	uint32_t StartTime = 0;
 
-
-
 protected:
-	class LoLaPacketConnection : public ILoLaPacket
-	{
-	private:
-		uint8_t Data[PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE];
-
-	protected:
-		uint8_t * GetRaw()
-		{
-			return &Data[LOLA_PACKET_HEADER_INDEX];
-		}
-	};
 	bool LogSend = false;
 	class ConnectionPacketDefinition : public PacketDefinition
 	{
@@ -69,7 +58,7 @@ protected:
 	//TinyCrc CalculatorCRC;
 	LoLaLinkInfo ConnectionInfo;
 
-	LoLaPacketConnection PacketHolder;//Optimized memory usage grunt packet.
+	LoLaPacketSlim PacketHolder;//Optimized memory usage grunt packet.
 
 	//Subservices.
 	LatencyLoLaService LatencyService;
@@ -79,6 +68,11 @@ protected:
 
 	//Callback handler
 	Signal<const bool> ConnectionStatusUpdated;
+
+	union ArrayToUint32 {
+		byte array[4];
+		uint32_t uint;
+	} ATUI;
 
 public:
 	LoLaConnectionService(Scheduler* scheduler, ILoLa* loLa)
@@ -337,13 +331,13 @@ protected:
 			DemoteToDisconnected();
 			SetNextRunASAP();
 		}
-		else if (elapsedSinceLastReceived > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING)
+		else if (elapsedSinceLastReceived > LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD)
 		{
 #ifdef DEBUG_LOLA
-			Serial.println(F("Keep alive Ping"));
+			Serial.println(F("Beep"));
 #endif
-			//LatencyService.RequestSinglePing();
-			SetNextRunDelay(CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING);
+			LatencyService.RequestSinglePing();
+			SetNextRunDefault();
 		}
 		else
 #endif // !MOCK_RADIO
@@ -352,10 +346,13 @@ protected:
 		}
 	}
 
-	void OnTookTooLong()
+	void ResetToSetup()
 	{
+		if (ConnectionInfo.State != LoLaLinkInfo::ConnectionState::Setup)
+		{
+			ConnectionStatusUpdated.fire(true);
+		}
 		ConnectionInfo.State = LoLaLinkInfo::ConnectionState::Setup;
-		SetNextRunDelay((uint32_t)CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING * 40);
 	}
 
 	void OnService()
@@ -364,6 +361,7 @@ protected:
 		{
 		case LoLaLinkInfo::ConnectionState::Setup:
 			StartTime = Millis();
+			TimeHelper = 0;
 			SetNextRunASAP();
 			OnConnectionSetup();
 			ConnectionInfo.State = LoLaLinkInfo::ConnectionState::AwaitingConnection;
@@ -388,6 +386,20 @@ protected:
 			Disable();
 			return;
 		}
+	}
+
+	void PrepareBasePacketMAC(const uint8_t subHeader)
+	{
+		PacketHolder.SetDefinition(&ConnectionDefinition);
+		PacketHolder.SetId(SessionId);
+
+		ATUI.uint = LinkPMAC;
+
+		PacketHolder.GetPayload()[0] = subHeader;
+		PacketHolder.GetPayload()[1] = ATUI.array[0];
+		PacketHolder.GetPayload()[2] = ATUI.array[1];
+		PacketHolder.GetPayload()[3] = ATUI.array[2];
+		PacketHolder.GetPayload()[4] = ATUI.array[3];
 	}
 };
 #endif
