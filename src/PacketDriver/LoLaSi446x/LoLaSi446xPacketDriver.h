@@ -37,8 +37,8 @@
 
 
  
-#define SI4463_MIN_RSSI (int16_t(-150))
-#define SI4463_MAX_RSSI (int16_t(-10))
+#define SI4463_MIN_RSSI (int16_t(-130))
+#define SI4463_MAX_RSSI (int16_t(-40))
 
 
 #define _TASK_OO_CALLBACKS
