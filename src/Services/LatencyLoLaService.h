@@ -50,7 +50,7 @@ private:
 		LongTimeOut,
 		AnalysingResults,
 		Done
-	} State = LatencyServiceStateEnum::Setup;
+	} State = LatencyServiceStateEnum::Done;
 
 	LoLaPacketNoPayload PacketHolder;//Optimized memory usage grunt packet.
 
@@ -138,7 +138,6 @@ protected:
 
 	bool OnEnable()
 	{
-		State = LatencyServiceStateEnum::Setup;
 		return true;
 	}
 
