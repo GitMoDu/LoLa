@@ -135,7 +135,5 @@ public:
 
 	int16_t GetRSSIMax();
 	int16_t GetRSSIMin();
-
-	uint8_t GetRSSI();
 };
 #endif

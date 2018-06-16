@@ -177,11 +177,6 @@ void LoLaSi446xPacketDriver::OnStart()
 #endif
 }
 
-uint8_t LoLaSi446xPacketDriver::GetRSSI()
-{
-	return map((int16_t)min(SI4463_MAX_RSSI, max(SI4463_MIN_RSSI, LastReceivedRssi)), (int16_t)SI4463_MIN_RSSI, SI4463_MAX_RSSI, 0, 255);
-}
-
 uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMax()
 {
 	return SI4463_MAX_TRANSMIT_POWER;
