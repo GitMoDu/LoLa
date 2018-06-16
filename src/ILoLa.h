@@ -69,10 +69,6 @@ public:
 		return LastSent;
 	}
 
-	uint8_t GetRSSI()
-	{
-		return LastReceivedRssi;
-	}
 	uint32_t GetLastReceivedMillis()
 	{
 		return LastReceived;
