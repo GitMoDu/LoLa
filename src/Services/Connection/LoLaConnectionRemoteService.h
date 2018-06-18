@@ -156,16 +156,16 @@ protected:
 		switch (ConnectingState)
 		{
 		case AwaitingConnectionEnum::SearchingForBroadcast:
-			if (Millis() - TimeHelper > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING)
+			if (GetElapsedSinceStart() > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
+			{
+				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingSleeping);
+				SetNextRunDelay(CONNECTION_SERVICE_SLEEP_PERIOD);
+			}
+			else if (Millis() - TimeHelper > CONNECTION_SERVICE_MIN_ELAPSED_BEFORE_HELLO)
 			{
 				PrepareHello();
 				RequestSendPacket();
 				TimeHelper = Millis();
-			}
-			else if (GetElapsedSinceStart() > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
-			{
-				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingSleeping);
-				SetNextRunDelay(CONNECTION_SERVICE_SLEEP_PERIOD);
 			}
 			else
 			{
