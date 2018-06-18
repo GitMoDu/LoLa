@@ -208,9 +208,8 @@ protected:
 	{
 		if (LinkInfo.State != newState)
 		{
-			LinkInfo.StampConnectionStarted();
-			ConnectionStatusUpdated.fire(newState);
 			OnLinkStateChanged(newState);
+			ConnectionStatusUpdated.fire(newState);
 		}
 		LinkInfo.State = newState;
 	}
