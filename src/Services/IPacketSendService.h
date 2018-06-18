@@ -54,7 +54,6 @@ public:
 			}
 			break;
 		case SendStatusEnum::SendingPacket:
-
 			if (Millis() > TimeOutPoint)
 			{
 				SetNextRunASAP();
