@@ -91,6 +91,7 @@ protected:
 			ATUI.array[1] = data[1];
 			ATUI.array[2] = data[2];
 			ATUI.array[3] = data[3];
+			TimeHelper = 0;
 
 			if (SessionId == 0 ||
 				RemotePMAC == 0 ||
