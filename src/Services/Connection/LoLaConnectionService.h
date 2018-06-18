@@ -210,6 +210,16 @@ protected:
 		{
 			OnLinkStateChanged(newState);
 			ConnectionStatusUpdated.fire(newState);
+
+			if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connected)
+			{
+				//TODO: Take to chance to do something when link is lost.
+			}
+			else if (newState == LoLaLinkInfo::ConnectionState::Connected)
+			{
+				//TODO: Take to chance to do something when link is established.
+				LinkInfo.StampConnectionStarted();
+			}	
 		}
 		LinkInfo.State = newState;
 	}
