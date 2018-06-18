@@ -18,16 +18,6 @@ private:
 		ResponseNotOk = 5,
 	};
 
-	enum ConnectingEnum
-	{
-		ConnectingStarting = 6,
-		Diagnostics = 7,
-		MeasuringLatency = 8,
-		MeasurementLatencyDone = 9,
-		ConnectionGreenLight = 10,
-		ConnectionEscalationFailed = 11
-	};
-
 public:
 	LoLaConnectionHostService(Scheduler *scheduler, ILoLa* loLa)
 		: LoLaConnectionService(scheduler, loLa)
@@ -251,18 +241,6 @@ protected:
 	}
 
 private:
-	void OnLatencyMeasurementComplete(const bool success)
-	{
-		if (ConnectingState == ConnectingEnum::MeasuringLatency)
-		{
-			if (success)
-			{
-				ConnectingState = ConnectingEnum::MeasurementLatencyDone;
-			}
-			SetNextRunASAP();
-		}
-	}
-
 	void NewSession()
 	{
 		ClearSession();

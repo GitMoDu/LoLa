@@ -50,6 +50,16 @@ protected:
 		uint8_t GetPayloadSize() { return PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE; }
 	} ConnectionDefinition;
 
+	enum ConnectingEnum
+	{
+		ConnectingStarting = 250,
+		Diagnostics = 251,
+		MeasuringLatency = 252,
+		MeasurementLatencyDone = 253,
+		ConnectionGreenLight = 254,
+		ConnectionEscalationFailed = 255,
+	};
+
 	uint32_t ConnectionStarted = 0;
 	uint32_t LinkPMAC = 0;
 	uint32_t RemotePMAC = 0;
@@ -141,9 +151,24 @@ public:
 	}
 
 private:
-	virtual void OnLatencyMeasurementComplete(const bool success) {}
+	void OnLatencyMeasurementComplete(const bool success)
+	{
+		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connecting &&
+			ConnectingState == ConnectingEnum::MeasuringLatency)
+		{
+			if (success)
+			{
+				LinkInfo.SetRTT(LatencyService.GetRTT());
+				ConnectingState = ConnectingEnum::MeasurementLatencyDone;
+			}
+			else
+			{
+				LinkInfo.ResetLatency();
+			}
+			SetNextRunASAP();
+		}
+	}
 
-private:
 	void AttachCallbacks()
 	{
 		MethodSlot<LoLaConnectionService, const bool> memFunSlot(this, &LoLaConnectionService::OnLatencyMeasurementCompleteInternal);
