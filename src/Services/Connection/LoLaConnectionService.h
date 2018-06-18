@@ -156,39 +156,6 @@ public:
 		return &LinkInfo;
 	}
 
-private:
-	void OnLatencyMeasurementComplete(const bool success)
-	{
-		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connecting &&
-			ConnectingState == ConnectingEnum::MeasuringLatency)
-		{
-			if (success)
-			{
-				LinkInfo.SetRTT(LatencyService.GetRTT());
-				ConnectingState = ConnectingEnum::MeasurementLatencyDone;
-			}
-			else
-			{
-				LinkInfo.ResetLatency();
-			}
-			SetNextRunASAP();
-		}
-	}
-
-	void AttachCallbacks()
-	{
-		MethodSlot<LoLaConnectionService, const bool> memFunSlot(this, &LoLaConnectionService::OnLatencyMeasurementCompleteInternal);
-		LatencyService.SetMeasurementCompleteCallback(memFunSlot);
-	}
-
-protected:
-#ifdef DEBUG_LOLA
-	void PrintName(Stream* serial)
-	{
-		serial->print(F("Connection service"));
-	}
-#endif // DEBUG_LOLA
-
 protected:
 	virtual void OnBroadcastReceived(const uint8_t sessionId, uint8_t* data) {}
 	virtual void OnChallengeReplyReceived(const uint8_t sessionId, uint8_t* data) {}
@@ -204,6 +171,13 @@ protected:
 	virtual void OnConnecting() {}
 
 protected:
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("Connection service"));
+	}
+#endif // DEBUG_LOLA
+
 	void UpdateLinkState(const LoLaLinkInfo::ConnectionState newState)
 	{
 		if (LinkInfo.State != newState)
@@ -219,7 +193,7 @@ protected:
 			{
 				//TODO: Take to chance to do something when link is established.
 				LinkInfo.StampConnectionStarted();
-			}	
+			}
 		}
 		LinkInfo.State = newState;
 	}
@@ -364,7 +338,8 @@ protected:
 #endif
 				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
 				SetNextRunASAP();
-			}else if (elapsedSinceLastReceived > CONNECTION_SERVICE_PANIC)
+			}
+			else if (elapsedSinceLastReceived > CONNECTION_SERVICE_PANIC)
 			{
 				SetNextRunDelay(LOLA_CONNECTION_SERVICE_FAST_CHECK_PERIOD);
 				OnLinkWarningHigh();
@@ -377,7 +352,7 @@ protected:
 			else if (elapsedSinceLastReceived > CONNECTION_SERVICE_KEEP_ALIVE_PERIOD)
 			{
 				SetNextRunDelay(LOLA_CONNECTION_SERVICE_SLOW_CHECK_PERIOD);
-				OnLinkWarningLow();				
+				OnLinkWarningLow();
 			}
 			else
 			{
@@ -388,7 +363,7 @@ protected:
 		{
 
 			SetNextRunASAP();
-		}		
+		}
 	}
 
 	void OnService()
@@ -440,6 +415,31 @@ protected:
 		PacketHolder.GetPayload()[2] = ATUI.array[1];
 		PacketHolder.GetPayload()[3] = ATUI.array[2];
 		PacketHolder.GetPayload()[4] = ATUI.array[3];
+	}
+
+private:
+	void OnLatencyMeasurementComplete(const bool success)
+	{
+		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connecting &&
+			ConnectingState == ConnectingEnum::MeasuringLatency)
+		{
+			if (success)
+			{
+				LinkInfo.SetRTT(LatencyService.GetRTT());
+				ConnectingState = ConnectingEnum::MeasurementLatencyDone;
+			}
+			else
+			{
+				LinkInfo.ResetLatency();
+			}
+			SetNextRunASAP();
+		}
+	}
+
+	void AttachCallbacks()
+	{
+		MethodSlot<LoLaConnectionService, const bool> memFunSlot(this, &LoLaConnectionService::OnLatencyMeasurementCompleteInternal);
+		LatencyService.SetMeasurementCompleteCallback(memFunSlot);
 	}
 };
 #endif
