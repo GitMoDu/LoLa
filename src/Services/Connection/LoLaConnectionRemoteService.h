@@ -142,7 +142,7 @@ protected:
 
 		switch (ConnectingState)
 		{
-		case ConnectingEnum::Starting:
+		case ConnectingEnum::ConnectingStarting:
 			TimeHelper = Millis();
 			ConnectingState = ConnectingEnum::Diagnostics;
 			SetNextRunASAP();
@@ -245,7 +245,7 @@ protected:
 			ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
 			break;;
 		case LoLaLinkInfo::ConnectionState::Connecting:
-			ConnectingState = ConnectingEnum::Starting;
+			ConnectingState = ConnectingEnum::ConnectingStarting;
 			break;
 		case LoLaLinkInfo::ConnectionState::Connected:
 			TimeHelper = 0;
