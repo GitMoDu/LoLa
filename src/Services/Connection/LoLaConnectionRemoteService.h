@@ -234,7 +234,6 @@ protected:
 		case LoLaLinkInfo::ConnectionState::Connected:
 			TimeHelper = 0;
 			StartTimeReset();
-			ConnectingState = ConnectingEnum::Starting;
 			break;
 		case LoLaLinkInfo::ConnectionState::Disabled:
 		case LoLaLinkInfo::ConnectionState::AwaitingSleeping:
