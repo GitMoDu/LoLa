@@ -185,7 +185,7 @@ protected:
 
 protected:
 	virtual void OnBroadcastReceived(const uint8_t sessionId, uint8_t* data) {}
-	virtual void OnChallengeReplyReceived(const uint8_t sessionId,uint8_t* data) {}
+	virtual void OnChallengeReplyReceived(const uint8_t sessionId, uint8_t* data) {}
 	virtual void OnChallengeAcceptedReceived(const uint8_t sessionId, uint8_t* data) {}
 	virtual void OnHelloReceived(const uint8_t sessionId, uint8_t* data) {}
 

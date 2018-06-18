@@ -129,8 +129,6 @@ protected:
 		}
 	}
 
-
-
 	void OnConnecting()
 	{
 		if (SessionId == 0)

@@ -72,7 +72,6 @@ protected:
 		default:
 			break;
 		}
-
 	}
 
 	void OnHelloReceived(const uint8_t sessionId, uint8_t* data)
