@@ -23,8 +23,9 @@ private:
 		Starting = 6,
 		Diagnostics = 7,
 		MeasuringLatency = 8,
-		ConnectionGreenLight = 9,
-		ConnectionEscalationFailed = 10,
+		MeasurementLatencyDone = 9,
+		ConnectionGreenLight = 10,
+		ConnectionEscalationFailed = 11,
 	};
 
 public:
@@ -32,7 +33,6 @@ public:
 		: LoLaConnectionService(scheduler, loLa)
 	{
 		LinkPMAC = LOLA_CONNECTION_REMOTE_PMAC;
-		ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
 	}
 
 protected:
@@ -42,163 +42,142 @@ protected:
 		serial->print(F("Connection Remote service"));
 	}
 #endif // DEBUG_LOLA
-	void OnConnectionSetup()
-	{
-		ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
-		SessionId = 0;
-	}
 
-	bool ShouldProcessPackets()
+	void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
 	{
-		if (!LoLaConnectionService::ShouldProcessPackets())
+		LoLaConnectionService::OnKeepingConnected(elapsedSinceLastReceived);
+
+		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connected)
 		{
-			return ConnectingState == AwaitingConnectionEnum::SearchingForBroadcast;
+			if (elapsedSinceLastReceived > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING)
+			{
+				if (Millis() - TimeHelper > CONNECTION_SERVICE_MIN_PING_INTERVAL)
+				{
+					TimeHelper = Millis();
+					PrepareHello();
+					RequestSendPacket();
+					return;
+				}
+			}
 		}
-		return true;
+		SetNextRunDelay(CONNECTION_SERVICE_MIN_PING_INTERVAL);
 	}
 
-	void OnReceivedBroadcast(const uint8_t sessionId, uint8_t* data)
+	void OnHelloReceived(const uint8_t sessionId, uint8_t* data)
+	{
+		switch (LinkInfo.State)
+		{
+		case LoLaLinkInfo::ConnectionState::Connecting:
+		case LoLaLinkInfo::ConnectionState::Connected:
+			ATUI.array[0] = data[0];
+			ATUI.array[1] = data[1];
+			ATUI.array[2] = data[2];
+			ATUI.array[3] = data[3];
+
+			if (SessionId == 0 ||
+				RemotePMAC == 0 ||
+				(RemotePMAC == ATUI.uint && SessionId != sessionId))
+			{
+				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
+				SetNextRunASAP();
+			}
+			break;
+		case LoLaLinkInfo::ConnectionState::Setup:
+		case LoLaLinkInfo::ConnectionState::AwaitingConnection:
+		case LoLaLinkInfo::ConnectionState::AwaitingSleeping:
+			SetNextRunASAP();
+			break;
+		case LoLaLinkInfo::ConnectionState::Disabled:
+		default:
+			return;
+		}
+	}
+
+	void OnBroadcastReceived(const uint8_t sessionId, uint8_t* data)
 	{
 		ATUI.array[0] = data[0];
 		ATUI.array[1] = data[1];
 		ATUI.array[2] = data[2];
 		ATUI.array[3] = data[3];
 
-		switch (ConnectionInfo.State)
+		switch (LinkInfo.State)
 		{
 		case LoLaLinkInfo::ConnectionState::Connected:
-#ifdef DEBUG_LOLA
-			Serial.print(F("GotBroadcast Connected State: "));
-			Serial.println(ConnectionInfo.State);
-#endif
 			if (RemotePMAC == ATUI.uint)
 			{
-				DemoteToDisconnected();
+				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
 				SetNextRunASAP();
 			}
-#ifdef DEBUG_LOLA
-			else
-			{
-				Serial.print(F("Mac Mismatch: RemotePMAC: "));
-				Serial.print(RemotePMAC);
-				Serial.print(F("  Messaged PMAC: "));
-				Serial.println(ATUI.uint);
-			}
-#endif
-			break;
-		case LoLaLinkInfo::ConnectionState::Connecting:
-#ifdef DEBUG_LOLA
-			Serial.print(F("GotBroadcast Connecting State: "));
-			Serial.println(ConnectionInfo.State);
-#endif
-			if (RemotePMAC == ATUI.uint)
-			{
-				DemoteToAwaiting();
-				SetNextRunASAP();
-			}
-#ifdef DEBUG_LOLA
-			else
-			{
-				Serial.print(F("Mac Mismatch: RemotePMAC: "));
-				Serial.print(RemotePMAC);
-				Serial.print(F("  Messaged PMAC: "));
-				Serial.println(ATUI.uint);
-			}
-#endif
 			break;
 		case LoLaLinkInfo::ConnectionState::Setup:
-#ifdef DEBUG_LOLA
-			Serial.print(F("GotBroadcast Setup State: "));
-			Serial.println(ConnectionInfo.State);
-#endif
 			SetNextRunASAP();
 			break;
+		case LoLaLinkInfo::ConnectionState::AwaitingSleeping:
+			UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
 		case LoLaLinkInfo::ConnectionState::AwaitingConnection:
-			//TODO: Event warning of new Host to connect.
-			RemotePMAC = (uint32_t)data[0] & 0x00FF;
-			RemotePMAC += ((uint32_t)data[1]) << 8;
-			RemotePMAC += ((uint32_t)data[2]) << 16;
-			RemotePMAC += ((uint32_t)data[3]) << 24;
-
+			RemotePMAC = ATUI.uint;
 			SessionId = sessionId;
-
-#ifdef DEBUG_LOLA
-			Serial.println(F("GotBroadcast OK."));
-#endif
 			ConnectingState = AwaitingConnectionEnum::GotBroadcast;
 			SetNextRunASAP();
 			break;
+		case LoLaLinkInfo::ConnectionState::Connecting:
 		default:
-#ifdef DEBUG_LOLA
-			Serial.print(F("GotBroadcast ? State: "));
-			Serial.println(ConnectionInfo.State);
-#endif
 			//Ignore, nothing to do.
 			break;
 		}
 	}
 
-	void OnChallengeAccepted(uint8_t* data)
+	void OnChallengeAcceptedReceived(const uint8_t sessionId, uint8_t* data)
 	{
-#ifdef DEBUG_LOLA
-		Serial.println(F("OnChallengeAccepted: "));
-#endif
 		if (ConnectingState == AwaitingConnectionEnum::AwaitingCallengeResponse)
 		{
-#ifdef DEBUG_LOLA
-			Serial.println(F("ResponseOk: "));
-#endif
+//#ifdef DEBUG_LOLA
+//			Serial.println(F("Challenge Accepted"));
+//#endif
 			ConnectingState = AwaitingConnectionEnum::ResponseOk;
 			SetNextRunASAP();
 		}
 	}
 
+
+
 	void OnConnecting()
 	{
+		if (SessionId == 0)
+		{
+			UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
+			SetNextRunASAP();
+			return;
+		}
+
 		switch (ConnectingState)
 		{
 		case ConnectingEnum::Starting:
 			TimeHelper = Millis();
-			if (SessionId == 0)
-			{
-				DemoteToAwaiting();
-				ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
-				SetNextRunASAP();
-				return;
-			}
 			ConnectingState = ConnectingEnum::Diagnostics;
 			SetNextRunASAP();
 			break;
 		case ConnectingEnum::Diagnostics:
-			if (SessionId == 0)
-			{
-				DemoteToAwaiting();
-				ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
-				SetNextRunASAP();
-				return;
-			}
-#ifdef DEBUG_LOLA
-			Serial.print(F("Connecting: "));
-			Serial.println(SessionId);
-#endif
-			//ConnectingState = ConnectingEnum::MeasuringLatency;
-			//LatencyService.RequestRefreshPing();
-			//SetNextRunDelay(LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS + 1000);
-			ConnectingState = ConnectingEnum::ConnectionGreenLight;
-			SetNextRunDelay(300);
+			ConnectingState = ConnectingEnum::MeasuringLatency;
+			LatencyService.RequestRefreshPing();
+			SetNextRunDelay(LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS + 1000);
 			break;
 		case ConnectingEnum::MeasuringLatency:
 			ConnectingState = ConnectingEnum::ConnectionEscalationFailed;
 			SetNextRunASAP();
 			break;
+		case ConnectingEnum::MeasurementLatencyDone:
+			ConnectingState = ConnectingEnum::ConnectionGreenLight;
+			SetNextRunASAP();
+			break;
 		case ConnectingEnum::ConnectionGreenLight:
-			PromoteToConnected();
+			UpdateLinkState(LoLaLinkInfo::ConnectionState::Connected);
 			SetNextRunASAP();
 			break;
 		case ConnectingEnum::ConnectionEscalationFailed:
 		default:
-			DemoteToAwaiting();
-			ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
+			StartTimeReset();
+			UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
 			SetNextRunASAP();
 			break;
 		}
@@ -211,21 +190,18 @@ protected:
 		case AwaitingConnectionEnum::SearchingForBroadcast:
 			if (Millis() - TimeHelper > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING)
 			{
-#ifdef DEBUG_LOLA
-				Serial.println(F("Hello!"));
-#endif
 				PrepareHello();
 				RequestSendPacket();
 				TimeHelper = Millis();
 			}
 			else if (GetElapsedSinceStart() > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
 			{
-				ResetToSetup();
+				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingSleeping);
 				SetNextRunDelay(CONNECTION_SERVICE_SLEEP_PERIOD);
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD);
+				SetNextRunDefault();
 			}
 			break;
 		case AwaitingConnectionEnum::GotBroadcast:
@@ -235,10 +211,6 @@ protected:
 				SetNextRunDefault();
 				return;
 			}
-#ifdef DEBUG_LOLA
-			Serial.print(F("GotBroadcast, sending challenge: "));
-			Serial.println(SessionId);
-#endif
 			PrepareSendChallenge();
 			RequestSendPacket();
 			ConnectingState = AwaitingConnectionEnum::SendingChallenge;
@@ -256,8 +228,7 @@ protected:
 #endif
 			break;
 		case AwaitingConnectionEnum::ResponseOk:
-			PromoteToConnecting();
-			ConnectingState = ConnectingEnum::Starting;
+			UpdateLinkState(LoLaLinkInfo::ConnectionState::Connecting);
 			SetNextRunASAP();
 			break;
 		case AwaitingConnectionEnum::ResponseNotOk:
@@ -269,17 +240,52 @@ protected:
 		}
 	}
 
-	void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
+	void OnLinkStateChanged(const LoLaLinkInfo::ConnectionState newState)
 	{
-		LoLaConnectionService::OnKeepingConnected(elapsedSinceLastReceived);
+		switch (newState)
+		{
+		case LoLaLinkInfo::ConnectionState::Setup:
+			ClearSession();
+			StartTimeReset();
+			SetNextRunDefault();			
+			break;
+		case LoLaLinkInfo::ConnectionState::AwaitingConnection:
+			ClearSession();
+			TimeHelper = 0;
+			ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
+			break;;
+		case LoLaLinkInfo::ConnectionState::Connecting:
+			ConnectingState = ConnectingEnum::Starting;
+			break;
+		case LoLaLinkInfo::ConnectionState::Connected:
+			TimeHelper = 0;
+			StartTimeReset();
+			ConnectingState = ConnectingEnum::Starting;
+			break;
+		case LoLaLinkInfo::ConnectionState::Disabled:
+		case LoLaLinkInfo::ConnectionState::AwaitingSleeping:
+		default:
+			break;
+		}
 	}
 
-
 private:
+
+	void OnLatencyMeasurementComplete(const bool success)
+	{
+		if (ConnectingState == ConnectingEnum::MeasuringLatency)
+		{
+			if (success)
+			{
+				ConnectingState = ConnectingEnum::MeasurementLatencyDone;
+			}
+			SetNextRunASAP();
+		}
+	}
+
 	void PrepareHello()
 	{
 		PrepareBasePacketMAC(LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO);
-
 	}
 
 	void PrepareSendChallenge()
@@ -288,4 +294,3 @@ private:
 	}
 };
 #endif
-
