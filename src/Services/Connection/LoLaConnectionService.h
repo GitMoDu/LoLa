@@ -196,6 +196,9 @@ protected:
 	virtual void OnHelloReceived(const uint8_t sessionId, uint8_t* data) {}
 
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::ConnectionState newState) {}
+	virtual void OnLinkWarningLow() {}
+	virtual void OnLinkWarningMedium() {}
+	virtual void OnLinkWarningHigh() {}
 
 	virtual void OnAwaitingConnection() {}
 	virtual void OnConnecting() {}
