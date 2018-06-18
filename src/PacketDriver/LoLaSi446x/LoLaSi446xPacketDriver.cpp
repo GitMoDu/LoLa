@@ -3,10 +3,10 @@
 
 #include <PacketDriver\LoLaSi446x\LoLaSi446xPacketDriver.h>
 
+#define UNINITIALIZED_INTERRUPT 0XFF
 
 //Static handlers for interrupts.
 LoLaSi446xPacketDriver* StaticSi446LoLa = nullptr;
-#define UNINITIALIZED_INTERRUPT 0XFF
 volatile uint8_t InterruptStatus = UNINITIALIZED_INTERRUPT;
 volatile bool Receiving = false;
 
