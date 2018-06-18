@@ -73,9 +73,9 @@ public:
 	{
 	}
 
-	uint32_t GetLatency()
+	float GetLatency()
 	{
-		return GetAverage() / 2;
+		return ((float)GetRTT() / (float)2000);
 	}
 
 	uint32_t GetRTT()
@@ -405,7 +405,7 @@ protected:
 				Serial.print(GetRTT());
 				Serial.println(F(" us"));
 				Serial.print(F("Latency: "));
-				Serial.print((double)GetLatency() / (double)1000, 2);
+				Serial.print(GetLatency(), 2);
 				Serial.println(F(" ms"));
 #endif
 				State = LatencyServiceStateEnum::Done;
