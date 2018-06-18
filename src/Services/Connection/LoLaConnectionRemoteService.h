@@ -260,11 +260,6 @@ protected:
 	}
 
 private:
-	void PrepareHello()
-	{
-		PrepareBasePacketMAC(LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO);
-	}
-
 	void PrepareSendChallenge()
 	{
 		PrepareBasePacketMAC(LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY);

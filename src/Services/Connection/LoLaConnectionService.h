@@ -316,6 +316,11 @@ protected:
 #endif
 	}
 
+	void PrepareHello()
+	{
+		PrepareBasePacketMAC(LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO);
+	}
+
 	virtual bool ShouldProcessPackets()
 	{
 		if (SessionId != 0 ||
