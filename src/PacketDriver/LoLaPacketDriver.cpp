@@ -28,7 +28,7 @@ void LoLaPacketDriver::OnIncoming(const int16_t rssi)
 }
 
 //When RF has packet to read.
-void LoLaPacketDriver::OnReceiveBegin(const uint8_t length, const  int16_t rssi)
+void LoLaPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t rssi)
 {
 	Receiver.SetBufferSize(length);	
 }
