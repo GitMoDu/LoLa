@@ -33,26 +33,6 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
-	{
-		LoLaConnectionService::OnKeepingConnected(elapsedSinceLastReceived);
-
-		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connected)
-		{
-			if (elapsedSinceLastReceived > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING)
-			{
-				if (Millis() - TimeHelper > CONNECTION_SERVICE_MIN_PING_INTERVAL)
-				{
-					TimeHelper = Millis();
-					PrepareHello();
-					RequestSendPacket();
-					return;
-				}
-			}
-		}
-		SetNextRunDelay(CONNECTION_SERVICE_MIN_PING_INTERVAL);
-	}
-
 	void OnHelloReceived(const uint8_t sessionId, uint8_t* data)
 	{
 		switch (LinkInfo.State)
@@ -228,6 +208,12 @@ protected:
 		}
 	}
 
+	void OnLinkWarningMedium()
+	{
+		PrepareHello();
+		RequestSendPacket();
+	}
+
 	void OnLinkStateChanged(const LoLaLinkInfo::ConnectionState newState)
 	{
 		switch (newState)
@@ -260,7 +246,7 @@ protected:
 private:
 	void PrepareSendChallenge()
 	{
-		PrepareBasePacketMAC(LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY);
+		PrepareBasePacketMAC(CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY);
 	}
 };
 #endif

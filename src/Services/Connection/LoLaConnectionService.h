@@ -16,18 +16,24 @@
 #define LOLA_CONNECTION_SERVICE_POLL_PERIOD_MILLIS 500
 
 #define LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD			1000
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING			1500
-#define CONNECTION_SERVICE_MIN_PING_INTERVAL				500
+#define LOLA_CONNECTION_SERVICE_FAST_CHECK_PERIOD			50
+
 #define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP			30000
 #define CONNECTION_SERVICE_SLEEP_PERIOD						60000
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT (CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_PING*4)
 
 
+#define CONNECTION_SERVICE_MIN_ELAPSED_BEFORE_HELLO			500
+#define CONNECTION_SERVICE_KEEP_ALIVE_PERIOD				1000
+#define CONNECTION_SERVICE_PERIOD_INTERVENTION			(LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS/2)
+#define CONNECTION_SERVICE_PANIC						(LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS - CONNECTION_SERVICE_KEEP_ALIVE_PERIOD)
+#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT	(CONNECTION_SERVICE_KEEP_ALIVE_PERIOD*4)
 
-#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST	0x01
-#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY		0x02
-#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED	0x03
-#define LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO		0x04
+#define LOLA_CONNECTION_SERVICE_SLOW_CHECK_PERIOD			CONNECTION_SERVICE_MIN_ELAPSED_BEFORE_HELLO
+
+#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST	0x01
+#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY		0x02
+#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED		0x03
+#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO		0x04
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO				0X05
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP					0X06
 
@@ -225,16 +231,16 @@ protected:
 			{
 				switch (incomingPacket->GetPayload()[0])
 				{
-				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST:
+				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST:
 					OnBroadcastReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
-				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY:
+				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY:
 					OnChallengeReplyReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
-				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
+				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
 					OnChallengeAcceptedReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
-				case LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO:
+				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO:
 					OnHelloReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
 				default:
@@ -318,7 +324,7 @@ protected:
 
 	void PrepareHello()
 	{
-		PrepareBasePacketMAC(LOLA_CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO);
+		PrepareBasePacketMAC(CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO);
 	}
 
 	virtual bool ShouldProcessPackets()
@@ -333,22 +339,44 @@ protected:
 		return false;
 	}
 
-	virtual void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
+	void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
 	{
-		if (elapsedSinceLastReceived > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT)
+		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connected)
 		{
+			if (elapsedSinceLastReceived > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT)
+			{
 #ifdef DEBUG_LOLA
-			Serial.print(F("Bi directional commms lost over "));
-			Serial.print(CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT / 1000);
-			Serial.println(F(" seconds."));
+				Serial.print(F("Bi directional commms lost over "));
+				Serial.print(CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT / 1000);
+				Serial.println(F(" seconds."));
 #endif
-			UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
-			SetNextRunASAP();
+				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
+				SetNextRunASAP();
+			}else if (elapsedSinceLastReceived > CONNECTION_SERVICE_PANIC)
+			{
+				SetNextRunDelay(LOLA_CONNECTION_SERVICE_FAST_CHECK_PERIOD);
+				OnLinkWarningHigh();
+			}
+			else if (elapsedSinceLastReceived > CONNECTION_SERVICE_PERIOD_INTERVENTION)
+			{
+				SetNextRunDelay(LOLA_CONNECTION_SERVICE_FAST_CHECK_PERIOD);
+				OnLinkWarningMedium();
+			}
+			else if (elapsedSinceLastReceived > CONNECTION_SERVICE_KEEP_ALIVE_PERIOD)
+			{
+				SetNextRunDelay(LOLA_CONNECTION_SERVICE_SLOW_CHECK_PERIOD);
+				OnLinkWarningLow();				
+			}
+			else
+			{
+				SetNextRunDelay(CONNECTION_SERVICE_MIN_ELAPSED_BEFORE_HELLO);
+			}
 		}
 		else
 		{
-			SetNextRunDefault();
-		}	
+
+			SetNextRunASAP();
+		}		
 	}
 
 	void OnService()
