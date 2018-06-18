@@ -44,7 +44,7 @@
 class LoLaConnectionService : public IPacketSendService
 {
 private:
-	uint32_t StartTime = 0;
+	uint32_t StateStartTime = 0;
 
 protected:
 	bool LogSend = false;
@@ -99,7 +99,7 @@ public:
 		LinkInfo.SetDriver(loLa);
 		LinkInfo.State = LoLaLinkInfo::ConnectionState::Disabled;
 		AttachCallbacks();
-		StartTime = Millis();
+		StateStartTime = Millis();
 		RemotePMAC = 0;
 	}
 
@@ -134,12 +134,12 @@ public:
 
 	uint32_t GetElapsedSinceStart()
 	{
-		return Millis() - StartTime;
+		return Millis() - StateStartTime;
 	}
 
 	void StartTimeReset()
 	{
-		StartTime = Millis();
+		StateStartTime = Millis();
 	}
 
 	void OnDisable()
