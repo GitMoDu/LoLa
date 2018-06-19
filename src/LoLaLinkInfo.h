@@ -126,13 +126,13 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			if (Driver->GetLastSentMillis() >= Driver->GetLastReceivedMillis())
+			if (Driver->GetLastSentMillis() >= Driver->GetLastValidReceivedMillis())
 			{
 				return Driver->GetMillis() - Driver->GetLastSentMillis();
 			}
 			else
 			{
-				return Driver->GetMillis() - Driver->GetLastReceivedMillis();
+				return Driver->GetMillis() - Driver->GetLastValidReceivedMillis();
 			}
 		}
 		return UINT32_MAX;
@@ -151,7 +151,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			return Driver->GetMillis() - Driver->GetLastReceivedMillis();
+			return Driver->GetMillis() - Driver->GetLastValidReceivedMillis();
 		}
 		return UINT32_MAX;
 	}
