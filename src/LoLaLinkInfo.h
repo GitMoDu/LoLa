@@ -42,6 +42,11 @@ public:
 	{
 		RTT = LOLA_LINK_INFO_INVALID_LATENCY;
 	}
+	
+	bool HasLink()
+	{
+		return LinkState == LinkStateEnum::Connected;
+	}
 
 	bool HasLatency()
 	{
