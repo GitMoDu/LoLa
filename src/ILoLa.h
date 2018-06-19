@@ -10,6 +10,10 @@
 
 #define ILOLA_DEFAULT_MIN_RSSI (int16_t(-100))
 
+#define ILOLA_INVALID_RSSI		UINT16_MAX
+#define ILOLA_INVALID_LATENCY	UINT16_MAX
+#define ILOLA_INVALID_MILLIS	0
+
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
