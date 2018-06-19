@@ -16,12 +16,11 @@
 #define LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS 4
 
 class LoLaPacketDriver : public ILoLa
-{
+{	
 protected:
 	///Services that are served receiving packets.
 	LoLaServicesManager Services;
 	///
-
 
 	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
 	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;

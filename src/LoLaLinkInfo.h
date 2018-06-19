@@ -18,10 +18,8 @@ private:
 	ILoLa * Driver = nullptr;
 	uint32_t ActivityElapsedHelper;
 
-	volatile uint16_t RTT = LOLA_LINK_INFO_INVALID_LATENCY;
-	volatile uint32_t LinkStarted = 0;
-	//volatile uint32_t LastReceivedOk = 0;
-	//volatile uint32_t LastSentOk = 0;
+	uint16_t RTT = LOLA_LINK_INFO_INVALID_RSSI;
+	uint32_t LinkStarted = 0;
 
 public:
 	enum LinkStateEnum
@@ -32,7 +30,7 @@ public:
 		AwaitingSleeping,
 		Connecting,
 		Connected
-	}LinkState;
+	} LinkState;
 
 	void SetDriver(ILoLa* driver)
 	{
