@@ -7,8 +7,8 @@
 #include <PacketDriver\LoLaPacketDriver.h>
 
 #include <Services\ILoLaService.h>
-#include <Services\Connection\LoLaLinkHostService.h>
-#include <Services\Connection\LoLaLinkRemoteService.h>
+#include <Services\Link\LoLaLinkHostService.h>
+#include <Services\Link\LoLaLinkRemoteService.h>
 
 #include <Services\LoLaServicesManager.h>
 

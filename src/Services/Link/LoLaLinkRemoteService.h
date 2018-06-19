@@ -3,7 +3,7 @@
 #ifndef _LOLA_LINK_REMOTE_SERVICE_h
 #define _LOLA_LINK_REMOTE_SERVICE_h
 
-#include <Services\Connection\LoLaLinkService.h>
+#include <Services\Link\LoLaLinkService.h>
 
 class LoLaLinkRemoteService : public LoLaLinkService
 {

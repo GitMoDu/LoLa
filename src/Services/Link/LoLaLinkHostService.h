@@ -3,7 +3,7 @@
 #ifndef _LOLA_LINK_HOST_SERVICE_h
 #define _LOLA_LINK_HOST_SERVICE_h
 
-#include <Services\Connection\LoLaLinkService.h>
+#include <Services\Link\LoLaLinkService.h>
 
 class LoLaLinkHostService : public LoLaLinkService
 {

@@ -68,7 +68,6 @@ protected:
 	};
 
 	//Link session variables
-	uint32_t ConnectionStarted = 0;
 
 	uint32_t LinkPMAC = 0;
 	uint32_t RemotePMAC = 0;
@@ -190,13 +189,13 @@ protected:
 
 			if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
-				ConnectionStarted = 0;
+				LinkInfo.ResetLinkStarted();
 				//TODO: Take to chance to do something when link is lost.
 			}
 			else if (newState == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
+				LinkInfo.StampLinkStarted();
 				//TODO: Take to chance to do something when link is established.
-				LinkInfo.StampConnectionStarted();
 			}
 		}
 		LinkInfo.LinkState = newState;
