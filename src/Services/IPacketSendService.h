@@ -160,6 +160,8 @@ protected:
 	void ClearSendRequest()
 	{
 		Packet->ClearDefinition();
+		SendStatus = SendStatusEnum::Done;
+		SetNextRunASAP();
 	}
 };
 
