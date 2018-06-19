@@ -23,9 +23,9 @@ class ILoLa
 {
 protected:
 	///Statistics
-	volatile uint32_t LastSent = 0;
-	volatile uint32_t LastReceived = 0;
-	volatile int16_t LastReceivedRssi = -254;
+	volatile uint32_t LastSent = ILOLA_INVALID_MILLIS;
+	volatile uint32_t LastReceived = ILOLA_INVALID_MILLIS;
+	volatile int16_t LastReceivedRssi = ILOLA_INVALID_RSSI;
 	///
 
 	///Configurations
