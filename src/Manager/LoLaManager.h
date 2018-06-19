@@ -7,8 +7,8 @@
 #include <PacketDriver\LoLaPacketDriver.h>
 
 #include <Services\ILoLaService.h>
-#include <Services\Connection\LoLaConnectionHostService.h>
-#include <Services\Connection\LoLaConnectionRemoteService.h>
+#include <Services\Connection\LoLaLinkHostService.h>
+#include <Services\Connection\LoLaLinkRemoteService.h>
 
 #include <Services\LoLaServicesManager.h>
 
@@ -20,7 +20,7 @@ protected:
 
 
 protected:
-	virtual LoLaConnectionService * GetConnectionService() { return nullptr; }
+	virtual LoLaLinkService * GetLinkService() { return nullptr; }
 
 	virtual bool OnSetupServices()
 	{
@@ -31,12 +31,12 @@ protected:
 protected:
 	bool SetupServices()
 	{
-		if (!LoLa->GetServices()->Add(GetConnectionService()))
+		if (!LoLa->GetServices()->Add(GetLinkService()))
 		{
 			return false;
 		}
 
-		if (!GetConnectionService()->AddSubServices(LoLa->GetServices()))
+		if (!GetLinkService()->AddSubServices(LoLa->GetServices()))
 		{
 			return false;
 		}
@@ -57,7 +57,7 @@ public:
 
 	bool Start()
 	{
-		GetConnectionService()->Enable();
+		GetLinkService()->Enable();
 		LoLa->Enable();
 		return true;
 
@@ -84,33 +84,32 @@ class LoLaManagerHost : public LoLaManager
 {
 protected:
 	//Host base services.
-	LoLaConnectionHostService ConnectionService;
+	LoLaLinkHostService LinkService;
 
 public:
 	LoLaManagerHost(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManager(loLa)
-		, ConnectionService(scheduler, loLa)
+		, LinkService(scheduler, loLa)
 	{
 	}
 
-	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
+	LoLaLinkService * GetLinkService() { return &LinkService; }
 };
 
 class LoLaManagerRemote : public LoLaManager
 {
 protected:
 	//Remote base services.
-	LoLaConnectionRemoteService ConnectionService;
+	LoLaLinkRemoteService LinkService;
 
 public:
 	LoLaManagerRemote(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManager(loLa)
-		, ConnectionService(scheduler, loLa)
+		, LinkService(scheduler, loLa)
 	{
 	}
 
-	LoLaConnectionService * GetConnectionService() { return &ConnectionService; }
+	LoLaLinkService * GetLinkService() { return &LinkService; }
 };
-
 #endif
 

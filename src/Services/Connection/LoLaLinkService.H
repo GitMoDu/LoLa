@@ -1,7 +1,7 @@
-// LoLaConnectionService.h
+// LoLaLinkService.h
 
-#ifndef _LOLACONNECTIONSERVICE_h
-#define _LOLACONNECTIONSERVICE_h
+#ifndef _LOLA_LINK_SERVICE_h
+#define _LOLA_LINK_SERVICE_h
 
 #include <Services\IPacketSendService.h>
 #include <Services\LatencyLoLaService.h>
@@ -12,36 +12,37 @@
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
 
-#define PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE 5  //1 byte Sub-header + 4 byte pseudo-MAC or other uint32_t
-#define LOLA_CONNECTION_SERVICE_POLL_PERIOD_MILLIS 500
+#define LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE	5  //1 byte Sub-header + 4 byte pseudo-MAC or other uint32_t
 
-#define LOLA_CONNECTION_SERVICE_BROADCAST_PERIOD			1000
-#define LOLA_CONNECTION_SERVICE_FAST_CHECK_PERIOD			50
-
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_SLEEP			30000
-#define CONNECTION_SERVICE_SLEEP_PERIOD						60000
+#define LOLA_LINK_SERVICE_POLL_PERIOD_MILLIS				500
+#define LOLA_LINK_SERVICE_BROADCAST_PERIOD					1000
+#define LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP			30000
+#define LOLA_LINK_SERVICE_SLEEP_PERIOD						60000
 
 
-#define CONNECTION_SERVICE_MIN_ELAPSED_BEFORE_HELLO			500
-#define CONNECTION_SERVICE_KEEP_ALIVE_PERIOD				1000
-#define CONNECTION_SERVICE_PERIOD_INTERVENTION			(LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS/2)
-#define CONNECTION_SERVICE_PANIC						(LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS - CONNECTION_SERVICE_KEEP_ALIVE_PERIOD)
-#define CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT	(CONNECTION_SERVICE_KEEP_ALIVE_PERIOD*4)
+#define LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO			500
+#define LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD					(LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO*4)
+#define LOLA_LINK_SERVICE_PERIOD_INTERVENTION				(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*2)
+#define LOLA_LINK_SERVICE_PANIC								(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*3)
+#define LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT		(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*4)
 
-#define LOLA_CONNECTION_SERVICE_SLOW_CHECK_PERIOD			CONNECTION_SERVICE_MIN_ELAPSED_BEFORE_HELLO
+#define LOLA_LINK_SERVICE_SLOW_CHECK_PERIOD					LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO
+#define LOLA_LINK_SERVICE_FAST_CHECK_PERIOD			50
 
-#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST	0x01
-#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY		0x02
-#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED		0x03
-#define CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO		0x04
+#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_BROADCAST	0x01
+#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_REPLY		0x02
+#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED		0x03
+#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO		0x04
+
+//TODO: Future.
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO				0X05
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP					0X06
 
 //TODO: Replace with one time random number.
-#define LOLA_CONNECTION_HOST_PMAC 0x0E0F
-#define LOLA_CONNECTION_REMOTE_PMAC 0x1A1B
+#define LOLA_LINK_HOST_PMAC 0x0E0F
+#define LOLA_LINK_REMOTE_PMAC 0x1A1B
 
-class LoLaConnectionService : public IPacketSendService
+class LoLaLinkService : public IPacketSendService
 {
 private:
 	uint32_t StateStartTime = 0;
@@ -53,7 +54,7 @@ protected:
 	public:
 		uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
 		uint8_t GetHeader() { return PACKET_DEFINITION_CONNECTION_HEADER; }
-		uint8_t GetPayloadSize() { return PACKET_DEFINITION_CONNECTION_PAYLOAD_SIZE; }
+		uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE; }
 	} ConnectionDefinition;
 
 	enum ConnectingEnum
@@ -66,7 +67,9 @@ protected:
 		ConnectionEscalationFailed = 255,
 	};
 
+	//Link session variables
 	uint32_t ConnectionStarted = 0;
+
 	uint32_t LinkPMAC = 0;
 	uint32_t RemotePMAC = 0;
 	uint8_t SessionId = 0;
@@ -92,19 +95,19 @@ protected:
 	} ATUI;
 
 public:
-	LoLaConnectionService(Scheduler* scheduler, ILoLa* loLa)
-		: IPacketSendService(scheduler, LOLA_CONNECTION_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
+	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
+		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
 		, LatencyService(scheduler, loLa)
 	{
 		LinkInfo.SetDriver(loLa);
-		LinkInfo.State = LoLaLinkInfo::ConnectionState::Disabled;
+		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
 		AttachCallbacks();
 		StateStartTime = Millis();
 		RemotePMAC = 0;
 	}
 
 	//Param is 
-	//LoLaLinkInfo::ConnectionState
+	//LoLaLinkInfo::LinkState
 	void SetOnConnectionStatusUpdatedCallback(const Slot<const uint8_t>& slot)
 	{
 		ConnectionStatusUpdated.attach(slot);
@@ -128,7 +131,7 @@ public:
 
 	bool OnEnable()
 	{
-		UpdateLinkState(LoLaLinkInfo::ConnectionState::Setup);
+		UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Setup);
 		return true;
 	}
 
@@ -162,7 +165,7 @@ protected:
 	virtual void OnChallengeAcceptedReceived(const uint8_t sessionId, uint8_t* data) {}
 	virtual void OnHelloReceived(const uint8_t sessionId, uint8_t* data) {}
 
-	virtual void OnLinkStateChanged(const LoLaLinkInfo::ConnectionState newState) {}
+	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 	virtual void OnLinkWarningLow() {}
 	virtual void OnLinkWarningMedium() {}
 	virtual void OnLinkWarningHigh() {}
@@ -178,24 +181,25 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	void UpdateLinkState(const LoLaLinkInfo::ConnectionState newState)
+	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
 	{
-		if (LinkInfo.State != newState)
+		if (LinkInfo.LinkState != newState)
 		{
 			OnLinkStateChanged(newState);
 			ConnectionStatusUpdated.fire(newState);
 
-			if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connected)
+			if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
+				ConnectionStarted = 0;
 				//TODO: Take to chance to do something when link is lost.
 			}
-			else if (newState == LoLaLinkInfo::ConnectionState::Connected)
+			else if (newState == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
 				//TODO: Take to chance to do something when link is established.
 				LinkInfo.StampConnectionStarted();
 			}
 		}
-		LinkInfo.State = newState;
+		LinkInfo.LinkState = newState;
 	}
 
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
@@ -217,16 +221,16 @@ protected:
 			{
 				switch (incomingPacket->GetPayload()[0])
 				{
-				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_BROADCAST:
+				case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_BROADCAST:
 					OnBroadcastReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
-				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_REPLY:
+				case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_REPLY:
 					OnChallengeReplyReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
-				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
+				case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
 					OnChallengeAcceptedReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
-				case CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO:
+				case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO:
 					OnHelloReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
 				default:
@@ -268,56 +272,16 @@ protected:
 		return false;
 	}
 
-	void OnSendOk()
-	{
-#ifdef DEBUG_LOLA
-		if (LogSend)
-			Serial.println(F("OnSendOk: "));
-#endif
-	}
-
-	void OnSendDelayed()
-	{
-#ifdef DEBUG_LOLA
-		if (LogSend)
-			Serial.println(F("OnSendDelayed: "));
-#endif
-	}
-
-	void OnSendRetrying()
-	{
-#ifdef DEBUG_LOLA
-		if (LogSend)
-			Serial.println(F("OnSendRetrying: "));
-#endif
-	}
-
-	void OnSendFailed()
-	{
-#ifdef DEBUG_LOLA
-		if (LogSend)
-			Serial.println(F("OnSendFailed: "));
-#endif
-	}
-
-	void OnSendTimedOut()
-	{
-#ifdef DEBUG_LOLA
-		if (LogSend)
-			Serial.println(F("OnSendTimedOut: "));
-#endif
-	}
-
 	void PrepareHello()
 	{
-		PrepareBasePacketMAC(CONNECTION_SERVICE_SUBHEADER_CHALLENGE_HELLO);
+		PrepareBasePacketMAC(LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO);
 	}
 
 	virtual bool ShouldProcessPackets()
 	{
 		if (SessionId != 0 ||
-			LinkInfo.State == LoLaLinkInfo::ConnectionState::AwaitingConnection ||
-			LinkInfo.State == LoLaLinkInfo::ConnectionState::AwaitingSleeping)
+			LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingConnection ||
+			LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
 		{
 			return true;
 		}
@@ -327,72 +291,71 @@ protected:
 
 	void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
 	{
-		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connected)
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
 		{
-			if (elapsedSinceLastReceived > CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT)
+			if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT)
 			{
 #ifdef DEBUG_LOLA
 				Serial.print(F("Bi directional commms lost over "));
-				Serial.print(CONNECTION_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT / 1000);
+				Serial.print(LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT / 1000);
 				Serial.println(F(" seconds."));
 #endif
-				UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
 				SetNextRunASAP();
 			}
-			else if (elapsedSinceLastReceived > CONNECTION_SERVICE_PANIC)
+			else if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_PANIC)
 			{
-				SetNextRunDelay(LOLA_CONNECTION_SERVICE_FAST_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 				OnLinkWarningHigh();
 			}
-			else if (elapsedSinceLastReceived > CONNECTION_SERVICE_PERIOD_INTERVENTION)
+			else if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_PERIOD_INTERVENTION)
 			{
-				SetNextRunDelay(LOLA_CONNECTION_SERVICE_FAST_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 				OnLinkWarningMedium();
 			}
-			else if (elapsedSinceLastReceived > CONNECTION_SERVICE_KEEP_ALIVE_PERIOD)
+			else if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD)
 			{
-				SetNextRunDelay(LOLA_CONNECTION_SERVICE_SLOW_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_SLOW_CHECK_PERIOD);
 				OnLinkWarningLow();
 			}
 			else
 			{
-				SetNextRunDelay(CONNECTION_SERVICE_MIN_ELAPSED_BEFORE_HELLO);
+				SetNextRunDelay(LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO);
 			}
 		}
 		else
 		{
-
 			SetNextRunASAP();
 		}
 	}
 
 	void OnService()
 	{
-		switch (LinkInfo.State)
+		switch (LinkInfo.LinkState)
 		{
-		case LoLaLinkInfo::ConnectionState::Setup:
+		case LoLaLinkInfo::LinkStateEnum::Setup:
 			StartTimeReset();
 			SetNextRunASAP();
-			UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
 			break;
-		case LoLaLinkInfo::ConnectionState::AwaitingConnection:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
 			SetNextRunASAP();
 			OnAwaitingConnection();
 			break;
-		case LoLaLinkInfo::ConnectionState::AwaitingSleeping:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			StartTimeReset();
 			SetNextRunASAP();
-			UpdateLinkState(LoLaLinkInfo::ConnectionState::AwaitingConnection);
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
 			break;
-		case LoLaLinkInfo::ConnectionState::Connecting:
+		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			SetNextRunASAP();
 			OnConnecting();
 			break;
-		case LoLaLinkInfo::ConnectionState::Connected:
+		case LoLaLinkInfo::LinkStateEnum::Connected:
 			SetNextRunASAP();
 			OnKeepingConnected(Millis() - GetLoLa()->GetLastReceivedMillis());
 			break;
-		case LoLaLinkInfo::ConnectionState::Disabled:
+		case LoLaLinkInfo::LinkStateEnum::Disabled:
 		default:
 			Disable();
 			return;
@@ -420,7 +383,7 @@ protected:
 private:
 	void OnLatencyMeasurementComplete(const bool success)
 	{
-		if (LinkInfo.State == LoLaLinkInfo::ConnectionState::Connecting &&
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingEnum::MeasuringLatency)
 		{
 			if (success)
@@ -438,7 +401,7 @@ private:
 
 	void AttachCallbacks()
 	{
-		MethodSlot<LoLaConnectionService, const bool> memFunSlot(this, &LoLaConnectionService::OnLatencyMeasurementCompleteInternal);
+		MethodSlot<LoLaLinkService, const bool> memFunSlot(this, &LoLaLinkService::OnLatencyMeasurementCompleteInternal);
 		LatencyService.SetMeasurementCompleteCallback(memFunSlot);
 	}
 };
