@@ -10,10 +10,10 @@
 #include <Callback.h>
 
 
-#define LATENCY_PING_DATA_POINT_STACK_SIZE 5
+#define LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE 5
 
 //65536 is the max uint16_t, about 65 ms max latency is accepted.
-#define LATENCY_SERVICE_PING_TIMEOUT_MICROS 65000
+#define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS 65000
 
 #define LOLA_LATENCY_SERVICE_POLL_PERIOD_MILLIS 50
 #define LOLA_LATENCY_SERVICE_BACK_OFF_DURATION_MILLIS 1000
@@ -21,7 +21,7 @@
 #define LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS 20
 
 #define LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS 100
-#define LOLA_LATENCY_SERVICE_NO_REPLY_TIMEOUT_MILLIS (1000 + LATENCY_PING_DATA_POINT_STACK_SIZE*(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS+LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS))
+#define LOLA_LATENCY_SERVICE_NO_REPLY_TIMEOUT_MILLIS (1000 + LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE*(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS+LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS))
 #define LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS 5000
 
 #define PACKET_DEFINITION_PING_HEADER (PACKET_DEFINITION_CONNECTION_HEADER+1)
@@ -105,7 +105,7 @@ public:
 private:
 	uint16_t GetAverage()
 	{
-		if (SampleCount >= LATENCY_PING_DATA_POINT_STACK_SIZE)
+		if (SampleCount >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
 		{
 			return DurationSum / SampleCount;
 		}
@@ -193,7 +193,7 @@ protected:
 				if (State == LatencyServiceStateEnum::Sending || State == LatencyServiceStateEnum::WaitingForAck)
 				{
 					if (LastSentTimeStamp != 0 && SentId == id &&
-						ReceivingDuration < LATENCY_SERVICE_PING_TIMEOUT_MICROS)
+						ReceivingDuration < LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS)
 					{
 						DurationSum += ReceivingDuration;
 						SampleCount++;
@@ -346,7 +346,7 @@ protected:
 				SetNextRunDelayRandom(LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS);
 			}
 			//Do we have needed sample count?
-			else if (SampleCount >= LATENCY_PING_DATA_POINT_STACK_SIZE)
+			else if (SampleCount >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
 			{
 				State = LatencyServiceStateEnum::AnalysingResults;
 				SetNextRunASAP();
@@ -356,7 +356,7 @@ protected:
 			{
 				State = LatencyServiceStateEnum::Sending;
 				PreparePacket();
-				RequestSendPacket((uint8_t)(LATENCY_SERVICE_PING_TIMEOUT_MICROS / 1000));
+				RequestSendPacket((uint8_t)(LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS / 1000));
 				LastSentTimeStamp = Micros();
 			}
 			break;
@@ -374,7 +374,7 @@ protected:
 			LastSentTimeStamp = 0; //Make sure we ignore stale acks.
 			State = LatencyServiceStateEnum::Checking;
 			//Do we have needed sample count?
-			if (SampleCount >= LATENCY_PING_DATA_POINT_STACK_SIZE)
+			if (SampleCount >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
 			{
 				SetNextRunASAP();
 			}
