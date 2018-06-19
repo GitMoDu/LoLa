@@ -23,6 +23,8 @@ protected:
 	///
 
 
+	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
+	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
 	bool SetupOk = false;
 	LoLaReceiver Receiver;
 	LoLaSender Sender;
@@ -31,6 +33,8 @@ public:
 	LoLaPacketDriver();
 	virtual bool SendPacket(ILoLaPacket* packet);
 	LoLaServicesManager* GetServices();
+	uint32_t GetLastValidReceivedMillis();
+	int16_t GetLastValidRSSI();
 
 public:
 	virtual bool Setup();

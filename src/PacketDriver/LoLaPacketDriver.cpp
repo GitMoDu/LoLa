@@ -113,3 +113,13 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 
 	return false;
 }
+
+uint32_t LoLaPacketDriver::GetLastValidReceivedMillis()
+{ 
+	return  LastValidReceived;
+}
+
+int16_t LoLaPacketDriver::GetLastValidRSSI() 
+{ 
+	return LastValidReceivedRssi;
+}
