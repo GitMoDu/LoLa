@@ -25,46 +25,64 @@ void LoLaPacketDriver::OnIncoming(const int16_t rssi)
 {
 	LastReceived = GetMillis();
 	LastReceivedRssi = rssi;
+	if (!IncomingInfo.HasInfo())
+	{
+		IncomingInfo.SetInfo(LastReceived, LastReceivedRssi);
+	}
 }
 
 //When RF has packet to read.
 void LoLaPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t rssi)
 {
-	Receiver.SetBufferSize(length);	
+	if (!IncomingInfo.HasInfo())
+	{
+		IncomingInfo.SetInfo(GetMillis(), rssi);
+	}
+	Receiver.SetBufferSize(length);
 }
 
 //When RF has received a garbled packet.
 void LoLaPacketDriver::OnReceivedFail(const int16_t rssi)
 {
-	LastReceivedRssi = rssi;
+	IncomingInfo.Clear();
 }
 
 void LoLaPacketDriver::OnReceived()
-{	
-	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
+{
+	if (!IncomingInfo.HasInfo())
 	{
-		return;
+		IncomingInfo.SetInfo(GetMillis(), LastReceivedRssi);
 	}
 
-	//Is Ack
-	if (Receiver.GetIncomingDefinition()->GetHeader() == PACKET_DEFINITION_ACK_HEADER)
+	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
 	{
-		Services.ProcessAck(Receiver.GetIncomingPacket());
 	}
-	else//Is packet
-	{
-		if (Receiver.GetIncomingDefinition()->HasACK())
+	else 
+	{	//Packet received Ok, let's update that info really quick.
+		LastValidReceived = IncomingInfo.PacketTime;
+		LastValidReceivedRssi = IncomingInfo.PacketRSSI;
+		IncomingInfo.Clear();
+		//Is Ack
+		if (Receiver.GetIncomingDefinition()->GetHeader() == PACKET_DEFINITION_ACK_HEADER)
 		{
-			if (Sender.SendAck(Receiver.GetIncomingDefinition(), Receiver.GetIncomingPacket()->GetId()))
+			Services.ProcessAck(Receiver.GetIncomingPacket());
+		}
+		//Is packet
+		else
+		{
+			if (Receiver.GetIncomingDefinition()->HasACK())
 			{
-				if (Transmit())
+				if (Sender.SendAck(Receiver.GetIncomingDefinition(), Receiver.GetIncomingPacket()->GetId()))
 				{
-					LastSent = GetMillis();
+					if (Transmit())
+					{
+						LastSent = GetMillis();
+					}
 				}
 			}
+			//Handle packet.
+			Services.ProcessPacket(Receiver.GetIncomingPacket());
 		}
-		//Handle packet.
-		Services.ProcessPacket(Receiver.GetIncomingPacket());
 	}
 }
 
@@ -91,7 +109,7 @@ bool LoLaPacketDriver::AllowedSend()
 		SendPermission &&
 		(GetMillis() - LastSent > LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS)
 		&&
-		(GetMillis() - LastReceived > LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS)
+		(GetMillis() - LastValidReceived > LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS)
 		&&
 		CanTransmit();
 }
