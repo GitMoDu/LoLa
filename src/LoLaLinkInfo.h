@@ -5,8 +5,6 @@
 
 #include <ILoLa.h>
 
-#include <Services\SyncSurface\ITrackedSurface.h>
-
 #define LOLA_LINK_INFO_MAX_STALENESS	1000
 
 #define LOLA_LINK_INFO_INVALID_RSSI		ILOLA_INVALID_RSSI
