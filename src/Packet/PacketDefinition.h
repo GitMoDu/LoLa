@@ -8,11 +8,12 @@
 ///Configurations for packets.
 #define PACKET_DEFINITION_MASK_CUSTOM_1		 B00000001
 #define PACKET_DEFINITION_MASK_CUSTOM_2		 B00000010
-#define PACKET_DEFINITION_MASK_CUSTOM_3		 B01000000
-//#define PACKET_DEFINITION_MASK_HAS_ADDRESS   B00000100 //TODO: Implement in PacketManager.
-//#define PACKET_DEFINITION_MASK_HAS_TOPPLE    B00001000 //TODO: Implement in PacketManager.
-#define PACKET_DEFINITION_MASK_HAS_ID		 B00010000 
-#define PACKET_DEFINITION_MASK_HAS_PRIORITY  B00100000
+#define PACKET_DEFINITION_MASK_CUSTOM_3		 B00000100
+#define PACKET_DEFINITION_MASK_CUSTOM_4		 B00001000
+#define PACKET_DEFINITION_MASK_CUSTOM_5		 B00010000
+#define PACKET_DEFINITION_MASK_HAS_ADDRESS   B00010000 //TODO: Implement in PacketManager.
+#define PACKET_DEFINITION_MASK_HAS_ID		 B00100000 
+#define PACKET_DEFINITION_MASK_HAS_PRIORITY  B01000000
 #define PACKET_DEFINITION_MASK_HAS_ACK		 B10000000
 #define PACKET_DEFINITION_MASK_BASIC		 B00000000
 
@@ -44,11 +45,6 @@ public:
 		return TotalSize;
 	}
 
-	//bool HasTopple()
-	//{
-	//	return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_TOPPLE;
-	//}
-
 	bool HasPriority()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_PRIORITY;
@@ -72,8 +68,6 @@ public:
 #ifdef DEBUG_LOLA
 	void Debug(Stream* serial)
 	{
-		//serial->print(F("Header: "));
-		//serial->print(GetHeader(), HEX);
 		serial->print(F(" Size: "));
 		serial->print(GetTotalSize());
 		serial->print(F(" |"));
@@ -105,5 +99,4 @@ public:
 	}
 #endif
 };
-
 #endif
