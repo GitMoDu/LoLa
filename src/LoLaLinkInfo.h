@@ -34,7 +34,7 @@ public:
 
 	void ResetLatency()
 	{
-		RTT = ILOLA_INVALID_MILLIS;
+		RTT = ILOLA_INVALID_LATENCY;
 	}
 
 	bool HasLink()
@@ -44,7 +44,7 @@ public:
 
 	bool HasLatency()
 	{
-		return RTT != ILOLA_INVALID_RSSI;
+		return RTT != ILOLA_INVALID_LATENCY;
 	}
 
 	void SetRTT(const uint16_t rtt)
