@@ -10,7 +10,7 @@
 
 #define ILOLA_DEFAULT_MIN_RSSI (int16_t(-100))
 
-#if !defined(UINT16_MAX) ||!defined(INT16_MIN) || !defined(UINT32_MAX) || defined(UINT8_MAX)
+#if !defined(UINT16_MAX) || !defined(INT16_MIN) || !defined(UINT32_MAX) || defined(UINT8_MAX)
 #include <stdint.h>
 #endif
 
