@@ -5,19 +5,16 @@
 
 #include <ILoLa.h>
 
-#define LOLA_LINK_INFO_MAX_STALENESS	1000
-
-#define LOLA_LINK_INFO_INVALID_RSSI		ILOLA_INVALID_RSSI
-#define LOLA_LINK_INFO_INVALID_LATENCY	ILOLA_INVALID_MILLIS
+#define LOLA_LINK_INFO_MAX_STALENESS	3000
 
 class LoLaLinkInfo
 {
 private:
 	ILoLa * Driver = nullptr;
-	uint32_t ActivityElapsedHelper;
+	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
 
-	uint16_t RTT = LOLA_LINK_INFO_INVALID_RSSI;
-	uint32_t LinkStarted = 0;
+	uint16_t RTT = ILOLA_INVALID_RSSI;
+	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
 public:
 	enum LinkStateEnum
@@ -37,9 +34,9 @@ public:
 
 	void ResetLatency()
 	{
-		RTT = LOLA_LINK_INFO_INVALID_LATENCY;
+		RTT = ILOLA_INVALID_MILLIS;
 	}
-	
+
 	bool HasLink()
 	{
 		return LinkState == LinkStateEnum::Connected;
@@ -47,7 +44,7 @@ public:
 
 	bool HasLatency()
 	{
-		return RTT != LOLA_LINK_INFO_INVALID_LATENCY;
+		return RTT != ILOLA_INVALID_RSSI;
 	}
 
 	void SetRTT(const uint16_t rtt)
@@ -68,25 +65,25 @@ public:
 		}
 		else
 		{
-			return LOLA_LINK_INFO_INVALID_LATENCY;
+			return (float)0;//Unknown.
 		}
 	}
 
 	uint32_t GetLinkDuration()
 	{
-		if (LinkStarted != 0)
+		if (HasLink() && LinkStarted != ILOLA_INVALID_MILLIS)
 		{
 			return Driver->GetMillis() - LinkStarted;
 		}
 		else
 		{
-			return 0;
+			return 0;//Unknown.
 		}
 	}
 
 	void ResetLinkStarted()
 	{
-		LinkStarted = 0;
+		LinkStarted = ILOLA_INVALID_MILLIS;
 	}
 
 	void StampLinkStarted()
@@ -96,15 +93,23 @@ public:
 
 	int16_t GetRSSI()
 	{
-		return constrain(Driver->GetLastRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax());
+		if (Driver != nullptr)
+		{
+			return constrain(Driver->GetLastRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax());
+		}
+		return 0;//Unknown.		
 	}
 
 	//Output normalized to uint8_t range.
 	uint8_t GetRSSINormalized()
 	{
-		return (int8_t)map(constrain(Driver->GetLastRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax()),
-			Driver->GetRSSIMin(), Driver->GetRSSIMax(),
-			0, UINT8_MAX);
+		if (Driver != nullptr)
+		{
+			return (int8_t)map(constrain(Driver->GetLastRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax()),
+				Driver->GetRSSIMin(), Driver->GetRSSIMax(),
+				0, UINT8_MAX);
+		}
+		return 0;//Unknown.
 	}
 
 	//Output normalized to uint8_t range.
@@ -116,7 +121,7 @@ public:
 			return map(min(LOLA_LINK_INFO_MAX_STALENESS, ActivityElapsedHelper), 0, LOLA_LINK_INFO_MAX_STALENESS, UINT8_MAX, 0);
 		}
 
-		return UINT8_MAX;
+		return 0;//Not fresh at all.
 	}
 
 	//Output normalized to uint8_t range.
@@ -133,7 +138,7 @@ public:
 				return Driver->GetMillis() - Driver->GetLastValidReceivedMillis();
 			}
 		}
-		return UINT32_MAX;
+		return ILOLA_INVALID_MILLIS;
 	}
 
 	uint32_t GetLastSentElapsed()
@@ -142,7 +147,7 @@ public:
 		{
 			return Driver->GetMillis() - Driver->GetLastSentMillis();
 		}
-		return UINT32_MAX;
+		return ILOLA_INVALID_MILLIS;
 	}
 
 	uint32_t GetLastReceivedElapsed()
@@ -151,7 +156,7 @@ public:
 		{
 			return Driver->GetMillis() - Driver->GetLastValidReceivedMillis();
 		}
-		return UINT32_MAX;
+		return ILOLA_INVALID_MILLIS;
 	}
 
 	uint8_t GetTransmitPowerNormalized()
@@ -160,7 +165,7 @@ public:
 		{
 			return map(Driver->GetTransmitPower(), Driver->GetTransmitPowerMin(), Driver->GetTransmitPowerMax(), 0, UINT8_MAX);
 		}
-		return UINT8_MAX;
+		return 0;//Unknown.
 	}
 };
 #endif

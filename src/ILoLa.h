@@ -12,7 +12,7 @@
 
 #define ILOLA_INVALID_RSSI		UINT16_MAX
 #define ILOLA_INVALID_LATENCY	UINT16_MAX
-#define ILOLA_INVALID_MILLIS	0
+#define ILOLA_INVALID_MILLIS	UINT32_MAX
 
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
