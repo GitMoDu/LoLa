@@ -27,20 +27,24 @@
 #define LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT		(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*4)
 
 #define LOLA_LINK_SERVICE_SLOW_CHECK_PERIOD					LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO
-#define LOLA_LINK_SERVICE_FAST_CHECK_PERIOD			50
+#define LOLA_LINK_SERVICE_FAST_CHECK_PERIOD					50
 
-#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_BROADCAST	0x01
-#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_REPLY		0x02
+#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_BROADCAST		0x01
+#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_REPLY			0x02
 #define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED		0x03
-#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO		0x04
+#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO			0x04
 
 //TODO: Future.
-//#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO				0X05
-//#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP					0X06
+//#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO		0X05
+//#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP				0X06
+
+#define LOLA_LINK_SERVICE_INVALID_SESSION					UINT8_MAX
 
 //TODO: Replace with one time random number.
-#define LOLA_LINK_HOST_PMAC 0x0E0F
-#define LOLA_LINK_REMOTE_PMAC 0x1A1B
+#define LOLA_LINK_HOST_PMAC									0x0E0F
+#define LOLA_LINK_REMOTE_PMAC								0x1A1B
+#define LOLA_LINK_INVALID_PMAC								UINT32_MAX
+
 
 class LoLaLinkService : public IPacketSendService
 {
@@ -59,24 +63,24 @@ protected:
 
 	enum ConnectingEnum
 	{
-		ConnectingStarting = 250,
-		Diagnostics = 251,
-		MeasuringLatency = 252,
-		MeasurementLatencyDone = 253,
-		ConnectionGreenLight = 254,
-		ConnectionEscalationFailed = 255,
+		ConnectingStarting = 249,
+		Diagnostics = 250,
+		MeasuringLatency = 251,
+		MeasurementLatencyDone = 252,
+		ConnectionGreenLight = 253,
+		ConnectionEscalationFailed = 254,
 	};
+	uint8_t ConnectingState = 255;
 
 	//Link session variables
-	uint32_t LinkPMAC = 0;
-	uint32_t RemotePMAC = 0;
-	uint8_t SessionId = 0;
-
-	uint8_t ConnectingState = 0;
+	uint32_t LinkPMAC = LOLA_LINK_INVALID_PMAC;
+	uint32_t RemotePMAC = LOLA_LINK_INVALID_PMAC;
+	uint8_t SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 
 	LoLaLinkInfo LinkInfo;
 
-	LoLaPacketSlim PacketHolder;//Optimized memory usage grunt packet.
+	//Optimized memory usage grunt packet.
+	LoLaPacketSlim PacketHolder;
 
 	//Subservices.
 	LatencyLoLaService LatencyService;
