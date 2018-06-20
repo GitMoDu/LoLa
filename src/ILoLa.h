@@ -10,9 +10,13 @@
 
 #define ILOLA_DEFAULT_MIN_RSSI (int16_t(-100))
 
-#define ILOLA_INVALID_RSSI		UINT16_MAX
-#define ILOLA_INVALID_LATENCY	UINT16_MAX
-#define ILOLA_INVALID_MILLIS	UINT32_MAX
+#if !defined(UINT16_MAX) ||!defined(INT16_MIN) || !defined(UINT32_MAX) || defined(UINT8_MAX)
+#include <stdint.h>
+#endif
+
+#define ILOLA_INVALID_RSSI		((int16_t)INT16_MIN)
+#define ILOLA_INVALID_MILLIS	((uint32_t)UINT32_MAX)
+#define ILOLA_INVALID_LATENCY	((uint16_t)UINT16_MAX)
 
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
