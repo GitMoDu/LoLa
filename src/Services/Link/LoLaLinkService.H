@@ -68,14 +68,12 @@ protected:
 	};
 
 	//Link session variables
-
 	uint32_t LinkPMAC = 0;
 	uint32_t RemotePMAC = 0;
 	uint8_t SessionId = 0;
 
 	uint8_t ConnectingState = 0;
 
-	//TinyCrc CalculatorCRC;
 	LoLaLinkInfo LinkInfo;
 
 	LoLaPacketSlim PacketHolder;//Optimized memory usage grunt packet.
