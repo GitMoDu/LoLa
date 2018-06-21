@@ -49,7 +49,8 @@
 class LoLaLinkService : public IPacketSendService
 {
 private:
-	uint32_t StateStartTime = 0;
+	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
+	uint32_t LastSent = ILOLA_INVALID_MILLIS;
 
 protected:
 	bool LogSend = false;
@@ -84,8 +85,6 @@ protected:
 
 	//Subservices.
 	LatencyLoLaService LatencyService;
-
-	uint32_t TimeHelper = 0;
 
 	//Callback handler
 	Signal<const uint8_t> ConnectionStatusUpdated;
@@ -136,14 +135,38 @@ public:
 		return true;
 	}
 
-	uint32_t GetElapsedSinceStart()
+	void OnSendOk()
 	{
-		return Millis() - StateStartTime;
+		LastSent = Millis();
 	}
 
-	void StartTimeReset()
+	uint32_t GetElapsedSinceStateStart()
 	{
-		StateStartTime = Millis();
+		if (LastSent == ILOLA_INVALID_MILLIS)
+		{
+			return ILOLA_INVALID_MILLIS;
+		}
+		else
+		{
+			return Millis() - StateStartTime;
+		}
+	}
+
+	uint32_t GetElapsedSinceLastSent()
+	{
+		if (LastSent == ILOLA_INVALID_MILLIS)
+		{
+			return ILOLA_INVALID_MILLIS;
+		}
+		else
+		{
+			return Millis() - LastSent;
+		}
+	}
+
+	void ResetLastSentTimeStamp()
+	{
+		LastSent = ILOLA_INVALID_MILLIS;
 	}
 
 	void OnDisable()
@@ -186,18 +209,51 @@ protected:
 	{
 		if (LinkInfo.LinkState != newState)
 		{
+			StateStartTime = Millis();
 			OnLinkStateChanged(newState);
 			ConnectionStatusUpdated.fire(newState);
 
-			if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
+			//Previous state
+			switch (LinkInfo.LinkState)
 			{
+			case LoLaLinkInfo::LinkStateEnum::Setup:
+			case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+			case LoLaLinkInfo::LinkStateEnum::Connecting:
+			case LoLaLinkInfo::LinkStateEnum::Connected:
 				LinkInfo.ResetLinkStarted();
 				//TODO: Take to chance to do something when link is lost.
+			case LoLaLinkInfo::LinkStateEnum::Disabled:
+			
+			default:
+				break;
 			}
-			else if (newState == LoLaLinkInfo::LinkStateEnum::Connected)
+
+			//New state
+			switch (newState)
 			{
+			case LoLaLinkInfo::LinkStateEnum::Setup:
+				ClearSession();
+				SetNextRunDefault();
+				break;
+			case LoLaLinkInfo::LinkStateEnum::Connected:
 				LinkInfo.StampLinkStarted();
+				StateStartTime = Millis();
+				ResetLastSentTimeStamp();
 				//TODO: Take to chance to do something when link is established.
+				break;
+			case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+				ResetLastSentTimeStamp();
+				break;
+			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+				ResetLastSentTimeStamp();
+				break;
+			case LoLaLinkInfo::LinkStateEnum::Connecting:
+				ResetLastSentTimeStamp();
+				break;
+			case LoLaLinkInfo::LinkStateEnum::Disabled:
+			default:
+				break;
 			}
 		}
 		LinkInfo.LinkState = newState;
@@ -335,9 +391,9 @@ protected:
 		switch (LinkInfo.LinkState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
-			StartTimeReset();
 			SetNextRunASAP();
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+			StateStartTime = Millis();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
 			SetNextRunASAP();
