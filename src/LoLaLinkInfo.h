@@ -13,7 +13,7 @@ private:
 	ILoLa * Driver = nullptr;
 	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
 
-	uint16_t RTT = ILOLA_INVALID_RSSI;
+	uint16_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
 public:
