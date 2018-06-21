@@ -107,8 +107,8 @@ public:
 		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	}
 
-	//Param is 
-	//LoLaLinkInfo::LinkState
+	//Param uint8_t is 
+	//LoLaLinkInfo::LinkState enum
 	void SetOnConnectionStatusUpdatedCallback(const Slot<const uint8_t>& slot)
 	{
 		ConnectionStatusUpdated.attach(slot);
