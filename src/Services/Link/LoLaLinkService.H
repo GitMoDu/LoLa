@@ -65,14 +65,13 @@ protected:
 
 	enum ConnectingEnum : uint8_t
 	{
-		ConnectingStarting = 249,
-		Diagnostics = 250,
-		MeasuringLatency = 251,
-		MeasurementLatencyDone = 252,
-		ConnectionGreenLight = 253,
-		ConnectionEscalationFailed = 254,
+		ConnectingStarting,
+		ConnectionGreenLight,
+		ConnectionEscalationFailed,
+		Size
 	};
-	uint8_t ConnectingState = 255;
+
+	uint8_t ConnectingState = 0;
 
 	//Link session variables
 	uint32_t LinkPMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
@@ -196,7 +195,7 @@ protected:
 	virtual void OnLinkWarningHigh() {}
 
 	virtual void OnAwaitingConnection() {}
-	virtual void OnConnecting() {}
+	virtual void OnConnecting() { OnConnectingBasic(); }
 
 protected:
 #ifdef DEBUG_LOLA
@@ -434,21 +433,44 @@ protected:
 	}
 
 private:
+	void OnConnectingBasic()
+	{
+		if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
+			RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC)
+		{
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+			SetNextRunASAP();
+		}
+		else
+		{
+			switch (ConnectingState)
+			{
+			case ConnectingEnum::ConnectingStarting:
+				ConnectingState = ConnectingEnum::ConnectionGreenLight;
+				SetNextRunDelay(1500);
+				break;
+			case ConnectingEnum::ConnectionGreenLight:
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
+				SetNextRunASAP();
+				break;
+			case ConnectingEnum::ConnectionEscalationFailed:
+			default:
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+				SetNextRunASAP();
+				break;
+			}
+		}
+	}
+
 	void OnLatencyMeasurementComplete(const bool success)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
-			ConnectingState == ConnectingEnum::MeasuringLatency)
+		if (success)
 		{
-			if (success)
-			{
-				LinkInfo.SetRTT(LatencyService.GetRTT());
-				ConnectingState = ConnectingEnum::MeasurementLatencyDone;
-			}
-			else
-			{
-				LinkInfo.ResetLatency();
-			}
-			SetNextRunASAP();
+			LinkInfo.SetRTT(LatencyService.GetRTT());
+		}
+		else
+		{
+			LinkInfo.ResetLatency();
 		}
 	}
 

@@ -112,48 +112,6 @@ protected:
 		}
 	}
 
-	void OnConnecting()
-	{
-		if (SessionId == 0)
-		{
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
-			SetNextRunASAP();
-			return;
-		}
-
-		switch (ConnectingState)
-		{
-		case ConnectingEnum::ConnectingStarting:
-			TimeHelper = Millis();
-			ConnectingState = ConnectingEnum::Diagnostics;
-			SetNextRunASAP();
-			break;
-		case ConnectingEnum::Diagnostics:
-			ConnectingState = ConnectingEnum::MeasuringLatency;
-			LatencyService.RequestRefreshPing();
-			SetNextRunDelay(LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS + 1000);
-			break;
-		case ConnectingEnum::MeasuringLatency:
-			ConnectingState = ConnectingEnum::ConnectionEscalationFailed;
-			SetNextRunASAP();
-			break;
-		case ConnectingEnum::MeasurementLatencyDone:
-			ConnectingState = ConnectingEnum::ConnectionGreenLight;
-			SetNextRunASAP();
-			break;
-		case ConnectingEnum::ConnectionGreenLight:
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
-			SetNextRunASAP();
-			break;
-		case ConnectingEnum::ConnectionEscalationFailed:
-		default:
-			StartTimeReset();
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
-			SetNextRunASAP();
-			break;
-		}
-	}
-
 	void OnAwaitingConnection()
 	{
 		switch (ConnectingState)
