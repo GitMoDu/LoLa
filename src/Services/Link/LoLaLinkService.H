@@ -21,10 +21,11 @@
 
 
 #define LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO			500
-#define LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD					(LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO*4)
+#define LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD					(LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO*2)
 #define LOLA_LINK_SERVICE_PERIOD_INTERVENTION				(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*2)
 #define LOLA_LINK_SERVICE_PANIC								(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*3)
-#define LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT		(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*4)
+#define LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT				(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*4)
+#define LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL		(LOLA_LINK_SERVICE_BROADCAST_PERIOD*2)
 
 #define LOLA_LINK_SERVICE_SLOW_CHECK_PERIOD					LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO
 #define LOLA_LINK_SERVICE_FAST_CHECK_PERIOD					50
@@ -43,7 +44,7 @@
 //TODO: Replace with one time random number.
 #define LOLA_LINK_HOST_PMAC									0x0E0F
 #define LOLA_LINK_REMOTE_PMAC								0x1A1B
-#define LOLA_LINK_INVALID_PMAC								UINT32_MAX
+#define LOLA_LINK_SERVICE_INVALID_PMAC						UINT32_MAX
 
 
 class LoLaLinkService : public IPacketSendService
@@ -74,8 +75,8 @@ protected:
 	uint8_t ConnectingState = 255;
 
 	//Link session variables
-	uint32_t LinkPMAC = LOLA_LINK_INVALID_PMAC;
-	uint32_t RemotePMAC = LOLA_LINK_INVALID_PMAC;
+	uint32_t LinkPMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
+	uint32_t RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	uint8_t SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 
 	LoLaLinkInfo LinkInfo;
@@ -103,7 +104,7 @@ public:
 		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
 		AttachCallbacks();
 		StateStartTime = Millis();
-		RemotePMAC = 0;
+		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	}
 
 	//Param is 
@@ -266,8 +267,8 @@ protected:
 
 	void ClearSession()
 	{
-		SessionId = 0;
-		RemotePMAC = 0;
+		SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
+		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	}
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
@@ -336,7 +337,7 @@ protected:
 
 	virtual bool ShouldProcessPackets()
 	{
-		if (SessionId != 0 ||
+		if (SessionId != LOLA_LINK_SERVICE_INVALID_SESSION ||
 			LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingConnection ||
 			LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
 		{
@@ -350,11 +351,11 @@ protected:
 	{
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
 		{
-			if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT)
+			if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
 			{
 #ifdef DEBUG_LOLA
 				Serial.print(F("Bi directional commms lost over "));
-				Serial.print(LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_DISCONNECT / 1000);
+				Serial.print(LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT / 1000);
 				Serial.println(F(" seconds."));
 #endif
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
