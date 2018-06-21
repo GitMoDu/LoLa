@@ -44,8 +44,8 @@ protected:
 			ATUI.array[2] = data[2];
 			ATUI.array[3] = data[3];
 
-			if (SessionId == 0 ||
-				RemotePMAC == 0 ||
+			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
+				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
 				(RemotePMAC == ATUI.uint && SessionId != sessionId))
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
@@ -73,7 +73,7 @@ protected:
 		switch (LinkInfo.LinkState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::Connected:
-			if (RemotePMAC == ATUI.uint)
+			if (ATUI.uint != LOLA_LINK_SERVICE_INVALID_PMAC && RemotePMAC == ATUI.uint)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
 				SetNextRunASAP();
@@ -85,10 +85,13 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
 		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
-			RemotePMAC = ATUI.uint;
-			SessionId = sessionId;
-			ConnectingState = AwaitingConnectionEnum::GotBroadcast;
-			SetNextRunASAP();
+			if (ATUI.uint != LOLA_LINK_SERVICE_INVALID_PMAC && sessionId != LOLA_LINK_SERVICE_INVALID_SESSION)
+			{
+				RemotePMAC = ATUI.uint;
+				SessionId = sessionId;
+				ConnectingState = AwaitingConnectionEnum::GotBroadcast;
+				SetNextRunASAP();
+			}			
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 		default:
@@ -156,16 +159,15 @@ protected:
 		switch (ConnectingState)
 		{
 		case AwaitingConnectionEnum::SearchingForBroadcast:
-			if (GetElapsedSinceStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
+			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				SetNextRunDelay(LOLA_LINK_SERVICE_SLEEP_PERIOD);
 			}
-			else if (Millis() - TimeHelper > LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO)
+			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO)
 			{
 				PrepareHello();
 				RequestSendPacket();
-				TimeHelper = Millis();
 			}
 			else
 			{
@@ -173,7 +175,7 @@ protected:
 			}
 			break;
 		case AwaitingConnectionEnum::GotBroadcast:
-			if (SessionId == 0)
+			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION)
 			{
 				ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
 				SetNextRunDefault();
@@ -218,25 +220,16 @@ protected:
 	{
 		switch (newState)
 		{
-		case LoLaLinkInfo::LinkStateEnum::Setup:
-			ClearSession();
-			StartTimeReset();
-			SetNextRunDefault();			
-			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
-			ClearSession();
-			TimeHelper = 0;
 			ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
-			break;;
+			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			ConnectingState = ConnectingEnum::ConnectingStarting;
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connected:
-			TimeHelper = 0;
-			StartTimeReset();
-			break;
 		case LoLaLinkInfo::LinkStateEnum::Disabled:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+		case LoLaLinkInfo::LinkStateEnum::Setup:
 		default:
 			break;
 		}
