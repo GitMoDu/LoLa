@@ -142,7 +142,7 @@ public:
 
 	uint32_t GetElapsedSinceStateStart()
 	{
-		if (LastSent == ILOLA_INVALID_MILLIS)
+		if (StateStartTime == ILOLA_INVALID_MILLIS)
 		{
 			return ILOLA_INVALID_MILLIS;
 		}
