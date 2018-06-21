@@ -324,7 +324,6 @@ protected:
 		if (IPacketSendService::OnSetup())
 		{
 			SetNextRunDefault();
-			ClearSession();
 			return true;
 		}
 		return false;
@@ -397,20 +396,16 @@ protected:
 			StateStartTime = Millis();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
-			SetNextRunASAP();
 			OnAwaitingConnection();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-			StartTimeReset();
 			SetNextRunASAP();
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
-			SetNextRunASAP();
 			OnConnecting();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connected:
-			SetNextRunASAP();
 			OnKeepingConnected(Millis() - GetLoLa()->GetLastReceivedMillis());
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Disabled:
