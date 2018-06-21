@@ -10,22 +10,23 @@
 #include <Callback.h>
 
 
-#define LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE 5
+#define LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE						3
+#define LOLA_LATENCY_PING_DATA_MAX_DEVIATION_SIGMA					((float)0.2)
 
 //65536 is the max uint16_t, about 65 ms max latency is accepted.
-#define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS 65000
+#define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS					65000
 
-#define LOLA_LATENCY_SERVICE_POLL_PERIOD_MILLIS 50
-#define LOLA_LATENCY_SERVICE_BACK_OFF_DURATION_MILLIS 1000
+#define LOLA_LATENCY_SERVICE_POLL_PERIOD_MILLIS						50
+#define LOLA_LATENCY_SERVICE_BACK_OFF_DURATION_MILLIS				1000
 
-#define LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS 20
+#define LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS			120
 
-#define LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS 100
-#define LOLA_LATENCY_SERVICE_NO_REPLY_TIMEOUT_MILLIS (1000 + LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE*(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS+LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS))
-#define LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS 5000
+#define LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS	100
+#define LOLA_LATENCY_SERVICE_NO_REPLY_TIMEOUT_MILLIS				(1000 + LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE*(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS+LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS))
+#define LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS	3000
 
-#define PACKET_DEFINITION_PING_HEADER (PACKET_DEFINITION_CONNECTION_HEADER+1)
-#define PACKET_DEFINITION_PING_PAYLOAD_SIZE 0
+#define PACKET_DEFINITION_PING_HEADER								(PACKET_DEFINITION_CONNECTION_HEADER+1)
+#define PACKET_DEFINITION_PING_PAYLOAD_SIZE							0
 
 class LatencyLoLaService : public IPacketSendService
 {
@@ -54,18 +55,17 @@ private:
 
 	LoLaPacketNoPayload PacketHolder;//Optimized memory usage grunt packet.
 
-	uint32_t LastStartedMillis = 0;
-	uint32_t FirstStartedMillis = 0;
-	uint32_t LastSentTimeStamp = 0;
+	uint32_t LastStartedMillis = ILOLA_INVALID_MILLIS;
+	uint32_t LastSentTimeStamp = ILOLA_INVALID_MILLIS;
 	volatile uint8_t SentId;
 
-	uint16_t ReceivingDuration = 0;
-	uint32_t DurationSum = 0;
-	uint8_t SampleCount = 0;
+	RingBufCPP<uint16_t , PROCESS_EVENT_QUEUE_MAX_QUEUE_DEPTH> DurationStack;
+
+	uint16_t SampleDuration = ILOLA_INVALID_LATENCY;
+	uint32_t DurationSum = ILOLA_INVALID_MILLIS;
 
 	//Callback handler
 	Signal<const bool> MeasurementCompleteEvent;
-
 
 public:
 	LatencyLoLaService(Scheduler* scheduler, ILoLa* loLa)
@@ -78,7 +78,7 @@ public:
 		return ((float)GetRTT() / (float)2000);
 	}
 
-	uint32_t GetRTT()
+	uint16_t GetRTT()
 	{
 		return GetAverage();
 	}
@@ -105,20 +105,42 @@ public:
 private:
 	uint16_t GetAverage()
 	{
-		if (SampleCount >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
+		if (DurationStack.numElements() > LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE - 1)
 		{
-			return DurationSum / SampleCount;
+			DurationSum = 0;
+			for (uint8_t i = 0; i < DurationStack.numElements(); i++)
+			{
+				DurationSum += *DurationStack.peek(i);
+			}
+
+			//Average is temporarily stored in DurationSum.
+			DurationSum = DurationSum / DurationStack.numElements();
+
+			uint16_t MaxDeviation = ceil((float)DurationSum)*(LOLA_LATENCY_PING_DATA_MAX_DEVIATION_SIGMA);
+			for (uint8_t i = 0; i < DurationStack.numElements(); i++)
+			{
+				if (abs((int32_t)*DurationStack.peek(i) - DurationSum) > MaxDeviation)
+				{
+					return ILOLA_INVALID_LATENCY;
+				}
+			}
+
+			//Value is always smaller than uint16, because samples with higher value are filtered out on acquisition.
+			return (uint16_t)DurationSum;			
 		}
 		else
 		{
-			return 0;
+			return ILOLA_INVALID_LATENCY;
 		}
 	}
 
 	void ClearDurations()
 	{
-		SampleCount = 0;
-		DurationSum = 0;
+		while (!DurationStack.isEmpty())
+		{
+			DurationStack.pull();
+		}
+		LastSentTimeStamp = 0;
 	}
 
 	void PreparePacket()
@@ -184,7 +206,7 @@ protected:
 
 	bool ProcessAck(const uint8_t header, const uint8_t id)
 	{
-		ReceivingDuration = Micros() - LastSentTimeStamp;
+		SampleDuration = Micros() - LastSentTimeStamp;
 
 		if (header == PACKET_DEFINITION_PING_HEADER)
 		{
@@ -192,11 +214,10 @@ protected:
 			{
 				if (State == LatencyServiceStateEnum::Sending || State == LatencyServiceStateEnum::WaitingForAck)
 				{
-					if (LastSentTimeStamp != 0 && SentId == id &&
-						ReceivingDuration < LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS)
+					if (LastSentTimeStamp != ILOLA_INVALID_MILLIS && SentId == id &&
+						SampleDuration < LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS)
 					{
-						DurationSum += ReceivingDuration;
-						SampleCount++;
+						DurationStack.addForce(SampleDuration);
 					}
 					State = LatencyServiceStateEnum::BackOff;
 					SetNextRunASAP();
@@ -228,83 +249,54 @@ protected:
 		SetNextRunASAP();
 	}
 
+	void CancelSample()
+	{
+		if (State == LatencyServiceStateEnum::Sending)
+		{
+			ClearSendRequest();
+			State = LatencyServiceStateEnum::Checking;
+			LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+		}		
+	}
+
 	void OnSendDelayed()
 	{
-		LastSentTimeStamp = Micros();
-#ifdef DEBUG_LOLA
-		SendDelays++;
-#endif		
+		CancelSample();
 	}
+
 	void OnSendRetrying()
 	{
-		LastSentTimeStamp = Micros();
-#ifdef DEBUG_LOLA
-		SendFails++;
-#endif
+		CancelSample();
 	}
 
 	void OnSendFailed()
 	{
-#ifdef DEBUG_LOLA
-		Serial.println(F("OnSendFailed"));
-		DebugCurrentSend();
-#endif
-		SetNextRunDefault();
+		CancelSample();		
 	}
 
 	void OnSendTimedOut()
 	{
-#ifdef DEBUG_LOLA 
-		Serial.println(F("OnSendTimedOut"));
-		DebugCurrentSend();
-#endif
+		CancelSample();
 	}
 
-#ifdef DEBUG_LOLA
-	void DebugCurrentSend()
-	{
-
-		if (SendDelays > 0)
-		{
-			Serial.print(F("Delays: "));
-			Serial.println(SendDelays);
-		}
-		if (SendFails > 0)
-		{
-			Serial.print(F("Fails: "));
-			Serial.println(SendFails);
-		}
-	}
-#endif
-
-#ifdef DEBUG_LOLA
-	uint8_t SendDelays, SendFails;
-
-#endif
 	void OnService()
 	{
 		switch (State)
 		{
 		case LatencyServiceStateEnum::Setup:
 #ifdef DEBUG_LOLA
-			Serial.println(F("Latency service started"));
+			Serial.println(F("Latency started"));
 #endif			
 			ClearDurations();
-			FirstStartedMillis = Millis();
+			LastStartedMillis = Millis();
 			State = LatencyServiceStateEnum::Starting;
 			SetNextRunDefault();
 			break;
 		case LatencyServiceStateEnum::Starting:
-#ifdef DEBUG_LOLA
-			Serial.println(F("Measuring..."));
-#endif	
-			ClearDurations();
-			LastSentTimeStamp = 0;
-#ifdef DEBUG_LOLA
-			SendDelays = 0;
-			SendFails = 0;
-#endif
-			
+//#ifdef DEBUG_LOLA
+//			Serial.println(F("Measuring..."));
+//#endif	
+			ClearDurations();		
 #ifdef MOCK_RADIO
 #ifdef DEBUG_LOLA
 			Serial.println(F("Mock Latency done."));
@@ -312,21 +304,14 @@ protected:
 			State = LatencyServiceStateEnum::Done;
 			MeasurementCompleteEvent.fire(true);
 #else
-			LastStartedMillis = Millis();
 			State = LatencyServiceStateEnum::Checking;
 #endif
 			SetNextRunASAP();
-
 			break;
 		case LatencyServiceStateEnum::Checking:
 			//Have we timed out for good?
-			if (Millis() - FirstStartedMillis > LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS)
+			if (Millis() - LastStartedMillis > LOLA_LATENCY_SERVICE_UNABLE_TO_COMMUNICATE_TIMEOUT_MILLIS)
 			{
-				//TODO: Handle retry
-#ifdef DEBUG_LOLA
-				Serial.println(F("Latency timed out for good."));
-#endif
-				//FirstStartedMillis = 0;//Reset the long time out counter.
 				State = LatencyServiceStateEnum::Done;
 #ifdef MOCK_RADIO
 				MeasurementCompleteEvent.fire(true);
@@ -339,14 +324,14 @@ protected:
 			//Have we timed out for a worst case scenario measurement?
 			else if (Millis() - LastStartedMillis > LOLA_LATENCY_SERVICE_NO_REPLY_TIMEOUT_MILLIS)
 			{
-#ifdef DEBUG_LOLA
-				Serial.println(F("Latency timed out."));
-#endif
+//#ifdef DEBUG_LOLA
+//				Serial.println(F("Latency timed out."));
+//#endif
 				State = LatencyServiceStateEnum::ShortTimeOut;
 				SetNextRunDelayRandom(LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS);
 			}
 			//Do we have needed sample count?
-			else if (SampleCount >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
+			else if (DurationStack.numElements() >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
 			{
 				State = LatencyServiceStateEnum::AnalysingResults;
 				SetNextRunASAP();
@@ -371,10 +356,10 @@ protected:
 			break;
 		case LatencyServiceStateEnum::BackOff:
 			//If we're here, it means the ack arrived and was valid.
-			LastSentTimeStamp = 0; //Make sure we ignore stale acks.
+			LastSentTimeStamp = ILOLA_INVALID_MILLIS; //Make sure we ignore stale acks.
 			State = LatencyServiceStateEnum::Checking;
 			//Do we have needed sample count?
-			if (SampleCount >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
+			if (DurationStack.numElements() >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
 			{
 				SetNextRunASAP();
 			}
@@ -389,21 +374,18 @@ protected:
 			break;
 		case LatencyServiceStateEnum::LongTimeOut:
 			State = LatencyServiceStateEnum::Starting;
-			FirstStartedMillis = Millis();
 			SetNextRunASAP();
 			break;
 		case LatencyServiceStateEnum::AnalysingResults:
-			if (GetAverage() != 0)
+			if (GetAverage() != ILOLA_INVALID_LATENCY)
 			{
 #ifdef DEBUG_LOLA
-				Serial.print(F("Latency measurement took: "));
-				Serial.print(Millis() - LastStartedMillis);
-				Serial.println(F(" ms"));
-
-				DebugCurrentSend();
-				Serial.print(F("RTT: "));
-				Serial.print(GetRTT());
-				Serial.println(F(" us"));
+				//Serial.print(F("Latency measurement took: "));
+				//Serial.print(Millis() - LastStartedMillis);
+				//Serial.println(F(" ms"));
+				//Serial.print(F("RTT: "));
+				//Serial.print(GetRTT());
+				//Serial.println(F(" us"));
 				Serial.print(F("Latency: "));
 				Serial.print(GetLatency(), 2);
 				Serial.println(F(" ms"));
@@ -414,7 +396,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS);
+				SetNextRunASAP();
 				State = LatencyServiceStateEnum::Starting;
 			}
 			break;
