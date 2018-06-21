@@ -26,16 +26,6 @@ public:
 		Packet->ClearDefinition();
 	}
 
-	virtual bool OnEnable()
-	{
-		return true;
-	}
-
-	virtual void OnDisable()
-	{
-	}
-
-
 	bool Callback()
 	{
 		//Finish sending any pending packet.
@@ -138,6 +128,8 @@ protected:
 	virtual void OnSendTimedOut() { }
 	virtual void OnSendDelayed() { }
 	virtual void OnSendRetrying() { }
+	virtual bool OnEnable() { return true; }
+	virtual void OnDisable() {	}
 	virtual bool OnSetup()
 	{
 		//TODO: Get comms entropy source, abstracted.
