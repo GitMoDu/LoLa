@@ -51,7 +51,7 @@ private:
 	uint32_t LastRemoteHashReceived = 0;
 
 protected:
-	enum SyncStatusCodeEnum
+	enum SyncStatusCodeEnum : uint8_t
 	{
 		Reader_StartSync = 0,
 		Writer_StartingSync = 1,
