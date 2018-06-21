@@ -17,7 +17,7 @@ private:
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
 public:
-	enum LinkStateEnum
+	enum LinkStateEnum : uint8_t
 	{
 		Disabled,
 		Setup,

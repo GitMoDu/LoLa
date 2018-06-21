@@ -61,7 +61,7 @@ protected:
 		uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE; }
 	} ConnectionDefinition;
 
-	enum ConnectingEnum
+	enum ConnectingEnum : uint8_t
 	{
 		ConnectingStarting = 249,
 		Diagnostics = 250,
