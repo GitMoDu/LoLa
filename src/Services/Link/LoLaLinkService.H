@@ -3,14 +3,16 @@
 #ifndef _LOLA_LINK_SERVICE_h
 #define _LOLA_LINK_SERVICE_h
 
+#define LOLA_LINK_DIAGNOSTICS_ENABLED
+
 #include <Services\IPacketSendService.h>
-#include <Services\LoLaLatencyService\LoLaLatencyService.h>
 #include <Services\LoLaServicesManager.h>
 #include <LoLaLinkInfo.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
+#include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 
 #define LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE	5  //1 byte Sub-header + 4 byte pseudo-MAC or other uint32_t
 
@@ -54,7 +56,6 @@ private:
 	uint32_t LastSent = ILOLA_INVALID_MILLIS;
 
 protected:
-	bool LogSend = false;
 	class ConnectionPacketDefinition : public PacketDefinition
 	{
 	public:
@@ -83,8 +84,10 @@ protected:
 	//Optimized memory usage grunt packet.
 	LoLaPacketSlim PacketHolder;
 
-	//Subservices.
-	LoLaLatencyService LatencyService;
+	//Subservices
+#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
+	LoLaDiagnosticsService Diagnostics;
+#endif
 
 	//Callback handler
 	Signal<const uint8_t> ConnectionStatusUpdated;
@@ -97,11 +100,12 @@ protected:
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
-		, LatencyService(scheduler, loLa)
+#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
+		, Diagnostics(scheduler, loLa)
+#endif
 	{
 		LinkInfo.SetDriver(loLa);
 		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
-		AttachCallbacks();
 		StateStartTime = Millis();
 		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	}
@@ -120,11 +124,20 @@ public:
 			return false;
 		}
 
-		if (servicesManager == nullptr || !servicesManager->Add(&LatencyService))
+#if defined(LOLA_LINK_DIAGNOSTICS_ENABLED)
+
+		if (servicesManager == nullptr || !servicesManager->Add(&Diagnostics))
 		{
 			return false;
 		}
 
+#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
+		if (!Diagnostics.AddSubServices(servicesManager))
+		{
+			return false;
+		}
+#endif
+#endif
 		SetNextRunDefault();
 		return true;
 	}
@@ -169,16 +182,7 @@ public:
 		LastSent = ILOLA_INVALID_MILLIS;
 	}
 
-	void OnDisable()
-	{
-	}
-
-	void OnLatencyMeasurementCompleteInternal(const bool success)
-	{
-		OnLatencyMeasurementComplete(success);
-	}
-
-	LoLaLinkInfo* GetConnectionInfo()
+	LoLaLinkInfo* GetLinkInfo()
 	{
 		return &LinkInfo;
 	}
@@ -462,22 +466,6 @@ private:
 		}
 	}
 
-	void OnLatencyMeasurementComplete(const bool success)
-	{
-		if (success)
-		{
-			LinkInfo.SetRTT(LatencyService.GetRTT());
-		}
-		else
-		{
-			LinkInfo.ResetLatency();
-		}
-	}
 
-	void AttachCallbacks()
-	{
-		MethodSlot<LoLaLinkService, const bool> memFunSlot(this, &LoLaLinkService::OnLatencyMeasurementCompleteInternal);
-		LatencyService.SetMeasurementCompleteCallback(memFunSlot);
-	}
 };
 #endif
