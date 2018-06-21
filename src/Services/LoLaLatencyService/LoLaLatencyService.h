@@ -1,7 +1,7 @@
-// LatencyLoLaService.h
+// LoLaLatencyService.h
 
-#ifndef _LATENCYRADIOSERVICE_h
-#define _LATENCYRADIOSERVICE_h
+#ifndef _LOLA_LATENCY_SERVICE_h
+#define _LOLA_LATENCY_SERVICE_h
 
 #include <Services\IPacketSendService.h>
 #include <Packet\LoLaPacket.h>
@@ -28,7 +28,7 @@
 #define PACKET_DEFINITION_PING_HEADER								(PACKET_DEFINITION_CONNECTION_HEADER+1)
 #define PACKET_DEFINITION_PING_PAYLOAD_SIZE							0
 
-class LatencyLoLaService : public IPacketSendService
+class LoLaLatencyService : public IPacketSendService
 {
 private:
 	class PingPacketDefinition : public PacketDefinition
@@ -68,7 +68,7 @@ private:
 	Signal<const bool> MeasurementCompleteEvent;
 
 public:
-	LatencyLoLaService(Scheduler* scheduler, ILoLa* loLa)
+	LoLaLatencyService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LATENCY_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
 	{
 	}

@@ -4,7 +4,7 @@
 #define _LOLA_LINK_SERVICE_h
 
 #include <Services\IPacketSendService.h>
-#include <Services\LatencyLoLaService.h>
+#include <Services\LoLaLatencyService\LoLaLatencyService.h>
 #include <Services\LoLaServicesManager.h>
 #include <LoLaLinkInfo.h>
 #include <Packet\LoLaPacket.h>
@@ -84,7 +84,7 @@ protected:
 	LoLaPacketSlim PacketHolder;
 
 	//Subservices.
-	LatencyLoLaService LatencyService;
+	LoLaLatencyService LatencyService;
 
 	//Callback handler
 	Signal<const uint8_t> ConnectionStatusUpdated;
