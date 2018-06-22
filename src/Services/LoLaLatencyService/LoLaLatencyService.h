@@ -55,7 +55,7 @@ private:
 
 	LoLaPacketNoPayload PacketHolder;//Optimized memory usage grunt packet.
 
-	uint32_t TimeOutPointMillis = ILOLA_INVALID_MILLIS;
+	uint32_t MeasurementStart = ILOLA_INVALID_MILLIS;
 	uint32_t LastSentTimeStamp = ILOLA_INVALID_MILLIS;
 	uint16_t StartUpDelay = 0;
 	volatile uint8_t SentId;
@@ -305,7 +305,8 @@ protected:
 			break;
 		case LatencyServiceStateEnum::Checking:
 			//Have we timed out for good?
-			if (TimeOutPointMillis == ILOLA_INVALID_MILLIS || Millis() > TimeOutPointMillis)
+			if (MeasurementStart == ILOLA_INVALID_MILLIS ||
+				(Millis() - MeasurementStart > LOLA_LATENCY_SERVICE_UNABLE_TO_MEASURE_TIMEOUT_MILLIS))
 			{
 				ClearDurations();
 				State = LatencyServiceStateEnum::Done;
@@ -368,6 +369,11 @@ protected:
 		case LatencyServiceStateEnum::AnalysingResults:
 			if (GetAverage() != ILOLA_INVALID_LATENCY)
 			{
+#ifdef DEBUG_LOLA
+				Serial.print(F("Took "));
+				Serial.print(Millis() - MeasurementStart);
+				Serial.println(F(" ms"));
+#endif
 				State = LatencyServiceStateEnum::Done;
 				SetNextRunASAP();
 				MeasurementCompleteEvent.fire(true);
