@@ -449,7 +449,7 @@ protected:
 			OnConnecting();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connected:
-			OnKeepingConnected(Millis() - GetLoLa()->GetLastReceivedMillis());
+			OnKeepingConnected(Millis() - GetLoLa()->GetLastValidReceivedMillis());
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Disabled:
 		default:
