@@ -3,7 +3,7 @@
 #ifndef _LOLA_LINK_SERVICE_h
 #define _LOLA_LINK_SERVICE_h
 
-#define LOLA_LINK_DIAGNOSTICS_ENABLED
+//#define LOLA_LINK_DIAGNOSTICS_ENABLED
 
 #include <Services\IPacketSendService.h>
 #include <Services\LoLaServicesManager.h>
