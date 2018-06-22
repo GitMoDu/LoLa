@@ -109,7 +109,7 @@ public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
-		, Diagnostics(scheduler, loLa)
+		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
 	{
 		LinkInfo.SetDriver(loLa);

@@ -12,12 +12,18 @@
 
 class LoLaDiagnosticsService : public ILoLaService
 {
+private:
+	//Subservices.
+	LoLaLatencyService LatencyService;
+
+	LoLaLinkInfo* LinkInfo = nullptr;
+
 public:
-	LoLaDiagnosticsService(Scheduler* scheduler, ILoLa* loLa)
+	LoLaDiagnosticsService(Scheduler* scheduler, ILoLa* loLa, LoLaLinkInfo* linkInfo)
 		: ILoLaService(scheduler, LOLA_DIAGNOSTICS_SERVICE_POLL_PERIOD_MILLIS, loLa)
 		, LatencyService(scheduler, loLa)
 	{
-		AttachCallbacks();
+		LinkInfo = linkInfo;
 	}
 
 	bool AddSubServices(LoLaServicesManager * servicesManager)
@@ -27,40 +33,54 @@ public:
 			return false;
 		}
 
+		AttachCallbacks();
+
 		SetNextRunDefault();
 		return true;
 	}
 
-private:
-	//Subservices.
-	LoLaLatencyService LatencyService;
+	void OnLinkEstablished() 
+	{
+		LatencyService.RequestRefreshPing();
+	}
 
-	LoLaLinkInfo* LinkInfo = nullptr;
+	void OnLinkLost()
+	{
+		LatencyService.Stop();
+	}
+
+
+private:
+	void AttachCallbacks()
+	{
+		MethodSlot<LoLaDiagnosticsService, const bool> memFunSlot(this, &LoLaDiagnosticsService::OnLatencyMeasurementComplete);
+		LatencyService.SetMeasurementCompleteCallback(memFunSlot);
+	}
 
 protected:
-
-
-private:
 	void OnLatencyMeasurementComplete(const bool success)
 	{
 		if (LinkInfo != nullptr)
 		{
 			if (success)
 			{
-
 				LinkInfo->SetRTT(LatencyService.GetRTT());
+
+#ifdef DEBUG_LOLA
+				Serial.print(F("Latency: "));
+				Serial.print(LatencyService.GetLatency(), 2);
+				Serial.println(F(" ms"));
+#endif
 			}
 			else
 			{
+#ifdef DEBUG_LOLA
+				Serial.println(F("Latency measurement failed."));
+#endif
 				LinkInfo->ResetLatency();
+				LatencyService.RequestRefreshPing(2000);
 			}
-		}	
-	}
-
-	void AttachCallbacks()
-	{
-		MethodSlot<LoLaDiagnosticsService, const bool> memFunSlot(this, &LoLaDiagnosticsService::OnLatencyMeasurementComplete);
-		LatencyService.SetMeasurementCompleteCallback(memFunSlot);
+		}
 	}
 };
 #endif
