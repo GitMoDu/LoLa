@@ -36,6 +36,8 @@
 #define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_REPLY			0x02
 #define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED		0x03
 
+#define LOLA_LINK_SERVICE_ACK_SUBHEADER_HELLO				0x00
+
 //TODO: Future.
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO		0X05
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP				0X06
@@ -315,12 +317,6 @@ protected:
 					break;
 				}
 			}
-			else
-			{
-#ifdef DEBUG_LOLA
-				Serial.println(F("Denied: "));
-#endif
-			}
 
 			return true;
 		}
@@ -328,30 +324,20 @@ protected:
 		{
 			if (ShouldProcessPackets())
 			{
-				OnHelloReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
-			}
-			else
-			{
-#ifdef DEBUG_LOLA
-				Serial.println(F("Denied: "));
-#endif
+				switch (incomingPacket->GetPayload()[0])
+				{
+				case LOLA_LINK_SERVICE_ACK_SUBHEADER_HELLO:
+					OnHelloReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
+					break;
+				default:
+					break;
+				}
+				
 			}
 
 			return true;
 		}
 		return false;
-	}
-
-	bool ProcessAck(const uint8_t header, const uint8_t id)
-	{
-		if (header == PACKET_DEFINITION_LINK_ACK_HEADER)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
 	}
 
 	bool OnSetup()
@@ -368,7 +354,7 @@ protected:
 	{
 		PacketHolder.SetDefinition(&LinkAckDefinition);
 		PacketHolder.SetId(SessionId);
-		PacketHolder.GetPayload()[0] = 0;
+		PacketHolder.GetPayload()[0] = LOLA_LINK_SERVICE_ACK_SUBHEADER_HELLO;
 
 		ATUI.uint = LinkPMAC;
 		PacketHolder.GetPayload()[1] = ATUI.array[0];
