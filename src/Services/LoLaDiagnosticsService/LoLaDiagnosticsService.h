@@ -60,6 +60,10 @@ private:
 protected:
 	void OnLatencyMeasurementComplete(const bool success)
 	{
+		if (!LinkInfo->HasLink())
+		{
+			return;
+		}
 		if (LinkInfo != nullptr)
 		{
 			if (success)
