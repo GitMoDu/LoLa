@@ -39,6 +39,24 @@ public:
 		}
 	}
 
+	void NotifyServicesLinkUpdated(const bool connected)
+	{
+		for (uint8_t i = 0; i < ServicesCount; i++)
+		{
+			if (Services[i] != nullptr)
+			{
+				if (connected)
+				{
+					Services[i]->OnLinkEstablished();
+				}
+				else 
+				{
+					Services[i]->OnLinkLost();
+				}
+			}
+		}
+	}
+
 	void ProcessAck(ILoLaPacket* receivedPacket)
 	{
 		uint8_t header = receivedPacket->GetPayload()[0];

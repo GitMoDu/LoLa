@@ -145,6 +145,8 @@ public:
 public:
 	virtual bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header) { return false; }
 	virtual bool ProcessAck(const uint8_t header, const uint8_t id) { return false; }
+	virtual void OnLinkEstablished() {}
+	virtual void OnLinkLost() {}
 
 protected:
 

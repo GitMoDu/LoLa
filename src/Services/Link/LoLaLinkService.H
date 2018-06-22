@@ -208,6 +208,18 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
+	//Notify all link dependent services they can start.
+	void OnLinkEstablished()
+	{
+		ServicesManager->NotifyServicesLinkUpdated(true);
+	}
+
+	//Notify all link dependent services to stop.
+	void OnLinkLost()
+	{
+		ServicesManager->NotifyServicesLinkUpdated(false);
+	}
+
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
 	{
 		if (LinkInfo.LinkState != newState)
@@ -219,15 +231,15 @@ protected:
 			//Previous state
 			switch (LinkInfo.LinkState)
 			{
+			case LoLaLinkInfo::LinkStateEnum::Connected:
+				OnLinkLost(); 
+				LinkInfo.ResetLinkStarted();
+				break;
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			case LoLaLinkInfo::LinkStateEnum::Connecting:
-			case LoLaLinkInfo::LinkStateEnum::Connected:
-				LinkInfo.ResetLinkStarted();
-				//TODO: Take to chance to do something when link is lost.
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
-			
 			default:
 				break;
 			}
@@ -243,7 +255,7 @@ protected:
 				LinkInfo.StampLinkStarted();
 				StateStartTime = Millis();
 				ResetLastSentTimeStamp();
-				//TODO: Take to chance to do something when link is established.
+				OnLinkEstablished();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
 				ResetLastSentTimeStamp();
