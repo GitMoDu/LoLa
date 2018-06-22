@@ -344,7 +344,7 @@ protected:
 			{
 				State = LatencyServiceStateEnum::Sending;
 				PreparePacket();
-				RequestSendPacket((uint8_t)(LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS / 1000));
+				RequestSendPacket(LOLA_LATENCY_SERVICE_SEND_FAILED_BACK_OFF_DURATION_MILLIS, LOLA_LATENCY_SERVICE_PING_TIMEOUT_MILLIS);
 				LastSentTimeStamp = Micros();
 			}
 			break;
