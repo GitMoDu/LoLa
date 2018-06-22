@@ -3,8 +3,6 @@
 #ifndef _LOLAPACKETDRIVER_h
 #define _LOLAPACKETDRIVER_h
 
-
-
 #include <ILoLa.h>
 #include <Packet\LoLaPacketMap.h>
 #include <Transceivers\LoLaReceiver.h>
@@ -12,8 +10,8 @@
 
 #include <Services\LoLaServicesManager.h>
 
-#define LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS 4
-#define LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS 4
+#define LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS 3
+#define LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS 5
 
 class LoLaPacketDriver : public ILoLa
 {	
