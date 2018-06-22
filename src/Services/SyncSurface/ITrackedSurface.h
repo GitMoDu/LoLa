@@ -131,6 +131,19 @@ public:
 public:
 	virtual uint8_t* GetData() { return nullptr; }
 	virtual IBitTracker* GetTracker() { return nullptr; }
+
+#ifdef DEBUG_LOLA
+	void Debug(Stream * serial)
+	{
+		serial->print(F("|"));
+		for (uint8_t i = 0; i < GetSize(); i++)
+		{
+			serial->print(GetData()[i]);
+			serial->print(F("|"));
+		}
+		serial->println();
+	}
+#endif 
 };
 
 class ITrackedSurfaceNotify : public ITrackedSurface
