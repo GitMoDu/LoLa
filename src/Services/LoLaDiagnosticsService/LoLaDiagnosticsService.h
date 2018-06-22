@@ -49,7 +49,6 @@ public:
 		LatencyService.Stop();
 	}
 
-
 private:
 	void AttachCallbacks()
 	{
@@ -73,7 +72,7 @@ protected:
 #ifdef DEBUG_LOLA
 				Serial.print(F("Latency: "));
 				Serial.print(LatencyService.GetLatency(), 2);
-				Serial.println(F(" ms"));
+				Serial.println(F(" ms"));			
 #endif
 			}
 			else
@@ -88,4 +87,3 @@ protected:
 	}
 };
 #endif
-
