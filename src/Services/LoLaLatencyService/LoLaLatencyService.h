@@ -197,23 +197,10 @@ protected:
 		SetNextRunDelay(range / 2 + random(range / 2));
 	}
 
-	bool ShouldWakeUpOnOutsidePacket()
-	{
-		if (IsSetupOk() &&
-			((State == LatencyServiceStateEnum::Done) || (State == LatencyServiceStateEnum::ShortTimeOut)))
-		{
-			SetNextRunDelayRandom(LOLA_LATENCY_SERVICE_NO_FULL_RESPONSE_RETRY_DURATION_MILLIS);
-			return true;
-		}
-
-		return false;
-	}
-
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
 	{
 		if (header == PACKET_DEFINITION_PING_HEADER)
 		{
-			ShouldWakeUpOnOutsidePacket();
 			return true;
 		}
 		return false;
