@@ -48,7 +48,6 @@
 #define LOLA_LINK_REMOTE_PMAC								0x1A1B
 #define LOLA_LINK_SERVICE_INVALID_PMAC						UINT32_MAX
 
-
 class LoLaLinkService : public IPacketSendService
 {
 private:
@@ -117,6 +116,8 @@ public:
 		ConnectionStatusUpdated.attach(slot);
 	}
 
+	LoLaServicesManager * ServicesManager = nullptr;
+
 	bool AddSubServices(LoLaServicesManager * servicesManager)
 	{
 		if (!IPacketSendService::OnSetup())
@@ -124,21 +125,19 @@ public:
 			return false;
 		}
 
-#if defined(LOLA_LINK_DIAGNOSTICS_ENABLED)
+		ServicesManager = nullptr;
 
-		if (servicesManager == nullptr || !servicesManager->Add(&Diagnostics))
+		if (ServicesManager == nullptr)
 		{
 			return false;
 		}
-
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
-		if (!Diagnostics.AddSubServices(servicesManager))
+		if (!ServicesManager->Add(&Diagnostics) || !Diagnostics.AddSubServices(ServicesManager))
 		{
 			return false;
 		}
 #endif
-#endif
-		SetNextRunDefault();
+
 		return true;
 	}
 
