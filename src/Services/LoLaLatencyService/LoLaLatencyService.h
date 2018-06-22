@@ -234,9 +234,7 @@ protected:
 			return false;
 		}
 
-		State = LatencyServiceStateEnum::Done;
-		SetNextRunDefault();
-		Disable();
+		Stop();
 		return true;
 	}
 
