@@ -41,7 +41,7 @@ public:
 
 	void OnLinkEstablished() 
 	{
-		LatencyService.RequestRefreshPing();
+		LatencyService.RequestRefreshPing(500);
 	}
 
 	void OnLinkLost()
