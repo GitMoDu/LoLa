@@ -143,7 +143,7 @@ public:
 
 	uint32_t GetLastSentElapsed()
 	{
-		if (Driver != nullptr)
+		if (Driver != nullptr && Driver->GetLastSentMillis() != ILOLA_INVALID_MILLIS)
 		{
 			return Driver->GetMillis() - Driver->GetLastSentMillis();
 		}
@@ -152,7 +152,7 @@ public:
 
 	uint32_t GetLastReceivedElapsed()
 	{
-		if (Driver != nullptr)
+		if (Driver != nullptr && Driver->GetLastValidReceivedMillis() != ILOLA_INVALID_MILLIS)
 		{
 			return Driver->GetMillis() - Driver->GetLastValidReceivedMillis();
 		}
