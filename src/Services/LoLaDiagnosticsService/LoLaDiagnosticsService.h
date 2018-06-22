@@ -80,8 +80,8 @@ protected:
 			{
 #ifdef DEBUG_LOLA
 				Serial.println(F("Latency measurement failed."));
-#endif
-				LinkInfo->ResetLatency();
+#endif				
+				//LinkInfo->ResetLatency();
 				LatencyService.RequestRefreshPing(2000);
 			}
 		}
