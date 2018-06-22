@@ -145,7 +145,7 @@ private:
 		{
 			DurationStack.pull();
 		}
-		LastSentTimeStamp = 0;
+		LastSentTimeStamp = ILOLA_INVALID_MILLIS;
 	}
 
 	void PreparePacket()
