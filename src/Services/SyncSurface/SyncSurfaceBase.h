@@ -180,17 +180,15 @@ protected:
 		return false;
 	}
 
-	bool ProcessAck(const uint8_t header, const uint8_t id)
+	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
 		if (!IsSetupOk())
 		{
-			return false;
+			return;
 		}
 
 		if (header == DataPacketDefinition.GetHeader())
 		{
-			//No Ack, just swallow.
-			return true;
 		}
 		else if (header == SyncStatusDefinition.GetHeader())
 		{
@@ -212,11 +210,7 @@ protected:
 			{
 				OnWriterAllDataUpdatedAck();
 			}
-
-			return true;
 		}
-
-		return false;
 	}
 
 	bool IsRemoteHashValid()
