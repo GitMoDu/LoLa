@@ -35,7 +35,6 @@
 #define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_BROADCAST		0x01
 #define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_REPLY			0x02
 #define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED		0x03
-#define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO			0x04
 
 //TODO: Future.
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO		0X05
@@ -55,13 +54,21 @@ private:
 	uint32_t LastSent = ILOLA_INVALID_MILLIS;
 
 protected:
-	class ConnectionPacketDefinition : public PacketDefinition
+	class LinkPacketDefinition : public PacketDefinition
+	{
+	public:
+		uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+		uint8_t GetHeader() { return PACKET_DEFINITION_LINK_HEADER; }
+		uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE; }
+	} LinkDefinition;
+
+	class LinkPacketAckDefinition : public PacketDefinition
 	{
 	public:
 		uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
-		uint8_t GetHeader() { return PACKET_DEFINITION_CONNECTION_HEADER; }
+		uint8_t GetHeader() { return PACKET_DEFINITION_LINK_ACK_HEADER; }
 		uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE; }
-	} ConnectionDefinition;
+	} LinkAckDefinition;
 
 	enum ConnectingEnum : uint8_t
 	{
@@ -273,7 +280,12 @@ protected:
 
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
-		return packetMap->AddMapping(&ConnectionDefinition);
+		if (!packetMap->AddMapping(&LinkDefinition) || !packetMap->AddMapping(&LinkAckDefinition))
+		{
+			return false;
+		}
+		
+		return true;
 	}
 
 	void ClearSession()
@@ -284,7 +296,7 @@ protected:
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
 	{
-		if (header == PACKET_DEFINITION_CONNECTION_HEADER)
+		if (header == PACKET_DEFINITION_LINK_HEADER)
 		{
 			if (ShouldProcessPackets())
 			{
@@ -299,12 +311,24 @@ protected:
 				case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
 					OnChallengeAcceptedReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
-				case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO:
-					OnHelloReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
-					break;
 				default:
 					break;
 				}
+			}
+			else
+			{
+#ifdef DEBUG_LOLA
+				Serial.println(F("Denied: "));
+#endif
+			}
+
+			return true;
+		}
+		else if (header == PACKET_DEFINITION_LINK_ACK_HEADER)
+		{
+			if (ShouldProcessPackets())
+			{
+				OnHelloReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 			}
 			else
 			{
@@ -320,7 +344,7 @@ protected:
 
 	bool ProcessAck(const uint8_t header, const uint8_t id)
 	{
-		if (header == PACKET_DEFINITION_CONNECTION_HEADER)
+		if (header == PACKET_DEFINITION_LINK_ACK_HEADER)
 		{
 			return true;
 		}
@@ -342,7 +366,15 @@ protected:
 
 	void PrepareHello()
 	{
-		PrepareBasePacketMAC(LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_HELLO);
+		PacketHolder.SetDefinition(&LinkAckDefinition);
+		PacketHolder.SetId(SessionId);
+		PacketHolder.GetPayload()[0] = 0;
+
+		ATUI.uint = LinkPMAC;
+		PacketHolder.GetPayload()[1] = ATUI.array[0];
+		PacketHolder.GetPayload()[2] = ATUI.array[1];
+		PacketHolder.GetPayload()[3] = ATUI.array[2];
+		PacketHolder.GetPayload()[4] = ATUI.array[3];
 	}
 
 	virtual bool ShouldProcessPackets()
@@ -428,7 +460,7 @@ protected:
 
 	void PrepareBasePacket(const uint8_t subHeader)
 	{
-		PacketHolder.SetDefinition(&ConnectionDefinition);
+		PacketHolder.SetDefinition(&LinkDefinition);
 		PacketHolder.SetId(SessionId);
 		PacketHolder.GetPayload()[0] = subHeader;
 	}

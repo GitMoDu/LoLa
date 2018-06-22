@@ -8,7 +8,8 @@
 #define LOLA_PACKET_MAP_TOTAL_SIZE 10 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
 #define PACKET_DEFINITION_ACK_HEADER 0x01
 
-#define PACKET_DEFINITION_CONNECTION_HEADER 0x02
+#define PACKET_DEFINITION_LINK_HEADER 0x02
+#define PACKET_DEFINITION_LINK_ACK_HEADER 0x03
 
 #define PACKET_DEFINITION_XACK_PAYLOAD_SIZE 2 //Payload Header and optional Id.
 
