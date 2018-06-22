@@ -125,12 +125,13 @@ public:
 			return false;
 		}
 
-		ServicesManager = nullptr;
+		ServicesManager = servicesManager;
 
 		if (ServicesManager == nullptr)
 		{
 			return false;
 		}
+
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		if (!ServicesManager->Add(&Diagnostics) || !Diagnostics.AddSubServices(ServicesManager))
 		{
