@@ -53,6 +53,7 @@ private:
 
 	uint32_t TimeOutPointMillis = ILOLA_INVALID_MILLIS;
 	uint32_t LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+	uint16_t StartUpDelay = 0;
 	volatile uint8_t SentId;
 
 	RingBufCPP<uint16_t , PROCESS_EVENT_QUEUE_MAX_QUEUE_DEPTH> DurationStack;
@@ -79,9 +80,10 @@ public:
 		return GetAverage();
 	}
 
-	void RequestRefreshPing()
+	void RequestRefreshPing(const uint16_t startUpDelay = 0)
 	{
 		Enable();
+		StartUpDelay = startUpDelay;
 		State = LatencyServiceStateEnum::Setup;
 	}
 
