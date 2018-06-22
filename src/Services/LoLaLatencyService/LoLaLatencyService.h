@@ -170,6 +170,7 @@ private:
 			State = LatencyServiceStateEnum::Checking;
 			LastSentTimeStamp = ILOLA_INVALID_MILLIS;
 			SamplesCancelled++;
+			SetNextRunDelay(LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS);
 		}
 	}
 
