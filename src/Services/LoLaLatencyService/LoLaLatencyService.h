@@ -342,17 +342,6 @@ protected:
 		case LatencyServiceStateEnum::AnalysingResults:
 			if (GetAverage() != ILOLA_INVALID_LATENCY)
 			{
-#ifdef DEBUG_LOLA
-				//Serial.print(F("Latency measurement took: "));
-				//Serial.print(Millis() - LastStartedMillis);
-				//Serial.println(F(" ms"));
-				//Serial.print(F("RTT: "));
-				//Serial.print(GetRTT());
-				//Serial.println(F(" us"));
-				Serial.print(F("Latency: "));
-				Serial.print(GetLatency(), 2);
-				Serial.println(F(" ms"));
-#endif
 				State = LatencyServiceStateEnum::Done;
 				SetNextRunASAP();
 				MeasurementCompleteEvent.fire(true);
