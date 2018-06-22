@@ -80,6 +80,14 @@ public:
 public:
 	uint8_t * GetData() { return Data; }
 	IBitTracker* GetTracker() { return &Tracker; }
+
+#ifdef DEBUG_LOLA
+	void Debug(Stream * serial)
+	{
+		serial->print(F("Telemetry Surface "));
+		ITrackedSurface::Debug(serial);
+	}
+#endif 
 };
 #endif
 

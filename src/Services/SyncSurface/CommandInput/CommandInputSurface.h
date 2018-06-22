@@ -92,14 +92,8 @@ public:
 	void Debug(Stream * serial)
 	{
 		serial->print(F("CommandInput Surface "));
-		serial->print(F("|"));
-		for (uint8_t i = 0; i < GetSize(); i++)
-		{
-			serial->print(GetData()[i]);
-			serial->print(F("|"));
-		}
-		serial->println();
+		ITrackedSurface::Debug(serial);
 	}
-#endif 	
+#endif 
 };
 #endif
