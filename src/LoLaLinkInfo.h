@@ -37,6 +37,11 @@ public:
 		RTT = ILOLA_INVALID_LATENCY;
 	}
 
+	bool IsDisabled()
+	{
+		return LinkState == LinkStateEnum::Disabled;
+	}
+
 	bool HasLink()
 	{
 		return LinkState == LinkStateEnum::Connected;
