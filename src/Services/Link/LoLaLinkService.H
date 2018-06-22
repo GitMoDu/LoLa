@@ -55,6 +55,8 @@ private:
 	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
 	uint32_t LastSent = ILOLA_INVALID_MILLIS;
 
+	LoLaServicesManager * ServicesManager = nullptr;
+
 protected:
 	class LinkPacketDefinition : public PacketDefinition
 	{
@@ -124,8 +126,6 @@ public:
 	{
 		ConnectionStatusUpdated.attach(slot);
 	}
-
-	LoLaServicesManager * ServicesManager = nullptr;
 
 	bool AddSubServices(LoLaServicesManager * servicesManager)
 	{
