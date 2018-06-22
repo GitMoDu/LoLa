@@ -13,6 +13,9 @@
 #define LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE						5
 #define LOLA_LATENCY_PING_DATA_MAX_DEVIATION_SIGMA					((float)0.1 + ((float)LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE/(float)50))
 
+//Max value UINT8_MAX
+#define LOLA_LATENCY_SERVICE_MAX_CANCEL_COUNT						100
+
 //65536 is the max uint16_t, about 65 ms max latency is accepted.
 #define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS					65000
 
@@ -61,6 +64,8 @@ private:
 
 	uint16_t SampleDuration = ILOLA_INVALID_LATENCY;
 	uint32_t DurationSum = ILOLA_INVALID_MILLIS;
+
+	uint8_t SamplesCancelled = 0;
 
 	//Callback handler
 	Signal<const bool> MeasurementCompleteEvent;
@@ -146,6 +151,7 @@ private:
 		{
 			DurationStack.pull();
 		}
+		SamplesCancelled = 0;
 		LastSentTimeStamp = ILOLA_INVALID_MILLIS;
 	}
 
@@ -163,6 +169,7 @@ private:
 			ClearSendRequest();
 			State = LatencyServiceStateEnum::Checking;
 			LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+			SamplesCancelled++;
 		}
 	}
 
@@ -304,6 +311,18 @@ protected:
 #endif	
 				MeasurementCompleteEvent.fire(false);
 #endif
+			}
+			//Is the data link too busy to get accurate results?
+			else if (SamplesCancelled > LOLA_LATENCY_SERVICE_MAX_CANCEL_COUNT)
+			{
+#ifdef DEBUG_LOLA
+				Serial.print(F("Cancelled out: "));
+				Serial.print(SamplesCancelled);
+				Serial.println(F(" times."));
+#endif	
+				State = LatencyServiceStateEnum::Checking;
+				ClearDurations();
+				SetNextRunASAP();
 			}
 			//Do we have needed sample count?
 			else if (DurationStack.numElements() >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
