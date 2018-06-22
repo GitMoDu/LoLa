@@ -270,17 +270,24 @@ protected:
 		CancelSample();
 	}
 
+	void OnAckFailed(const uint8_t header, const uint8_t id) 
+	{
+		CancelSample();
+	}
+
 	void OnService()
 	{
 		switch (State)
 		{
 		case LatencyServiceStateEnum::Setup:
 			ClearDurations();
-			TimeOutPointMillis = Millis() + LOLA_LATENCY_SERVICE_UNABLE_TO_MEASURE_TIMEOUT_MILLIS;
+			
+			//TimeOutPointMillis = Millis() + LOLA_LATENCY_SERVICE_UNABLE_TO_MEASURE_TIMEOUT_MILLIS;
 			State = LatencyServiceStateEnum::Starting;
 			SetNextRunDelay(StartUpDelay);
 			break;
 		case LatencyServiceStateEnum::Starting:
+			MeasurementStart = Millis();
 #ifdef DEBUG_LOLA
 			Serial.println(F("Measuring Latency..."));
 #endif
