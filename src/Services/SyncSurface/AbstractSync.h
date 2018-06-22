@@ -26,6 +26,33 @@ public:
 		return LastSynced;
 	}
 
+	void InvalidateSync()
+	{
+		if (SyncState >= SyncStateEnum::Synced)
+		{
+			SyncState = SyncStateEnum::NotSynced;
+			ClearSendRequest();
+			OnSyncLost();
+		}
+		SetNextRunASAP();
+	}
+
+	void OnLinkEstablished()
+	{
+		SyncState = SyncStateEnum::Starting;
+		Enable();
+		SetNextRunASAP();
+	}
+
+	void OnLinkLost()
+	{
+		if (SyncState != SyncStateEnum::Disabled)
+		{
+			SyncState = SyncStateEnum::Disabled;
+			SetNextRunASAP();
+		}
+	}
+
 private:
 	enum SyncStateEnum
 	{
@@ -105,22 +132,6 @@ protected:
 		return true;
 	}
 
-	void OnConnectionEstablished() 
-	{
-		SyncState = SyncStateEnum::Starting;
-		Enable();
-		SetNextRunASAP();
-	}
-
-	void OnConnectionLost() 
-	{
-		if (SyncState != SyncStateEnum::Disabled)
-		{
-			SyncState = SyncStateEnum::Disabled;
-			SetNextRunASAP();
-		}		
-	}
-
 	void OnService()
 	{
 		//Make sure hash is up to date.
@@ -161,19 +172,7 @@ protected:
 			SyncState = SyncStateEnum::Disabled;
 			break;
 		}
-	}
-
-public:
-	void InvalidateSync()
-	{
-		if (SyncState >= SyncStateEnum::Synced)
-		{
-			SyncState = SyncStateEnum::NotSynced;
-			ClearSendRequest();
-			OnSyncLost();
-		}
-		SetNextRunASAP();
-	}
+	}	
 };
 #endif
 
