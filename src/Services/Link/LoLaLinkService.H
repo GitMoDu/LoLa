@@ -148,6 +148,11 @@ public:
 		return true;
 	}
 
+	void OnDisable()
+	{
+		UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Disabled);
+	}
+
 	void OnSendOk()
 	{
 		LastSent = Millis();
