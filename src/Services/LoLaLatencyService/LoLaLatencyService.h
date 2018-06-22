@@ -155,6 +155,16 @@ private:
 		PacketHolder.SetId(SentId);
 	}
 
+	void CancelSample()
+	{
+		if (State == LatencyServiceStateEnum::Sending)
+		{
+			ClearSendRequest();
+			State = LatencyServiceStateEnum::Checking;
+			LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+		}
+	}
+
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -247,16 +257,6 @@ protected:
 		SetNextRunASAP();
 	}
 
-	void CancelSample()
-	{
-		if (State == LatencyServiceStateEnum::Sending)
-		{
-			ClearSendRequest();
-			State = LatencyServiceStateEnum::Checking;
-			LastSentTimeStamp = ILOLA_INVALID_MILLIS;
-		}		
-	}
-
 	void OnSendDelayed()
 	{
 		CancelSample();
@@ -269,7 +269,7 @@ protected:
 
 	void OnSendFailed()
 	{
-		CancelSample();		
+		CancelSample();
 	}
 
 	void OnSendTimedOut()
