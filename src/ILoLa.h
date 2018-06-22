@@ -133,7 +133,7 @@ public:
 	virtual bool Setup() { return true; }
 	virtual bool AllowedSend() { return true; }
 	virtual void OnStart() {}
-	virtual uint32_t GetLastValidReceivedMillis() { return  LastReceived; }
+	virtual uint32_t GetLastValidReceivedMillis() { return LastReceived; }
 	virtual int16_t GetLastValidRSSI() { return LastReceivedRssi; }
 	virtual uint8_t GetTransmitPowerMax() { return 0xFF; }
 	virtual uint8_t GetTransmitPowerMin() { return 0; }
