@@ -115,7 +115,7 @@ public:
 	//Output normalized to uint8_t range.
 	uint8_t GetLinkFreshnesss()
 	{
-		ActivityElapsedHelper = GetLastActivityElapsed();
+		ActivityElapsedHelper = GetLastReceivedElapsed();
 		if (ActivityElapsedHelper != UINT32_MAX)
 		{
 			return map(min(LOLA_LINK_INFO_MAX_STALENESS, ActivityElapsedHelper), 0, LOLA_LINK_INFO_MAX_STALENESS, UINT8_MAX, 0);
