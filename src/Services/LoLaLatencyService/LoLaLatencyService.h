@@ -167,10 +167,9 @@ private:
 		if (State == LatencyServiceStateEnum::Sending)
 		{
 			ClearSendRequest();
-			State = LatencyServiceStateEnum::Checking;
 			LastSentTimeStamp = ILOLA_INVALID_MILLIS;
 			SamplesCancelled++;
-			SetNextRunDelay(LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS);
+			SetNextRunASAP();
 		}
 	}
 
@@ -356,7 +355,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelayRandom(LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS);
+				SetNextRunDelay(LOLA_LATENCY_SERVICE_SEND_BACK_OFF_DURATION_MILLIS);
 			}
 			break;
 		case LatencyServiceStateEnum::AnalysingResults:
