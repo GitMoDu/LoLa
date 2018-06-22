@@ -12,7 +12,6 @@
 
 #define LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE						5
 #define LOLA_LATENCY_PING_DATA_MAX_DEVIATION_SIGMA					((float)0.1)
-#define LOLA_LATENCY_PING_DATA_PURGE_MIN_SIZE						2
 
 //65536 is the max uint16_t, about 65 ms max latency is accepted.
 #define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS					65000
@@ -348,10 +347,7 @@ protected:
 			}
 			else
 			{
-				if (DurationStack.numElements() > LOLA_LATENCY_PING_DATA_PURGE_MIN_SIZE)
-				{
-					DurationStack.pull();
-				}				
+				DurationStack.pull();
 				LastSentTimeStamp = ILOLA_INVALID_MILLIS;
 				State = LatencyServiceStateEnum::Checking;
 				SetNextRunASAP();
