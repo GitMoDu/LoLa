@@ -19,12 +19,12 @@ private:
 public:
 	enum LinkStateEnum : uint8_t
 	{
-		Disabled,
-		Setup,
-		AwaitingConnection,
-		AwaitingSleeping,
-		Connecting,
-		Connected
+		Disabled = 0,
+		Setup = 1,
+		AwaitingConnection = 2,
+		AwaitingSleeping = 3,
+		Connecting = 4,
+		Connected = 5
 	} LinkState;
 
 	void SetDriver(ILoLa* driver)
