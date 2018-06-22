@@ -112,7 +112,7 @@ public:
 	{
 		MeasurementCompleteEvent.attach(slot);
 	}
-	
+
 private:
 	uint16_t GetAverage()
 	{
@@ -137,7 +137,7 @@ private:
 			}
 
 			//Value is always smaller than uint16, because samples with higher value are filtered out on acquisition.
-			return (uint16_t)DurationSum;			
+			return (uint16_t)DurationSum;
 		}
 		else
 		{
@@ -163,7 +163,7 @@ private:
 	}
 
 	void CancelSample()
-	{
+	{		
 		if (State == LatencyServiceStateEnum::Sending)
 		{
 			ClearSendRequest();
@@ -284,7 +284,7 @@ protected:
 		case LatencyServiceStateEnum::Starting:
 #ifdef DEBUG_LOLA
 			Serial.println(F("Measuring Latency..."));
-#endif	
+#endif
 			ClearDurations();
 #ifdef MOCK_RADIO
 #ifdef DEBUG_LOLA
