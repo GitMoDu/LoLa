@@ -349,7 +349,7 @@ protected:
 			}
 			break;
 		case LatencyServiceStateEnum::Sending:
-			//If we're here, it means the ack failed to arrive.
+			//If we're here, it means something went wrong with the sample.
 			State = LatencyServiceStateEnum::Checking;
 			SetNextRunDelayRandom(LOLA_LATENCY_SERVICE_SEND_FAILED_BACK_OFF_DURATION_MILLIS);
 			break;
