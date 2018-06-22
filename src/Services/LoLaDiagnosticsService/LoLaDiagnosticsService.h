@@ -71,7 +71,7 @@ protected:
 
 #ifdef DEBUG_LOLA
 				Serial.print(F("Latency: "));
-				Serial.print(LatencyService.GetLatency(), 2);
+				Serial.print(LatencyService.GetLatency(), 3);
 				Serial.println(F(" ms"));			
 #endif
 			}
