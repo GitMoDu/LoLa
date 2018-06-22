@@ -95,6 +95,13 @@ public:
 		Enable();
 	}
 
+	void Stop()
+	{
+		State = LatencyServiceStateEnum::Done;
+		SetNextRunDefault();
+		Disable();
+	}
+
 	void SetMeasurementCompleteCallback(const Slot<const bool>& slot)
 	{
 		MeasurementCompleteEvent.attach(slot);
