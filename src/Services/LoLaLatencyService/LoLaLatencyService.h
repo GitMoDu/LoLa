@@ -254,11 +254,6 @@ protected:
 		}		
 	}
 
-	void OnSendOk()
-	{
-		SetNextRunASAP();
-	}
-
 	void OnSendFailed()
 	{
 		CancelSample();
