@@ -57,7 +57,7 @@ private:
 	LoLaPacketNoPayload PacketHolder;//Optimized memory usage grunt packet.
 
 	uint32_t MeasurementStart = ILOLA_INVALID_MILLIS;
-	uint32_t LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+	uint32_t LastSentTimeStamp = ILOLA_INVALID_MICROS;
 	uint16_t StartUpDelay = 0;
 	volatile uint8_t SentId;
 
@@ -153,7 +153,7 @@ private:
 			DurationStack.pull();
 		}
 		SamplesCancelled = 0;
-		LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+		LastSentTimeStamp = ILOLA_INVALID_MICROS;
 	}
 
 	void PreparePacket()
@@ -168,7 +168,7 @@ private:
 		if (State == LatencyServiceStateEnum::Sending)
 		{
 			ClearSendRequest();
-			LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+			LastSentTimeStamp = ILOLA_INVALID_MICROS;
 			SamplesCancelled++;
 			SetNextRunASAP();
 		}
@@ -224,7 +224,7 @@ protected:
 		{
 			if (SentId == id)
 			{
-				if (LastSentTimeStamp != ILOLA_INVALID_MILLIS &&
+				if (LastSentTimeStamp != ILOLA_INVALID_MICROS &&
 					SampleDuration < LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS)
 				{
 					DurationStack.addForce(SampleDuration);
@@ -345,7 +345,7 @@ protected:
 				State = LatencyServiceStateEnum::Sending;
 				PreparePacket();
 				RequestSendPacket(LOLA_LATENCY_SERVICE_SEND_FAILED_BACK_OFF_DURATION_MILLIS, LOLA_LATENCY_SERVICE_PING_TIMEOUT_MILLIS);
-				LastSentTimeStamp = Micros();
+				LastSentTimeStamp = ILOLA_INVALID_MICROS;
 			}
 			break;
 		case LatencyServiceStateEnum::Sending:
@@ -355,7 +355,7 @@ protected:
 			break;
 		case LatencyServiceStateEnum::BackOff:
 			//If we're here, it means the ack arrived and was valid.
-			LastSentTimeStamp = ILOLA_INVALID_MILLIS; //Make sure we ignore stale acks.
+			LastSentTimeStamp = ILOLA_INVALID_MICROS; //Make sure we ignore stale acks.
 			State = LatencyServiceStateEnum::Checking;
 			//Do we have needed sample count?
 			if (DurationStack.numElements() >= LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE)
@@ -382,7 +382,7 @@ protected:
 			else
 			{
 				DurationStack.pull();
-				LastSentTimeStamp = ILOLA_INVALID_MILLIS;
+				LastSentTimeStamp = ILOLA_INVALID_MICROS;
 				State = LatencyServiceStateEnum::Checking;
 				SetNextRunASAP();
 			}
