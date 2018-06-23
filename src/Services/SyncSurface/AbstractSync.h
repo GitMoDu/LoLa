@@ -71,7 +71,7 @@ protected:
 	LoLaPacketSlim PacketHolder;
 
 protected:
-	void TimeStampReceived(const uint32_t timeStamp)
+	void StampLastReceived(const uint32_t timeStamp)
 	{
 		LastReceived = timeStamp;
 	}

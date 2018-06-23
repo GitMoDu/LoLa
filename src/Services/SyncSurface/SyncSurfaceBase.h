@@ -127,13 +127,13 @@ protected:
 
 		if (header == DataPacketDefinition.GetHeader())
 		{
-			TimeStampReceived(Millis());
+			StampLastReceived(Millis());
 			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
 			return true;
 		}
 		else if (header == SyncStatusDefinition.GetHeader())
 		{
-			TimeStampReceived(Millis());
+			StampLastReceived(Millis());
 			//Validate session Id before calling methods.
 			switch ((SyncStatusCodeEnum)incomingPacket->GetPayload()[0])
 			{
@@ -192,7 +192,7 @@ protected:
 		}
 		else if (header == SyncStatusDefinition.GetHeader())
 		{
-			TimeStampReceived(Millis());
+			StampLastReceived(Millis());
 
 			if (id == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_READER_START_SYNC)
 			{
