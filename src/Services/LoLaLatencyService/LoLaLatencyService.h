@@ -246,19 +246,17 @@ protected:
 		return true;
 	}
 
+	void OnPreSend() 
+	{
+		if (State == LatencyServiceStateEnum::Sending)
+		{
+			LastSentTimeStamp = Micros();
+		}		
+	}
+
 	void OnSendOk()
 	{
 		SetNextRunASAP();
-	}
-
-	void OnSendDelayed()
-	{
-		CancelSample();
-	}
-
-	void OnSendRetrying()
-	{
-		CancelSample();
 	}
 
 	void OnSendFailed()
