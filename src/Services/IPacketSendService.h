@@ -50,10 +50,10 @@ private:
 protected:
 	virtual void OnAckFailed(const uint8_t header, const uint8_t id) { }
 	virtual void OnAckReceived(const uint8_t header, const uint8_t id) { }
-	virtual void OnSendOk() { }
+	virtual void OnSendOk() { SetNextRunASAP(); }
 	virtual void OnSendFailed() { SetNextRunDelay(LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS); }
 	virtual void OnService() { SetNextRunDelay(LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS); }
-	virtual void OnSendTimedOut() { }
+	virtual void OnSendTimedOut() { SetNextRunASAP(); }
 	virtual void OnSendDelayed() { }
 	virtual void OnSendRetrying() { }
 	virtual void OnPreSend() { }
