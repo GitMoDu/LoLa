@@ -28,13 +28,11 @@ private:
 		SyncStart,
 		SyncStarted,
 		SendingStartStatus,
-		WaitingForStartAck,
 		UpdatingBlocks,
 		WaitingForBlockSend,
 		BlocksUpdated,
 		BlocksDone,
 		SendingFinishedStatus,
-		WaitingForFinishedAck,
 		PreparingForEnsure,
 		WaitingForEnsure
 	} WriterState = Disabled;
@@ -152,8 +150,7 @@ protected:
 
 	void OnWriterStartingSyncAck()
 	{
-		if (WriterState == SyncWriterState::WaitingForStartAck ||
-			WriterState == SyncWriterState::SendingStartStatus)
+		if (WriterState == SyncWriterState::SendingStartStatus)
 		{
 			WriterState = SyncWriterState::UpdatingBlocks;
 			SetNextRunASAP();
@@ -162,8 +159,7 @@ protected:
 
 	void OnWriterAllDataUpdatedAck()
 	{
-		if (WriterState == SyncWriterState::WaitingForFinishedAck ||
-			WriterState == SyncWriterState::SendingFinishedStatus)
+		if (WriterState == SyncWriterState::SendingFinishedStatus)
 		{
 			WriterState = SyncWriterState::WaitingForEnsure;
 			SetNextRunASAP();
@@ -183,7 +179,6 @@ protected:
 	void OnSendOk()
 	{
 		LastSentMillis = Millis();
-		SetNextRunASAP();
 	}
 
 	void OnSendDelayed()
@@ -222,10 +217,6 @@ protected:
 			}
 			break;
 		case SyncWriterState::SendingStartStatus:
-			WriterState = SyncWriterState::WaitingForStartAck;
-			SetNextRunDelay(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS);
-			break;
-		case SyncWriterState::WaitingForStartAck:
 			//If we get here before progressing the state, it means sending has failed.
 			if (SyncTryCount > SYNC_WRITER_MAX_ENSURE_TRY_COUNT)
 			{
@@ -275,13 +266,10 @@ protected:
 			WriterState = SyncWriterState::SendingFinishedStatus;
 			break;
 		case SyncWriterState::SendingFinishedStatus:
-			WriterState = SyncWriterState::WaitingForFinishedAck;
-			SetNextRunDelay(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS);
-			break;
-		case SyncWriterState::WaitingForFinishedAck:
 			//If we get here before progressing the state, it means sending has failed.
 			WriterState = SyncWriterState::SyncStarted;
 			SetNextRunASAP();
+			break;
 		case SyncWriterState::PreparingForEnsure:
 			WriterState = SyncWriterState::WaitingForEnsure;
 			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);

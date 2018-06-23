@@ -21,15 +21,13 @@ private:
 	{
 		SyncStart,
 		RequestingSyncStart,
-		SyncStartSend,
-		WaitingForSyncStartAck,
+		SendingSyncStart,
 		PreparingForWriterStart,
 		WaitingForWriterStart,
 		WaitingForSyncStatus,
 		WaitingForDataUpdate,
 		PreparingForEnsure,
-		EnsureSend,
-		WaitingForEnsureAck,
+		SendindEnsure,
 		SyncingComplete,
 		Disabled
 	} ReaderState = Disabled;
@@ -117,8 +115,7 @@ protected:
 		}
 		else
 		{
-			if (ReaderState == SyncReaderState::WaitingForSyncStartAck ||
-				ReaderState == SyncReaderState::SyncStartSend)
+			if (ReaderState == SyncReaderState::SendingSyncStart)
 			{
 				ReaderState = SyncReaderState::PreparingForWriterStart;
 				SetNextRunASAP();
@@ -146,8 +143,7 @@ protected:
 		{
 			InvalidateSync();
 		}
-		else if (ReaderState == SyncReaderState::WaitingForEnsureAck ||
-			ReaderState == SyncReaderState::EnsureSend)
+		else if (ReaderState == SyncReaderState::SendindEnsure)
 		{
 			ReaderState = SyncReaderState::SyncingComplete;
 			SetNextRunASAP();
@@ -191,17 +187,13 @@ protected:
 			SetNextRunASAP();
 			break;
 		case SyncReaderState::RequestingSyncStart:
-			ReaderState = SyncReaderState::SyncStartSend;
+			ReaderState = SyncReaderState::SendingSyncStart;
 			ResetSyncSession();
 			PrepareReaderStartSyncPacket();
 			RequestSendPacket();
 			SyncStartMillis = Millis();
 			break;
-		case SyncReaderState::SyncStartSend:
-			ReaderState = SyncReaderState::WaitingForSyncStartAck;
-			SetNextRunDelay(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS);
-			break;
-		case SyncReaderState::WaitingForSyncStartAck:
+		case SyncReaderState::SendingSyncStart:
 			//If we get here before progressing the state, it means sending has failed.
 			ReaderState = SyncReaderState::RequestingSyncStart;
 			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
@@ -239,13 +231,9 @@ protected:
 		case SyncReaderState::PreparingForEnsure:
 			PrepareReaderEnsureSyncPacket();
 			RequestSendPacket();
-			ReaderState = SyncReaderState::EnsureSend;
+			ReaderState = SyncReaderState::SendindEnsure;
 			break;
-		case SyncReaderState::EnsureSend:
-			ReaderState = SyncReaderState::WaitingForEnsureAck;
-			SetNextRunDelay(LOLA_SEND_SERVICE_REPLY_TIMEOUT_MILLIS);
-			break;
-		case SyncReaderState::WaitingForEnsureAck:
+		case SyncReaderState::SendindEnsure:
 			//If we get here before progressing the state, it means sending has failed.
 			ReaderState = SyncReaderState::RequestingSyncStart;
 			SetNextRunASAP();
