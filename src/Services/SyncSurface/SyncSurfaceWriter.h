@@ -295,7 +295,8 @@ protected:
 			RemoteInvalidations++;
 			return true;
 		}
-		else if (Millis() - LastReceived > LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS)
+		else if (LastReceived == ILOLA_INVALID_MILLIS || 
+			Millis() - LastReceived > LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS)
 		{
 			return true;
 		}

@@ -212,7 +212,8 @@ protected:
 			SetNextRunASAP();
 			break;
 		case SyncReaderState::WaitingForDataUpdate:
-			if (LastReceived - GetLoLa()->GetMillis() > LOLA_SYNC_SURFACE_SERVICE_INVALIDATE_PERIOD_MILLIS)
+			if (LastReceived == ILOLA_INVALID_MILLIS || 
+				LastReceived - GetLoLa()->GetMillis() > LOLA_SYNC_SURFACE_SERVICE_INVALIDATE_PERIOD_MILLIS)
 			{
 				if (SyncTryCount > SYNC_READER_MAX_SYNC_TRY_COUNT)
 				{
@@ -265,7 +266,8 @@ protected:
 		{
 			return true;
 		}
-		else if (Millis() - LastReceived > LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS)
+		else if (LastReceived == ILOLA_INVALID_MILLIS || 
+			Millis() - LastReceived > LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS)
 		{
 			return true;
 		}

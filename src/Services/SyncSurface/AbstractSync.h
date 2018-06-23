@@ -66,8 +66,8 @@ private:
 
 protected:
 	TinyCrc CalculatorCRC;
-	uint32_t LastReceived = 0;
-	uint32_t LastSynced = 0;
+	uint32_t LastReceived = ILOLA_INVALID_MILLIS;
+	uint32_t LastSynced = ILOLA_INVALID_MILLIS;
 	LoLaPacketSlim PacketHolder;
 
 protected:
