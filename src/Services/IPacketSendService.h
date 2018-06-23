@@ -56,6 +56,7 @@ protected:
 	virtual void OnSendTimedOut() { }
 	virtual void OnSendDelayed() { }
 	virtual void OnSendRetrying() { }
+	virtual void OnPreSend() { }
 	virtual bool OnEnable() { return true; }
 	virtual void OnDisable() {	}
 	virtual bool OnSetup()
@@ -103,6 +104,9 @@ public:
 			}
 			else
 			{
+				//Last minute fast stuff.
+				OnPreSend();
+
 				//We only fire the OnSend and OnSendFailed events in the next cycle.
 				//Because SendPacket() is already quite time consuming.
 				if (SendPacket(Packet))
