@@ -140,6 +140,7 @@ public:
 			else
 			{
 				SendStatus = SendStatusEnum::Done;
+				ClearSendRequest();
 			}
 			break;
 		case SendStatusEnum::SendFailed:
