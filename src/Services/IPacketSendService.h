@@ -77,7 +77,7 @@ public:
 	bool Callback()
 	{
 		//Ensure we only deal with sending if there's request pending, otherwise yeald back to main service.
-		if (!HasSendPendingInternal())
+		if (!HasSendPendingInternal() && SendStatus != SendStatusEnum::Done)
 		{
 			SendStatus = SendStatusEnum::Done;
 			SetNextRunASAP();
