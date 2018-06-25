@@ -94,7 +94,7 @@ public:
 			{
 				SetNextRunASAP();
 				OnSendTimedOut();
-				SendStatus = SendStatusEnum::Done;
+				ClearSendRequest();
 			}
 			else if (!AllowedSend())
 			{
@@ -139,7 +139,6 @@ public:
 			}
 			else
 			{
-				SendStatus = SendStatusEnum::Done;
 				ClearSendRequest();
 			}
 			break;
