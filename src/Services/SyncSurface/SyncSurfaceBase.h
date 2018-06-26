@@ -104,7 +104,7 @@ protected:
 		{
 			UpdateState(SyncStateEnum::Starting);
 		}
-		else if (LastDoubleCheckSentMillis == ILOLA_INVALID_MILLIS || Millis() - LastDoubleCheckSentMillis > ABSTRACT_SURFACE_SYNC_PERSISTANCE_PERIOD)
+		else if (LastDoubleCheckSentMillis == ILOLA_INVALID_MILLIS || Millis() - LastDoubleCheckSentMillis > ABSTRACT_SURFACE_SYNC_KEEP_ALIVE_MILLIS)
 		{
 			LastDoubleCheckSentMillis = Millis();
 			
