@@ -83,4 +83,3 @@ public:
 	virtual void OnWakeUpTimer();
 };
 #endif
-

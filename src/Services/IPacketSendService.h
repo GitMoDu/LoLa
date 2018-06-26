@@ -75,6 +75,7 @@ public:
 		Packet->ClearDefinition();
 	}
 
+
 	bool Callback()
 	{
 		//Ensure we only deal with sending if there's request pending, otherwise yeald back to main service.
@@ -199,7 +200,7 @@ protected:
 public:
 	bool ProcessAck(const uint8_t header, const uint8_t id)
 	{
-		if (HasSendPendingInternal() && Packet->GetDefinition()->GetHeader() == header && Packet->GetId()== id)
+		if (HasSendPendingInternal() && Packet->GetDefinition()->GetHeader() == header && Packet->GetId() == id)
 		{
 			if (SendStatus == SendStatusEnum::WaitingForAck)
 			{

@@ -104,9 +104,6 @@ protected:
 	{
 		if (ConnectingState == AwaitingConnectionEnum::AwaitingCallengeResponse)
 		{
-//#ifdef DEBUG_LOLA
-//			Serial.println(F("Challenge Accepted"));
-//#endif
 			ConnectingState = AwaitingConnectionEnum::ResponseOk;
 			SetNextRunASAP();
 		}
@@ -151,7 +148,7 @@ protected:
 			ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
 			SetNextRunDefault();
 #ifdef DEBUG_LOLA
-			Serial.print(F("CallengeResponse timed out: "));
+			Serial.print(F("ChallengeResponse timed out: "));
 			Serial.println(SessionId);
 #endif
 			break;

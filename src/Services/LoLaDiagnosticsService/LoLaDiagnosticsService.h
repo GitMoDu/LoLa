@@ -63,6 +63,7 @@ protected:
 		{
 			return;
 		}
+
 		if (LinkInfo != nullptr)
 		{
 			if (success)
