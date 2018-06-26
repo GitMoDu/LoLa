@@ -436,7 +436,14 @@ protected:
 			OnConnecting();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connected:
-			OnKeepingConnected(Millis() - GetLoLa()->GetLastValidReceivedMillis());
+			if (GetLoLa()->GetLastValidReceivedMillis() != ILOLA_INVALID_MILLIS)
+			{
+				OnKeepingConnected(Millis() - GetLoLa()->GetLastValidReceivedMillis());
+			}
+			else
+			{
+				OnKeepingConnected(0);
+			}			
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Disabled:
 		default:
