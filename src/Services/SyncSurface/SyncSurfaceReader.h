@@ -138,7 +138,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD);
 			}
 			break;
 		case SyncReaderState::PreparingForReport:
