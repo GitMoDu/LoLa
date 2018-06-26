@@ -83,7 +83,7 @@ protected:
 			}
 			break;
 		case SyncStateEnum::Resync:
-			UpdateSyncingState(SyncWriterState::SyncStarting);
+			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
 		default:
 			break;
