@@ -111,17 +111,21 @@ protected:
 				StampSubStateStart();
 				PrepareSyncStartRequestPacket();
 				RequestSendPacket();
+#ifdef DEBUG_LOLA
 				Serial.print(Millis());
 				Serial.println(F(": Please start sync"));
+#endif
 			}
 			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
 			break;
 		case SyncReaderState::WaitingForDataUpdate:
 			if (GetSubStateElapsed() > ABSTRACT_SURFACE_MAX_ELAPSED_BEFORE_SYNC_RESTART)
 			{
+#ifdef DEBUG_LOLA
 				Serial.print(Millis());
 				Serial.print(F(": WaitingForDataUpdate Timeout. Elapsed: "));
 				Serial.print(GetSubStateElapsed());
+#endif
 				UpdateSyncingState(SyncReaderState::SyncStarting);
 			}
 			else
@@ -165,8 +169,10 @@ protected:
 
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
+#ifdef DEBUG_LOLA
 		Serial.print(Millis());
 		Serial.println(F(": Ack."));
+#endif
 		if (IsSyncing())
 		{
 			switch (ReaderState)
@@ -239,33 +245,46 @@ private:
 			default:
 				break;
 			}
-
+#ifdef DEBUG_LOLA
 			Serial.print(Millis());
 			Serial.print(F(": Updated Writer Syncing to "));
+#endif
 			switch (newState)
 			{
 			case SyncReaderState::SyncStarting:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SyncStarting"));
+#endif
 				InvalidateRemoteHash();
 				TrackedSurface->GetTracker()->SetAllPending();
 				StampSubStateStart(-LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS * 2);
 				break;
 			case SyncReaderState::WaitingForWriterStart:
+#ifdef DEBUG_LOLA
 				Serial.println(F("WaitingForWriterStart"));
+#endif
 				SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
 				break;
 			case SyncReaderState::WaitingForDataUpdate:
+#ifdef DEBUG_LOLA
 				Serial.println(F("WaitingForDataUpdate"));
+#endif
 				break;
 			case SyncReaderState::PreparingForReport:
+#ifdef DEBUG_LOLA
 				Serial.println(F("PreparingForReport"));
+#endif
 				InvalidateLocalHash();
 				break;
 			case SyncReaderState::SendindReport:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SendindReport"));
+#endif
 				break;
 			case SyncReaderState::SyncingComplete:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SyncingComplete"));
+#endif
 				break;
 			default:
 				break;

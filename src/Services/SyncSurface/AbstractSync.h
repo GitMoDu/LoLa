@@ -148,6 +148,7 @@ protected:
 
 	bool HashesMatch()
 	{
+#ifdef DEBUG_LOLA
 		if (!HasRemoteHash())
 		{
 			Serial.println(F("No Remote hash"));
@@ -156,6 +157,7 @@ protected:
 		{
 			Serial.println(F("Hash mismatch"));
 		}
+#endif
 		return (HasRemoteHash() &&
 			GetLocalHash() == LastRemoteHash);
 	}
@@ -243,32 +245,46 @@ protected:
 				break;
 			}
 
+#ifdef DEBUG_LOLA
 			Serial.print(Millis());
 			Serial.print(F(": Updated State to "));
+#endif
 			switch (newState)
 			{
 			case SyncStateEnum::WaitingForTrigger:
+#ifdef DEBUG_LOLA
 				Serial.println(F("WaitingForTrigger"));
+#endif
 				break;
 			case SyncStateEnum::Starting:
+#ifdef DEBUG_LOLA
 				Serial.println(F("Starting"));
+#endif
 				InvalidateLocalHash();
 				break;
 			case SyncStateEnum::FullSync:
+#ifdef DEBUG_LOLA
 				Serial.println(F("FullSync"));
+#endif
 				InvalidateRemoteHash();
 				TrackedSurface->GetTracker()->SetAllPending();
 				Enable();
 				break;
 			case SyncStateEnum::Synced:
+#ifdef DEBUG_LOLA
 				Serial.println(F("Synced"));
 				TrackedSurface->GetTracker()->ClearAllPending();
+#endif
 				break;
 			case SyncStateEnum::Resync:
+#ifdef DEBUG_LOLA
 				Serial.println(F("Resync"));
+#endif
 				break;
 			case SyncStateEnum::Disabled:
+#ifdef DEBUG_LOLA
 				Serial.println(F("Disabled"));
+#endif
 				break;
 			default:
 				break;

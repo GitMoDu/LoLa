@@ -128,9 +128,11 @@ protected:
 		}
 		else if (header == ProtocolPacketDefinition.GetHeader())
 		{
+#ifdef DEBUG_LOLA
 			Serial.print(Millis());
 			Serial.print(F(": Received Protocol: "));
 			Serial.println(incomingPacket->GetId());
+#endif
 			SetRemoteHash(incomingPacket->GetPayload()[0]);
 			switch (incomingPacket->GetId())
 			{			

@@ -138,8 +138,6 @@ protected:
 			SyncTryCount++;
 			if (TrackedSurface->GetTracker()->HasPending())
 			{
-				Serial.print(Millis());
-				Serial.println(F(": SendingFinish: HasPending "));
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 				SetNextRunASAP();
 			}
@@ -154,8 +152,6 @@ protected:
 				//Retry last block.
 				//TODO: Improve this behaviour. We have few tries and unreliable memory of which blocks were sent on this session.
 				SetLastSentBlockAsPending();
-				Serial.print(Millis());
-				Serial.println(F(": Retry last block: HasPending "));
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 				SetNextRunASAP();
 			}
@@ -163,8 +159,10 @@ protected:
 		case SyncWriterState::WaitingForConfirmation:
 			if (GetSubStateElapsed() > ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT)
 			{
+#ifdef DEBUG_LOLA
 				Serial.print(Millis());
 				Serial.println(F(": WaitingForConfirmation time out"));
+#endif
 				//If we're here, we've timed oud.
 				SetLastSentBlockAsPending();
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
@@ -186,8 +184,10 @@ protected:
 
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
+#ifdef DEBUG_LOLA
 		Serial.print(Millis());
 		Serial.println(F(": Ack."));
+#endif
 		if (IsSyncing())
 		{
 			switch (WriterState)
@@ -217,8 +217,10 @@ protected:
 
 	void OnSyncStartRequestReceived()
 	{
+#ifdef DEBUG_LOLA
 		Serial.print(Millis());
 		Serial.println(F(": OnSyncStartRequestReceived"));
+#endif
 		switch (SyncState)
 		{
 		case SyncStateEnum::Synced:
@@ -266,8 +268,10 @@ protected:
 
 	void OnSyncReportReceived()
 	{
+#ifdef DEBUG_LOLA
 		Serial.print(Millis());
 		Serial.println(F(": OnSyncReportReceived"));
+#endif
 		switch (SyncState)
 		{
 		case SyncStateEnum::FullSync:
@@ -282,7 +286,6 @@ protected:
 				{
 					if (TrackedSurface->GetTracker()->HasPending())
 					{
-						Serial.println(F("HasPending"));
 						UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 					}
 					else
@@ -310,13 +313,11 @@ protected:
 
 	void OnSendTimedOut()
 	{
-		Serial.println(F("OnSendTimedOut"));
 		OnSendPacketFailed();
 	}
 
 	void OnSendFailed()
 	{
-		Serial.println(F("OnSendFailed"));
 		OnSendPacketFailed();
 	}
 
@@ -349,38 +350,57 @@ private:
 			default:
 				break;
 			}
-
+#ifdef DEBUG_LOLA
 			Serial.print(Millis());
 			Serial.print(F(": Updated Writer Syncing to "));
+#endif
 			switch (newState)
 			{
 			case SyncSurfaceWriter::SyncStarting:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SyncStarting"));
+#endif
 				break;
 			case SyncSurfaceWriter::SendingStart:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SendingStart"));
+#endif
 				break;
 			case SyncSurfaceWriter::UpdatingBlocks:
+#ifdef DEBUG_LOLA
 				Serial.println(F("UpdatingBlocks"));
+#endif
 				break;
 			case SyncSurfaceWriter::SendingBlock:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SendingBlock"));
+#endif
 				break;
 			case SyncSurfaceWriter::BlocksUpdated:
+#ifdef DEBUG_LOLA
 				Serial.println(F("BlocksUpdated"));
+#endif
 				break;
 			case SyncSurfaceWriter::BlocksDone:
+#ifdef DEBUG_LOLA
 				Serial.println(F("BlocksDone"));
+#endif
 				break;
 			case SyncSurfaceWriter::SendingFinish:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SendingFinish"));
+#endif
 				break;
 			case SyncSurfaceWriter::WaitingForConfirmation:
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
+#ifdef DEBUG_LOLA
 				Serial.println(F("WaitingForConfirmation"));
+#endif
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
 				break;
 			case SyncSurfaceWriter::SyncComplete:
+#ifdef DEBUG_LOLA
 				Serial.println(F("SyncComplete"));
+#endif
 				break;
 			default:
 				break;
