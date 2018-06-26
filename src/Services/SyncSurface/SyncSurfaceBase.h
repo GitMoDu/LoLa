@@ -12,22 +12,19 @@
 #include <Packet\LoLaPacketMap.h>
 
 
-#define LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS 100
+#define LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS			100
+#define LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS				500
 
-//#define LOLA_SYNC_SURFACE_SERVICE_START_DELAY_DURATION_MILLIS 3000
-#define LOLA_SYNC_SURFACE_SERVICE_INVALIDATE_PERIOD_MILLIS 2000
-#define LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS 200
-#define LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS 10000//60000
+#define LOLA_SYNC_FAST_MAX_BLOCK_COUNT							PACKET_DEFINITION_SYNC_STATUS_PAYLOAD_SIZE
 
-#define LOLA_SYNC_KEEP_ALIVE_MILLIS (LOLA_SYNC_SURFACE_SERVICE_INVALIDATE_PERIOD_MILLIS/2)
 
-#define SYNC_SESSION_ID_STATUS_OFFSET_READER_START_SYNC 0
-#define SYNC_SESSION_ID_STATUS_OFFSET_READER_SYNC_ENSURE 1
-#define SYNC_SESSION_ID_STATUS_OFFSET_WRITER_STARTING_SYNC 2
-#define SYNC_SESSION_ID_STATUS_OFFSET_WRITER_ALL_DATA_UPDATED 3
+#define SYNC_SURFACE_STATUS_SUB_HEADER_FINISHED_SYNCED			1
 
-#define SYNC_SESSION_ID_STATUS_OFFSET_MAX SYNC_SESSION_ID_STATUS_OFFSET_WRITER_ALL_DATA_UPDATED
-
+#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_SYNC			0
+#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_DISABLE		1
+#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_STARTING_SYNC			2
+#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_FINISHING_SYNC			3
+#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_DOUBLE_CHECK			4
 
 
 class SyncSurfaceBase : public SyncSurfaceBlock
@@ -36,86 +33,84 @@ public:
 	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurfaceNotify* trackedSurface)
 		: SyncSurfaceBlock(scheduler, LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS, loLa, trackedSurface)
 	{
-		SyncStatusDefinition.SetBaseHeader(baseHeader);
+		SyncReportDefinition.SetBaseHeader(baseHeader);
 		DataPacketDefinition.SetBaseHeader(baseHeader);
+		ProtocolPacketDefinition.SetBaseHeader(baseHeader);
 	}
 
 private:
-	SyncStatusPacketDefinition SyncStatusDefinition;
+	SyncReportPacketDefinition SyncReportDefinition;
 	SyncDataPacketDefinition DataPacketDefinition;
-
-	uint8_t SyncSessionId = 0;
-	bool SyncSessionHasSynced = false;
-
-	uint8_t LastRemoteHash = 0;
-	uint32_t LastRemoteHashReceived = 0;
+	SyncProtocolPacketDefinition ProtocolPacketDefinition;
 
 protected:
-	enum SyncStatusCodeEnum : uint8_t
-	{
-		Reader_StartSync = 0,
-		Writer_StartingSync = 1,
-		Writer_AllDataUpdated = 2,
-		Reader_SyncEnsure = 3,
-		Reader_Disable = 4
-	};
-
 	uint8_t SyncTryCount = 0;
-	uint32_t SyncStartMillis = 0;
 
 protected:
 	virtual void OnBlockReceived(const uint8_t index, uint8_t * payload) {}
 
-	virtual void OnWriterAllDataUpdatedReceived() {}
-	virtual void OnWriterStartingSyncReceived() {}
-	virtual void OnReaderSyncEnsureReceived() {}
-	virtual void OnReaderStartSyncReceived() {}
-	virtual void OnReaderDisable() {}
+	//Reader
+	virtual void OnSyncFinishingReceived() {}
+	virtual void OnSyncStartingReceived() {}
 
-	virtual void OnWriterAllDataUpdatedAck() {}
-	virtual void OnWriterStartingSyncAck() {}
-	virtual void OnReaderSyncEnsureAck() {}
-	virtual void OnReaderStartSyncAck() {}
+	//Writer
+	virtual void OnSyncReportReceived() {}
+	virtual void OnSyncStartRequestReceived() {}
+	virtual void OnSyncDisableRequestReceived() {}
 
-	virtual void OnSyncFailed() {}
+	//Common
+	virtual void OnDoubleCheckReceived() {}
 
 protected:
-	virtual bool OnSetup()
+	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
-		if (SyncSurfaceBlock::OnSetup())
+		if (!packetMap->AddMapping(&SyncReportDefinition) ||
+			!packetMap->AddMapping(&DataPacketDefinition) ||
+			!packetMap->AddMapping(&ProtocolPacketDefinition))
 		{
-			GetSurface()->Initialize();
-			return true;
+			return false;
 		}
 
-		return false;
-	}
-
-protected:
-	bool SessionHasSynced()
-	{
-		return SyncSessionHasSynced;
-	}
-
-	void StampSessionSynced()
-	{
-		//if (!SyncSessionHasSynced)
-		//{
-
-		//}
-		SyncSessionHasSynced = true;
-	}
-
-	virtual bool OnSyncStart()
-	{
-		InvalidateHash();
-		LastRemoteHash = 0;
-		LastRemoteHashReceived = 0;
-		SyncTryCount = 0;
-		TrackedSurface->GetTracker()->SetAllPending();
-		ResetSyncSession();
-
 		return true;
+	}
+	
+	virtual void OnStateUpdated(const SyncStateEnum newState)
+	{
+		SyncSurfaceBlock::OnStateUpdated(newState);
+		switch (newState)
+		{
+		case SyncStateEnum::Starting:
+			SyncTryCount = 0;
+			break;
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::Synced:
+		case SyncStateEnum::Resync:
+		case SyncStateEnum::WaitingForTrigger:
+		case SyncStateEnum::Disabled:
+		default:
+			break;
+		}
+	}
+
+	uint32_t LastSentMillis = ILOLA_INVALID_MILLIS;
+
+	void OnSyncedService()
+	{
+		if (TrackedSurface->GetTracker()->HasPending())
+		{
+			UpdateState(SyncStateEnum::Resync);
+		}
+		else if (!HashesMatch())
+		{
+			UpdateState(SyncStateEnum::Starting);
+		}
+		else if (LastSentMillis == ILOLA_INVALID_MILLIS || Millis() - LastSentMillis > ABSTRACT_SURFACE_SYNC_PERSISTANCE_PERIOD)
+		{
+			LastSentMillis = Millis();
+			
+			PrepareDoubleCheckProtocolPacket();
+			RequestSendPacket();
+		}		
 	}
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
@@ -125,153 +120,92 @@ protected:
 			return false;
 		}
 
+		//Todo: Filter Should process packet
+
 		if (header == DataPacketDefinition.GetHeader())
 		{
-			StampLastReceived(Millis());
-			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
+			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());//To Reader.
 			return true;
 		}
-		else if (header == SyncStatusDefinition.GetHeader())
+		else if (header == ProtocolPacketDefinition.GetHeader())
 		{
-			StampLastReceived(Millis());
-			//Validate session Id before calling methods.
-			switch ((SyncStatusCodeEnum)incomingPacket->GetPayload()[0])
-			{
-			case SyncStatusCodeEnum::Reader_StartSync:
-				//Writer receives the session Id when sync start is requested.
-				SyncSessionId = incomingPacket->GetId() - SYNC_SESSION_ID_STATUS_OFFSET_READER_START_SYNC;
-				OnReaderStartSyncReceived();
+			Serial.print(Millis());
+			Serial.print(F(": Received Protocol: "));
+			Serial.println(incomingPacket->GetId());
+			SetRemoteHash(incomingPacket->GetPayload()[0]);
+			switch (incomingPacket->GetId())
+			{			
+			//To Writer.
+			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_SYNC:
+				OnSyncStartRequestReceived();
 				break;
-			case SyncStatusCodeEnum::Reader_SyncEnsure:
-				//Writer double checks the session Id, before accepting the packet.
-				if (incomingPacket->GetId() == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_READER_SYNC_ENSURE)
-				{
-					LastRemoteHashReceived = LastReceived;
-					LastRemoteHash = incomingPacket->GetPayload()[1];
-					OnReaderSyncEnsureReceived();
-				}
+			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_DISABLE:
+				OnSyncDisableRequestReceived();
+				break;			
+
+			//To Reader.
+			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_FINISHING_SYNC:
+				SetRemoteHash(incomingPacket->GetPayload()[0]);
+				OnSyncFinishingReceived();
+				break;		
+			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_STARTING_SYNC:
+				OnSyncStartingReceived();
 				break;
-			case SyncStatusCodeEnum::Writer_StartingSync:
-				//Writer double checks the session Id, before accepting the packet.
-				if (incomingPacket->GetId() == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_WRITER_STARTING_SYNC)
-				{
-					OnWriterStartingSyncReceived();
-				}
-				break;
-			case SyncStatusCodeEnum::Writer_AllDataUpdated:
-				//Writer double checks the session Id, before accepting the packet.
-				if (incomingPacket->GetId() == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_WRITER_ALL_DATA_UPDATED)
-				{
-					LastRemoteHashReceived = LastReceived;
-					LastRemoteHash = incomingPacket->GetPayload()[1];
-					OnWriterAllDataUpdatedReceived();
-				}
-				break;
-			case SyncStatusCodeEnum::Reader_Disable:
-				OnReaderDisable();
+
+			//To both.
+			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_DOUBLE_CHECK:
+				SetRemoteHash(incomingPacket->GetPayload()[0]);
+				OnDoubleCheckReceived();
 				break;
 			default:
 				break;
 			}
-
+		}
+		else if (header == SyncReportDefinition.GetHeader())
+		{
+			SetRemoteHash(incomingPacket->GetId());
+			//To Writer.
+			OnSyncReportReceived();
 			return true;
 		}
 
 		return false;
 	}
 
-	void OnAckReceived(const uint8_t header, const uint8_t id)
+	void PrepareTrackerStatusPayload()
 	{
-		if (!IsSetupOk())
+		for (uint8_t i = 0; i < min(TrackedSurface->GetTracker()->GetBitCount(), LOLA_SYNC_FAST_MAX_BLOCK_COUNT); i++)
 		{
-			return;
-		}
-
-		if (header == DataPacketDefinition.GetHeader())
-		{
-		}
-		else if (header == SyncStatusDefinition.GetHeader())
-		{
-			StampLastReceived(Millis());
-
-			if (id == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_READER_START_SYNC)
+			if (i < TrackedSurface->GetTracker()->GetSize())
 			{
-				OnReaderStartSyncAck();
-			}
-			else if (id == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_READER_SYNC_ENSURE)
-			{
-				OnReaderSyncEnsureAck();
-			}
-			else if (id == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_WRITER_STARTING_SYNC)
-			{
-				OnWriterStartingSyncAck();
-			}
-			else if (id == SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_WRITER_ALL_DATA_UPDATED)
-			{
-				OnWriterAllDataUpdatedAck();
-			}
-		}
-	}
-
-	bool IsRemoteHashValid()
-	{
-		return ((LastRemoteHashReceived != 0) &&
-			GetHash() == LastRemoteHash);
-	}
-
-	void ResetSyncSession()
-	{
-		uint8_t NewSessionId = SyncSessionId;
-		uint8_t TryCount = 0;
-		while (NewSessionId == SyncSessionId)
-		{
-			TryCount++;
-			if (TryCount > 3)
-			{
-				NewSessionId = SyncSessionId++;
+				Packet->GetPayload()[i] = TrackedSurface->GetTracker()->GetRawBlock(i);
 			}
 			else
 			{
-				NewSessionId = random(0xFF);
+				Packet->GetPayload()[i] = 0; //Unused value in this packet.
 			}
 		}
-		SyncSessionId = NewSessionId;
-		SyncSessionHasSynced = false;
 	}
 
-	void PrepareReaderStartSyncPacket()
+	void PrepareReportPacketHeader()
 	{
-		Packet->SetDefinition(&SyncStatusDefinition);
-		Packet->GetPayload()[0] = SyncStatusCodeEnum::Reader_StartSync;
-		Packet->GetPayload()[1] = 0; //Unused value in this packet.
-		Packet->SetId(SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_READER_START_SYNC); //Value is tracked by Ack.
+		Packet->SetDefinition(&SyncReportDefinition);
+		Packet->SetId(GetLocalHash());
 	}
 
-	void PrepareReaderEnsureSyncPacket()
+	void PrepareProtocolPacket(const uint8_t id)
 	{
-		Packet->SetDefinition(&SyncStatusDefinition);
-		Packet->GetPayload()[0] = SyncStatusCodeEnum::Reader_SyncEnsure;
-		Packet->GetPayload()[1] = GetHash();
-		Packet->SetId(SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_READER_START_SYNC); //Value is tracked by Ack.
+		Packet->SetDefinition(&ProtocolPacketDefinition);
+		Packet->SetId(id);
+		Packet->GetPayload()[0] = GetLocalHash();
 	}
 
-	void PrepareWriterStartingSyncPacket()
+	void PrepareDoubleCheckProtocolPacket()
 	{
-		Packet->SetDefinition(&SyncStatusDefinition);
-		Packet->GetPayload()[0] = SyncStatusCodeEnum::Writer_StartingSync;
-		Packet->GetPayload()[1] = 0; //Unused value in this packet.
-		Packet->SetId(SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_WRITER_STARTING_SYNC); //Value is tracked by Ack.
+		PrepareProtocolPacket(SYNC_SURFACE_PROTOCOL_SUB_HEADER_DOUBLE_CHECK);
 	}
 
-	void PrepareWriterAllDataUpdated()
-	{
-		Packet->SetDefinition(&SyncStatusDefinition);
-		Packet->GetPayload()[0] = SyncStatusCodeEnum::Writer_AllDataUpdated;
-		Packet->GetPayload()[1] = GetHash();
-		Packet->SetId(SyncSessionId + SYNC_SESSION_ID_STATUS_OFFSET_WRITER_ALL_DATA_UPDATED); //Value is tracked by Ack.
-	}
-
-	bool PrepareBlockPacket(const uint8_t index)
+	bool PrepareBlockPacketHeader(const uint8_t index)
 	{
 		if (index < TrackedSurface->GetSize())
 		{
@@ -284,18 +218,5 @@ protected:
 			return false;
 		}
 	}
-
-	bool OnAddPacketMap(LoLaPacketMap* packetMap)
-	{
-		if (!packetMap->AddMapping(&SyncStatusDefinition) ||
-			!packetMap->AddMapping(&DataPacketDefinition))
-		{
-			return false;
-		}
-
-		return true;
-	}
 };
-
 #endif
-
