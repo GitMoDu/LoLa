@@ -165,7 +165,7 @@ protected:
 	}
 
 	void SetNextRunLong()
-	{		 
+	{
 		Task::delay(LOLA_SERVICE_HOUR_PERIOD_MILLIS);
 	}
 

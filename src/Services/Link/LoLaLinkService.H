@@ -283,7 +283,8 @@ protected:
 
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
-		if (!packetMap->AddMapping(&LinkDefinition) || !packetMap->AddMapping(&LinkAckDefinition))
+		if (!packetMap->AddMapping(&LinkDefinition) ||
+			!packetMap->AddMapping(&LinkAckDefinition))
 		{
 			return false;
 		}
