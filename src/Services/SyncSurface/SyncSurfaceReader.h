@@ -27,8 +27,6 @@ private:
 		SyncingComplete = 5
 	} ReaderState = SyncStarting;
 
-
-
 protected:
 	void OnSendTimedOut()
 	{
@@ -250,18 +248,6 @@ private:
 
 			switch (ReaderState)
 			{
-			case SyncReaderState::SyncStarting:
-				break;
-			case SyncReaderState::WaitingForWriterStart:
-				break;
-			case SyncReaderState::WaitingForDataUpdate:
-				break;
-			case SyncReaderState::PreparingForReport:
-				break;
-			case SyncReaderState::SendindReport:
-				break;
-			case SyncReaderState::SyncingComplete:
-				break;
 			default:
 				break;
 			}
@@ -300,6 +286,7 @@ private:
 			ReaderState = newState;
 		}
 	}
+
 	void PrepareSyncStartRequestPacket()
 	{
 		PrepareProtocolPacket(SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_SYNC);
