@@ -162,7 +162,7 @@ public:
 		UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Disabled);
 	}
 
-	void OnSendOk()
+	void OnSendOk(const uint32_t sendDuration)
 	{
 		LastSent = Millis();
 	}
