@@ -7,49 +7,18 @@
 
 #include <Arduino.h>
 #include <Services\SyncSurface\AbstractSync.h>
-#include <Services\SyncSurface\ITrackedSurface.h>
+
 
 
 class SyncSurfaceBlock : public AbstractSync
 {
-protected:
-	ITrackedSurfaceNotify * TrackedSurface = nullptr;
-
-	//Process to fire external events.
-
-public:
-	SyncSurfaceBlock(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurfaceNotify* trackedSurface)
-		: AbstractSync(scheduler, period, loLa)
-	{
-		TrackedSurface = trackedSurface;
-	}
-
-	ITrackedSurface* GetSurface()
-	{
-		return TrackedSurface;
-	}
-
 private:
 	uint8_t IndexOffset = 0;
 
-protected:
-	virtual bool OnSetup()
+public:
+	SyncSurfaceBlock(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurfaceNotify* trackedSurface)
+		: AbstractSync(scheduler, period, loLa, trackedSurface)
 	{
-		if (AbstractSync::OnSetup() && TrackedSurface != nullptr)
-		{
-			TrackedSurface->Initialize();
-			if (TrackedSurface->GetData() != nullptr
-				&& TrackedSurface->GetTracker() != nullptr
-				&& TrackedSurface->GetSize() > 0
-				&& TrackedSurface->GetSize() <= TrackedSurface->GetTracker()->GetBitCount())
-			{
-				MethodSlot<SyncSurfaceBlock, uint8_t> memFunSlot(this, &SyncSurfaceBlock::SurfaceDataChanged);
-				TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
-				return true;
-			}			
-		}
-
-		return false;
 	}
 
 protected:
@@ -63,7 +32,7 @@ protected:
 		}
 	}
 
-	void PrepareBlockPayload(const uint8_t index, uint8_t * payload)
+	void PrepareBlockPacketPayload(const uint8_t index, uint8_t * payload)
 	{
 		IndexOffset = index * SYNC_SURFACE_BLOCK_SIZE;
 
@@ -73,30 +42,19 @@ protected:
 		}
 	}
 
-	void UpdateHash()
+	virtual void OnStateUpdated(const SyncStateEnum newState)
 	{
-		AbstractSync::UpdateHash();
-
-		for (uint8_t i = 0; i < TrackedSurface->GetDataSize(); i++)
+		AbstractSync::OnStateUpdated(newState);
+		switch (newState)
 		{
-			CalculatorCRC.Update(TrackedSurface->GetData()[i]);
-		}
-	}
-
-protected:
-	virtual void OnSurfaceDataChanged(){}
-
-public:
-	void SurfaceDataChanged(uint8_t param)
-	{
-		OnSurfaceDataChanged();
-	}
-
-	void NotifyDataChanged()
-	{
-		if (TrackedSurface != nullptr)
-		{
-			TrackedSurface->NotifyDataChanged();
+		case SyncStateEnum::Starting:
+		case SyncStateEnum::WaitingForTrigger:
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::Synced:
+		case SyncStateEnum::Resync:
+		case SyncStateEnum::Disabled:
+		default:
+			break;
 		}
 	}
 };
