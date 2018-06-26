@@ -36,14 +36,24 @@ public:
 	{
 	}
 
-	void Initialize()
+	bool Setup()
 	{
-		DataSize = GetTracker()->GetSize() * SYNC_SURFACE_BLOCK_SIZE;
-		for (uint8_t i = 0; i < GetSize(); i++)
+		if (GetData() != nullptr
+			&& GetTracker() != nullptr
+			&& GetTracker()->GetSize() > 0
+			&& GetTracker()->GetSize() <= GetTracker()->GetBitCount())
 		{
-			GetData()[i] = 0;			
+			DataSize = GetTracker()->GetSize() * SYNC_SURFACE_BLOCK_SIZE;
+			for (uint8_t i = 0; i < GetSize(); i++)
+			{
+				GetData()[i] = 0;
+			}
+			GetTracker()->ClearAllPending();
+
+			return true;
 		}
-		GetTracker()->ClearAllPending();
+		
+		return false;
 	}
 
 	void Invalidate()
