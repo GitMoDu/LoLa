@@ -443,14 +443,12 @@ private:
 	void OnSendPacketFailed()
 	{
 		//TODO: Should respond to packets.
+		SetNextRunASAP();
 		switch (SyncState)
 		{
 		case SyncStateEnum::FullSync:
 		case SyncStateEnum::Resync:
 			SetLastSentBlockAsPending();
-			break;
-		case SyncStateEnum::Synced:
-			SetNextRunASAP();
 			break;
 		default:
 			break;
