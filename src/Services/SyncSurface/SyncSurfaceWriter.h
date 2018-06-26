@@ -17,7 +17,6 @@ public:
 	SyncSurfaceWriter(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurfaceNotify* trackedSurface)
 		: SyncSurfaceBase(scheduler, loLa, baseHeader, trackedSurface)
 	{
-
 	}
 
 private:
