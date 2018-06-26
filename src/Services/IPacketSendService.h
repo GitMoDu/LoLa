@@ -52,7 +52,7 @@ protected:
 	virtual void OnAckFailed(const uint8_t header, const uint8_t id) { }
 	virtual void OnAckReceived(const uint8_t header, const uint8_t id) { }
 	virtual void OnSendOk(const uint32_t sendDuration) { SetNextRunASAP(); }
-	virtual void OnSendFailed() { SetNextRunDelay(LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS); }
+	virtual void OnSendFailed() { SetNextRunASAP(); }
 	virtual void OnService() { SetNextRunDelay(LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS); }
 	virtual void OnSendTimedOut() { SetNextRunASAP(); }
 	virtual void OnSendDelayed() { }
