@@ -7,8 +7,6 @@
 #include <Services\SyncSurface\Telemetry\TelemetrySurface.h>
 
 
-#define SYNC_TELEMETRY_BLOCK_COUNT 3
-
 class TelemetrySurfaceReader : public SyncSurfaceReader
 {
 private:
@@ -20,10 +18,6 @@ public:
 	{
 	}
 
-	ITrackedSurface* GetSurface()
-	{
-		return &Surface;
-	}
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
