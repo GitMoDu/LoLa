@@ -57,6 +57,13 @@ private:
 	}
 
 protected:
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("LoLaDiagnostics"));
+	}
+#endif // DEBUG_LOLA
+
 	void OnLatencyMeasurementComplete(const bool success)
 	{
 		if (!LinkInfo->HasLink())
