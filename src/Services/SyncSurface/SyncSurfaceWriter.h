@@ -162,12 +162,19 @@ protected:
 			}
 			break;
 		case SyncWriterState::WaitingForConfirmation:
-			Serial.print(Millis());
-			Serial.println(F(": WaitingForConfirmation time out"));
-			//If we're here, we've timed oud.
-			SetLastSentBlockAsPending();
-			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			SetNextRunASAP();
+			if (GetSubStateElapsed() > ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT)
+			{
+				Serial.print(Millis());
+				Serial.println(F(": WaitingForConfirmation time out"));
+				//If we're here, we've timed oud.
+				SetLastSentBlockAsPending();
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				SetNextRunASAP();
+			}
+			else
+			{
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD);
+			}
 			break;
 		case SyncWriterState::SyncComplete:
 			UpdateState(SyncStateEnum::Synced);
@@ -336,6 +343,7 @@ private:
 		if (WriterState != newState)
 		{
 			SetNextRunASAP();
+			StampSubStateStart();
 
 			switch (WriterState)
 			{
