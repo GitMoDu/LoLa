@@ -271,6 +271,7 @@ protected:
 			case SyncSurfaceWriter::BlocksDone:
 			case SyncSurfaceWriter::SendingFinish:
 			case SyncSurfaceWriter::WaitingForConfirmation:
+			case SyncSurfaceWriter::SyncComplete:
 				if (!LocalHashNeedsUpdate && HashesMatch())
 				{
 					if (TrackedSurface->GetTracker()->HasPending())
@@ -284,8 +285,7 @@ protected:
 					}
 				}
 				SetNextRunASAP();
-				break;
-			case SyncSurfaceWriter::SyncComplete:
+				break;			
 			default:
 				UpdateSyncingState(SyncWriterState::SyncStarting);
 				break;
