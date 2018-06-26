@@ -339,24 +339,6 @@ private:
 
 			switch (WriterState)
 			{
-			case SyncSurfaceWriter::SyncStarting:
-				break;
-			case SyncSurfaceWriter::SendingStart:
-				break;
-			case SyncSurfaceWriter::UpdatingBlocks:
-				break;
-			case SyncSurfaceWriter::SendingBlock:
-				break;
-			case SyncSurfaceWriter::BlocksUpdated:
-				break;
-			case SyncSurfaceWriter::BlocksDone:
-				break;
-			case SyncSurfaceWriter::SendingFinish:
-				break;
-			case SyncSurfaceWriter::WaitingForConfirmation:
-				break;
-			case SyncSurfaceWriter::SyncComplete:
-				break;
 			default:
 				break;
 			}
@@ -463,8 +445,6 @@ private:
 		case SyncStateEnum::Synced:
 			SetNextRunASAP();
 			break;
-		case SyncStateEnum::Disabled:
-		case SyncStateEnum::Starting:
 		default:
 			break;
 		}
