@@ -38,7 +38,6 @@ public:
 	TelemetrySurface()
 		: ITrackedSurfaceNotify()
 	{
-		Initialize();
 	}
 
 	//index [0:3]

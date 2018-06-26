@@ -18,7 +18,6 @@ public:
 	{
 	}
 
-
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -27,7 +26,4 @@ protected:
 	}
 #endif // DEBUG_LOLA
 };
-
-
 #endif
-
