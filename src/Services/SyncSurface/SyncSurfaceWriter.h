@@ -3,10 +3,10 @@
 #ifndef _SYNCSURFACEWRITER_h
 #define _SYNCSURFACEWRITER_h
 
-#define LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS	4
-#define LOLA_SYNC_SURFACE_REMOTE_HASH_INVALIDATE_PERIOD_MILLIS				100000
+#define LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS	40
+#define LOLA_SYNC_SURFACE_SERVICE_SEND_FINALIZER_BACK_OFF_PERIOD_MILLIS	    500
 
-#define SYNC_WRITER_MAX_ENSURE_TRY_COUNT 3
+#define SYNC_WRITER_MAX_FINALIZE_TRY_COUNT 3
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 #include <BitTracker.h>
@@ -21,297 +21,453 @@ public:
 	}
 
 private:
-	enum SyncWriterState
+	enum SyncWriterState : uint8_t
 	{
-		Disabled,
-		WaitingForSyncStart,
-		SyncStart,
-		SyncStarted,
-		SendingStartStatus,
-		UpdatingBlocks,
-		WaitingForBlockSend,
-		BlocksUpdated,
-		BlocksDone,
-		SendingFinishedStatus,
-		PreparingForEnsure,
-		WaitingForEnsure
-	} WriterState = Disabled;
+		SyncStarting = 0,
+		SendingStart = 1,
+		UpdatingBlocks = 2,
+		SendingBlock = 3,
+		BlocksUpdated = 4,
+		BlocksDone = 5,
+		SendingFinish = 6,
+		WaitingForConfirmation = 7,
+		SyncComplete = 8,
+	} WriterState = SyncStarting;
 
 	uint8_t SurfaceSendingIndex = 0;
 
-
 protected:
-	uint32_t RemoteInvalidations = 0;
-
-protected:
-	virtual bool OnSetup()
-	{
-		if (SyncSurfaceBase::OnSetup())
-		{
-			WriterState = SyncWriterState::WaitingForSyncStart;
-			return true;
-		}
-
-		return false;
-	}
-
 	void OnSurfaceDataChanged()
 	{
-		if (WriterState != SyncWriterState::Disabled && WriterState != SyncWriterState::WaitingForSyncStart)
+		InvalidateLocalHash();
+
+		switch (SyncState)
 		{
-			Enable();
-			SetNextRunASAP();
+		case SyncStateEnum::Starting:
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::WaitingForTrigger:
+		case SyncStateEnum::Resync:
+		case SyncStateEnum::Synced:
+			UpdateState(SyncStateEnum::Resync);
+			break;
+		case SyncStateEnum::Disabled:
+		default:
+			break;
 		}
 	}
 
-	void OnSendFailed()
+	void OnSendOk(const uint32_t sendDuration)
 	{
-		TrackedSurface->GetTracker()->SetAllPending();
-		InvalidateSync();
+		if (IsSyncing() && WriterState == SyncWriterState::SendingBlock)
+		{
+			TrackedSurface->GetTracker()->ClearBitPending(SurfaceSendingIndex);
+			SurfaceSendingIndex++;
+		}
+		SetNextRunASAP();
+	}
+
+	void OnStateUpdated(const SyncStateEnum newState)
+	{
+		SyncSurfaceBase::OnStateUpdated(newState);
+		switch (newState)
+		{
+		case SyncStateEnum::Starting:
+		case SyncStateEnum::FullSync:
+			if (SyncState == SyncStateEnum::Resync)
+			{
+				TrackedSurface->GetTracker()->SetAllPending();
+			}
+			else
+			{
+				UpdateSyncingState(SyncWriterState::SyncStarting);
+			}
+			break;
+		case SyncStateEnum::Resync:
+			UpdateSyncingState(SyncWriterState::SyncStarting);
+			break;
+		default:
+			break;
+		}
+	}
+
+	void OnWaitingForTriggerService()
+	{
+		//TODO: Replace with Disable, after testing.
+		SetNextRunLong();//Writer does nothing until it receives a sync start request.
+	}
+
+	void OnSyncActive()
+	{
+		switch (WriterState)
+		{
+		case SyncWriterState::SyncStarting:
+			SyncTryCount = 0;
+			UpdateSyncingState(SyncWriterState::SendingStart);
+			PrepareStartingSyncPacket();
+			RequestSendPacket();
+			break;
+		case SyncWriterState::SendingStart:
+			//If we get here before progressing the state, it means sending has failed.
+			UpdateSyncingState(SyncWriterState::SyncStarting);
+			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
+			break;
+		case SyncWriterState::UpdatingBlocks:
+			if (TrackedSurface->GetTracker()->HasPending())
+			{
+				PrepareNextPendingBlockPacket();
+				RequestSendPacket();
+				UpdateSyncingState(SyncWriterState::SendingBlock);
+			}
+			else
+			{
+				UpdateSyncingState(SyncWriterState::BlocksUpdated);
+				SetNextRunASAP();
+			}
+			break;
+		case SyncWriterState::SendingBlock:
+			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			SetNextRunDelay(LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS);
+			break;
+		case SyncWriterState::BlocksUpdated:
+			PrepareFinalizingProtocolPacket();
+			RequestSendPacket();
+			UpdateSyncingState(SyncWriterState::SendingFinish);
+			SetNextRunDelay(LOLA_SYNC_SURFACE_SERVICE_SEND_FINALIZER_BACK_OFF_PERIOD_MILLIS);
+			break;
+		case SyncWriterState::SendingFinish:
+			//If we're were, something went wrong with communicating the finishing move.
+			SyncTryCount++;
+			if (TrackedSurface->GetTracker()->HasPending())
+			{
+				Serial.print(Millis());
+				Serial.println(F(": SendingFinish: HasPending "));
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				SetNextRunASAP();
+			}
+			else if (SyncTryCount > SYNC_WRITER_MAX_FINALIZE_TRY_COUNT)
+			{
+				TrackedSurface->GetTracker()->SetAllPending();
+				UpdateSyncingState(SyncWriterState::SyncStarting);
+				SetNextRunASAP();
+			}
+			else
+			{
+				//Retry last block.
+				//TODO: Improve this behaviour. We have few tries and unreliable memory of which blocks were sent on this session.
+				SetLastSentBlockAsPending();
+				Serial.print(Millis());
+				Serial.println(F(": Retry last block: HasPending "));
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				SetNextRunASAP();
+			}
+			break;
+		case SyncWriterState::WaitingForConfirmation:
+			Serial.print(Millis());
+			Serial.println(F(": WaitingForConfirmation time out"));
+			//If we're here, we've timed oud.
+			SetLastSentBlockAsPending();
+			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			SetNextRunASAP();
+			break;
+		case SyncWriterState::SyncComplete:
+			UpdateState(SyncStateEnum::Synced);
+			break;
+		default:
+			UpdateState(SyncStateEnum::WaitingForTrigger);
+			break;
+		}
+	}
+
+	void OnAckReceived(const uint8_t header, const uint8_t id)
+	{
+		Serial.print(Millis());
+		Serial.println(F(": Ack."));
+		if (IsSyncing())
+		{
+			switch (WriterState)
+			{
+			case SyncWriterState::SyncStarting:
+			case SyncWriterState::SendingStart:
+				//Protocol sync has started.
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				SetNextRunASAP();
+				break;
+			case SyncWriterState::SendingFinish:
+				if (TrackedSurface->GetTracker()->HasPending())
+				{
+					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+					SetNextRunASAP();
+				}
+				else
+				{
+					UpdateSyncingState(SyncWriterState::WaitingForConfirmation);
+				}
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	void OnSyncStartRequestReceived()
+	{
+		Serial.print(Millis());
+		Serial.println(F(": OnSyncStartRequestReceived"));
+		switch (SyncState)
+		{
+		case SyncStateEnum::Synced:
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::Starting:
+		case SyncStateEnum::WaitingForTrigger:
+		case SyncStateEnum::Resync:
+			TrackedSurface->GetTracker()->SetAllPending();
+			UpdateState(SyncStateEnum::FullSync);
+			break;
+		default:
+			break;
+		}
+	}
+
+	void OnDoubleCheckReceived()
+	{
+		switch (SyncState)
+		{
+		case SyncStateEnum::Starting:
+			break;
+		case SyncStateEnum::WaitingForTrigger:
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::Resync:
+			TrackedSurface->GetTracker()->SetAllPending();
+			UpdateState(SyncStateEnum::FullSync);
+			break;
+		case SyncStateEnum::Synced:
+			if (!HashesMatch())
+			{
+				UpdateState(SyncStateEnum::Starting);
+			}
+			else if (TrackedSurface->GetTracker()->HasPending())
+			{
+				UpdateState(SyncStateEnum::Resync);
+				SetNextRunASAP();
+			}
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
+		}
+	}
+
+	void OnSyncReportReceived()
+	{
+		Serial.print(Millis());
+		Serial.println(F(": OnSyncReportReceived"));
+		switch (SyncState)
+		{
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::Resync:
+			switch (WriterState)
+			{
+			case SyncSurfaceWriter::BlocksDone:
+			case SyncSurfaceWriter::SendingFinish:
+			case SyncSurfaceWriter::WaitingForConfirmation:
+				if (!LocalHashNeedsUpdate && HashesMatch())
+				{
+					if (TrackedSurface->GetTracker()->HasPending())
+					{
+						Serial.println(F("HasPending"));
+						UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+					}
+					else
+					{
+						UpdateSyncingState(SyncWriterState::SyncComplete);
+					}
+				}
+				SetNextRunASAP();
+				break;
+			case SyncSurfaceWriter::SyncComplete:
+			default:
+				UpdateSyncingState(SyncWriterState::SyncStarting);
+				break;
+			}
+			break;
+		default:
+			UpdateSyncingState(SyncWriterState::SyncStarting);
+			break;
+		}
+	}
+
+	void OnSyncDisableRequestReceived()
+	{
+		UpdateState(SyncStateEnum::WaitingForTrigger);
 	}
 
 	void OnSendTimedOut()
 	{
-		OnSendFailed();
+		Serial.println(F("OnSendTimedOut"));
+		OnSendPacketFailed();
 	}
 
-	bool OnSyncStart()
+	void OnSendFailed()
 	{
-		if (SyncSurfaceBase::OnSyncStart())
+		Serial.println(F("OnSendFailed"));
+		OnSendPacketFailed();
+	}
+
+	void OnSendDelayed()
+	{
+		if (IsSyncing() && WriterState == SyncWriterState::SendingBlock)
 		{
-			WriterState = WaitingForSyncStart;
-			return true;
-		}
-
-		return false;
-	}
-
-	void OnSyncAchieved()
-	{
-		StampSessionSynced();
-#ifdef DEBUG_LOLA
-		Serial.println(F("Data in Sync"));
-#endif		
-	}
-
-	void OnSyncLost()
-	{
-#ifdef DEBUG_LOLA
-		Serial.println(F("Sync Lost"));
-#endif		
-		if (WriterState != SyncWriterState::Disabled)
-		{
-			StartSync();
+			UpdatePendingBlockPacketPayload();//Update packet payload with latest live data.
 		}
 	}
 
-	void PrepareNextPending()
+	void OnSendRetrying()
+	{
+		if (IsSyncing() && WriterState == SyncWriterState::SendingBlock)
+		{
+			UpdatePendingBlockPacketPayload();//Update packet payload with latest live data.
+		}
+	}
+
+private:
+	void UpdateSyncingState(const SyncWriterState newState)
+	{
+		if (WriterState != newState)
+		{
+			SetNextRunASAP();
+
+			switch (WriterState)
+			{
+			case SyncSurfaceWriter::SyncStarting:
+				break;
+			case SyncSurfaceWriter::SendingStart:
+				break;
+			case SyncSurfaceWriter::UpdatingBlocks:
+				break;
+			case SyncSurfaceWriter::SendingBlock:
+				break;
+			case SyncSurfaceWriter::BlocksUpdated:
+				break;
+			case SyncSurfaceWriter::BlocksDone:
+				break;
+			case SyncSurfaceWriter::SendingFinish:
+				break;
+			case SyncSurfaceWriter::WaitingForConfirmation:
+				break;
+			case SyncSurfaceWriter::SyncComplete:
+				break;
+			default:
+				break;
+			}
+
+			Serial.print(Millis());
+			Serial.print(F(": Updated Writer Syncing to "));
+			switch (newState)
+			{
+			case SyncSurfaceWriter::SyncStarting:
+				Serial.println(F("SyncStarting"));
+				break;
+			case SyncSurfaceWriter::SendingStart:
+				Serial.println(F("SendingStart"));
+				break;
+			case SyncSurfaceWriter::UpdatingBlocks:
+				Serial.println(F("UpdatingBlocks"));
+				break;
+			case SyncSurfaceWriter::SendingBlock:
+				Serial.println(F("SendingBlock"));
+				break;
+			case SyncSurfaceWriter::BlocksUpdated:
+				Serial.println(F("BlocksUpdated"));
+				break;
+			case SyncSurfaceWriter::BlocksDone:
+				Serial.println(F("BlocksDone"));
+				break;
+			case SyncSurfaceWriter::SendingFinish:
+				Serial.println(F("SendingFinish"));
+				break;
+			case SyncSurfaceWriter::WaitingForConfirmation:
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
+				Serial.println(F("WaitingForConfirmation"));
+				break;
+			case SyncSurfaceWriter::SyncComplete:
+				Serial.println(F("SyncComplete"));
+				break;
+			default:
+				break;
+			}
+
+			WriterState = newState;
+		}
+	}
+
+	void UpdatePendingBlockPacketPayload()
+	{
+		PrepareBlockPacketPayload(SurfaceSendingIndex, Packet->GetPayload());
+	}
+
+	void PrepareFinalizingProtocolPacket()
+	{
+		PrepareProtocolPacket(SYNC_SURFACE_PROTOCOL_SUB_HEADER_FINISHING_SYNC);
+	}
+
+	void PrepareNextPendingBlockPacket()
 	{
 		if (SurfaceSendingIndex >= TrackedSurface->GetSize())
 		{
 			SurfaceSendingIndex = 0;
 		}
 		SurfaceSendingIndex = TrackedSurface->GetTracker()->GetNextPendingIndex(SurfaceSendingIndex);
-		PrepareBlockPacket(SurfaceSendingIndex);
-		PrepareBlockPayload(SurfaceSendingIndex, Packet->GetPayload());
-		SurfaceSendingIndex++;
+		PrepareBlockPacketHeader(SurfaceSendingIndex);
+		PrepareBlockPacketPayload(SurfaceSendingIndex, Packet->GetPayload());
 	}
 
-	void StartSync()
+	void PrepareStartingSyncPacket()
 	{
-		WriterState = SyncWriterState::SyncStarted;
-		SyncTryCount = 0;
-		SetNextRunASAP();
+		PrepareProtocolPacket(SYNC_SURFACE_PROTOCOL_SUB_HEADER_STARTING_SYNC);
+		Packet->GetPayload()[0] = GetLocalHash();
 	}
 
-	void OnReaderStartSyncReceived()
+	void SetLastSentBlockAsPending()
 	{
-		if (WriterState != SyncWriterState::Disabled)
+		if (SurfaceSendingIndex < TrackedSurface->GetSize())
 		{
-			StartSync();
-		}
-	}
-
-	void OnReaderSyncEnsureReceived()
-	{
-		if (WriterState == SyncWriterState::WaitingForEnsure || 
-			WriterState == SyncWriterState::PreparingForEnsure)
-		{
-			if (IsRemoteHashValid())
+			TrackedSurface->GetTracker()->SetBitPending(SurfaceSendingIndex);
+			if (SurfaceSendingIndex > 1)
 			{
-				PromoteToSynced();
+				SurfaceSendingIndex--;
 			}
-			else
-			{
-				StartSync();
-			}
-		}
-	}
-
-	void OnWriterStartingSyncAck()
-	{
-		if (WriterState == SyncWriterState::SendingStartStatus)
-		{
-			WriterState = SyncWriterState::UpdatingBlocks;
-			SetNextRunASAP();
-		}
-	}
-
-	void OnWriterAllDataUpdatedAck()
-	{
-		if (WriterState == SyncWriterState::SendingFinishedStatus)
-		{
-			WriterState = SyncWriterState::WaitingForEnsure;
-			SetNextRunASAP();
-		}
-	}
-
-	void OnReaderDisable()
-	{
-		WriterState = SyncWriterState::Disabled;
-	}
-
-	void OnSyncFailed()
-	{
-		WriterState = SyncWriterState::WaitingForSyncStart;
-	}
-
-	void OnSendOk()
-	{
-		LastSentMillis = Millis();
-	}
-
-	void OnSendDelayed()
-	{
-		if (WriterState == SyncWriterState::WaitingForBlockSend)
-		{
-			PrepareNextPending();//Update packet payload with latest live data.
-		}
-	}
-
-	bool OnNotSynced()
-	{
-		switch (WriterState)
-		{
-		case SyncWriterState::Disabled:
-			SetNextRunDefault();
-			break;
-		case SyncWriterState::WaitingForSyncStart:
-			SetNextRunLong();
-			break;
-		case SyncWriterState::SyncStart:
-			SyncStartMillis = Millis();
-			break;
-		case SyncWriterState::SyncStarted:
-			if (Millis() - SyncStartMillis > LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS)
-			{
-				OnSyncFailed();
-				SetNextRunLong();
-			}
-			else
-			{
-				WriterState = SyncWriterState::SendingStartStatus;
-				SyncTryCount++;
-				PrepareWriterStartingSyncPacket();
-				RequestSendPacket();
-			}
-			break;
-		case SyncWriterState::SendingStartStatus:
-			//If we get here before progressing the state, it means sending has failed.
-			if (SyncTryCount > SYNC_WRITER_MAX_ENSURE_TRY_COUNT)
-			{
-				WriterState = SyncWriterState::WaitingForSyncStart;
-			}
-			else
-			{
-				WriterState = SyncWriterState::SyncStarted;
-			}
-			SetNextRunASAP();
-			break;
-		case SyncWriterState::UpdatingBlocks:
-			if (TrackedSurface->GetTracker()->HasPending())
-			{
-				PrepareNextPending();
-				RequestSendPacket();
-				WriterState = SyncWriterState::WaitingForBlockSend;
-			}
-			else
-			{
-				WriterState = SyncWriterState::BlocksUpdated;
-				SetNextRunASAP();
-			}
-			break;
-		case SyncWriterState::WaitingForBlockSend:
-			TrackedSurface->GetTracker()->ClearBitPending(SurfaceSendingIndex);
-			WriterState = SyncWriterState::UpdatingBlocks;
-			//Elapsed time aware delay. Should keep things snappy without running over something.
-			SetNextRunDelay(constrain(Millis() - LastSentMillis, 0, LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS));
-			break;
-		case SyncWriterState::BlocksUpdated:
-			WriterState = SyncWriterState::BlocksDone;
-			if (SessionHasSynced())
-			{
-				//Wait a bit for potential block updates, before occupying comms with sync acknowledge.
-				SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
-			}
-			else
-			{
-				//Except on first sync, let's get there fast.
-				SetNextRunASAP();
-			}
-			break;
-		case SyncWriterState::BlocksDone:
-			PrepareWriterAllDataUpdated();
-			RequestSendPacket();
-			WriterState = SyncWriterState::SendingFinishedStatus;
-			break;
-		case SyncWriterState::SendingFinishedStatus:
-			//If we get here before progressing the state, it means sending has failed.
-			WriterState = SyncWriterState::SyncStarted;
-			SetNextRunASAP();
-			break;
-		case SyncWriterState::PreparingForEnsure:
-			WriterState = SyncWriterState::WaitingForEnsure;
-			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
-			break;
-		case SyncWriterState::WaitingForEnsure:
-			WriterState = SyncWriterState::SyncStarted;
-			SetNextRunASAP();
-			break;
-		}
-
-		return false; //Always false, AbstractSyncStatus progresses through events.
-	}
-
-	uint32_t LastSentMillis;
-	bool OnSynced()
-	{
-		if (TrackedSurface->GetTracker()->HasPending())
-		{
-			return true;
-		}
-		else if (!IsRemoteHashValid())
-		{
-			RemoteInvalidations++;
-			return true;
-		}
-		else if (LastReceived == ILOLA_INVALID_MILLIS || 
-			Millis() - LastReceived > LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS)
-		{
-			return true;
-		}
-		else if (Millis() - LastSentMillis > LOLA_SYNC_KEEP_ALIVE_MILLIS)
-		{
-			PrepareWriterAllDataUpdated();
-			RequestSendPacket();
 		}
 		else
 		{
-			SetNextRunDefault();
+			if (SurfaceSendingIndex > 0)
+			{
+				TrackedSurface->GetTracker()->SetBitPending(SurfaceSendingIndex - 1);
+				if (SurfaceSendingIndex > 1)
+				{
+					SurfaceSendingIndex--;
+				}
+			}
 		}
+	}
 
-		return false;
+	void OnSendPacketFailed()
+	{
+		//TODO: Should respond to packets.
+		switch (SyncState)
+		{
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::Resync:
+			SetLastSentBlockAsPending();
+			break;
+		case SyncStateEnum::Synced:
+			SetNextRunASAP();
+			break;
+		case SyncStateEnum::Disabled:
+		case SyncStateEnum::Starting:
+		default:
+			break;
+		}
 	}
 };
 #endif
-

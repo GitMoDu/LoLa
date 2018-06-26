@@ -17,280 +17,298 @@ public:
 	}
 
 private:
-	enum SyncReaderState
+	enum SyncReaderState : uint8_t
 	{
-		SyncStart,
-		RequestingSyncStart,
-		SendingSyncStart,
-		PreparingForWriterStart,
-		WaitingForWriterStart,
-		WaitingForSyncStatus,
-		WaitingForDataUpdate,
-		PreparingForEnsure,
-		SendindEnsure,
-		SyncingComplete,
-		Disabled
-	} ReaderState = Disabled;
+		SyncStarting = 0,
+		WaitingForWriterStart = 1,
+		WaitingForDataUpdate = 2,
+		PreparingForReport = 3,
+		SendindReport = 4,
+		SyncingComplete = 5
+	} ReaderState = SyncStarting;
+
+
 
 protected:
-	void OnSyncAchieved()
-	{
-#ifdef DEBUG_LOLA
-		Serial.println(F("OnSyncAchieved"));
-#endif
-		SyncTryCount = 0;
-	}
-
-	void OnSyncLost()
-	{
-#ifdef DEBUG_LOLA
-		Serial.println(F("OnSyncLost"));
-#endif		
-		SyncTryCount = 0;
-	}
-
-	virtual bool OnSetup()
-	{
-		if (SyncSurfaceBase::OnSetup())
-		{
-			ReaderState = SyncReaderState::SyncStart;
-			return true;
-		}
-
-		ReaderState = SyncReaderState::Disabled;
-
-		return false;
-	}
-
-	void OnSendOk()
+	void OnSendTimedOut()
 	{
 		SetNextRunASAP();
+		Serial.println(F("OnSendTimedOut"));
 	}
 
 	void OnSendFailed()
 	{
-
-	}
-
-	void OnSendTimedOut()
-	{
-		OnSendFailed();
-	}
-
-	bool OnSyncStart()
-	{
-		if (SyncSurfaceBase::OnSyncStart())
-		{
-			return true;
-		}
-
-		return false;
+		SetNextRunASAP();
+		Serial.println(F("OnSendFailed"));
 	}
 
 	void OnBlockReceived(const uint8_t index, uint8_t * payload)
 	{
 		UpdateBlockData(index, payload);
-		InvalidateHash();
-		if (IsSynced())
-		{
-			InvalidateSync();
-			NotifyDataChanged();
-		}
-		else
-		{
-			if (ReaderState == 1)
-			{
+		InvalidateLocalHash();
+		TrackedSurface->GetTracker()->ClearBitPending(index);
+		NotifyDataChanged();
 
-			}
+		switch (SyncState)
+		{
+		case SyncStateEnum::Starting:
+			break;
+		case SyncStateEnum::WaitingForTrigger:
+			break;
+		case SyncStateEnum::Synced:
+			TrackedSurface->GetTracker()->SetAllPending();
 			TrackedSurface->GetTracker()->ClearBitPending(index);
-			SetNextRunASAP();
-		}
-	}
-
-	void OnReaderStartSyncAck()
-	{
-		if (IsSynced())
-		{
-			InvalidateSync();
-		}
-		else
-		{
-			if (ReaderState == SyncReaderState::SendingSyncStart)
+			UpdateState(SyncStateEnum::Resync);
+			break;
+		case SyncStateEnum::FullSync:
+		case SyncStateEnum::Resync:
+			switch (ReaderState)
 			{
-				ReaderState = SyncReaderState::PreparingForWriterStart;
-				SetNextRunASAP();
+			case SyncReaderState::SyncStarting:
+			case SyncReaderState::WaitingForWriterStart:
+				UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
+				break;
+			case SyncReaderState::WaitingForDataUpdate:
+				//Reset the time out by prolonging it to ABSTRACT_SURFACE_MAX_ELAPSED_BEFORE_SYNC_RESTART from now
+				StampSubStateStart();
+				break;
+			default:
+				break;
 			}
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
 		}
 	}
 
-	void OnWriterStartingSyncReceived()
+	void OnStateUpdated(const SyncStateEnum newState)
 	{
-		if (IsSynced())
+		SyncSurfaceBase::OnStateUpdated(newState);
+		switch (newState)
 		{
-			InvalidateSync();
-		}
-		else if (ReaderState == SyncReaderState::PreparingForWriterStart ||
-			ReaderState == SyncReaderState::WaitingForWriterStart)
-		{
-			ReaderState = SyncReaderState::SyncStart;
-			SetNextRunASAP();
-		}
-	}
-
-	void OnReaderSyncEnsureAck()
-	{
-		if (IsSynced())
-		{
-			InvalidateSync();
-		}
-		else if (ReaderState == SyncReaderState::SendindEnsure)
-		{
-			ReaderState = SyncReaderState::SyncingComplete;
-			SetNextRunASAP();
-		}
-	}
-
-	void OnWriterAllDataUpdatedReceived()
-	{
-		if (IsSynced() || ReaderState == SyncReaderState::WaitingForDataUpdate)
-		{
-			if (IsRemoteHashValid())
+		case SyncStateEnum::Starting:
+		case SyncStateEnum::FullSync:
+			if (SyncState == SyncStateEnum::Resync)
 			{
-				ReaderState = SyncReaderState::PreparingForEnsure;
-			}
-			else if (SessionHasSynced())
-			{
-				ReaderState = SyncReaderState::PreparingForEnsure;
-				//TODO: Missed some bits, how to handle on Writer?
+				TrackedSurface->GetTracker()->SetAllPending();
 			}
 			else
 			{
-				ReaderState = SyncReaderState::SyncStart;
+				UpdateSyncingState(SyncReaderState::SyncStarting);
 			}
-			SetNextRunASAP();
-		}
-		else if (ReaderState != SyncReaderState::Disabled)
-		{
-			//Protocol miss-hit, this edge case shouldn't happen often.
-			ReaderState = SyncReaderState::SyncStart;
-			SetNextRunASAP();
+			break;
+		case SyncStateEnum::Resync:
+			UpdateSyncingState(SyncReaderState::SyncStarting);
+			break;
+		default:
+			break;
 		}
 	}
 
-	bool OnNotSynced()
+	void OnWaitingForTriggerService()
+	{
+		UpdateState(SyncStateEnum::FullSync);
+	}
+
+	void OnSyncActive()
 	{
 		switch (ReaderState)
 		{
-		case SyncReaderState::SyncStart:
-			SyncTryCount = 0;
-			ReaderState = SyncReaderState::RequestingSyncStart;
-			SetNextRunASAP();
-			break;
-		case SyncReaderState::RequestingSyncStart:
-			ReaderState = SyncReaderState::SendingSyncStart;
-			ResetSyncSession();
-			PrepareReaderStartSyncPacket();
-			RequestSendPacket();
-			SyncStartMillis = Millis();
-			break;
-		case SyncReaderState::SendingSyncStart:
-			//If we get here before progressing the state, it means sending has failed.
-			ReaderState = SyncReaderState::RequestingSyncStart;
-			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
-			break;
-		case SyncReaderState::PreparingForWriterStart:
-			ReaderState = SyncReaderState::WaitingForWriterStart;
-			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
+		case SyncReaderState::SyncStarting:
+			UpdateSyncingState(SyncReaderState::WaitingForWriterStart);
 			break;
 		case SyncReaderState::WaitingForWriterStart:
-			//If we get here before progressing the state, it means sending has failed.
-			ReaderState = SyncReaderState::RequestingSyncStart;
-			break;
-		case SyncReaderState::WaitingForSyncStatus:
-			//Sync-In-Progress barrier crossed.
-			ReaderState = SyncReaderState::WaitingForDataUpdate;
-			SetNextRunASAP();
+			if (SubStateElapsed() > LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS)
+			{
+				StampSubStateStart();
+				PrepareSyncStartRequestPacket();
+				RequestSendPacket();
+				Serial.print(Millis());
+				Serial.println(F(": Please start sync"));
+			}
+			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
 			break;
 		case SyncReaderState::WaitingForDataUpdate:
-			if (LastReceived == ILOLA_INVALID_MILLIS || 
-				LastReceived - GetLoLa()->GetMillis() > LOLA_SYNC_SURFACE_SERVICE_INVALIDATE_PERIOD_MILLIS)
+			if (SubStateElapsed() > ABSTRACT_SURFACE_MAX_ELAPSED_BEFORE_SYNC_RESTART)
 			{
-				if (SyncTryCount > SYNC_READER_MAX_SYNC_TRY_COUNT)
-				{
-					ReaderState = SyncReaderState::Disabled;
-					OnSyncFailed();
-					SyncTryCount = 0;
-				}
-				SyncTryCount++;
-				SetNextRunASAP();
+				Serial.print(Millis());
+				Serial.print(F(": WaitingForDataUpdate Timeout. Elapsed: "));
+				Serial.print(SubStateElapsed());
+				UpdateSyncingState(SyncReaderState::SyncStarting);
 			}
 			else
 			{
-				SetNextRunDefault();
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
 			}
 			break;
-		case SyncReaderState::PreparingForEnsure:
-			PrepareReaderEnsureSyncPacket();
-			RequestSendPacket();
-			ReaderState = SyncReaderState::SendindEnsure;
+		case SyncReaderState::PreparingForReport:
+			if (HashesMatch())
+			{
+				PrepareSyncFinishedPacket();
+				RequestSendPacket();
+				UpdateSyncingState(SyncReaderState::SendindReport);
+			}
+			else
+			{
+				UpdateSyncingState(SyncReaderState::SyncStarting);
+			}
 			break;
-		case SyncReaderState::SendindEnsure:
-			//If we get here before progressing the state, it means sending has failed.
-			ReaderState = SyncReaderState::RequestingSyncStart;
-			SetNextRunASAP();
+		case SyncReaderState::SendindReport:
+			SyncTryCount++;
+			if (SyncTryCount > ABSTRACT_SURFACE_SYNC_PERSISTANCE_COUNT)
+			{
+				UpdateSyncingState(SyncReaderState::SyncStarting);
+			}
+			else
+			{
+				UpdateSyncingState(SyncReaderState::PreparingForReport);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+			}
 			break;
 		case SyncReaderState::SyncingComplete:
-			if (IsRemoteHashValid())
-			{
-				return true;
-			}
-			else
-			{
-				//Partial data corruption, try again.
-				ReaderState = SyncReaderState::RequestingSyncStart;
-				SetNextRunASAP();
-			}
+			if (HasRemoteHash() && HashesMatch())
+				UpdateState(SyncStateEnum::Synced);
 			break;
 		default:
-		case SyncReaderState::Disabled:
-			SetNextRunLong();
+			UpdateState(SyncStateEnum::Starting);
 			break;
 		}
-
-		return false;
 	}
 
-	bool OnSynced()
+	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
-		if (IsRemoteHashValid())
+		Serial.print(Millis());
+		Serial.println(F(": Ack."));
+		if (IsSyncing())
 		{
-			return true;
-		}
-		else if (LastReceived == ILOLA_INVALID_MILLIS || 
-			Millis() - LastReceived > LOLA_SYNC_SURFACE_MAX_UNRESPONSIVE_REMOTE_DURATION_MILLIS)
-		{
-			return true;
-		}
-		else if (Millis() - LastReceived > LOLA_SYNC_SURFACE_SERVICE_INVALIDATE_PERIOD_MILLIS)
-		{
-			if (SyncTryCount > SYNC_READER_MAX_SYNC_TRY_COUNT)
+			switch (ReaderState)
 			{
-				ReaderState = SyncReaderState::Disabled;
-				OnSyncFailed();
+			case SyncReaderState::SyncStarting:
+				UpdateSyncingState(SyncReaderState::WaitingForWriterStart);
+			case SyncReaderState::WaitingForWriterStart:
+				SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
+				break;
+			case SyncReaderState::PreparingForReport:
+			case SyncReaderState::SendindReport:
+				UpdateSyncingState(SyncReaderState::SyncingComplete);
+				break;
+			default:
+				break;
 			}
-			else
-			{
-				SyncTryCount++;
-			}
-			SetNextRunASAP();
 		}
-		else
-		{
-			SetNextRunDefault();
-		}
+	}
 
-		return false;
+	void OnSyncFinishingReceived()
+	{
+		if (IsSyncing())
+		{
+			switch (ReaderState)
+			{
+			case SyncReaderState::WaitingForDataUpdate:
+				if (HashesMatch())
+				{
+					UpdateSyncingState(SyncReaderState::PreparingForReport);
+				}
+				else
+				{
+					UpdateSyncingState(SyncReaderState::SyncStarting);
+				}				
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	void OnSyncStartingReceived()
+	{
+		if (IsSyncing())
+		{
+			switch (ReaderState)
+			{
+			case SyncReaderState::WaitingForDataUpdate:
+				StampSubStateStart();//If we're already awaiting data, delay the time out.
+			case SyncReaderState::SyncStarting:
+			case SyncReaderState::WaitingForWriterStart:
+				UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+private:
+	void UpdateSyncingState(const SyncReaderState newState)
+	{
+		if (ReaderState != newState)
+		{
+			SetNextRunASAP();
+			StampSubStateStart();
+
+			switch (ReaderState)
+			{
+			case SyncReaderState::SyncStarting:
+				break;
+			case SyncReaderState::WaitingForWriterStart:
+				break;
+			case SyncReaderState::WaitingForDataUpdate:
+				break;
+			case SyncReaderState::PreparingForReport:
+				break;
+			case SyncReaderState::SendindReport:
+				break;
+			case SyncReaderState::SyncingComplete:
+				break;
+			default:
+				break;
+			}
+
+			Serial.print(Millis());
+			Serial.print(F(": Updated Writer Syncing to "));
+			switch (newState)
+			{
+			case SyncReaderState::SyncStarting:
+				Serial.println(F("SyncStarting"));
+				InvalidateRemoteHash();
+				TrackedSurface->GetTracker()->SetAllPending();
+				StampSubStateStart(-LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS * 2);
+				break;
+			case SyncReaderState::WaitingForWriterStart:
+				Serial.println(F("WaitingForWriterStart"));
+				SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
+				break;
+			case SyncReaderState::WaitingForDataUpdate:
+				Serial.println(F("WaitingForDataUpdate"));
+				break;
+			case SyncReaderState::PreparingForReport:
+				Serial.println(F("PreparingForReport"));
+				InvalidateLocalHash();
+				break;
+			case SyncReaderState::SendindReport:
+				Serial.println(F("SendindReport"));
+				break;
+			case SyncReaderState::SyncingComplete:
+				Serial.println(F("SyncingComplete"));
+				break;
+			default:
+				break;
+			}
+
+			ReaderState = newState;
+		}
+	}
+	void PrepareSyncStartRequestPacket()
+	{
+		PrepareProtocolPacket(SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_SYNC);
+	}
+
+	void PrepareSyncFinishedPacket()
+	{
+		PrepareReportPacketHeader();
+		PrepareTrackerStatusPayload();
 	}
 };
-
 #endif
