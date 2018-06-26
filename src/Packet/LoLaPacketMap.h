@@ -5,7 +5,7 @@
 
 #include <Packet\PacketDefinition.h>
 
-#define LOLA_PACKET_MAP_TOTAL_SIZE 10 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
+#define LOLA_PACKET_MAP_TOTAL_SIZE 20 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
 #define PACKET_DEFINITION_ACK_HEADER 0x01
 
 #define PACKET_DEFINITION_LINK_HEADER 0x02
