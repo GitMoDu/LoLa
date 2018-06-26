@@ -186,7 +186,7 @@ protected:
 		LastRemoteHashReceived = ILOLA_INVALID_MILLIS;
 	}
 
-	inline uint32_t SubStateElapsed()
+	inline uint32_t GetSubStateElapsed()
 	{
 		if (SubStateStart != ILOLA_INVALID_MILLIS)
 		{

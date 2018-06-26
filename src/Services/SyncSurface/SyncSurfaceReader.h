@@ -120,7 +120,7 @@ protected:
 			UpdateSyncingState(SyncReaderState::WaitingForWriterStart);
 			break;
 		case SyncReaderState::WaitingForWriterStart:
-			if (SubStateElapsed() > LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS)
+			if (GetSubStateElapsed() > LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS)
 			{
 				StampSubStateStart();
 				PrepareSyncStartRequestPacket();
@@ -131,11 +131,11 @@ protected:
 			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
 			break;
 		case SyncReaderState::WaitingForDataUpdate:
-			if (SubStateElapsed() > ABSTRACT_SURFACE_MAX_ELAPSED_BEFORE_SYNC_RESTART)
+			if (GetSubStateElapsed() > ABSTRACT_SURFACE_MAX_ELAPSED_BEFORE_SYNC_RESTART)
 			{
 				Serial.print(Millis());
 				Serial.print(F(": WaitingForDataUpdate Timeout. Elapsed: "));
-				Serial.print(SubStateElapsed());
+				Serial.print(GetSubStateElapsed());
 				UpdateSyncingState(SyncReaderState::SyncStarting);
 			}
 			else
