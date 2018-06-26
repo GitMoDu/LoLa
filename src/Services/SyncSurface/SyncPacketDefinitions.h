@@ -12,6 +12,8 @@
 #define PACKET_DEFINITION_SYNC_PROTOCOL_HEADER_OFFSET 2
 #define PACKET_DEFINITION_SYNC_PROTOCOL_PAYLOAD_SIZE 1
 
+#define SYNC_SERVICE_PACKET_DEFINITION_COUNT			3 
+
 class SyncAbstractPacketDefinition : public PacketDefinition
 {
 private:
