@@ -28,18 +28,6 @@ private:
 	} ReaderState = SyncStarting;
 
 protected:
-	void OnSendTimedOut()
-	{
-		SetNextRunASAP();
-		Serial.println(F("OnSendTimedOut"));
-	}
-
-	void OnSendFailed()
-	{
-		SetNextRunASAP();
-		Serial.println(F("OnSendFailed"));
-	}
-
 	void OnBlockReceived(const uint8_t index, uint8_t * payload)
 	{
 		UpdateBlockData(index, payload);
