@@ -146,7 +146,7 @@ public:
 	void Debug(Stream * serial)
 	{
 		serial->print(F("|"));
-		for (uint8_t i = 0; i < GetSize(); i++)
+		for (uint8_t i = 0; i < (GetSize()*SYNC_SURFACE_BLOCK_SIZE); i++)
 		{
 			serial->print(GetData()[i]);
 			serial->print(F("|"));
