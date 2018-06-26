@@ -43,6 +43,8 @@ private:
 	SyncDataPacketDefinition DataPacketDefinition;
 	SyncProtocolPacketDefinition ProtocolPacketDefinition;
 
+	uint32_t LastDoubleCheckSentMillis = ILOLA_INVALID_MILLIS;
+
 protected:
 	uint8_t SyncTryCount = 0;
 
@@ -92,8 +94,6 @@ protected:
 		}
 	}
 
-	uint32_t LastSentMillis = ILOLA_INVALID_MILLIS;
-
 	void OnSyncedService()
 	{
 		if (TrackedSurface->GetTracker()->HasPending())
@@ -104,9 +104,9 @@ protected:
 		{
 			UpdateState(SyncStateEnum::Starting);
 		}
-		else if (LastSentMillis == ILOLA_INVALID_MILLIS || Millis() - LastSentMillis > ABSTRACT_SURFACE_SYNC_PERSISTANCE_PERIOD)
+		else if (LastDoubleCheckSentMillis == ILOLA_INVALID_MILLIS || Millis() - LastDoubleCheckSentMillis > ABSTRACT_SURFACE_SYNC_PERSISTANCE_PERIOD)
 		{
-			LastSentMillis = Millis();
+			LastDoubleCheckSentMillis = Millis();
 			
 			PrepareDoubleCheckProtocolPacket();
 			RequestSendPacket();
