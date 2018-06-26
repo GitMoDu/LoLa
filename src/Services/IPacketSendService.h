@@ -35,7 +35,8 @@ private:
 	} SendStatus = SendStatusEnum::Done;
 
 	uint8_t SendFailures = 0;
-	uint32_t SendTimeOutPoint = ILOLA_INVALID_MILLIS;
+	uint32_t SendStartMillis = ILOLA_INVALID_MILLIS;
+	uint8_t SendTimeOutDuration = 0;
 	uint8_t AckTimeOutDuration = 0;
 
 protected:
@@ -90,9 +91,9 @@ public:
 			SendStatus = SendStatusEnum::SendingPacket;
 			break;
 		case SendStatusEnum::SendingPacket:
-			if (Millis() > SendTimeOutPoint)
-			{
-				SetNextRunASAP();
+			if (SendStartMillis == ILOLA_INVALID_MILLIS ||
+				((Millis() - SendStartMillis) > (SendStartMillis + SendTimeOutDuration)))
+			{				
 				OnSendTimedOut();
 				ClearSendRequest();
 			}
@@ -171,12 +172,14 @@ protected:
 	void RequestSendPacket(const uint8_t sendTimeOutDurationMillis = LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS,
 		const uint8_t ackReplyTimeOutDurationMillis = LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS)
 	{
-		SendTimeOutPoint = Millis() + sendTimeOutDurationMillis;
-		if (HasSendPendingInternal() && Packet->GetDefinition()->HasACK())
+		if (HasSendPendingInternal())
 		{
+			SendStartMillis = Millis();
+			SendTimeOutDuration = sendTimeOutDurationMillis;
 			AckTimeOutDuration = ackReplyTimeOutDurationMillis;
+			SendStatus = SendStatusEnum::Requested;
 		}
-		SendStatus = SendStatusEnum::Requested;
+
 		SetNextRunASAP();
 	}
 
@@ -188,6 +191,7 @@ protected:
 	void ClearSendRequest()
 	{
 		Packet->ClearDefinition();
+		SendStartMillis = ILOLA_INVALID_MILLIS;
 		SendStatus = SendStatusEnum::Done;
 		SetNextRunASAP();
 	}
