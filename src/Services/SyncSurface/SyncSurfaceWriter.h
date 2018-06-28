@@ -273,10 +273,7 @@ protected:
 	{
 		if (IsSyncing())
 		{
-			if (!LocalHashNeedsUpdate)
-			{
-				UpdateLocalHash();
-			}
+			UpdateLocalHash();
 
 			switch (WriterState)
 			{
