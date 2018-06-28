@@ -126,17 +126,9 @@ protected:
 			break;
 		case SyncReaderState::PreparingForReport:
 			UpdateLocalHash();
-			if (HashesMatch())
-			{
-				PrepareSyncFinishedPacket();
-				RequestSendPacket();
-				UpdateSyncingState(SyncReaderState::SendindReport);
-			}
-			else
-			{
-				//TODO: For now, we request a full sync when the hashes don't match, but this can be improved.
-				UpdateSyncingState(SyncReaderState::SyncStarting);
-			}
+			PrepareSyncFinishedPacket();
+			RequestSendPacket();
+			UpdateSyncingState(SyncReaderState::SendindReport);
 			break;
 		case SyncReaderState::SendindReport:
 			SyncTryCount++;
@@ -153,7 +145,13 @@ protected:
 		case SyncReaderState::SyncingComplete:
 			UpdateLocalHash();
 			if (HasRemoteHash() && HashesMatch())
+			{
 				UpdateState(SyncStateEnum::Synced);
+			}
+			else
+			{
+				UpdateSyncingState(SyncReaderState::SyncStarting);
+			}				
 			break;
 		default:
 			UpdateState(SyncStateEnum::Starting);
@@ -189,15 +187,7 @@ protected:
 			switch (ReaderState)
 			{
 			case SyncReaderState::WaitingForDataUpdate:
-				UpdateLocalHash();
-				if (HashesMatch())
-				{
-					UpdateSyncingState(SyncReaderState::PreparingForReport);
-				}
-				else
-				{
-					UpdateSyncingState(SyncReaderState::SyncStarting);
-				}				
+				UpdateSyncingState(SyncReaderState::PreparingForReport);			
 				break;
 			default:
 				break;
