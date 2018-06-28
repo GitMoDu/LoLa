@@ -5,9 +5,6 @@
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 
-
-#define SYNC_READER_MAX_SYNC_TRY_COUNT 3
-
 class SyncSurfaceReader : public SyncSurfaceBase
 {
 public:

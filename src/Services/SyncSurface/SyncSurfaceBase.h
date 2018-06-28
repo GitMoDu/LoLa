@@ -160,6 +160,7 @@ protected:
 		else if (header == SyncReportDefinition.GetHeader())
 		{
 			SetRemoteHash(incomingPacket->GetId());
+
 			//To Writer.
 			OnSyncReportReceived(incomingPacket->GetPayload());
 			return true;
