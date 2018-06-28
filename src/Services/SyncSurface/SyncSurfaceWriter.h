@@ -252,6 +252,7 @@ protected:
 			UpdateState(SyncStateEnum::FullSync);
 			break;
 		case SyncStateEnum::Synced:
+			UpdateLocalHash();
 			if (!HashesMatch())
 			{
 				UpdateState(SyncStateEnum::Starting);

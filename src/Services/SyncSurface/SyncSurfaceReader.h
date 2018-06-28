@@ -125,6 +125,7 @@ protected:
 			}
 			break;
 		case SyncReaderState::PreparingForReport:
+			UpdateLocalHash();
 			if (HashesMatch())
 			{
 				PrepareSyncFinishedPacket();
@@ -150,6 +151,7 @@ protected:
 			}
 			break;
 		case SyncReaderState::SyncingComplete:
+			UpdateLocalHash();
 			if (HasRemoteHash() && HashesMatch())
 				UpdateState(SyncStateEnum::Synced);
 			break;
@@ -187,6 +189,7 @@ protected:
 			switch (ReaderState)
 			{
 			case SyncReaderState::WaitingForDataUpdate:
+				UpdateLocalHash();
 				if (HashesMatch())
 				{
 					UpdateSyncingState(SyncReaderState::PreparingForReport);
