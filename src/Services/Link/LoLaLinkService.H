@@ -501,7 +501,5 @@ private:
 			}
 		}
 	}
-
-
 };
 #endif
