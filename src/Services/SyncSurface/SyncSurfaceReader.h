@@ -144,7 +144,7 @@ protected:
 			}
 			else
 			{
-				UpdateSyncingState(SyncReaderState::PreparingForReport);
+				UpdateSyncingState(SyncReaderState::PreparingForReport, false);
 				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
 			}
 			break;
@@ -220,12 +220,16 @@ protected:
 	}
 
 private:
-	void UpdateSyncingState(const SyncReaderState newState)
+	void UpdateSyncingState(const SyncReaderState newState, const bool resetTryCount = true)
 	{
 		if (ReaderState != newState)
 		{
 			SetNextRunASAP();
 			StampSubStateStart();
+			if (resetTryCount)
+			{
+				SyncTryCount = 0;
+			}
 
 #ifdef DEBUG_LOLA
 			Serial.print(Millis());

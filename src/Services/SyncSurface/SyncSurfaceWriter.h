@@ -96,22 +96,27 @@ protected:
 		switch (WriterState)
 		{
 		case SyncWriterState::SyncStarting:
-			SyncTryCount = 0;
 			UpdateSyncingState(SyncWriterState::SendingStart);
 			PrepareStartingSyncPacket();
 			RequestSendPacket();
 			break;
 		case SyncWriterState::SendingStart:
 			//If we get here before progressing the state, it means sending has failed.
-			UpdateSyncingState(SyncWriterState::SyncStarting);
-			SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
+			SyncTryCount++;
+			if (SyncTryCount > ABSTRACT_SURFACE_SYNC_PERSISTANCE_COUNT)
+			{
+				UpdateSyncingState(SyncWriterState::SyncStarting, true);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_KEEP_ALIVE_MILLIS);
+			}
+			UpdateSyncingState(SyncWriterState::SyncStarting, false);
+			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
 			break;
 		case SyncWriterState::UpdatingBlocks:
 			if (TrackedSurface->GetTracker()->HasPending())
 			{
 				PrepareNextPendingBlockPacket();
 				RequestSendPacket();
-				UpdateSyncingState(SyncWriterState::SendingBlock);
+				UpdateSyncingState(SyncWriterState::SendingBlock, false);
 			}
 			else
 			{
@@ -121,7 +126,7 @@ protected:
 			}
 			break;
 		case SyncWriterState::SendingBlock:
-			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
 			SetNextRunDelay(LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::BlocksUpdated:
@@ -295,7 +300,7 @@ protected:
 				break;
 			}
 		}
-		else if (IsSyncEnabled)
+		else if (IsSyncEnabled())
 		{
 			UpdateSyncingState(SyncWriterState::SyncStarting);
 		}
@@ -333,12 +338,16 @@ protected:
 	}
 
 private:
-	void UpdateSyncingState(const SyncWriterState newState)
+	void UpdateSyncingState(const SyncWriterState newState, const bool resetTryCount = true)
 	{
 		if (WriterState != newState)
 		{
 			SetNextRunASAP();
 			StampSubStateStart();
+			if (resetTryCount)
+			{
+				SyncTryCount = 0;
+			}
 
 #ifdef DEBUG_LOLA
 			Serial.print(Millis());
@@ -457,6 +466,22 @@ private:
 		if (IsSyncing())
 		{
 			SetLastSentBlockAsPending();
+			switch (WriterState)
+			{
+			case SyncWriterState::SendingBlock:
+				SyncTryCount++;
+				if (SyncTryCount > ABSTRACT_SURFACE_SYNC_PERSISTANCE_COUNT)
+				{
+					UpdateSyncingState(SyncWriterState::SyncStarting);
+				}
+				else
+				{
+					SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+				}
+				break;
+			default:
+				break;
+			}
 		}
 	}
 };
