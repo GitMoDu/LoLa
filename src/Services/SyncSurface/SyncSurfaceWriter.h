@@ -130,10 +130,17 @@ protected:
 			SetNextRunDelay(LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::BlocksUpdated:
-			PrepareFinalizingProtocolPacket();
-			RequestSendPacket();
-			UpdateSyncingState(SyncWriterState::SendingFinish);
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
+			if (TrackedSurface->GetTracker()->HasPending())
+			{
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			}
+			else
+			{
+				PrepareFinalizingProtocolPacket();
+				RequestSendPacket();
+				UpdateSyncingState(SyncWriterState::SendingFinish);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
+			}
 			break;
 		case SyncWriterState::SendingFinish:
 			//If we're were, something went wrong with communicating the finishing move.
