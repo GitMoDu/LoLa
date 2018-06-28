@@ -133,6 +133,7 @@ protected:
 			}
 			else
 			{
+				//TODO: For now, we request a full sync when the hashes don't match, but this can be improved.
 				UpdateSyncingState(SyncReaderState::SyncStarting);
 			}
 			break;
