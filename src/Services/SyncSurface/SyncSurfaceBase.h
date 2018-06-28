@@ -83,11 +83,6 @@ protected:
 		case SyncStateEnum::Starting:
 			SyncTryCount = 0;
 			break;
-		case SyncStateEnum::FullSync:
-		case SyncStateEnum::Synced:
-		case SyncStateEnum::Resync:
-		case SyncStateEnum::WaitingForTrigger:
-		case SyncStateEnum::Disabled:
 		default:
 			break;
 		}
