@@ -3,6 +3,8 @@
 #ifndef _ABSTRACTSURFACE_h
 #define _ABSTRACTSURFACE_h
 
+//#define LOLA_SYNC_FULL_DEBUG
+
 #include <Arduino.h>
 #include <Crypto\TinyCRC.h>
 #include <Services\IPacketSendService.h>
@@ -240,25 +242,25 @@ protected:
 				break;
 			}
 
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 			Serial.print(Millis());
 			Serial.print(F(": Updated State to "));
 #endif
 			switch (newState)
 			{
 			case SyncStateEnum::WaitingForTrigger:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("WaitingForTrigger"));
 #endif
 				break;
 			case SyncStateEnum::Starting:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Starting"));
 #endif
 				InvalidateLocalHash();
 				break;
 			case SyncStateEnum::FullSync:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("FullSync"));
 #endif
 				InvalidateRemoteHash();
@@ -266,18 +268,18 @@ protected:
 				Enable();
 				break;
 			case SyncStateEnum::Synced:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Synced"));
 				TrackedSurface->GetTracker()->ClearAllPending();
 #endif
 				break;
 			case SyncStateEnum::Resync:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Resync"));
 #endif
 				break;
 			case SyncStateEnum::Disabled:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Disabled"));
 #endif
 				break;

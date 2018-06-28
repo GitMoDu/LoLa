@@ -102,7 +102,7 @@ protected:
 				StampSubStateStart();
 				PrepareSyncStartRequestPacket();
 				RequestSendPacket();
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.print(Millis());
 				Serial.println(F(": Start sync request."));
 #endif
@@ -112,7 +112,7 @@ protected:
 		case SyncReaderState::WaitingForDataUpdate:
 			if (GetSubStateElapsed() > ABSTRACT_SURFACE_MAX_ELAPSED_BEFORE_SYNC_RESTART)
 			{
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.print(Millis());
 				Serial.print(F(": WaitingForDataUpdate Timeout. Elapsed: "));
 				Serial.print(GetSubStateElapsed());
@@ -232,14 +232,14 @@ private:
 				SyncTryCount = 0;
 			}
 
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 			Serial.print(Millis());
 			Serial.print(F(": Updated Writer Syncing to "));
 #endif
 			switch (newState)
 			{
 			case SyncReaderState::SyncStarting:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SyncStarting"));
 #endif
 				InvalidateRemoteHash();
@@ -247,29 +247,29 @@ private:
 				StampSubStateStart(-LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS * 2);
 				break;
 			case SyncReaderState::WaitingForWriterStart:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("WaitingForWriterStart"));
 #endif
 				SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
 				break;
 			case SyncReaderState::WaitingForDataUpdate:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("WaitingForDataUpdate"));
 #endif
 				break;
 			case SyncReaderState::PreparingForReport:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("PreparingForReport"));
 #endif
 				InvalidateLocalHash();
 				break;
 			case SyncReaderState::SendindReport:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SendindReport"));
 #endif
 				break;
 			case SyncReaderState::SyncingComplete:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SyncingComplete"));
 #endif
 				break;

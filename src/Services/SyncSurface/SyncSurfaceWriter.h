@@ -159,7 +159,7 @@ protected:
 			if (GetSubStateElapsed() > ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT)
 			{
 				//If we're here, we've timed oud.
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.print(Millis());
 				Serial.println(F(": WaitingForConfirmation time out"));
 #endif
@@ -219,7 +219,7 @@ protected:
 
 	void OnSyncStartRequestReceived()
 	{
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 		Serial.print(Millis());
 		Serial.println(F(": SyncStartRequest Received"));
 #endif
@@ -270,10 +270,6 @@ protected:
 
 	void OnSyncReportReceived(uint8_t* payload)
 	{
-#ifdef DEBUG_LOLA
-		Serial.print(Millis());
-		Serial.println(F(": SyncReport Received"));
-#endif
 		if (IsSyncing())
 		{
 			if (!LocalHashNeedsUpdate)
@@ -363,55 +359,55 @@ private:
 				SyncTryCount = 0;
 			}
 
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 			Serial.print(Millis());
 			Serial.print(F(": Updated Writer Syncing to "));
 #endif
 			switch (newState)
 			{
 			case SyncWriterState::SyncStarting:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SyncStarting"));
 #endif
 				break;
 			case SyncWriterState::SendingStart:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SendingStart"));
 #endif
 				break;
 			case SyncWriterState::UpdatingBlocks:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("UpdatingBlocks"));
 #endif
 				break;
 			case SyncWriterState::SendingBlock:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SendingBlock"));
 #endif
 				break;
 			case SyncWriterState::BlocksUpdated:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("BlocksUpdated"));
 #endif
 				break;
 			case SyncWriterState::BlocksDone:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("BlocksDone"));
 #endif
 				break;
 			case SyncWriterState::SendingFinish:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SendingFinish"));
 #endif
 				break;
 			case SyncWriterState::WaitingForConfirmation:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("WaitingForConfirmation"));
 #endif
 				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
 				break;
 			case SyncWriterState::SyncComplete:
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SyncComplete"));
 #endif
 				break;
