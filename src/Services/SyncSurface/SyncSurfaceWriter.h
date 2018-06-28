@@ -7,7 +7,6 @@
 #define SYNC_WRITER_MAX_FINALIZE_TRY_COUNT 3
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
-#include <BitTracker.h>
 
 class SyncSurfaceWriter : public SyncSurfaceBase
 {
