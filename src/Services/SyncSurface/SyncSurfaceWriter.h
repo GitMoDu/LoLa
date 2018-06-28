@@ -96,7 +96,7 @@ protected:
 		switch (WriterState)
 		{
 		case SyncWriterState::SyncStarting:
-			UpdateSyncingState(SyncWriterState::SendingStart);
+			UpdateSyncingState(SyncWriterState::SendingStart, false);
 			PrepareStartingSyncPacket();
 			RequestSendPacket();
 			break;
@@ -120,7 +120,7 @@ protected:
 			}
 			else
 			{
-				UpdateSyncingState(SyncWriterState::BlocksUpdated);
+				UpdateSyncingState(SyncWriterState::BlocksUpdated, false);
 				//Take some time for the data to maybe update, before occupying the link with insurace.
 				SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
 			}
@@ -197,7 +197,7 @@ protected:
 			case SyncWriterState::SyncStarting:
 			case SyncWriterState::SendingStart:
 				//Protocol sync has started.
-				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
 				SetNextRunASAP();
 				break;
 			case SyncWriterState::SendingFinish:
