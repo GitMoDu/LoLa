@@ -276,24 +276,38 @@ protected:
 #endif
 		if (IsSyncing())
 		{
+			if (!LocalHashNeedsUpdate)
+			{
+				UpdateLocalHash();
+			}
+
 			switch (WriterState)
 			{
+			case SyncSurfaceWriter::UpdatingBlocks:
+			case SyncSurfaceWriter::SendingBlock:
+			case SyncSurfaceWriter::BlocksUpdated:
+				if (TrackedSurface->GetTracker()->HasPending())
+				{
+					UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
+				}
+				else if (HashesMatch())
+				{
+					UpdateSyncingState(SyncWriterState::SyncComplete);
+				}
+				break;
 			case SyncWriterState::BlocksDone:
 			case SyncWriterState::SendingFinish:
 			case SyncWriterState::WaitingForConfirmation:
-			case SyncWriterState::SyncComplete:
-				if (!LocalHashNeedsUpdate && HashesMatch())
+			case SyncWriterState::SyncComplete:				
+				if (HashesMatch())
 				{
-					if (TrackedSurface->GetTracker()->HasPending())
-					{
-						UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-					}
-					else
-					{
-						UpdateSyncingState(SyncWriterState::SyncComplete);
-					}
+					UpdateSyncingState(SyncWriterState::SyncComplete);
 				}
-				SetNextRunASAP();
+				else
+				{
+					SetLastSentBlockAsPending();
+					UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
+				}
 				break;
 			default:
 				UpdateSyncingState(SyncWriterState::SyncStarting);
