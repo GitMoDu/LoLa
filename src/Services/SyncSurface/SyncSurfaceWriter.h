@@ -269,16 +269,14 @@ protected:
 		Serial.print(Millis());
 		Serial.println(F(": SyncReport Received"));
 #endif
-		switch (SyncState)
+		if (IsSyncing())
 		{
-		case SyncStateEnum::FullSync:
-		case SyncStateEnum::Resync:
 			switch (WriterState)
 			{
-			case SyncSurfaceWriter::BlocksDone:
-			case SyncSurfaceWriter::SendingFinish:
-			case SyncSurfaceWriter::WaitingForConfirmation:
-			case SyncSurfaceWriter::SyncComplete:
+			case SyncWriterState::BlocksDone:
+			case SyncWriterState::SendingFinish:
+			case SyncWriterState::WaitingForConfirmation:
+			case SyncWriterState::SyncComplete:
 				if (!LocalHashNeedsUpdate && HashesMatch())
 				{
 					if (TrackedSurface->GetTracker()->HasPending())
@@ -291,15 +289,15 @@ protected:
 					}
 				}
 				SetNextRunASAP();
-				break;			
+				break;
 			default:
 				UpdateSyncingState(SyncWriterState::SyncStarting);
 				break;
 			}
-			break;
-		default:
+		}
+		else if (IsSyncEnabled)
+		{
 			UpdateSyncingState(SyncWriterState::SyncStarting);
-			break;
 		}
 	}
 
@@ -342,59 +340,54 @@ private:
 			SetNextRunASAP();
 			StampSubStateStart();
 
-			switch (WriterState)
-			{
-			default:
-				break;
-			}
 #ifdef DEBUG_LOLA
 			Serial.print(Millis());
 			Serial.print(F(": Updated Writer Syncing to "));
 #endif
 			switch (newState)
 			{
-			case SyncSurfaceWriter::SyncStarting:
+			case SyncWriterState::SyncStarting:
 #ifdef DEBUG_LOLA
 				Serial.println(F("SyncStarting"));
 #endif
 				break;
-			case SyncSurfaceWriter::SendingStart:
+			case SyncWriterState::SendingStart:
 #ifdef DEBUG_LOLA
 				Serial.println(F("SendingStart"));
 #endif
 				break;
-			case SyncSurfaceWriter::UpdatingBlocks:
+			case SyncWriterState::UpdatingBlocks:
 #ifdef DEBUG_LOLA
 				Serial.println(F("UpdatingBlocks"));
 #endif
 				break;
-			case SyncSurfaceWriter::SendingBlock:
+			case SyncWriterState::SendingBlock:
 #ifdef DEBUG_LOLA
 				Serial.println(F("SendingBlock"));
 #endif
 				break;
-			case SyncSurfaceWriter::BlocksUpdated:
+			case SyncWriterState::BlocksUpdated:
 #ifdef DEBUG_LOLA
 				Serial.println(F("BlocksUpdated"));
 #endif
 				break;
-			case SyncSurfaceWriter::BlocksDone:
+			case SyncWriterState::BlocksDone:
 #ifdef DEBUG_LOLA
 				Serial.println(F("BlocksDone"));
 #endif
 				break;
-			case SyncSurfaceWriter::SendingFinish:
+			case SyncWriterState::SendingFinish:
 #ifdef DEBUG_LOLA
 				Serial.println(F("SendingFinish"));
 #endif
 				break;
-			case SyncSurfaceWriter::WaitingForConfirmation:
+			case SyncWriterState::WaitingForConfirmation:
 #ifdef DEBUG_LOLA
 				Serial.println(F("WaitingForConfirmation"));
 #endif
 				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
 				break;
-			case SyncSurfaceWriter::SyncComplete:
+			case SyncWriterState::SyncComplete:
 #ifdef DEBUG_LOLA
 				Serial.println(F("SyncComplete"));
 #endif
@@ -461,14 +454,9 @@ private:
 	{
 		//TODO: Should respond to packets.
 		SetNextRunASAP();
-		switch (SyncState)
+		if (IsSyncing())
 		{
-		case SyncStateEnum::FullSync:
-		case SyncStateEnum::Resync:
 			SetLastSentBlockAsPending();
-			break;
-		default:
-			break;
 		}
 	}
 };
