@@ -202,6 +202,7 @@ protected:
 	void PrepareReportPacketHeader()
 	{
 		Packet->SetDefinition(&SyncReportDefinition);
+		UpdateLocalHash();
 		Packet->SetId(GetLocalHash());
 	}
 
@@ -209,6 +210,7 @@ protected:
 	{
 		Packet->SetDefinition(&ProtocolPacketDefinition);
 		Packet->SetId(id);
+		UpdateLocalHash();
 		Packet->GetPayload()[0] = GetLocalHash();
 	}
 
