@@ -4,7 +4,6 @@
 #define _SYNCSURFACEWRITER_h
 
 #define LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS	4
-#define SYNC_WRITER_MAX_FINALIZE_TRY_COUNT 3
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 
@@ -138,7 +137,7 @@ protected:
 			{
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			}
-			else if (SyncTryCount > SYNC_WRITER_MAX_FINALIZE_TRY_COUNT)
+			else if (SyncTryCount > ABSTRACT_SURFACE_SYNC_PERSISTANCE_COUNT)
 			{
 				TrackedSurface->GetTracker()->SetAllPending();
 				UpdateSyncingState(SyncWriterState::SyncStarting);
