@@ -5,7 +5,6 @@
 
 #include <BitTracker.h>
 #include <Callback.h>
-#include <Crypto\TinyCRC.h>
 
 #define SYNC_SURFACE_BLOCK_SIZE 4 //4 bytes per block, enough for a 32 bit value (uint32_t, int32_t);
 
@@ -20,8 +19,6 @@ class ITrackedSurface
 private:
 	uint8_t DataSize = 0;
 	uint8_t IndexOffsetGrunt;
-	TinyCrc CalculatorCRC;
-	boolean HashNeedsUpdate = true;
 
 private:
 	void InvalidateBlock(const uint8_t blockIndex)
@@ -37,31 +34,6 @@ protected:
 public:
 	ITrackedSurface()
 	{
-		CalculatorCRC.Reset();
-	}
-
-	void UpdateHash()
-	{
-		if (HashNeedsUpdate)
-		{
-			HashNeedsUpdate = false;
-			CalculatorCRC.Reset();
-
-			for (uint8_t i = 0; i < GetDataSize(); i++)
-			{
-				CalculatorCRC.Update(GetData()[i]);
-			}
-		}		
-	}
-
-	inline void InvalidateHash()
-	{
-		HashNeedsUpdate = true;
-	}
-
-	uint8_t GetHash()
-	{
-		return CalculatorCRC.GetCurrent();
 	}
 
 	bool Setup()

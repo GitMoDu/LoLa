@@ -3,7 +3,7 @@
 #ifndef _ABSTRACTSURFACE_h
 #define _ABSTRACTSURFACE_h
 
-#define LOLA_SYNC_FULL_DEBUG
+//#define LOLA_SYNC_FULL_DEBUG
 
 #include <Arduino.h>
 #include <Crypto\TinyCRC.h>
@@ -43,9 +43,13 @@ protected:
 		Disabled = 5
 	};
 
+	boolean LocalHashNeedsUpdate = false;
+
 	ITrackedSurfaceNotify * TrackedSurface = nullptr;
 
 	SyncStateEnum SyncState = SyncStateEnum::Disabled;
+
+	TinyCrc CalculatorCRC;
 	LoLaPacketSlim PacketHolder;
 
 protected:
@@ -61,7 +65,7 @@ public:
 		: IPacketSendService(scheduler, period, loLa, &PacketHolder)
 	{
 		TrackedSurface = trackedSurface;
-		
+		CalculatorCRC.Reset();
 		SyncState = SyncStateEnum::Disabled;
 	}
 
@@ -151,33 +155,29 @@ protected:
 
 	bool HashesMatch()
 	{
-#ifdef DEBUG_LOLA
-		if (!HasRemoteHash())
-		{
-			Serial.println(F("No Remote hash"));
-		}
-		if (GetLocalHash() != LastRemoteHash)
-		{
-			Serial.println(F("Hash mismatch"));
-		}
-#endif
 		return (HasRemoteHash() &&
-			TrackedSurface->GetHash() == LastRemoteHash);
+			GetLocalHash() == LastRemoteHash);
 	}
 
 	void UpdateLocalHash()
 	{
-		TrackedSurface->UpdateHash();
+		LocalHashNeedsUpdate = false;
+		CalculatorCRC.Reset();
+
+		for (uint8_t i = 0; i < TrackedSurface->GetDataSize(); i++)
+		{
+			CalculatorCRC.Update(TrackedSurface->GetData()[i]);
+		}
+	}
+
+	uint8_t GetLocalHash()
+	{
+		return CalculatorCRC.GetCurrent();
 	}
 
 	inline void InvalidateLocalHash()
 	{
-		TrackedSurface->InvalidateHash();
-	}
-
-	inline uint8_t GetLocalHash()
-	{
-		return TrackedSurface->GetHash();
+		LocalHashNeedsUpdate = true;
 	}
 
 	inline void InvalidateRemoteHash()
@@ -306,7 +306,10 @@ protected:
 	void OnService()
 	{
 		//Make sure hash is up to date.
-		UpdateLocalHash();
+		if (LocalHashNeedsUpdate)
+		{
+			UpdateLocalHash();
+		}
 
 		switch (SyncState)
 		{

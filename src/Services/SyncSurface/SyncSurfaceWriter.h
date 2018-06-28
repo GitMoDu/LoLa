@@ -44,7 +44,6 @@ protected:
 		case SyncStateEnum::Resync:
 		case SyncStateEnum::Synced:
 			UpdateState(SyncStateEnum::Resync);
-			SetNextRunASAP();
 			break;
 		case SyncStateEnum::Disabled:
 		default:
