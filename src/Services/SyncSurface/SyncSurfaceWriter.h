@@ -154,13 +154,21 @@ protected:
 		case SyncWriterState::WaitingForConfirmation:
 			if (GetSubStateElapsed() > ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT)
 			{
+				//If we're here, we've timed oud.
 #ifdef DEBUG_LOLA
 				Serial.print(Millis());
 				Serial.println(F(": WaitingForConfirmation time out"));
 #endif
-				//If we're here, we've timed oud.
-				SetLastSentBlockAsPending();
-				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				if (!TrackedSurface->GetTracker()->HasPending())
+				{
+					UpdateSyncingState(SyncWriterState::BlocksUpdated);
+					SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+				}
+				else
+				{
+					SetLastSentBlockAsPending();
+					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				}
 			}
 			else
 			{
