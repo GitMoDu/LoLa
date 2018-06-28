@@ -233,11 +233,6 @@ protected:
 			case SyncStateEnum::Disabled:
 				Enable();
 				break;
-			case SyncStateEnum::Starting:
-			case SyncStateEnum::WaitingForTrigger:
-			case SyncStateEnum::FullSync:
-			case SyncStateEnum::Synced:
-			case SyncStateEnum::Resync:
 			default:
 				break;
 			}
