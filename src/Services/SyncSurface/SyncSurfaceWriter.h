@@ -120,7 +120,8 @@ protected:
 			else
 			{
 				UpdateSyncingState(SyncWriterState::BlocksUpdated);
-				SetNextRunASAP();
+				//Take some time for the data to maybe update, before occupying the link with insurace.
+				SetNextRunDelay(LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS);
 			}
 			break;
 		case SyncWriterState::SendingBlock:
