@@ -86,7 +86,7 @@ protected:
 			}
 			break;
 		case SyncStateEnum::Resync:
-			UpdateSyncingState(SyncReaderState::SyncStarting);
+			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
 			break;
 		default:
 			break;
