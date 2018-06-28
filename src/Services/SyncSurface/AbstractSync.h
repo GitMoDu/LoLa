@@ -89,6 +89,11 @@ public:
 		return SyncState == SyncStateEnum::Synced;
 	}
 
+	bool IsSyncEnabled()
+	{
+		return SyncState != SyncStateEnum::Disabled;
+	}
+
 	bool IsSyncing()
 	{
 		return SyncState == SyncStateEnum::Resync || SyncState == SyncStateEnum::FullSync;
