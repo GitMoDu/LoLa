@@ -441,6 +441,7 @@ private:
 	void PrepareStartingSyncPacket()
 	{
 		PrepareProtocolPacket(SYNC_SURFACE_PROTOCOL_SUB_HEADER_STARTING_SYNC);
+		UpdateLocalHash();
 		Packet->GetPayload()[0] = GetLocalHash();
 	}
 
