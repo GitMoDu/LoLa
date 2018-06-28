@@ -184,10 +184,6 @@ protected:
 
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
-#ifdef DEBUG_LOLA
-		Serial.print(Millis());
-		Serial.println(F(": Ack."));
-#endif
 		if (IsSyncing())
 		{
 			switch (WriterState)
@@ -219,7 +215,7 @@ protected:
 	{
 #ifdef DEBUG_LOLA
 		Serial.print(Millis());
-		Serial.println(F(": OnSyncStartRequestReceived"));
+		Serial.println(F(": SyncStartRequest Received"));
 #endif
 		switch (SyncState)
 		{
@@ -270,7 +266,7 @@ protected:
 	{
 #ifdef DEBUG_LOLA
 		Serial.print(Millis());
-		Serial.println(F(": OnSyncReportReceived"));
+		Serial.println(F(": SyncReport Received"));
 #endif
 		switch (SyncState)
 		{

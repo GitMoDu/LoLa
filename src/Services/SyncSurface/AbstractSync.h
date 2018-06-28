@@ -148,16 +148,6 @@ protected:
 
 	bool HashesMatch()
 	{
-#ifdef DEBUG_LOLA
-		if (!HasRemoteHash())
-		{
-			Serial.println(F("No Remote hash"));
-		}
-		if (GetLocalHash() != LastRemoteHash)
-		{
-			Serial.println(F("Hash mismatch"));
-		}
-#endif
 		return (HasRemoteHash() &&
 			GetLocalHash() == LastRemoteHash);
 	}
