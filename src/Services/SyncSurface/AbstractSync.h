@@ -323,21 +323,12 @@ protected:
 		case SyncStateEnum::WaitingForTrigger:
 			OnWaitingForTriggerService();
 			break;
+		case SyncStateEnum::Resync:
 		case SyncStateEnum::FullSync:
 			OnSyncActive();
 			break;
 		case SyncStateEnum::Synced:
 			OnSyncedService();
-			break;
-		case SyncStateEnum::Resync:
-			if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_BEFORE_RESYNC_DEMOTE)
-			{
-				UpdateState(SyncStateEnum::FullSync);
-			}
-			else
-			{
-				OnSyncActive();
-			}
 			break;
 		case SyncStateEnum::Disabled:
 		default:
