@@ -55,7 +55,7 @@ protected:
 	virtual void OnSyncStartingReceived() {}
 
 	//Writer
-	virtual void OnSyncReportReceived() {}
+	virtual void OnSyncReportReceived(uint8_t * payload) {}
 	virtual void OnSyncStartRequestReceived() {}
 	virtual void OnSyncDisableRequestReceived() {}
 
@@ -166,7 +166,7 @@ protected:
 		{
 			SetRemoteHash(incomingPacket->GetId());
 			//To Writer.
-			OnSyncReportReceived();
+			OnSyncReportReceived(incomingPacket->GetPayload());
 			return true;
 		}
 

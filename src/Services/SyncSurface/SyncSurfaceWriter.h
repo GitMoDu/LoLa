@@ -266,7 +266,7 @@ protected:
 		}
 	}
 
-	void OnSyncReportReceived()
+	void OnSyncReportReceived(uint8_t* payload)
 	{
 #ifdef DEBUG_LOLA
 		Serial.print(Millis());
