@@ -4,8 +4,6 @@
 #define _SYNCSURFACEWRITER_h
 
 #define LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS	4
-#define LOLA_SYNC_SURFACE_SERVICE_SEND_FINALIZER_BACK_OFF_PERIOD_MILLIS	    ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT
-
 #define SYNC_WRITER_MAX_FINALIZE_TRY_COUNT 3
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
@@ -132,7 +130,7 @@ protected:
 			PrepareFinalizingProtocolPacket();
 			RequestSendPacket();
 			UpdateSyncingState(SyncWriterState::SendingFinish);
-			SetNextRunDelay(LOLA_SYNC_SURFACE_SERVICE_SEND_FINALIZER_BACK_OFF_PERIOD_MILLIS);
+			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
 			break;
 		case SyncWriterState::SendingFinish:
 			//If we're were, something went wrong with communicating the finishing move.
