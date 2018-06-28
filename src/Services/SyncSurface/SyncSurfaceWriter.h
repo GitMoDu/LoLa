@@ -152,7 +152,7 @@ protected:
 				//Retry last block.
 				//TODO: Improve this behaviour. We have few tries and unreliable memory of which blocks were sent on this session.
 				SetLastSentBlockAsPending();
-				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
 			}
 			break;
 		case SyncWriterState::WaitingForConfirmation:
