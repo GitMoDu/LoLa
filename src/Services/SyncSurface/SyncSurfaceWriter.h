@@ -137,13 +137,11 @@ protected:
 			if (TrackedSurface->GetTracker()->HasPending())
 			{
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-				SetNextRunASAP();
 			}
 			else if (SyncTryCount > SYNC_WRITER_MAX_FINALIZE_TRY_COUNT)
 			{
 				TrackedSurface->GetTracker()->SetAllPending();
 				UpdateSyncingState(SyncWriterState::SyncStarting);
-				SetNextRunASAP();
 			}
 			else
 			{
@@ -151,7 +149,6 @@ protected:
 				//TODO: Improve this behaviour. We have few tries and unreliable memory of which blocks were sent on this session.
 				SetLastSentBlockAsPending();
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-				SetNextRunASAP();
 			}
 			break;
 		case SyncWriterState::WaitingForConfirmation:
@@ -164,7 +161,6 @@ protected:
 				//If we're here, we've timed oud.
 				SetLastSentBlockAsPending();
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-				SetNextRunASAP();
 			}
 			else
 			{
