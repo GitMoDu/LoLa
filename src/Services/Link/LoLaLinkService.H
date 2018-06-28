@@ -29,6 +29,7 @@
 #define LOLA_LINK_SERVICE_PANIC								(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*3)
 #define LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT				(LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD*4)
 #define LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL		(LOLA_LINK_SERVICE_BROADCAST_PERIOD*2)
+#define LOLA_LINK_SERVICE_CONNECTING_MIN_DURATION			50
 
 #define LOLA_LINK_SERVICE_SLOW_CHECK_PERIOD					LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO
 #define LOLA_LINK_SERVICE_FAST_CHECK_PERIOD					50
@@ -486,7 +487,7 @@ private:
 			{
 			case ConnectingEnum::ConnectingStarting:
 				ConnectingState = ConnectingEnum::ConnectionGreenLight;
-				SetNextRunDelay(1500);
+				SetNextRunDelay(LOLA_LINK_SERVICE_CONNECTING_MIN_DURATION);
 				break;
 			case ConnectingEnum::ConnectionGreenLight:
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
