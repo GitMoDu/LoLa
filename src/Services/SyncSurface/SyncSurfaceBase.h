@@ -5,7 +5,7 @@
 
 
 #include <Arduino.h>
-#include <Services\SyncSurface\SyncSurfaceBlock.h>
+#include <Services\SyncSurface\AbstractSync.h>
 #include <Services\SyncSurface\SyncPacketDefinitions.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\PacketDefinition.h>
@@ -26,11 +26,11 @@
 #define SYNC_SURFACE_PROTOCOL_SUB_HEADER_DOUBLE_CHECK			4
 
 
-class SyncSurfaceBase : public SyncSurfaceBlock
+class SyncSurfaceBase : public AbstractSync
 {
 public:
 	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurfaceNotify* trackedSurface)
-		: SyncSurfaceBlock(scheduler, LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS, loLa, trackedSurface)
+		: AbstractSync(scheduler, LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS, loLa, trackedSurface)
 	{
 		SyncReportDefinition.SetBaseHeader(baseHeader);
 		DataPacketDefinition.SetBaseHeader(baseHeader);
@@ -77,7 +77,7 @@ protected:
 	
 	virtual void OnStateUpdated(const SyncStateEnum newState)
 	{
-		SyncSurfaceBlock::OnStateUpdated(newState);
+		AbstractSync::OnStateUpdated(newState);
 		switch (newState)
 		{
 		case SyncStateEnum::Starting:
@@ -171,6 +171,26 @@ protected:
 		}
 
 		return false;
+	}
+
+	void UpdateBlockData(const uint8_t blockIndex, uint8_t * payload)
+	{
+		uint8_t IndexOffset = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+
+		for (uint8_t i = 0; i < SYNC_SURFACE_BLOCK_SIZE; i++)
+		{
+			TrackedSurface->GetData()[IndexOffset + i] = payload[i];
+		}
+	}
+
+	void PrepareBlockPacketPayload(const uint8_t index, uint8_t * payload)
+	{
+		uint8_t IndexOffset = index * SYNC_SURFACE_BLOCK_SIZE;
+
+		for (uint8_t i = 0; i < SYNC_SURFACE_BLOCK_SIZE; i++)
+		{
+			payload[i] = TrackedSurface->GetData()[IndexOffset + i];
+		}
 	}
 
 	void PrepareTrackerStatusPayload()
