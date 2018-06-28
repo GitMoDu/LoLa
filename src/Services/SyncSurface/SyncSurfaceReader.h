@@ -34,10 +34,6 @@ protected:
 
 		switch (SyncState)
 		{
-		case SyncStateEnum::Starting:
-			break;
-		case SyncStateEnum::WaitingForTrigger:
-			break;
 		case SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->SetAllPending();
 			TrackedSurface->GetTracker()->ClearBitPending(index);
@@ -58,8 +54,6 @@ protected:
 			default:
 				break;
 			}
-			break;
-		case SyncStateEnum::Disabled:
 			break;
 		default:
 			break;
@@ -233,11 +227,6 @@ private:
 			SetNextRunASAP();
 			StampSubStateStart();
 
-			switch (ReaderState)
-			{
-			default:
-				break;
-			}
 #ifdef DEBUG_LOLA
 			Serial.print(Millis());
 			Serial.print(F(": Updated Writer Syncing to "));
