@@ -102,7 +102,7 @@ protected:
 #endif
 
 	//Callback handler
-	Signal<const uint8_t> ConnectionStatusUpdated;
+	Signal<uint8_t> LinkStatusUpdated;
 
 	union ArrayToUint32 {
 		byte array[4];
@@ -124,9 +124,9 @@ public:
 
 	//Param uint8_t is 
 	//LoLaLinkInfo::LinkState enum
-	void SetOnConnectionStatusUpdatedCallback(const Slot<const uint8_t>& slot)
+	void AttachOnLinkStatusUpdated(const Slot<uint8_t>& slot)
 	{
-		ConnectionStatusUpdated.attach(slot);
+		LinkStatusUpdated.attach(slot);
 	}
 
 	bool AddSubServices(LoLaServicesManager * servicesManager)
@@ -231,7 +231,6 @@ protected:
 		{
 			StateStartTime = Millis();
 			OnLinkStateChanged(newState);
-			ConnectionStatusUpdated.fire(newState);
 
 			//Previous state
 			switch (LinkInfo.LinkState)
@@ -278,7 +277,10 @@ protected:
 			default:
 				break;
 			}
+
+			LinkStatusUpdated.fire(newState);
 		}
+
 		LinkInfo.LinkState = newState;
 	}
 
