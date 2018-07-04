@@ -48,12 +48,12 @@ protected:
 				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
 				(RemotePMAC == ATUI.uint && SessionId != sessionId))
 			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 				SetNextRunASAP();
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Setup:
-		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunASAP();
 			break;
@@ -75,7 +75,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::Connected:
 			if (ATUI.uint != LOLA_LINK_SERVICE_INVALID_PMAC && RemotePMAC == ATUI.uint)
 			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 				SetNextRunASAP();
 			}
 			break;
@@ -83,8 +83,8 @@ protected:
 			SetNextRunASAP();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
-		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (ATUI.uint != LOLA_LINK_SERVICE_INVALID_PMAC && sessionId != LOLA_LINK_SERVICE_INVALID_SESSION)
 			{
 				RemotePMAC = ATUI.uint;
@@ -175,7 +175,7 @@ protected:
 	{
 		switch (newState)
 		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			ConnectingState = AwaitingConnectionEnum::SearchingForBroadcast;
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:

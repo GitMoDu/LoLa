@@ -242,7 +242,7 @@ protected:
 				LinkInfo.ResetLinkStarted();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Setup:
-			case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			case LoLaLinkInfo::LinkStateEnum::Connecting:
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
@@ -265,7 +265,7 @@ protected:
 				//Notify all link dependent services they can start.
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				break;
-			case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				ResetLastSentTimeStamp();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
@@ -369,7 +369,7 @@ protected:
 	virtual bool ShouldProcessPackets()
 	{
 		if (SessionId != LOLA_LINK_SERVICE_INVALID_SESSION ||
-			LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingConnection ||
+			LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink ||
 			LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
 		{
 			return true;
@@ -389,7 +389,7 @@ protected:
 				Serial.print(LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT / 1000);
 				Serial.println(F(" seconds."));
 #endif
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 				SetNextRunASAP();
 			}
 			else if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_PANIC)
@@ -424,15 +424,15 @@ protected:
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
 			SetNextRunASAP();
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			StateStartTime = Millis();
 			break;
-		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			OnAwaitingConnection();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunASAP();
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			OnConnecting();
@@ -478,7 +478,7 @@ private:
 		if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
 			RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC)
 		{
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			SetNextRunASAP();
 		}
 		else
@@ -495,7 +495,7 @@ private:
 				break;
 			case ConnectingEnum::ConnectionEscalationFailed:
 			default:
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 				SetNextRunASAP();
 				break;
 			}

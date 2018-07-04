@@ -63,7 +63,7 @@ protected:
 		switch (LinkInfo.LinkState)
 		{
 
-		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			if (ConnectingState == AwaitingConnectionEnum::BroadcastingOpenSession ||
 				ConnectingState == AwaitingConnectionEnum::Starting)
@@ -78,7 +78,7 @@ protected:
 				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
 				RemotePMAC == ATUI.uint)
 			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
@@ -94,7 +94,7 @@ protected:
 		switch (LinkInfo.LinkState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
-		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunASAP();
 			break;
@@ -109,7 +109,7 @@ protected:
 				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
 				(RemotePMAC == ATUI.uint && SessionId != sessionId))
 			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingConnection);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Disabled:
@@ -185,7 +185,7 @@ protected:
 			SetNextRunASAP();
 			NewSession();
 			break;
-		case LoLaLinkInfo::LinkStateEnum::AwaitingConnection:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			NewSession();
 			ConnectingState = AwaitingConnectionEnum::Starting;
 			SetNextRunASAP();

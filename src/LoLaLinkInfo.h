@@ -21,7 +21,7 @@ public:
 	{
 		Disabled = 0,
 		Setup = 1,
-		AwaitingConnection = 2,
+		AwaitingLink = 2,
 		AwaitingSleeping = 3,
 		Connecting = 4,
 		Connected = 5
