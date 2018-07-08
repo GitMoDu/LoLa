@@ -1,6 +1,8 @@
 // TinyCRC.h
 // Tiny CRC calculator, supporting continuous, single shot and mixed.
 // Source : https://github.com/FrankBoesing/FastCRC.git
+// 
+// Modified and expanded by GitModu (batatas@gmail.com)
 
 #ifndef _TINYCRC_h
 #define _TINYCRC_h
@@ -41,33 +43,46 @@ const uint8_t crc_table_smbus[256] PROGMEM = {
 	0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
 };
 
-class TinyCrc
+enum CrcTypes
 {
-private:
-	uint8_t Seed = 0;
+	Modbus8
+};
+
+template <class T> class AbstractTinyCrc
+{
+protected:
+	T Seed = 0;
 
 public:
-	void Reset(const uint8_t seed)
+	void Reset(const T seed)
 	{
 		Seed = seed;
 	}
 
-	uint8_t Reset()
+	T Reset()
 	{
 		Seed = 0;
 
 		return Seed;
 	}
 
-	uint8_t GetCurrent()
+	T GetCurrent()
 	{
 		return Seed;
 	}
 
+	virtual T Update(const T value);
+
+	virtual T Update(const T data[], const uint8_t size);
+};
+
+class TinyCrcModbus8 : public AbstractTinyCrc<uint8_t>
+{
+public:
 	uint8_t Update(const uint8_t value)
 	{
 		Seed = pgm_read_byte(&crc_table_smbus[Seed ^ value]);
-
+		
 		return Seed;
 	}
 
@@ -81,5 +96,4 @@ public:
 		return Seed;
 	}
 };
-
 #endif
