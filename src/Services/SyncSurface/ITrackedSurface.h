@@ -20,7 +20,7 @@ class ITrackedSurface
 private:
 	uint8_t DataSize = 0;
 	uint8_t IndexOffsetGrunt;
-	TinyCrc CalculatorCRC;
+	TinyCrcModbus8 CalculatorCRC;
 	boolean HashNeedsUpdate = true;
 
 private:

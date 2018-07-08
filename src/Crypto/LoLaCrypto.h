@@ -15,7 +15,7 @@ private:
 
 protected:
 	///CRC validation.
-	TinyCrc CalculatorCRC;
+	TinyCrcModbus8 CalculatorCRC;
 	uint8_t CRCIndex = 0;
 	///
 
