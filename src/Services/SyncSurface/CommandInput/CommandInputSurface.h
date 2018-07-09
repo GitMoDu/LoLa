@@ -18,12 +18,9 @@
 #define SYNC_COMMAND_INPUT_DIRECTION_DATA_OFFSET 0
 #define SYNC_COMMAND_INPUT_PROPULSION_DATA_OFFSET 1
 
-class CommandInputSurface : public ITrackedSurfaceNotify
+class CommandInputSurface : public TemplateTrackedSurface<COMMAND_INPUT_BLOCK_COUNT>
 {
 private:
-	BitTracker8 Tracker = BitTracker8(COMMAND_INPUT_BLOCK_COUNT);
-	uint8_t Data[COMMAND_INPUT_DATA_SIZE];
-
 	uint16_t Grunt16;
 
 	uint16_t LastDirection = 0;
@@ -31,7 +28,7 @@ private:
 
 public:
 	CommandInputSurface()
-		: ITrackedSurfaceNotify()
+		: TemplateTrackedSurface()
 	{
 	}
 
@@ -83,10 +80,6 @@ public:
 	{
 		return (int16_t)Get16(SYNC_COMMAND_INPUT_TRIM_BLOCK_INDEX, SYNC_COMMAND_INPUT_PROPULSION_DATA_OFFSET);
 	}
-
-public:
-	uint8_t * GetData() { return Data; }
-	IBitTracker* GetTracker() { return &Tracker; }
 
 #ifdef DEBUG_LOLA
 	void Debug(Stream * serial)

@@ -27,16 +27,11 @@
 
 #define SYNC_STATUS_BLOCK_INDEX 0
 
-class TelemetrySurface : public ITrackedSurfaceNotify
+class TelemetrySurface : public TemplateTrackedSurface<TELEMETRY_BLOCK_COUNT>
 {
-private:
-	BitTracker32 Tracker = BitTracker32(TELEMETRY_BLOCK_COUNT);
-	uint8_t Data[TELEMETRY_DATA_SIZE];
-
-
 public:
 	TelemetrySurface()
-		: ITrackedSurfaceNotify()
+		: TemplateTrackedSurface()
 	{
 	}
 
@@ -75,10 +70,6 @@ public:
 	{
 		Set8(SYNC_TELEMETRY_BATTERY_STATUS_BLOCK_INDEX, statusCode, index);
 	}
-
-public:
-	uint8_t * GetData() { return Data; }
-	IBitTracker* GetTracker() { return &Tracker; }
 
 #ifdef DEBUG_LOLA
 	void Debug(Stream * serial)
