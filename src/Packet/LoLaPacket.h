@@ -90,34 +90,11 @@ public:
 	}
 };
 
-class LoLaPacketNoPayload : public ILoLaPacket
+template <size_t DataSize>
+class TemplateLoLaPacket : public ILoLaPacket
 {
 private:
-	uint8_t Data[LOLA_PACKET_NO_PAYLOAD_SIZE];
-public:
-	uint8_t * GetRaw()
-	{
-		return &Data[LOLA_PACKET_HEADER_INDEX];
-	}
-};
-
-class LoLaPacketSlim : public ILoLaPacket
-{
-private:
-	uint8_t Data[LOLA_PACKET_SLIM_SIZE];
-
-public:
-	uint8_t * GetRaw()
-	{
-		return &Data[LOLA_PACKET_HEADER_INDEX];
-	}
-};
-
-class LoLaPacketFull : public ILoLaPacket
-{
-private:
-	uint8_t Data[PACKET_DEFINITION_MAX_PACKET_SIZE];
-
+	uint8_t Data[DataSize];
 public:
 	uint8_t * GetRaw()
 	{

@@ -46,7 +46,7 @@ protected:
 	ITrackedSurfaceNotify * TrackedSurface = nullptr;
 
 	SyncStateEnum SyncState = SyncStateEnum::Disabled;
-	LoLaPacketSlim PacketHolder;
+	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
 
 protected:
 	virtual void OnWaitingForTriggerService() {}

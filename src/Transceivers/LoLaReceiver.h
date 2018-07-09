@@ -9,7 +9,7 @@
 class LoLaReceiver : public LoLaBuffer
 {
 private:
-	LoLaPacketFull ReceiverPacket;
+	TemplateLoLaPacket<PACKET_DEFINITION_MAX_PACKET_SIZE> ReceiverPacket;
 
 public:
 	PacketDefinition * GetIncomingDefinition()

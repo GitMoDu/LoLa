@@ -94,7 +94,7 @@ protected:
 	LoLaLinkInfo LinkInfo;
 
 	//Optimized memory usage grunt packet.
-	LoLaPacketSlim PacketHolder;
+	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
 
 	//Subservices
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED

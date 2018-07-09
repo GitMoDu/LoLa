@@ -54,7 +54,7 @@ private:
 		Done
 	} State = LatencyServiceStateEnum::Done;
 
-	LoLaPacketNoPayload PacketHolder;//Optimized memory usage grunt packet.
+	TemplateLoLaPacket<LOLA_PACKET_NO_PAYLOAD_SIZE> PacketHolder;//Optimized memory usage grunt packet.
 
 	uint32_t MeasurementStart = ILOLA_INVALID_MILLIS;
 	uint32_t LastSentTimeStamp = ILOLA_INVALID_MICROS;
