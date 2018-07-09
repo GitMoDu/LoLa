@@ -8,7 +8,7 @@
 class SyncSurfaceReader : public SyncSurfaceBase
 {
 public:
-	SyncSurfaceReader(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurfaceNotify* trackedSurface)
+	SyncSurfaceReader(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
 		: SyncSurfaceBase(scheduler, loLa, baseHeader, trackedSurface)
 	{
 	}
@@ -29,14 +29,14 @@ protected:
 	{
 		UpdateBlockData(index, payload);
 		InvalidateLocalHash();
-		TrackedSurface->GetTracker()->ClearBitPending(index);
+		TrackedSurface->GetTracker()->ClearBit(index);
 		NotifyDataChanged();
 
 		switch (SyncState)
 		{
 		case SyncStateEnum::Synced:
-			TrackedSurface->GetTracker()->SetAllPending();
-			TrackedSurface->GetTracker()->ClearBitPending(index);
+			TrackedSurface->GetTracker()->SetAll();
+			TrackedSurface->GetTracker()->ClearBit(index);
 			UpdateState(SyncStateEnum::Resync);
 			break;
 		case SyncStateEnum::FullSync:
@@ -69,7 +69,7 @@ protected:
 		case SyncStateEnum::FullSync:
 			if (SyncState == SyncStateEnum::Resync)
 			{
-				TrackedSurface->GetTracker()->SetAllPending();
+				TrackedSurface->GetTracker()->SetAll();
 			}
 			else
 			{
@@ -236,7 +236,7 @@ private:
 				Serial.println(F("SyncStarting"));
 #endif
 				InvalidateRemoteHash();
-				TrackedSurface->GetTracker()->SetAllPending();
+				TrackedSurface->GetTracker()->SetAll();
 				StampSubStateStart(-LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS * 2);
 				break;
 			case SyncReaderState::WaitingForWriterStart:

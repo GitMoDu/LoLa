@@ -10,7 +10,7 @@
 class SyncSurfaceWriter : public SyncSurfaceBase
 {
 public:
-	SyncSurfaceWriter(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurfaceNotify* trackedSurface)
+	SyncSurfaceWriter(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
 		: SyncSurfaceBase(scheduler, loLa, baseHeader, trackedSurface)
 	{
 	}
@@ -55,7 +55,7 @@ protected:
 	{
 		if (IsSyncing() && WriterState == SyncWriterState::SendingBlock)
 		{
-			TrackedSurface->GetTracker()->ClearBitPending(SurfaceSendingIndex);
+			TrackedSurface->GetTracker()->ClearBit(SurfaceSendingIndex);
 			SurfaceSendingIndex++;
 		}
 		SetNextRunASAP();
@@ -70,7 +70,7 @@ protected:
 		case SyncStateEnum::FullSync:
 			if (SyncState == SyncStateEnum::Resync)
 			{
-				TrackedSurface->GetTracker()->SetAllPending();
+				TrackedSurface->GetTracker()->SetAll();
 			}
 			else
 			{
@@ -112,7 +112,7 @@ protected:
 			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
 			break;
 		case SyncWriterState::UpdatingBlocks:
-			if (TrackedSurface->GetTracker()->HasPending())
+			if (TrackedSurface->GetTracker()->HasSet())
 			{
 				PrepareNextPendingBlockPacket();
 				RequestSendPacket();
@@ -130,7 +130,7 @@ protected:
 			SetNextRunDelay(LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::BlocksUpdated:
-			if (TrackedSurface->GetTracker()->HasPending())
+			if (TrackedSurface->GetTracker()->HasSet())
 			{
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			}
@@ -145,13 +145,13 @@ protected:
 		case SyncWriterState::SendingFinish:
 			//If we're were, something went wrong with communicating the finishing move.
 			SyncTryCount++;
-			if (TrackedSurface->GetTracker()->HasPending())
+			if (TrackedSurface->GetTracker()->HasSet())
 			{
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			}
 			else if (SyncTryCount > ABSTRACT_SURFACE_SYNC_PERSISTANCE_COUNT)
 			{
-				TrackedSurface->GetTracker()->SetAllPending();
+				TrackedSurface->GetTracker()->SetAll();
 				UpdateSyncingState(SyncWriterState::SyncStarting);
 			}
 			else
@@ -170,7 +170,7 @@ protected:
 				Serial.print(Millis());
 				Serial.println(F(": WaitingForConfirmation time out"));
 #endif
-				if (!TrackedSurface->GetTracker()->HasPending())
+				if (!TrackedSurface->GetTracker()->HasSet())
 				{
 					UpdateSyncingState(SyncWriterState::BlocksUpdated);
 					SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
@@ -208,7 +208,7 @@ protected:
 				SetNextRunASAP();
 				break;
 			case SyncWriterState::SendingFinish:
-				if (TrackedSurface->GetTracker()->HasPending())
+				if (TrackedSurface->GetTracker()->HasSet())
 				{
 					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 					SetNextRunASAP();
@@ -237,7 +237,7 @@ protected:
 		case SyncStateEnum::Starting:
 		case SyncStateEnum::WaitingForTrigger:
 		case SyncStateEnum::Resync:
-			TrackedSurface->GetTracker()->SetAllPending();
+			TrackedSurface->GetTracker()->SetAll();
 			UpdateState(SyncStateEnum::FullSync);
 			break;
 		default:
@@ -254,7 +254,7 @@ protected:
 		case SyncStateEnum::WaitingForTrigger:
 		case SyncStateEnum::FullSync:
 		case SyncStateEnum::Resync:
-			TrackedSurface->GetTracker()->SetAllPending();
+			TrackedSurface->GetTracker()->SetAll();
 			UpdateState(SyncStateEnum::FullSync);
 			break;
 		case SyncStateEnum::Synced:
@@ -263,7 +263,7 @@ protected:
 			{
 				UpdateState(SyncStateEnum::Starting);
 			}
-			else if (TrackedSurface->GetTracker()->HasPending())
+			else if (TrackedSurface->GetTracker()->HasSet())
 			{
 				UpdateState(SyncStateEnum::Resync);
 				SetNextRunASAP();
@@ -287,7 +287,7 @@ protected:
 			case SyncSurfaceWriter::UpdatingBlocks:
 			case SyncSurfaceWriter::SendingBlock:
 			case SyncSurfaceWriter::BlocksUpdated:
-				if (TrackedSurface->GetTracker()->HasPending())
+				if (TrackedSurface->GetTracker()->HasSet())
 				{
 					UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
 				}
@@ -440,7 +440,7 @@ private:
 		{
 			SurfaceSendingIndex = 0;
 		}
-		SurfaceSendingIndex = TrackedSurface->GetTracker()->GetNextPendingIndex(SurfaceSendingIndex);
+		SurfaceSendingIndex = TrackedSurface->GetTracker()->GetNextSetIndex(SurfaceSendingIndex);
 		PrepareBlockPacketHeader(SurfaceSendingIndex);
 		PrepareBlockPacketPayload(SurfaceSendingIndex, Packet->GetPayload());
 	}
@@ -456,7 +456,7 @@ private:
 	{
 		if (SurfaceSendingIndex < TrackedSurface->GetSize())
 		{
-			TrackedSurface->GetTracker()->SetBitPending(SurfaceSendingIndex);
+			TrackedSurface->GetTracker()->SetBit(SurfaceSendingIndex);
 			if (SurfaceSendingIndex > 1)
 			{
 				SurfaceSendingIndex--;
@@ -466,7 +466,7 @@ private:
 		{
 			if (SurfaceSendingIndex > 0)
 			{
-				TrackedSurface->GetTracker()->SetBitPending(SurfaceSendingIndex - 1);
+				TrackedSurface->GetTracker()->SetBit(SurfaceSendingIndex - 1);
 				if (SurfaceSendingIndex > 1)
 				{
 					SurfaceSendingIndex--;

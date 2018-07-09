@@ -29,7 +29,7 @@
 class SyncSurfaceBase : public AbstractSync
 {
 public:
-	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurfaceNotify* trackedSurface)
+	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
 		: AbstractSync(scheduler, LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS, loLa, trackedSurface)
 	{
 		SyncReportDefinition.SetBaseHeader(baseHeader);
@@ -90,7 +90,7 @@ protected:
 
 	void OnSyncedService()
 	{
-		if (TrackedSurface->GetTracker()->HasPending())
+		if (TrackedSurface->GetTracker()->HasSet())
 		{
 			UpdateState(SyncStateEnum::Resync);
 		}

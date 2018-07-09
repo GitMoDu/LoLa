@@ -18,26 +18,33 @@
 class ITrackedSurface
 {
 private:
-	uint8_t DataSize = 0;
-	uint8_t IndexOffsetGrunt;
+	//Callback handler.
+	Signal<uint8_t> OnSurfaceUpdatedCallback;
+
+	//CRC Calculator.
 	TinyCrcModbus8 CalculatorCRC;
 	boolean HashNeedsUpdate = true;
 
-private:
-	void InvalidateBlock(const uint8_t blockIndex)
-	{
-		GetTracker()->SetBitPending(blockIndex);
-	}
-	
 protected:
-	virtual void OnDataChanged()
+	inline void OnDataChanged()
 	{
+		OnSurfaceUpdatedCallback.fire(0);
 	}
 
 public:
 	ITrackedSurface()
 	{
 		CalculatorCRC.Reset();
+	}
+
+	void AttachOnSurfaceUpdated(const Slot<uint8_t>& slot)
+	{
+		OnSurfaceUpdatedCallback.attach(slot);
+	}
+
+	void NotifyDataChanged()
+	{
+		OnDataChanged();
 	}
 
 	void UpdateHash()
@@ -51,7 +58,7 @@ public:
 			{
 				CalculatorCRC.Update(GetData()[i]);
 			}
-		}		
+		}
 	}
 
 	inline void InvalidateHash()
@@ -64,47 +71,89 @@ public:
 		return CalculatorCRC.GetCurrent();
 	}
 
-	bool Setup()
+public:
+	virtual uint8_t* GetData();
+	virtual IBitTracker* GetTracker();
+	virtual uint8_t GetSize() const;
+	virtual uint8_t GetDataSize() const;
+	virtual void SetAllPending();
+
+
+protected:
+	//Helper methods.
+	inline uint16_t Get8(const uint8_t blockIndex, const uint8_t offset = 0);
+	inline void Set8(const uint8_t blockIndex, const uint8_t value, const uint8_t offset = 0);
+	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset = 0);
+	inline void Set16(const uint8_t blockIndex, const uint16_t value, const uint8_t offset = 0);
+	inline uint32_t Get32(const uint8_t blockIndex);
+	inline void Set32(const uint8_t blockIndex, const uint32_t value);
+
+public:
+#ifdef DEBUG_LOLA
+	void Debug(Stream * serial)
 	{
-		if (GetData() != nullptr
-			&& GetTracker() != nullptr
-			&& GetTracker()->GetSize() > 0
-			&& GetTracker()->GetSize() <= GetTracker()->GetBitCount())
+		serial->print(F("|"));
+		for (uint8_t i = 0; i < (GetSize()*SYNC_SURFACE_BLOCK_SIZE); i++)
 		{
-			DataSize = GetTracker()->GetSize() * SYNC_SURFACE_BLOCK_SIZE;
-			for (uint8_t i = 0; i < GetSize(); i++)
-			{
-				GetData()[i] = 0;
-			}
-			GetTracker()->ClearAllPending();
-
-			return true;
+			serial->print(GetData()[i]);
+			serial->print(F("|"));
 		}
-		
-		return false;
+		serial->println();
 	}
+#endif 
+};
 
-	void Invalidate()
+//BlockCount < 32
+template <uint8_t BlockCount>
+class TemplateTrackedSurface : public ITrackedSurface
+{
+private:
+	const uint8_t DataSize = BlockCount * SYNC_SURFACE_BLOCK_SIZE;
+	uint8_t IndexOffsetGrunt;
+
+	TemplateBitTracker<BlockCount> Tracker;
+	uint8_t Data[BlockCount * SYNC_SURFACE_BLOCK_SIZE];
+
+private:
+	void InvalidateBlock(const uint8_t blockIndex)
 	{
+		Tracker.SetBit(blockIndex);
 		OnDataChanged();
 	}
 
-	inline uint8_t GetSize()
+public:
+	TemplateTrackedSurface() : ITrackedSurface()
 	{
-		return GetTracker()->GetSize();
+		for (uint8_t i = 0; i < DataSize; i++)
+		{
+			Data[i] = 0;
+		}
+		Tracker.ClearAll();
 	}
 
-	inline uint8_t GetDataSize()
+	uint8_t* GetData()
+	{ 
+		return Data;
+	}
+
+	IBitTracker* GetTracker()
+	{ 
+		return &Tracker;
+	}
+
+	inline uint8_t GetSize() const
+	{
+		return BlockCount;
+	}
+
+	inline uint8_t GetDataSize() const
 	{
 		return DataSize;
 	}
 
 	void SetAllPending()
 	{
-		for (uint8_t i = 0; i < GetSize(); i++)
-		{
-			GetTracker()->SetBitPending(i);
-		}
+		Tracker.SetAll();
 	}
 
 	//Helper methods.
@@ -120,7 +169,6 @@ public:
 		GetData()[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset] = value & 0x00FF;
 
 		InvalidateBlock(blockIndex);
-		OnDataChanged();
 	}
 
 	//offset [0:1]
@@ -138,7 +186,6 @@ public:
 		GetData()[IndexOffsetGrunt + 1] = value >> 8;
 
 		InvalidateBlock(blockIndex);
-		OnDataChanged();
 	}
 
 	uint32_t Get32(const uint8_t blockIndex)
@@ -163,54 +210,6 @@ public:
 		GetData()[IndexOffsetGrunt + 3] = value >> 24;
 
 		InvalidateBlock(blockIndex);
-		OnDataChanged();
-	}
-
-public:
-	virtual uint8_t* GetData() { return nullptr; }
-	virtual IBitTracker* GetTracker() { return nullptr; }
-
-#ifdef DEBUG_LOLA
-	void Debug(Stream * serial)
-	{
-		serial->print(F("|"));
-		for (uint8_t i = 0; i < (GetSize()*SYNC_SURFACE_BLOCK_SIZE); i++)
-		{
-			serial->print(GetData()[i]);
-			serial->print(F("|"));
-		}
-		serial->println();
-	}
-#endif 
-};
-
-class ITrackedSurfaceNotify : public ITrackedSurface
-{
-private:
-	//Callback handler
-	Signal<uint8_t> OnSurfaceUpdatedCallback;
-
-protected:
-	void OnDataChanged()
-	{
-		OnSurfaceUpdatedCallback.fire(0);
-	}
-
-public:
-	ITrackedSurfaceNotify()
-		: ITrackedSurface()
-	{
-	}
-
-	//Public interface
-	void AttachOnSurfaceUpdated(const Slot<uint8_t>& slot)
-	{
-		OnSurfaceUpdatedCallback.attach(slot);
-	}
-
-	void NotifyDataChanged()
-	{
-		OnDataChanged();
 	}
 };
 #endif

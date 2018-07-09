@@ -43,7 +43,7 @@ protected:
 		Disabled = 5
 	};
 
-	ITrackedSurfaceNotify * TrackedSurface = nullptr;
+	ITrackedSurface * TrackedSurface = nullptr;
 
 	SyncStateEnum SyncState = SyncStateEnum::Disabled;
 	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
@@ -57,7 +57,7 @@ protected:
 	virtual void OnStateUpdated(const SyncStateEnum newState) {}
 
 public:
-	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurfaceNotify* trackedSurface)
+	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurface* trackedSurface)
 		: IPacketSendService(scheduler, period, loLa, &PacketHolder)
 	{
 		TrackedSurface = trackedSurface;
@@ -259,13 +259,13 @@ protected:
 				Serial.println(F("FullSync"));
 #endif
 				InvalidateRemoteHash();
-				TrackedSurface->GetTracker()->SetAllPending();
+				TrackedSurface->GetTracker()->SetAll();
 				Enable();
 				break;
 			case SyncStateEnum::Synced:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Synced"));
-				TrackedSurface->GetTracker()->ClearAllPending();
+				TrackedSurface->GetTracker()->ClearAll();
 #endif
 				break;
 			case SyncStateEnum::Resync:
@@ -292,12 +292,9 @@ protected:
 	{
 		if (IPacketSendService::OnSetup() && TrackedSurface != nullptr)
 		{
-			if (TrackedSurface->Setup())
-			{
-				MethodSlot<AbstractSync, uint8_t> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
-				TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
-				return true;
-			}
+			MethodSlot<AbstractSync, uint8_t> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
+			TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
+			return true;
 		}
 
 		return false;
