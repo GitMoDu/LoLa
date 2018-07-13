@@ -3,7 +3,7 @@
 #ifndef _LOLAMANAGERRCRECEIVER_h
 #define _LOLAMANAGERRCRECEIVER_h
 
-#include <LoLaManager.h>
+#include <LoLaManagerInclude.h>
 
 #if defined(ARDUINO_ARCH_AVR)//Poor old ATmega's 2k of RAM is not enough.
 #undef USE_TELEMETRY

@@ -3,7 +3,7 @@
 #ifndef _LOLAMANAGERRCRECEIVER_h
 #define _LOLAMANAGERRCRECEIVER_h
 
-#include <LoLaManager.h>
+#include <LoLaManagerInclude.h>
 
 #define USE_TELEMETRY
 
