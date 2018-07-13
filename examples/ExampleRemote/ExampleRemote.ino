@@ -40,7 +40,7 @@ RemoteManager LoLa(&SchedulerBase, &LoLaDriver);
 ///
 
 ///Communicated Data
-CommandInputSurface * CommandInput = nullptr;
+ControllerSurface * ControllerOutput = nullptr;
 ///
 
 void Halt()
@@ -71,14 +71,14 @@ void setup()
 		Halt();
 	}
 
-	if (LoLa.GetCommandInputSurface() == nullptr)
+	if (LoLa.GetControllerSurface() == nullptr)
 	{
 		Halt();
 	}
-	CommandInput = LoLa.GetCommandInputSurface();
+	ControllerOutput = LoLa.GetControllerSurface();
 
 	FunctionSlot<uint8_t> ptrSlot(OnSurfaceUpdated);
-	CommandInput->AttachOnSurfaceUpdated(ptrSlot);
+	ControllerOutput->AttachOnSurfaceUpdated(ptrSlot);
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
 	LoLaDriver.Debug(&Serial);
@@ -92,16 +92,15 @@ void setup()
 		Halt();
 	}
 
-
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	CommandInput->NotifyDataChanged();
+	ControllerOutput->NotifyDataChanged();
 #endif
 }
 
 void OnSurfaceUpdated(uint8_t param)
 {
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	CommandInput->Debug(&Serial);
+	ControllerOutput->Debug(&Serial);
 #endif
 }
 

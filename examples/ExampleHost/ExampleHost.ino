@@ -39,7 +39,7 @@ HostManager LoLa(&SchedulerBase, &LoLaDriver);
 ///
 
 ///Communicated Data
-CommandInputSurface * CommandInput = nullptr;
+ControllerSurface * ControllerInput = nullptr;
 ///
 
 
@@ -69,14 +69,14 @@ void setup()
 		Halt();
 	}
 
-	if (LoLa.GetCommandInputSurface() == nullptr)
+	if (LoLa.GetControllerSurface() == nullptr)
 	{
 		Halt();
 	}
-	CommandInput = LoLa.GetCommandInputSurface();
+	ControllerInput = LoLa.GetControllerSurface();
 
 	FunctionSlot<uint8_t> ptrSlot(OnSurfaceUpdated);
-	CommandInput->AttachOnSurfaceUpdated(ptrSlot);
+	ControllerInput->AttachOnSurfaceUpdated(ptrSlot);
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
 	LoLaDriver.Debug(&Serial);
@@ -91,14 +91,14 @@ void setup()
 	}
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	CommandInput->NotifyDataChanged();
+	ControllerInput->NotifyDataChanged();
 #endif
 }
 
 void OnSurfaceUpdated(uint8_t param)
 {
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	CommandInput->Debug(&Serial);
+	ControllerInput->Debug(&Serial);
 #endif
 }
 

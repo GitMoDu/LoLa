@@ -5,58 +5,29 @@
 
 #include <LoLaManagerInclude.h>
 
-#define USE_TELEMETRY
+#include <ExampleControllerSurface.h>
+#include <Services\SyncSurface\SyncSurfaceReader.h>
+#include <Services\SyncSurface\SyncSurfaceWriter.h>
 
-#if defined(ARDUINO_ARCH_AVR)//Poor old ATmega's 2k of RAM is not enough.
-#undef USE_TELEMETRY
-#endif
-
-#include <Services\SyncSurface\CommandInput\CommandInputSurfaceWriter.h>
-#ifdef USE_TELEMETRY
-#include <Services\SyncSurface\Telemetry\TelemetrySurfaceReader.h>
-#endif
-
+#define CONTROLLER_SURFACE_BASE_HEADER (PACKET_DEFINITION_PING_HEADER + 1)
 
 class HostManager : public LoLaManagerHost
 {
-protected:
-	CommandInputSurfaceWriter CommandInput;
+private:
+	ControllerSurface Controller;
 
-#ifdef USE_TELEMETRY
-	TelemetrySurfaceReader Telemetry;
-#endif
-
-protected:
-	virtual bool OnSetupServices()
-	{
-		if (!LoLa->GetServices()->Add(&CommandInput))
-		{
-			return false;
-		}
-
-#ifdef USE_TELEMETRY
-		if (!LoLa->GetServices()->Add(&Telemetry))
-		{
-			return false;
-		}
-#endif
-
-		return true;
-	}
+	SyncSurfaceReader Reader;
 
 public:
 	HostManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManagerHost(scheduler, loLa)
-		, CommandInput(scheduler, loLa)
-#ifdef USE_TELEMETRY
-		, Telemetry(scheduler, loLa)
-#endif
+		, Reader(scheduler, loLa, CONTROLLER_SURFACE_BASE_HEADER, &Controller)
 	{
 	}
 
-	CommandInputSurface* GetCommandInputSurface()
+	ControllerSurface* GetControllerSurface()
 	{
-		return (CommandInputSurface*)CommandInput.GetSurface();
+		return &Controller;
 	}
 };
 #endif
