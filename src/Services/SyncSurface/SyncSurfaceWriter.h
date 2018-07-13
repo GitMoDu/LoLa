@@ -27,7 +27,7 @@ private:
 		SendingFinish = 6,
 		WaitingForConfirmation = 7,
 		SyncComplete = 8,
-	} WriterState = SyncStarting;
+	} WriterState = SyncWriterState::SyncStarting;
 
 	uint8_t SurfaceSendingIndex = 0;
 
