@@ -61,7 +61,7 @@ private:
 	uint16_t StartUpDelay = 0;
 	volatile uint8_t SentId;
 
-	RingBufCPP<uint16_t , PROCESS_EVENT_QUEUE_MAX_QUEUE_DEPTH> DurationStack;
+	RingBufCPP<uint16_t , LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE> DurationStack;
 
 	uint16_t SampleDuration = ILOLA_INVALID_LATENCY;
 	uint32_t DurationSum = ILOLA_INVALID_MILLIS;
