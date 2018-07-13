@@ -72,11 +72,11 @@ public:
 	}
 
 public:
-	virtual uint8_t* GetData();
-	virtual IBitTracker* GetTracker();
-	virtual uint8_t GetSize() const;
-	virtual uint8_t GetDataSize() const;
-	virtual void SetAllPending();
+	virtual uint8_t* GetData() { return nullptr; }
+	virtual IBitTracker* GetTracker() { return nullptr; };
+	inline virtual uint8_t GetSize() const { return 0; };
+	inline virtual uint8_t GetDataSize() const { return 0; };
+	virtual void SetAllPending() {};
 
 
 protected:
