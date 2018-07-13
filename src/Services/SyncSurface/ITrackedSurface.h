@@ -164,7 +164,7 @@ public:
 	}
 
 	//offset [0:3]
-	inline void Set8(const uint8_t blockIndex, const uint8_t value, const uint8_t offset = 0)
+	inline void Set8(const uint8_t value, const uint8_t blockIndex, const uint8_t offset = 0)
 	{
 		GetData()[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset] = value & 0x00FF;
 
@@ -179,7 +179,7 @@ public:
 	}
 
 	//offset [0:1]
-	inline void Set16(const uint8_t blockIndex, const uint16_t value, const uint8_t offset = 0)
+	inline void Set16(const uint16_t value, const uint8_t blockIndex, const uint8_t offset = 0)
 	{
 		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset*2;
 		GetData()[IndexOffsetGrunt] = value & 0x00FF;
@@ -188,7 +188,7 @@ public:
 		InvalidateBlock(blockIndex);
 	}
 
-	uint32_t Get32(const uint8_t blockIndex)
+	inline uint32_t Get32(const uint8_t blockIndex)
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
@@ -200,7 +200,7 @@ public:
 		return Grunt32;
 	}
 
-	void Set32(const uint8_t blockIndex, const uint32_t value)
+	inline void Set32(const uint32_t value, const uint8_t blockIndex)
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
