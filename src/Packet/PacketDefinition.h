@@ -25,6 +25,13 @@ public:
 	virtual uint8_t GetHeader() { return 0; }
 	virtual uint8_t GetPayloadSize() { return 0; }
 
+#ifdef DEBUG_LOLA
+	virtual void PrintName(Stream* serial)
+	{
+
+	}
+#endif
+
 	uint8_t GetTotalSize()
 	{
 		uint8_t TotalSize = 2;//1 Byte for Header, 1 Byte for MAC/CRC.
@@ -67,7 +74,8 @@ public:
 #ifdef DEBUG_LOLA
 	void Debug(Stream* serial)
 	{
-		serial->print(F(" Size: "));
+		PrintName(serial);
+		serial->print(F("\tSize: "));
 		serial->print(GetTotalSize());
 		serial->print(F(" |"));
 

@@ -24,9 +24,14 @@ public:
 	{
 		BaseHeader = baseHeader;
 	}
-public:
-	virtual uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+
+	virtual uint8_t GetConfiguration() 
+	{
+		return PACKET_DEFINITION_MASK_BASIC; 
+	}
+
 	uint8_t GetHeader() { return BaseHeader; }
+
 	virtual void SetBaseHeader(const uint8_t baseHeader)
 	{
 		BaseHeader = baseHeader;
@@ -45,6 +50,13 @@ public:
 		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET);
 	}
 	uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("SyncData"));
+	}
+#endif
 };
 
 class SyncReportPacketDefinition : public SyncAbstractPacketDefinition
@@ -58,6 +70,13 @@ public:
 		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_STATUS_HEADER_OFFSET);
 	}
 	uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_STATUS_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("SyncReport"));
+	}
+#endif
 };
 
 class SyncProtocolPacketDefinition : public SyncAbstractPacketDefinition
@@ -71,6 +90,13 @@ public:
 		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_PROTOCOL_HEADER_OFFSET);
 	}
 	uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_PROTOCOL_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("SyncProto"));
+	}
+#endif
 };
 
 #endif

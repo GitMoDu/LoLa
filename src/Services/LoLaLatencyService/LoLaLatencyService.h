@@ -38,6 +38,12 @@ private:
 		uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
 		uint8_t GetHeader() { return PACKET_DEFINITION_PING_HEADER; }
 		uint8_t GetPayloadSize() { return LOLA_PACKET_NO_PAYLOAD_SIZE; }
+#ifdef DEBUG_LOLA
+		void PrintName(Stream* serial)
+		{
+			serial->print(F("Ping"));
+		}
+#endif
 	} PingDefinition;
 
 	enum LatencyServiceStateEnum

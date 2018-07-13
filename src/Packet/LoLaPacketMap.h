@@ -15,7 +15,7 @@
 
 
 
-#define PACKET_DEFINITION_XACK_PAYLOAD_SIZE 2 //Payload Header and optional Id.
+#define PACKET_DEFINITION_XACK_PAYLOAD_SIZE 2 //Payload is original Header. Id is optional.
 
 class AckPacketDefinition : public PacketDefinition
 {
@@ -23,6 +23,13 @@ public:
 	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
 	uint8_t GetPayloadSize() { return PACKET_DEFINITION_XACK_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("Ack"));
+	}
+#endif
 };
 
 
@@ -109,7 +116,7 @@ public:
 		{
 			if (Mapping[i] != nullptr)
 			{
-				serial->print(F("\tMapping  "));
+				serial->print(' ');
 				serial->print(i, HEX);
 				serial->print(F(": "));
 				Mapping[i]->Debug(serial);

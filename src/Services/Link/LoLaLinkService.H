@@ -66,6 +66,13 @@ protected:
 		uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
 		uint8_t GetHeader() { return PACKET_DEFINITION_LINK_HEADER; }
 		uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+		void PrintName(Stream* serial)
+		{
+			serial->print(F("Link"));
+		}
+#endif
 	} LinkDefinition;
 
 	class LinkPacketAckDefinition : public PacketDefinition
@@ -74,6 +81,13 @@ protected:
 		uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
 		uint8_t GetHeader() { return PACKET_DEFINITION_LINK_ACK_HEADER; }
 		uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+		void PrintName(Stream* serial)
+		{
+			serial->print(F("LinkAck"));
+		}
+#endif
 	} LinkAckDefinition;
 
 	enum ConnectingEnum : uint8_t
