@@ -6,10 +6,14 @@
 #include <Packet\PacketDefinition.h>
 
 #define LOLA_PACKET_MAP_TOTAL_SIZE 20 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
-#define PACKET_DEFINITION_ACK_HEADER 0x01
+#define PACKET_DEFINITION_ACK_HEADER 0x00
 
-#define PACKET_DEFINITION_LINK_HEADER 0x02
-#define PACKET_DEFINITION_LINK_ACK_HEADER 0x03
+#define PACKET_DEFINITION_LINK_HEADER (PACKET_DEFINITION_ACK_HEADER+1)
+#define PACKET_DEFINITION_LINK_ACK_HEADER (PACKET_DEFINITION_LINK_HEADER+1)
+
+#define PACKET_DEFINITION_PING_HEADER (PACKET_DEFINITION_LINK_ACK_HEADER+1)
+
+
 
 #define PACKET_DEFINITION_XACK_PAYLOAD_SIZE 2 //Payload Header and optional Id.
 
@@ -20,6 +24,7 @@ public:
 	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
 	uint8_t GetPayloadSize() { return PACKET_DEFINITION_XACK_PAYLOAD_SIZE; }
 };
+
 
 class LoLaPacketMap
 {
