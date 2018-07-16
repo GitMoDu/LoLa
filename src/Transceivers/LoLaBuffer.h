@@ -41,8 +41,8 @@ protected:
 		}
 		return nullptr;
 	}
+	
 public:
-
 	uint8_t * GetBuffer()
 	{
 		return BufferPacket->GetRaw();
@@ -82,6 +82,7 @@ public:
 		serial->println();
 	}
 #endif // DEBUG_LOLA
-};
-#endif
 
+};
+
+#endif

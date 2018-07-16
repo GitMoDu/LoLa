@@ -99,14 +99,10 @@ public:
 			{
 				return true;
 			}
-			else
-			{
-				AckDefinition = nullptr;
-			}
 		}
 
 		return false;
 	}
 };
-#endif
 
+#endif
