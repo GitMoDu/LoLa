@@ -61,17 +61,17 @@ The packets definitions and payload are defined in a very minimalistic way with 
 
 Features: 
 
-Simple Acknowledged Packets with Id: acks only carry the original packet's id. 
+Simple Acknowledged Packets with Id: acks only carry the original packet's header and id.
 
 Packet collision avoidance: tracking time elapsed after the last receive/send and rejecting a send when a packet is incoming. 
 
 No buffer outputs: Each LoLa service can handle a packet send being delayed or even failed, so we don't need to buffer outputs. 
 
-Connection manager:  Tries to establish connection and measure properties, while firing events to notify the services. 
+Link management [WORKING]: Link service establishes a link and fires events when the link is gained or lost. Keeps sending pings (with Ack) to make sure the partner is still there, avoiding stealing bandwidth from user services.
 
-Connection diagnostics: can fire events when the connection is lost or keep sending pings (with Ack) to make sure the partner is still there. 
+Link diagnostics [WORKING BARE]: Measures link properties: Latency, TODO: add more.
 
-SyncSurface Service: synchronises an array of N blocks (32bits wide) in a differential fashion, i.e., only send over radio the changing blocks, not the whole data array. 
+SyncSurface Service [BUGGY]: synchronises an array of N blocks (32bits wide) in a differential fashion, i.e., only send over radio the changing blocks, not the whole data array. 
 
   
 
@@ -85,9 +85,9 @@ It's quite a memory hog (around 1,5 kB for the example projects with only 2 sync
 
 Future : 
 
-Improved Packet Collision avoidance – Using the measured real system latency, instead of hard coded value. Work in progress. 
+Improved Packet Collision Avoidance [WIP] – Using the measured real system latency, instead of hard coded value.
 
-Connection Handling – Broadcast, send challenge response and start session. Work in progress. 
+Link Handshake Handling [WORKING] – Broadcast, send challenge response and start session. Basic cryptoless handshake is working.
 
 Auto channel selection for remote. 
 
