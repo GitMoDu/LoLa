@@ -4,6 +4,8 @@
 
 # Low Latency Radio System 
 
+![](https://raw.githubusercontent.com/GitMoDu/LoLa/master/media/First_tests.jpg)
+
 
 
 For Arduino compatible boards. 
