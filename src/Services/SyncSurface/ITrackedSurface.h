@@ -158,7 +158,7 @@ public:
 
 	//Helper methods.
 	//offset [0:3]
-	inline uint16_t Get8(const uint8_t blockIndex, const uint8_t offset = 0)
+	inline uint8_t Get8(const uint8_t blockIndex, const uint8_t offset = 0)
 	{
 		return GetData()[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset];
 	}
