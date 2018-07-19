@@ -221,7 +221,7 @@ protected:
 
 	bool PrepareBlockPacketHeader(const uint8_t index)
 	{
-		if (index < TrackedSurface->GetSize())
+		if (index < TrackedSurface->GetBlockCount())
 		{
 			Packet->SetDefinition(&DataPacketDefinition);
 			Packet->SetId(index);
