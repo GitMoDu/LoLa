@@ -436,7 +436,7 @@ private:
 
 	void PrepareNextPendingBlockPacket()
 	{
-		if (SurfaceSendingIndex >= TrackedSurface->GetSize())
+		if (SurfaceSendingIndex >= TrackedSurface->GetBlockCount())
 		{
 			SurfaceSendingIndex = 0;
 		}
@@ -454,7 +454,7 @@ private:
 
 	void SetLastSentBlockAsPending()
 	{
-		if (SurfaceSendingIndex < TrackedSurface->GetSize())
+		if (SurfaceSendingIndex < TrackedSurface->GetBlockCount())
 		{
 			TrackedSurface->GetTracker()->SetBit(SurfaceSendingIndex);
 			if (SurfaceSendingIndex > 1)

@@ -71,11 +71,15 @@ public:
 		return CalculatorCRC.GetCurrent();
 	}
 
+	inline uint8_t GetDataSize()
+	{
+		return GetBlockCount() * SYNC_SURFACE_BLOCK_SIZE;
+	}
+
 public:
 	virtual uint8_t* GetData() { return nullptr; }
 	virtual IBitTracker* GetTracker() { return nullptr; };
-	inline virtual uint8_t GetSize() const { return 0; };
-	inline virtual uint8_t GetDataSize() const { return 0; };
+	inline virtual uint8_t GetBlockCount() { return 0; };
 	virtual void SetAllPending() {};
 
 
@@ -108,7 +112,6 @@ template <uint8_t BlockCount>
 class TemplateTrackedSurface : public ITrackedSurface
 {
 private:
-	const uint8_t DataSize = BlockCount * SYNC_SURFACE_BLOCK_SIZE;
 	uint8_t IndexOffsetGrunt;
 
 	TemplateBitTracker<BlockCount> Tracker;
@@ -124,7 +127,7 @@ private:
 public:
 	TemplateTrackedSurface() : ITrackedSurface()
 	{
-		for (uint8_t i = 0; i < DataSize; i++)
+		for (uint8_t i = 0; i < GetDataSize(); i++)
 		{
 			Data[i] = 0;
 		}
@@ -141,14 +144,9 @@ public:
 		return &Tracker;
 	}
 
-	inline uint8_t GetSize() const
+	inline uint8_t GetBlockCount()
 	{
 		return BlockCount;
-	}
-
-	inline uint8_t GetDataSize() const
-	{
-		return DataSize;
 	}
 
 	void SetAllPending()
