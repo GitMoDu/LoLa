@@ -108,8 +108,11 @@ protected:
 				UpdateSyncingState(SyncWriterState::SyncStarting, true);
 				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_KEEP_ALIVE_MILLIS);
 			}
-			UpdateSyncingState(SyncWriterState::SyncStarting, false);
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+			else 
+			{
+				UpdateSyncingState(SyncWriterState::SyncStarting, false);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+			}
 			break;
 		case SyncWriterState::UpdatingBlocks:
 			if (TrackedSurface->GetTracker()->HasSet())
