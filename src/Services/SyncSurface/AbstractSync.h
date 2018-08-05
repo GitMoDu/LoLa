@@ -228,13 +228,10 @@ protected:
 
 			SetNextRunASAP();
 
-			switch (SyncState)
+			if (SyncState == SyncStateEnum::Disabled &&
+				newState != SyncStateEnum::Disabled)
 			{
-			case SyncStateEnum::Disabled:
 				Enable();
-				break;
-			default:
-				break;
 			}
 
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
@@ -277,6 +274,7 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Disabled"));
 #endif
+				Disable();
 				break;
 			default:
 				break;
