@@ -292,10 +292,10 @@ protected:
 				break;
 			}
 
+			LinkInfo.LinkState = newState;
+
 			LinkStatusUpdated.fire(newState);
 		}
-
-		LinkInfo.LinkState = newState;
 	}
 
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
