@@ -251,6 +251,7 @@ protected:
 			{
 			case LoLaLinkInfo::LinkStateEnum::Connected:
 				//Notify all link dependent services to stop.
+				GetLoLa()->SetLinkStatus(false);
 				ServicesManager->NotifyServicesLinkUpdated(false);
 				LinkInfo.ResetLinkStarted();
 				break;
@@ -276,6 +277,7 @@ protected:
 				ResetLastSentTimeStamp();
 
 				//Notify all link dependent services they can start.
+				GetLoLa()->SetLinkStatus(true);
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:

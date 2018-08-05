@@ -38,6 +38,7 @@ protected:
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
 	bool SendPermission = true;
 	bool Enabled = false;
+	bool LinkActive = false;
 	///
 
 	///Packet Mapper for known definitions.
@@ -61,6 +62,16 @@ public:
 	void Disable()
 	{
 		Enabled = false;
+	}
+
+	void SetLinkStatus(const bool active)
+	{
+		LinkActive = active;
+	}
+
+	bool IsLinkActive()
+	{
+		return LinkActive;
 	}
 
 	uint32_t GetTimeStamp()
