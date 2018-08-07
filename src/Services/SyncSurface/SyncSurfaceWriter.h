@@ -172,7 +172,6 @@ protected:
 				if (!TrackedSurface->GetTracker()->HasSet())
 				{
 					UpdateSyncingState(SyncWriterState::BlocksUpdated);
-					SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
 				}
 				else
 				{
