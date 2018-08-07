@@ -138,7 +138,7 @@ protected:
 				PrepareFinalizingProtocolPacket();
 				RequestSendPacket();
 				UpdateSyncingState(SyncWriterState::SendingFinish);
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_TIMEOUT);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_COALESCE_PERIOD);
 			}
 			break;
 		case SyncWriterState::SendingFinish:
