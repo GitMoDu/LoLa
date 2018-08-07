@@ -68,11 +68,7 @@ protected:
 		{
 		case SyncStateEnum::Starting:
 		case SyncStateEnum::FullSync:
-			if (SyncState == SyncStateEnum::Resync)
-			{
-				TrackedSurface->GetTracker()->SetAll();
-			}
-			else
+			if (SyncState != SyncStateEnum::Resync)
 			{
 				UpdateSyncingState(SyncWriterState::SyncStarting);
 			}

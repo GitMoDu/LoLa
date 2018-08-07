@@ -77,11 +77,11 @@ protected:
 	
 	virtual void OnStateUpdated(const SyncStateEnum newState)
 	{
-		AbstractSync::OnStateUpdated(newState);
 		switch (newState)
 		{
 		case SyncStateEnum::Starting:
 			SyncTryCount = 0;
+			TrackedSurface->GetTracker()->SetAll();
 			break;
 		default:
 			break;
