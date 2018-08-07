@@ -150,7 +150,6 @@ protected:
 			}
 			else if (SyncTryCount > ABSTRACT_SURFACE_SYNC_PERSISTANCE_COUNT)
 			{
-				TrackedSurface->GetTracker()->SetAll();
 				UpdateSyncingState(SyncWriterState::SyncStarting);
 			}
 			else
