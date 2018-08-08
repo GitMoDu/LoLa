@@ -6,18 +6,18 @@
 #define DEBUG_LOLA
 #define MOCK_RADIO
 
-#define ILOLA_DEFAULT_CHANNEL 20
-
-#define ILOLA_DEFAULT_MIN_RSSI (int16_t(-100))
-
 #if !defined(UINT16_MAX) || !defined(INT16_MIN) || !defined(UINT32_MAX) || defined(UINT8_MAX)
 #include <stdint.h>
 #endif
 
-#define ILOLA_INVALID_RSSI		((int16_t)INT16_MIN)
-#define ILOLA_INVALID_MILLIS	((uint32_t)UINT32_MAX)
-#define ILOLA_INVALID_MICROS	ILOLA_INVALID_MILLIS
-#define ILOLA_INVALID_LATENCY	((uint16_t)UINT16_MAX)
+#define ILOLA_DEFAULT_CHANNEL				20
+
+#define ILOLA_DEFAULT_MIN_RSSI				(int16_t(-100))
+
+#define ILOLA_INVALID_RSSI					((int16_t)INT16_MIN)
+#define ILOLA_INVALID_MILLIS				((uint32_t)UINT32_MAX)
+#define ILOLA_INVALID_MICROS				ILOLA_INVALID_MILLIS
+#define ILOLA_INVALID_LATENCY				((uint16_t)UINT16_MAX)
 
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
