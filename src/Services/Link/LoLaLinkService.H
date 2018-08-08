@@ -239,6 +239,9 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
+	//Link service has the power to always receive packets.
+	bool ShouldProcessReceived() { return true; }
+
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
 	{
 		if (LinkInfo.LinkState != newState)
