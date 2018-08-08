@@ -83,6 +83,9 @@ protected:
 			SyncTryCount = 0;
 			TrackedSurface->GetTracker()->SetAll();
 			break;
+		case SyncStateEnum::FullSync:
+			TrackedSurface->GetTracker()->SetAll();
+			break;
 		default:
 			break;
 		}
