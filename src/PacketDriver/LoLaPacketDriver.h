@@ -82,5 +82,10 @@ protected:
 
 protected:
 	virtual void OnStart() {}
+
+private:
+	inline bool HotAfterSend();
+	inline bool HotAfterReceive();
+
 };
 #endif
