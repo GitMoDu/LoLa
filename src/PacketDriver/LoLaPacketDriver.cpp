@@ -57,7 +57,7 @@ void LoLaPacketDriver::OnReceived()
 	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
 	{
 	}
-	else 
+	else
 	{	//Packet received Ok, let's update that info really quick.
 		LastValidReceived = IncomingInfo.PacketTime;
 		LastValidReceivedRssi = IncomingInfo.PacketRSSI;
@@ -103,7 +103,7 @@ LoLaServicesManager* LoLaPacketDriver::GetServices()
 	return &Services;
 }
 
-inline bool LoLaPacketDriver::HotAfterSend()
+bool LoLaPacketDriver::HotAfterSend()
 {
 	if (LastSent != ILOLA_INVALID_MILLIS)
 	{
@@ -112,7 +112,7 @@ inline bool LoLaPacketDriver::HotAfterSend()
 	return false;
 }
 
-inline bool LoLaPacketDriver::HotAfterReceive()
+bool LoLaPacketDriver::HotAfterReceive()
 {
 	if (LastValidReceived != ILOLA_INVALID_MILLIS)
 	{
@@ -173,11 +173,11 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 }
 
 uint32_t LoLaPacketDriver::GetLastValidReceivedMillis()
-{ 
+{
 	return  LastValidReceived;
 }
 
-int16_t LoLaPacketDriver::GetLastValidRSSI() 
-{ 
+int16_t LoLaPacketDriver::GetLastValidRSSI()
+{
 	return LastValidReceivedRssi;
 }
