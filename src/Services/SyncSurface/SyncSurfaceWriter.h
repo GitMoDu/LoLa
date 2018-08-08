@@ -318,7 +318,10 @@ protected:
 		}
 		else if (IsSyncEnabled())
 		{
-			UpdateSyncingState(SyncWriterState::SyncStarting);
+			if (TrackedSurface->GetTracker()->HasSet() || !HashesMatch())
+			{
+				UpdateSyncingState(SyncWriterState::SyncStarting);
+			}
 		}
 	}
 
