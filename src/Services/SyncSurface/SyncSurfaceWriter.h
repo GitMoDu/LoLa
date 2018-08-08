@@ -296,7 +296,6 @@ protected:
 			case SyncWriterState::BlocksDone:
 			case SyncWriterState::SendingFinish:
 			case SyncWriterState::WaitingForConfirmation:
-			case SyncWriterState::SyncComplete:				
 				if (HashesMatch())
 				{
 					UpdateSyncingState(SyncWriterState::SyncComplete);
@@ -305,6 +304,11 @@ protected:
 				{
 					SetLastSentBlockAsPending();
 					UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
+				}
+			case SyncWriterState::SyncComplete:				
+				if (!HashesMatch())
+				{
+					UpdateSyncingState(SyncWriterState::SyncStarting);
 				}
 				break;
 			default:
