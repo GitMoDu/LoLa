@@ -14,7 +14,7 @@
 #define LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS 5
 
 class LoLaPacketDriver : public ILoLa
-{	
+{
 private:
 	struct IncomingInfoStruct
 	{
@@ -36,7 +36,7 @@ private:
 			PacketRSSI = rssi;
 		}
 	} IncomingInfo;
-	
+
 protected:
 	///Services that are served receiving packets.
 	LoLaServicesManager Services;
@@ -50,13 +50,24 @@ protected:
 
 public:
 	LoLaPacketDriver();
-	virtual bool SendPacket(ILoLaPacket* packet);
 	LoLaServicesManager* GetServices();
 	uint32_t GetLastValidReceivedMillis();
 	int16_t GetLastValidRSSI();
 
 public:
+	virtual bool SendPacket(ILoLaPacket* packet);
+
+public:
 	virtual bool Setup();
+	virtual void OnIncoming(const int16_t rssi);
+	virtual void OnReceiveBegin(const uint8_t length, const int16_t rssi);
+	virtual void OnReceivedFail(const int16_t rssi);
+	virtual void OnSentOk();
+	virtual void OnReceived();
+	virtual void OnBatteryAlarm();
+	virtual void OnWakeUpTimer();
+	virtual bool AllowedSend();
+
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
 	{
@@ -64,22 +75,12 @@ public:
 		Services.Debug(serial);
 	}
 #endif
+
 protected:
 	virtual bool Transmit() { return false; }
 	virtual bool CanTransmit() { return true; }
-	virtual bool AllowedSend();
-	
-protected:	
-	virtual void OnStart() {}
 
-	///Public static members to cross the static events to instance.
-public:
-	virtual void OnIncoming(const int16_t rssi);
-	virtual void OnReceiveBegin(const uint8_t length, const  int16_t rssi);
-	virtual void OnReceivedFail(const int16_t rssi);
-	virtual void OnSentOk();
-	virtual void OnReceived();
-	virtual void OnBatteryAlarm();
-	virtual void OnWakeUpTimer();
+protected:
+	virtual void OnStart() {}
 };
 #endif
