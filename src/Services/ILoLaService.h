@@ -184,9 +184,9 @@ protected:
 		return LoLa->GetPacketMap();
 	}
 
-	bool AllowedSend()
+	bool AllowedSend(const bool overridePermission = false)
 	{
-		return LoLa->AllowedSend();
+		return LoLa->AllowedSend(overridePermission);
 	}
 
 	bool SendPacket(ILoLaPacket* outgoingPacket)
