@@ -251,7 +251,7 @@ protected:
 		case SyncStateEnum::WaitingForTrigger:
 		case SyncStateEnum::FullSync:
 		case SyncStateEnum::Resync:
-			TrackedSurface->GetTracker()->SetAll();
+			
 			UpdateState(SyncStateEnum::FullSync);
 			break;
 		case SyncStateEnum::Synced:
