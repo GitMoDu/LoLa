@@ -101,8 +101,8 @@ protected:
 			SyncTryCount++;
 			if (SyncTryCount > ABSTRACT_SURFACE_SYNC_PERSISTANCE_COUNT)
 			{
-				UpdateSyncingState(SyncWriterState::SyncStarting, true);
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_KEEP_ALIVE_MILLIS);
+				//Unable to start protocol, reset to wait for reader request.
+				UpdateState(SyncStateEnum::WaitingForTrigger);
 			}
 			else 
 			{
