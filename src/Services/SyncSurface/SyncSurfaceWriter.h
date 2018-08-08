@@ -378,6 +378,7 @@ private:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SyncStarting"));
 #endif
+				InvalidateRemoteHash();
 				TrackedSurface->GetTracker()->SetAll();
 				break;
 			case SyncWriterState::SendingStart:
