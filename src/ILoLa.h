@@ -152,15 +152,6 @@ public:
 	virtual int16_t GetRSSIMax() { return 0; }
 	virtual int16_t GetRSSIMin() { return ILOLA_DEFAULT_MIN_RSSI; }
 
-#ifdef DEBUG_LOLA
-	virtual void Debug(Stream* serial)
-	{
-		PacketMap.Debug(serial);
-	}
-#endif
-	///Public static members to cross the static events to instance.
-
-public:
 	virtual void OnWakeUpTimer() {}
 	virtual void OnReceiveBegin(const uint8_t length, const  int16_t rssi) {}
 	virtual void OnReceivedFail(const int16_t rssi) {}
@@ -169,7 +160,13 @@ public:
 	virtual void OnIncoming(const int16_t rssi) {}
 
 	virtual void OnBatteryAlarm() {}
-	///
+
+#ifdef DEBUG_LOLA
+	virtual void Debug(Stream* serial)
+	{
+		PacketMap.Debug(serial);
+	}
+#endif
 };
 #endif
 
