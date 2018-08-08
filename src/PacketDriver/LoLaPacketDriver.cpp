@@ -148,10 +148,10 @@ bool LoLaPacketDriver::IsInSendSlot()
 bool LoLaPacketDriver::AllowedSend(const bool overridePermission = false)
 {
 	return Enabled &&
-		(LinkActive || overridePermission) &&
 		!HotAfterSend() &&
 		!HotAfterReceive() &&
-		CanTransmit();
+		CanTransmit() &&
+		(overridePermission || IsInSendSlot());
 }
 
 //TODO:Store statistics metadata
