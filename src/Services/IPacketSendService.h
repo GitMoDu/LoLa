@@ -39,6 +39,8 @@ private:
 	uint8_t SendTimeOutDuration = 0;
 	uint8_t AckTimeOutDuration = 0;
 
+	bool OverrideSendPermission = false;
+
 protected:
 	ILoLaPacket * Packet = nullptr;
 
@@ -98,7 +100,7 @@ public:
 				OnSendTimedOut();
 				ClearSendRequest();
 			}
-			else if (!AllowedSend())
+			else if (!AllowedSend(OverrideSendPermission))
 			{
 				//Give an opportunity for the service to update the packet, if needed.
 				SetNextRunDelay(LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS);
@@ -170,7 +172,7 @@ public:
 	}
 
 protected:
-	void RequestSendPacket(const uint8_t sendTimeOutDurationMillis = LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS,
+	void RequestSendPacket(const bool overrideSendPermission = false, const uint8_t sendTimeOutDurationMillis = LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS,
 		const uint8_t ackReplyTimeOutDurationMillis = LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS)
 	{
 		if (HasSendPendingInternal())
@@ -178,6 +180,7 @@ protected:
 			SendStartMillis = Millis();
 			SendTimeOutDuration = sendTimeOutDurationMillis;
 			AckTimeOutDuration = ackReplyTimeOutDurationMillis;
+			OverrideSendPermission = overrideSendPermission;
 			SendStatus = SendStatusEnum::Requested;
 		}
 
