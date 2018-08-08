@@ -121,6 +121,30 @@ inline bool LoLaPacketDriver::HotAfterReceive()
 	return false;
 }
 
+bool LoLaPacketDriver::IsInSendSlot()
+{
+	if (LinkActive && SendSlotStart != ILOLA_INVALID_MILLIS)
+	{
+		SendSlotElapsed = GetMillis() % DuplexPeriodMillis;
+
+		if (EvenSlot)
+		{
+			if (SendSlotElapsed < DuplexPeriodMillis)
+			{
+				return true;
+			}
+		}
+		else //The limbo of SendSlotElapsed == DuplexHalfPeriodMillis will always return false.
+		{
+			if (SendSlotElapsed > DuplexPeriodMillis)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool LoLaPacketDriver::AllowedSend(const bool overridePermission = false)
 {
 	return Enabled &&

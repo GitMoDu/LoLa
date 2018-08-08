@@ -37,6 +37,9 @@ private:
 		}
 	} IncomingInfo;
 
+	//Helper for IsInSendSlot().
+	uint32_t SendSlotElapsed;
+
 protected:
 	///Services that are served receiving packets.
 	LoLaServicesManager Services;
@@ -86,6 +89,8 @@ protected:
 private:
 	inline bool HotAfterSend();
 	inline bool HotAfterReceive();
+
+	inline bool IsInSendSlot();
 
 };
 #endif
