@@ -201,7 +201,7 @@ protected:
 			case SyncWriterState::SyncStarting:
 			case SyncWriterState::SendingStart:
 				//Protocol sync has started.
-				UpdateSyncingState(SyncWriterState::UpdatingBlocks, false);
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks, true);
 				SetNextRunASAP();
 				break;
 			case SyncWriterState::SendingFinish:
