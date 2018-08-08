@@ -354,8 +354,8 @@ private:
 	{
 		if (WriterState != newState)
 		{
-			SetNextRunASAP();
 			StampSubStateStart();
+			SetNextRunASAP();
 			if (resetTryCount)
 			{
 				SyncTryCount = 0;
