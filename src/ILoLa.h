@@ -12,6 +12,8 @@
 
 #define ILOLA_DEFAULT_CHANNEL				20
 
+#define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
+
 #define ILOLA_DEFAULT_MIN_RSSI				(int16_t(-100))
 
 #define ILOLA_INVALID_RSSI					((int16_t)INT16_MIN)
@@ -37,7 +39,12 @@ protected:
 	uint8_t TransmitPower = 0;
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
 	bool Enabled = false;
+	uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
+	///
+
+	///Status
 	bool LinkActive = false;
+	bool EvenSlot = false;
 	///
 
 	///Packet Mapper for known definitions.
@@ -66,6 +73,11 @@ public:
 	void SetLinkStatus(const bool active)
 	{
 		LinkActive = active;
+	}
+
+	void SetDuplexSlot(const bool evenSlot)
+	{
+		EvenSlot = evenSlot;
 	}
 
 	bool IsLinkActive()
