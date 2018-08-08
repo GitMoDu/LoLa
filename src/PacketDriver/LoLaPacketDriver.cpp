@@ -124,7 +124,7 @@ inline bool LoLaPacketDriver::HotAfterReceive()
 bool LoLaPacketDriver::AllowedSend(const bool overridePermission = false)
 {
 	return Enabled &&
-		(SendPermission || overridePermission) &&
+		(LinkActive || overridePermission) &&
 		!HotAfterSend() &&
 		!HotAfterReceive() &&
 		CanTransmit();

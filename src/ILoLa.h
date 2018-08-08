@@ -36,7 +36,6 @@ protected:
 	///Configurations
 	uint8_t TransmitPower = 0;
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
-	bool SendPermission = true;
 	bool Enabled = false;
 	bool LinkActive = false;
 	///
