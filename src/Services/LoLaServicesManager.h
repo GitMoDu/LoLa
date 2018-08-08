@@ -32,7 +32,7 @@ public:
 		uint8_t header = receivedPacket->GetDataHeader();
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
-			if (Services[i] != nullptr && Services[i]->ProcessPacket(receivedPacket, header))
+			if (Services[i] != nullptr && Services[i]->ReceivedPacket(receivedPacket, header))
 			{
 				return;
 			}
@@ -64,7 +64,7 @@ public:
 
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
-			if (Services[i] != nullptr && Services[i]->ProcessAck(header, id))
+			if (Services[i] != nullptr && Services[i]->ReceivedAck(header, id))
 			{
 				return;
 			}
