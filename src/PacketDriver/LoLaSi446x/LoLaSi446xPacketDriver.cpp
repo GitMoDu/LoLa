@@ -220,8 +220,8 @@ bool LoLaSi446xPacketDriver::Setup()
 		{
 			Si446x_setTxPower(TransmitPower);
 			Si446x_setupCallback(SI446X_CBS_RXBEGIN | SI446X_CBS_SENT, 1); // Enable packet RX begin and packet sent callbacks
-			Si446x_setLowBatt(3000); // Set low battery voltage to 3000mV
-			Si446x_setupWUT(1, 8192, 0, SI446X_WUT_RUN | SI446X_WUT_BATT); // Run WUT and check battery every 2 seconds
+			Si446x_setLowBatt(3200); // Set low battery voltage to 3200mV
+			Si446x_setupWUT(1, 8192, 0, SI446X_WUT_BATT); // Run check battery every 2 seconds.
 
 			CheckForPending();
 
