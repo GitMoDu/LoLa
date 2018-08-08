@@ -143,13 +143,30 @@ public:
 #endif // DEBUG_LOLA
 
 public:
+	bool ReceivedPacket(ILoLaPacket* incomingPacket, const uint8_t header) 
+	{
+		if (ShouldProcessReceived()) {
+			return ProcessPacket(incomingPacket, header);
+		}
+		return false; 
+	}
+
+	bool ReceivedAck(const uint8_t header, const uint8_t id) 
+	{
+		if (ShouldProcessReceived()) {
+			return ProcessAck(header, id);
+		}
+		return false;
+	}
+
+public:
 	virtual bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header) { return false; }
 	virtual bool ProcessAck(const uint8_t header, const uint8_t id) { return false; }
 	virtual void OnLinkEstablished() {}
 	virtual void OnLinkLost() {}
 
 protected:
-
+	virtual bool ShouldProcessReceived() { return LoLa->IsLinkActive; }
 	virtual bool OnAddPacketMap(LoLaPacketMap* packetMap) { return true; }
 #ifdef DEBUG_LOLA
 	virtual void PrintName(Stream* serial)
