@@ -122,7 +122,7 @@ protected:
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO)
 			{
 				PrepareHello();
-				RequestSendPacket();
+				RequestSendPacket(true);
 			}
 			else
 			{
@@ -137,7 +137,7 @@ protected:
 				return;
 			}
 			PrepareSendChallenge();
-			RequestSendPacket();
+			RequestSendPacket(true);
 			ConnectingState = AwaitingConnectionEnum::SendingChallenge;
 			break;
 		case AwaitingConnectionEnum::SendingChallenge:

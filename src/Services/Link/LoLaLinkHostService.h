@@ -157,7 +157,7 @@ protected:
 			break;
 		case AwaitingConnectionEnum::ResponseOk:
 			PrepareResponseOk();
-			RequestSendPacket();
+			RequestSendPacket(true);
 			ConnectingState = AwaitingConnectionEnum::SendingResponseOk;
 			SetNextRunASAP();
 			break;
@@ -220,7 +220,7 @@ private:
 		//		Serial.println(SessionId);
 		//#endif
 		PreparePacketBroadcast();
-		RequestSendPacket();
+		RequestSendPacket(true);
 	}
 
 	void PreparePacketBroadcast()
