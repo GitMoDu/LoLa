@@ -125,10 +125,8 @@ bool LoLaPacketDriver::AllowedSend()
 {
 	return Enabled &&
 		SendPermission &&
-		(GetMillis() - LastSent > LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS)
-		&&
-		(GetMillis() - LastValidReceived > LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS)
-		&&
+		!HotAfterSend() &&
+		!HotAfterReceive() &&
 		CanTransmit();
 }
 
