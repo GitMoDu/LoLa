@@ -66,7 +66,7 @@ public:
 	virtual void OnReceived();
 	virtual void OnBatteryAlarm();
 	virtual void OnWakeUpTimer();
-	virtual bool AllowedSend();
+	virtual bool AllowedSend(const bool overridePermission = false);
 
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
