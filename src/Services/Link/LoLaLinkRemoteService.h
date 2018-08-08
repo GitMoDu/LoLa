@@ -23,6 +23,7 @@ public:
 		: LoLaLinkService(scheduler, loLa)
 	{
 		LinkPMAC = LOLA_LINK_REMOTE_PMAC;
+		loLa->SetDuplexSlot(true);
 	}
 
 protected:
