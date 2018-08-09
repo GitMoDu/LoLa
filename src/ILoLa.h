@@ -25,6 +25,7 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 
+#include <ClockSource.h>
 
 class ILoLa
 {
@@ -49,6 +50,10 @@ protected:
 
 	///Packet Mapper for known definitions.
 	LoLaPacketMap PacketMap;
+	///
+
+	///Synced clock
+	ClockSource SyncedClock;
 	///
 
 public:
@@ -85,14 +90,19 @@ public:
 		return LinkActive;
 	}
 
+	ClockSource* GetClockSource()
+	{
+		return &SyncedClock;
+	}
+
 	uint32_t GetTimeStamp()
 	{
-		return micros();
+		return SyncedClock.GetMicros();
 	}
 
 	uint32_t GetMillis()
 	{
-		return millis();
+		return SyncedClock.GetMillis();
 	}
 
 	uint32_t GetLastSentMillis()
