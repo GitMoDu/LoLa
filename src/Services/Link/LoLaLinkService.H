@@ -41,10 +41,11 @@
 #define LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED		0x03
 
 #define LOLA_LINK_SERVICE_ACK_SUBHEADER_HELLO				0x00
+#define LOLA_LINK_SERVICE_ACK_SUBHEADER_NTP					0X01
 
 //TODO: Future.
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_LINK_INFO		0X05
-//#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP				0X06
+
 
 #define LOLA_LINK_SERVICE_INVALID_SESSION					UINT8_MAX
 
@@ -227,6 +228,7 @@ protected:
 	virtual void OnChallengeReplyReceived(const uint8_t sessionId, uint8_t* data) {}
 	virtual void OnChallengeAcceptedReceived(const uint8_t sessionId, uint8_t* data) {}
 	virtual void OnHelloReceived(const uint8_t sessionId, uint8_t* data) {}
+	virtual void OnClockReceived(const uint8_t sessionId, uint8_t* data) {}
 
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 	virtual void OnLinkWarningLow() {}
@@ -358,6 +360,9 @@ protected:
 				case LOLA_LINK_SERVICE_ACK_SUBHEADER_HELLO:
 					OnHelloReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 					break;
+				case LOLA_LINK_SERVICE_ACK_SUBHEADER_NTP:
+					OnClockReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
+					break;
 				default:
 					break;
 				}
@@ -393,6 +398,32 @@ protected:
 		PacketHolder.GetPayload()[2] = ATUI.array[1];
 		PacketHolder.GetPayload()[3] = ATUI.array[2];
 		PacketHolder.GetPayload()[4] = ATUI.array[3];
+	}
+
+	void PrepareClockSync()
+	{
+		PacketHolder.SetDefinition(&LinkAckDefinition);
+		PacketHolder.SetId(SessionId);
+		PacketHolder.GetPayload()[0] = LOLA_LINK_SERVICE_ACK_SUBHEADER_NTP;
+
+		//Actual clock value is set on PreSend().
+		PacketHolder.GetPayload()[1] = 0;
+		PacketHolder.GetPayload()[2] = 0;
+		PacketHolder.GetPayload()[3] = 0;
+		PacketHolder.GetPayload()[4] = 0;
+	}
+
+	void OnPreSend() 
+	{
+		ATUI.uint = Millis();
+		if (PacketHolder.GetDataHeader == LinkAckDefinition.GetHeader() &&
+			PacketHolder.GetPayload()[0] == LOLA_LINK_SERVICE_ACK_SUBHEADER_NTP)
+		{
+			PacketHolder.GetPayload()[1] = ATUI.array[0];
+			PacketHolder.GetPayload()[2] = ATUI.array[1];
+			PacketHolder.GetPayload()[3] = ATUI.array[2];
+			PacketHolder.GetPayload()[4] = ATUI.array[3];
+		}
 	}
 
 	virtual bool ShouldProcessPackets()
