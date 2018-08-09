@@ -61,7 +61,7 @@ protected:
 	virtual void OnSendRetrying() { }
 	virtual void OnPreSend() { }
 	virtual bool OnEnable() { return true; }
-	virtual void OnDisable() {	}
+	virtual void OnDisable() { }
 	virtual bool OnSetup()
 	{
 		//TODO: Get comms entropy source, abstracted.
