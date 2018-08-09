@@ -136,7 +136,7 @@ bool LoLaSi446xPacketDriver::CanTransmit()
 #ifdef MOCK_RADIO
 	return true;
 #else
-	return !Receiving && LoLaPacketDriver::CanTransmit();
+	return !Receiving;
 #endif		
 }
 
