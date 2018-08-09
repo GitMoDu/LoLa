@@ -15,6 +15,8 @@
 #include <Crypto\TinyCRC.h>
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 
+#include <ClockSource.h>
+
 #define LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE	5  //1 byte Sub-header + 4 byte pseudo-MAC or other uint32_t
 
 #define LOLA_LINK_SERVICE_POLL_PERIOD_MILLIS				500
@@ -100,22 +102,25 @@ protected:
 
 	uint8_t ConnectingState = 0;
 
-	//Link session variables
+	//Link session variables.
 	uint32_t LinkPMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	uint32_t RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	uint8_t SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 
 	LoLaLinkInfo LinkInfo;
 
+	//Synced Clock.
+	ClockSource * SyncedClock = nullptr;
+
 	//Optimized memory usage grunt packet.
 	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
 
-	//Subservices
+	//Subservices.
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 	LoLaDiagnosticsService Diagnostics;
 #endif
 
-	//Callback handler
+	//Callback handler.
 	Signal<uint8_t> LinkStatusUpdated;
 
 	union ArrayToUint32 {
@@ -368,8 +373,11 @@ protected:
 	{
 		if (IPacketSendService::OnSetup())
 		{
-			SetNextRunDefault();
-			return true;
+			SyncedClock = GetLoLa()->GetClockSource();
+			if (SyncedClock != nullptr) {
+				SetNextRunDefault();
+				return true;
+			}
 		}
 		return false;
 	}
