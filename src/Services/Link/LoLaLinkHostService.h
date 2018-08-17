@@ -39,21 +39,6 @@ protected:
 		return LoLaLinkService::ShouldProcessPackets();
 	}
 
-	void OnLinkWarningLow()
-	{
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO)
-		{
-			PrepareHello();
-			RequestSendPacket();
-		}
-	}
-
-	void OnLinkWarningMedium()
-	{
-		PrepareHello();
-		RequestSendPacket();
-	}
-
 	void OnChallengeReplyReceived(const uint8_t sessionId, uint8_t* data)
 	{
 		ATUI.array[0] = data[0];

@@ -120,7 +120,7 @@ protected:
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				SetNextRunDelay(LOLA_LINK_SERVICE_SLEEP_PERIOD);
 			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_MIN_ELAPSED_BEFORE_HELLO)
+			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD)
 			{
 				PrepareHello();
 				RequestSendPacket(true);
@@ -164,12 +164,6 @@ protected:
 		default:
 			break;
 		}
-	}
-
-	void OnLinkWarningMedium()
-	{
-		PrepareHello();
-		RequestSendPacket();
 	}
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
