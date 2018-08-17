@@ -416,7 +416,7 @@ protected:
 	void OnPreSend() 
 	{
 		ATUI.uint = Millis();
-		if (PacketHolder.GetDataHeader == LinkAckDefinition.GetHeader() &&
+		if (PacketHolder.GetDataHeader() == LinkAckDefinition.GetHeader() &&
 			PacketHolder.GetPayload()[0] == LOLA_LINK_SERVICE_ACK_SUBHEADER_NTP)
 		{
 			PacketHolder.GetPayload()[1] = ATUI.array[0];
