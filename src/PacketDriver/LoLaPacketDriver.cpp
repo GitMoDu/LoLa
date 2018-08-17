@@ -123,7 +123,7 @@ bool LoLaPacketDriver::HotAfterReceive()
 
 bool LoLaPacketDriver::IsInSendSlot()
 {
-	if (LinkActive && SendSlotStart != ILOLA_INVALID_MILLIS)
+	if (LinkActive)
 	{
 		SendSlotElapsed = GetMillis() % DuplexPeriodMillis;
 
