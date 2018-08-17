@@ -166,7 +166,7 @@ public:
 	virtual void OnLinkLost() {}
 
 protected:
-	virtual bool ShouldProcessReceived() { return LoLa->IsLinkActive; }
+	virtual bool ShouldProcessReceived() { return LoLa->IsLinkActive(); }
 	virtual bool OnAddPacketMap(LoLaPacketMap* packetMap) { return true; }
 #ifdef DEBUG_LOLA
 	virtual void PrintName(Stream* serial)
