@@ -145,7 +145,7 @@ bool LoLaPacketDriver::IsInSendSlot()
 	return false;
 }
 
-bool LoLaPacketDriver::AllowedSend(const bool overridePermission = false)
+bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 {
 	return Enabled &&
 		!HotAfterSend() && //TODO: Deprecate and remove to maximize throughput when slot sending is working.
