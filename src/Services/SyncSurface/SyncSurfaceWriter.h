@@ -32,6 +32,14 @@ private:
 	uint8_t SurfaceSendingIndex = 0;
 
 protected:
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("SyncSurfaceWriter"));
+
+	}
+#endif // DEBUG_LOLA
+
 	void OnSurfaceDataChanged()
 	{
 		InvalidateLocalHash();

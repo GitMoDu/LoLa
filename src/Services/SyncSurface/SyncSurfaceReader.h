@@ -25,6 +25,13 @@ private:
 	} ReaderState = SyncStarting;
 
 protected:
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("SyncSurfaceReader"));
+	}
+#endif // DEBUG_LOLA
+
 	void OnBlockReceived(const uint8_t index, uint8_t * payload)
 	{
 		UpdateBlockData(index, payload);
