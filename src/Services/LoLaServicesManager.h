@@ -3,6 +3,7 @@
 #ifndef _RADIOSERVICESMANAGER_h
 #define _RADIOSERVICESMANAGER_h
 
+#define DEBUG_PACKET_INPUT
 
 #include <Packet\LoLaPacket.h>
 #include <Services\ILoLaService.h>
@@ -30,6 +31,10 @@ public:
 	void ProcessPacket(ILoLaPacket* receivedPacket)
 	{
 		uint8_t header = receivedPacket->GetDataHeader();
+#ifdef DEBUG_PACKET_INPUT
+		Serial.print(F("Received:"));
+		Serial.println(header);
+#endif
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
 			if (Services[i] != nullptr && Services[i]->ProcessPacket(receivedPacket, header))
@@ -61,7 +66,10 @@ public:
 	{
 		uint8_t header = receivedPacket->GetPayload()[0];
 		uint8_t id = receivedPacket->GetPayload()[1];
-
+#ifdef DEBUG_PACKET_INPUT
+		Serial.print(F("Ack:"));
+		Serial.println(header);
+#endif
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
 			if (Services[i] != nullptr && Services[i]->ProcessAck(header, id))
