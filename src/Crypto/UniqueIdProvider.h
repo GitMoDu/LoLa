@@ -64,7 +64,7 @@ public:
 	uint8_t * GetUUIDPointer()
 	{
 
-		return &UUID;
+		return UUID;
 	}
 	
 #ifdef ARDUINO_ARCH_AVR
