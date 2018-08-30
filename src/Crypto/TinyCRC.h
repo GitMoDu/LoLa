@@ -74,6 +74,14 @@ public:
 	virtual T Update(const uint8_t value);
 
 	virtual T Update(const uint8_t data[], const uint8_t size)
+	{
+		for (uint8_t i = 0; i < size; i++)
+		{
+			Update(data[i]);
+		}
+
+		return Seed;
+	}
 };
 
 class TinyCrcModbus8 : public AbstractTinyCrc<uint8_t>
