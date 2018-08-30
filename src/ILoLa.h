@@ -22,6 +22,7 @@
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
+#include <Crypto\UniqueIdProvider.h>
 
 
 class ILoLa
@@ -45,9 +46,23 @@ protected:
 	LoLaPacketMap PacketMap;
 	///
 
+	///Unique Id
+	UniqueIdProvider IdProvider;
+	///
+
 public:
-	ILoLa()
+	ILoLa() : IdProvider()
 	{
+	}
+
+	uint8_t GetIdLength()
+	{
+		return IdProvider.GetUUIDLength();
+	}
+
+	uint8_t* GetIdPointer()
+	{
+		return IdProvider.GetUUIDPointer();
 	}
 
 	void Enable()
