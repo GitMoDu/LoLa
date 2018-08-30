@@ -59,7 +59,7 @@ public:
 		Seed = seed;
 	}
 
-	T Reset()
+	virtual T Reset()
 	{
 		Seed = 0;
 
