@@ -13,6 +13,7 @@
 #include <Packet\LoLaPacketMap.h>
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
+#include <Crypto\PseudoMacGenerator.h>
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 
 #define LOLA_LINK_SERVICE_PACKET_DEFINITION_PAYLOAD_SIZE	5  //1 byte Sub-header + 4 byte pseudo-MAC or other uint32_t
@@ -45,11 +46,7 @@
 //#define LOLA_CONNECTION_SERVICE_SUBHEADER_NTP				0X06
 
 #define LOLA_LINK_SERVICE_INVALID_SESSION					UINT8_MAX
-
-//TODO: Replace with one time random number.
-#define LOLA_LINK_HOST_PMAC									0x0E0F
-#define LOLA_LINK_REMOTE_PMAC								0x1A1B
-#define LOLA_LINK_SERVICE_INVALID_PMAC						UINT32_MAX
+#define LOLA_LINK_SERVICE_INVALID_PMAC						LOLA_INVALID_PMAC
 
 class LoLaLinkService : public IPacketSendService
 {
@@ -100,6 +97,9 @@ protected:
 
 	uint8_t ConnectingState = 0;
 
+	//MAC Helper
+	PseudoMacGenerator PMACGenerator;
+
 	//Link session variables
 	uint32_t LinkPMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	uint32_t RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
@@ -130,6 +130,8 @@ public:
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
 	{
+		PMACGenerator.SetIdSource(loLa->GetIdPointer(), loLa->GetIdLength());
+
 		LinkInfo.SetDriver(loLa);
 		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
 
@@ -367,6 +369,7 @@ protected:
 		{
 			SetNextRunDefault();
 			ClearSession();
+			LinkPMAC = PMACGenerator.GetPMAC();
 			StateStartTime = Millis();
 			return true;
 		}

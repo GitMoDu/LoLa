@@ -22,7 +22,6 @@ public:
 	LoLaLinkRemoteService(Scheduler* scheduler, ILoLa* loLa)
 		: LoLaLinkService(scheduler, loLa)
 	{
-		LinkPMAC = LOLA_LINK_REMOTE_PMAC;
 	}
 
 protected:
