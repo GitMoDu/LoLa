@@ -56,9 +56,9 @@ public:
 	}
 
 	bool Start()
-	{
-		GetLinkService()->Enable();
+	{		
 		LoLa->Enable();
+		GetLinkService()->Enable();
 		return true;
 
 	}
