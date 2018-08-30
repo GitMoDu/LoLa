@@ -65,7 +65,7 @@ protected:
 	virtual bool OnSetup()
 	{
 		//TODO: Get comms entropy source, abstracted.
-		randomSeed(analogRead(0));
+		//randomSeed(...);
 		return Packet != nullptr;
 	}
 
