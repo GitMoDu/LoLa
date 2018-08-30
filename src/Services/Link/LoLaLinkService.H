@@ -132,8 +132,8 @@ public:
 	{
 		LinkInfo.SetDriver(loLa);
 		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
-		StateStartTime = Millis();
-		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
+
+		ClearSession();
 	}
 
 	//Param uint8_t is 
@@ -366,6 +366,8 @@ protected:
 		if (IPacketSendService::OnSetup())
 		{
 			SetNextRunDefault();
+			ClearSession();
+			StateStartTime = Millis();
 			return true;
 		}
 		return false;
