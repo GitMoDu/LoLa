@@ -8,6 +8,8 @@
 #include <Services\ILoLaService.h>
 #include <Packet\LoLaPacket.h>
 
+//#define DEBUG_PACKET_SERVICE
+
 //Takes around the same time as a full time out.
 #define LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS	2
 #define LOLA_SEND_SERVICE_DENIED_MAX_FAILS					3
@@ -65,7 +67,7 @@ protected:
 	virtual bool OnSetup()
 	{
 		//TODO: Get comms entropy source, abstracted.
-		randomSeed(analogRead(0));
+		//randomSeed(...);
 		return Packet != nullptr;
 	}
 
@@ -76,7 +78,6 @@ public:
 		Packet = packetHolder;
 		Packet->ClearDefinition();
 	}
-
 
 	bool Callback()
 	{
@@ -98,6 +99,13 @@ public:
 				((Millis() - SendStartMillis) > (SendStartMillis + SendTimeOutDuration)))
 			{				
 				OnSendTimedOut();
+#ifdef DEBUG_PACKET_SERVICE
+				Serial.print(F("OnSendTimedOut:"));
+				if (Packet != nullptr && Packet->GetDefinition() != nullptr)
+					Serial.println(Packet->GetDefinition()->GetHeader());
+				else
+					Serial.println(0);
+#endif
 				ClearSendRequest();
 			}
 			else if (!AllowedSend(OverrideSendPermission))
@@ -136,6 +144,13 @@ public:
 			break;
 		case SendStatusEnum::SentOk:
 			OnSendOk(Millis() - SendStartMillis);
+#ifdef DEBUG_PACKET_SERVICE
+			Serial.print(F("OnSendOk:"));
+			if (Packet != nullptr && Packet->GetDefinition() != nullptr)
+				Serial.println(Packet->GetDefinition()->GetHeader());
+			else
+				Serial.println(0);
+#endif
 			if (Packet->GetDefinition()->HasACK())
 			{
 				SendStatus = SendStatusEnum::WaitingForAck;
@@ -148,6 +163,13 @@ public:
 			break;
 		case SendStatusEnum::SendFailed:
 			OnSendFailed();
+#ifdef DEBUG_PACKET_SERVICE
+			Serial.print(F("SendFailed:"));
+			if (Packet != nullptr && Packet->GetDefinition() != nullptr)
+				Serial.println(Packet->GetDefinition()->GetHeader());
+			else
+				Serial.println(0);
+#endif
 			ClearSendRequest();
 			break;
 		case SendStatusEnum::WaitingForAck:
@@ -156,10 +178,24 @@ public:
 			break;
 		case SendStatusEnum::AckOk:
 			OnAckReceived(Packet->GetDefinition()->GetHeader(), Packet->GetId());
+#ifdef DEBUG_PACKET_SERVICE
+			Serial.print(F("OnAckReceived:"));
+			if (Packet != nullptr && Packet->GetDefinition() != nullptr)
+				Serial.println(Packet->GetDefinition()->GetHeader());
+			else
+				Serial.println(0);
+#endif
 			ClearSendRequest();
 			break;
 		case SendStatusEnum::AckFailed:
 			OnAckFailed(Packet->GetDefinition()->GetHeader(), Packet->GetId());
+#ifdef DEBUG_PACKET_SERVICE
+			Serial.print(F("OnAckFailed:"));
+			if (Packet != nullptr && Packet->GetDefinition() != nullptr)
+				Serial.println(Packet->GetDefinition()->GetHeader());
+			else
+				Serial.println(0);
+#endif
 			ClearSendRequest();
 			break;
 		case SendStatusEnum::Done:

@@ -7,6 +7,8 @@
 #ifndef _TINYCRC_h
 #define _TINYCRC_h
 
+#include <stdint.h>
+
 
 const uint8_t crc_table_smbus[256] PROGMEM = {
 	0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15,
@@ -59,7 +61,7 @@ public:
 		Seed = seed;
 	}
 
-	T Reset()
+	virtual T Reset()
 	{
 		Seed = 0;
 
@@ -71,9 +73,17 @@ public:
 		return Seed;
 	}
 
-	virtual T Update(const T value);
+	virtual T Update(const uint8_t value);
 
-	virtual T Update(const T data[], const uint8_t size);
+	virtual T Update(const uint8_t data[], const uint8_t size)
+	{
+		for (uint8_t i = 0; i < size; i++)
+		{
+			Update(data[i]);
+		}
+
+		return Seed;
+	}
 };
 
 class TinyCrcModbus8 : public AbstractTinyCrc<uint8_t>

@@ -7,6 +7,8 @@
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
 
+#define DEBUG_BIT_TRACKER
+
 #define SYNC_SURFACE_BLOCK_SIZE 4 //4 bytes per block, enough for a 32 bit value (uint32_t, int32_t);
 
 #define SYNC_SURFACE_8_SIZE		32	//8*LOLA_SYNC_SURFACE_BLOCK_SIZE
@@ -93,11 +95,11 @@ protected:
 	inline void Set32(const uint8_t blockIndex, const uint32_t value);
 
 public:
-#ifdef DEBUG_LOLA
+#ifdef DEBUG_BIT_TRACKER
 	void Debug(Stream * serial)
 	{
 		serial->print(F("|"));
-		for (uint8_t i = 0; i < (GetSize()*SYNC_SURFACE_BLOCK_SIZE); i++)
+		for (uint8_t i = 0; i < (GetBlockCount()*SYNC_SURFACE_BLOCK_SIZE); i++)
 		{
 			serial->print(GetData()[i]);
 			serial->print(F("|"));

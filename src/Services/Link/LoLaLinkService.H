@@ -159,8 +159,8 @@ public:
 	{
 		LinkInfo.SetDriver(loLa);
 		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
-		StateStartTime = Millis();
-		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
+
+		ClearSession();
 	}
 
 	//Param uint8_t is 
@@ -448,6 +448,8 @@ protected:
 			SyncedClock = GetLoLa()->GetClockSource();
 			if (SyncedClock != nullptr) {
 				SetNextRunDefault();
+				ClearSession();
+				StateStartTime = Millis();
 				return true;
 			}
 		}

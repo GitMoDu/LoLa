@@ -24,6 +24,7 @@
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
+#include <Crypto\UniqueIdProvider.h>
 
 #include <ClockSource.h>
 
@@ -54,11 +55,23 @@ protected:
 
 	///Synced clock
 	ClockSource SyncedClock;
+	///Unique Id
+	UniqueIdProvider IdProvider;
 	///
 
 public:
-	ILoLa()
+	ILoLa() : IdProvider()
 	{
+	}
+
+	uint8_t GetIdLength()
+	{
+		return IdProvider.GetUUIDLength();
+	}
+
+	uint8_t* GetIdPointer()
+	{
+		return IdProvider.GetUUIDPointer();
 	}
 
 	void Enable()

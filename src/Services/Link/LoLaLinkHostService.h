@@ -201,10 +201,6 @@ private:
 
 	void BroadCast()
 	{
-		//#ifdef DEBUG_LOLA
-		//		Serial.print(F("B: "));
-		//		Serial.println(SessionId);
-		//#endif
 		PreparePacketBroadcast();
 		RequestSendPacket(true);
 	}
