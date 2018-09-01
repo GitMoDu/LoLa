@@ -4,7 +4,7 @@
 #define _LOLABUFFER_h
 
 #include <Arduino.h>
-#include <Crypto\LoLaCrypto.h>
+#include <Crypto\TinyCRC.h>
 
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacket.h>
@@ -12,7 +12,7 @@
 
 #define LOLA_BUFFER_SIZE 
 
-class LoLaBuffer : public LoLaCrypto
+class LoLaBuffer
 {
 protected:
 	///Packet Mapper reuses the same object.
@@ -29,10 +29,19 @@ protected:
 	uint8_t BufferIndex = 0;
 	///
 
-protected:
+	///CRC validation.
+	TinyCrcModbus8 CalculatorCRC;
+	uint8_t CRCIndex = 0;
+	///
+
+	///Crypto validation.
+	ISeedSource* CryptoSeed = nullptr;
+	///
+
 	uint8_t BufferSize = 0;
 	ILoLaPacket* BufferPacket = nullptr;
 
+protected:
 	PacketDefinition * FindPacketDefinition(const uint8_t header)
 	{
 		if (PacketMap != nullptr)
@@ -40,6 +49,19 @@ protected:
 			return PacketMap->GetDefinition(header);
 		}
 		return nullptr;
+	}
+
+public:
+	virtual bool Setup(LoLaPacketMap* packetMap)
+	{
+		for (uint8_t i = 0; i < GetBufferSize(); i++)
+		{
+			GetBuffer()[i] = 0;
+		}
+
+		PacketMap = packetMap;
+
+		return PacketMap != nullptr;
 	}
 	
 public:
@@ -58,16 +80,21 @@ public:
 		return BufferSize;
 	}
 
-	virtual bool Setup(LoLaPacketMap* packetMap)
+	void SetCryptoSeedSource(ISeedSource* cryptoSeedSource)
 	{
-		for (uint8_t i = 0; i < GetBufferSize(); i++)
+		CryptoSeed = cryptoSeedSource;
+	}
+
+	uint8_t GetCryptoSeed()
+	{
+		if (CryptoSeed != nullptr)
 		{
-			GetBuffer()[i] = 0;
+			return CryptoSeed->GetSeed();
 		}
-
-		PacketMap = packetMap;
-
-		return PacketMap != nullptr;
+		else
+		{
+			return 0;
+		}
 	}
 
 #ifdef DEBUG_LOLA

@@ -27,17 +27,16 @@ public:
 			Services[i] = nullptr;
 		}
 	}
-
+	
 	void ProcessPacket(ILoLaPacket* receivedPacket)
 	{
-		uint8_t header = receivedPacket->GetDataHeader();
 #ifdef DEBUG_PACKET_INPUT
 		Serial.print(F("Received:"));
-		Serial.println(header);
+		Serial.println(receivedPacket->GetDataHeader());
 #endif
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
-			if (Services[i] != nullptr && Services[i]->ReceivedPacket(receivedPacket, header))
+			if (Services[i] != nullptr && Services[i]->ReceivedPacket(receivedPacket, receivedPacket->GetDataHeader()))
 			{
 				return;
 			}

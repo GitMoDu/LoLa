@@ -35,17 +35,17 @@ public:
 
 	bool ReceivePacket()
 	{
-		if (BufferSize > 0 && BufferSize < PACKET_DEFINITION_MAX_PACKET_SIZE && ValidateMACCRC() && Decrypt())
+		if (BufferSize > 0 && BufferSize < PACKET_DEFINITION_MAX_PACKET_SIZE && ValidateMACCRC())
 		{
+			PacketsProcessed++;
 			return true;
 		}
 		else
 		{
 			BufferSize = 0;
+			BufferPacket->SetDefinition(nullptr);
+			return false;
 		}
-
-		BufferPacket->SetDefinition(nullptr);
-		return false;
 	}
 
 	bool ValidateMACCRC()
@@ -56,6 +56,10 @@ public:
 		{
 			CRCIndex = 0;
 			CalculatorCRC.Reset();
+
+			//Crypto starts at the start of the hash.
+			CalculatorCRC.Update(GetCryptoSeed());
+
 			CalculatorCRC.Update(BufferPacket->GetDataHeader());
 
 			if (BufferPacket->GetDefinition()->HasId())
@@ -79,24 +83,6 @@ public:
 			}
 		}
 		return false;
-	}
-
-	bool Decrypt()
-	{
-		if (!IsCryptoEnabled())
-		{
-			return true;
-		}
-
-		//TODO:
-		CRCIndex = 0;
-		CalculatorCRC.Reset();
-		CryptoIndex = 0;
-		CalculatorCRC.Update(GetCryptoSeed());
-
-		PacketsProcessed++;
-
-		return true;
 	}
 };
 

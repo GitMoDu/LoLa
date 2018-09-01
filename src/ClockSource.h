@@ -23,6 +23,11 @@ public:
 		LastSetMillis = 0;
 	}
 
+	void SetRandom()
+	{
+		SetMillis(random(UINT32_MAX));
+	}
+
 	void SetMillis(const uint32_t timeMillis)
 	{
 		LastSetMillis = millis();

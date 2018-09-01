@@ -8,15 +8,14 @@
 class LoLaLinkHostService : public LoLaLinkService
 {
 private:
-	enum AwaitingConnectionEnum
+	enum AwaitingConnectionEnum : uint8_t
 	{
 		Starting = 0,
 		BroadcastingOpenSession = 1,
-		GotResponse = 2,
-		ResponseOk = 3,
-		SendingResponseOk = 4,
-		ResponseNotOk = 5,
+		SwitchOver = 2
 	};
+
+	//uint32_t ClockSyncHelper = 0;
 
 public:
 	LoLaLinkHostService(Scheduler *scheduler, ILoLa* loLa)
@@ -34,31 +33,59 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	bool ShouldProcessPackets()
+	//Host version, RemotePMAC is the Remote«s PMAC.
+	void SetBaseSeed()
 	{
-		return LoLaLinkService::ShouldProcessPackets();
+		CryptoSeed.SetBaseSeed(LinkPMAC, RemotePMAC, SessionId);
 	}
 
-	void OnChallengeReplyReceived(const uint8_t sessionId, uint8_t* data)
-	{
-		ATUI.array[0] = data[0];
-		ATUI.array[1] = data[1];
-		ATUI.array[2] = data[2];
-		ATUI.array[3] = data[3];
+	//virtual void OnClockReceived(const uint8_t sessionId, uint8_t* data)
+	//{
+	//	ClockSyncHelper = Millis();
+	//	ATUI.array[0] = data[0];
+	//	ATUI.array[1] = data[1];
+	//	ATUI.array[2] = data[2];
+	//	ATUI.array[3] = data[3];
 
+	//	ClockSyncHelper = Millis() - ATUI.uint;
+
+	//	if (ClockSyncHelper == 0)
+	//	{
+	//		//NTP reports clocks synced.
+	//		SyncedClockIsSynced = true;
+	//	}
+	//	else
+	//	{
+	//		//NTP reports clocks not synced.
+	//		SyncedClockIsSynced = false;
+	//	}
+
+	//	//PrepareClockSyncReply(ClockSyncHelper);
+	//	//RequestSendPacket();
+	//}
+
+	void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC)
+	{
 		switch (LinkInfo.LinkState)
 		{
-
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-			if (ConnectingState == AwaitingConnectionEnum::BroadcastingOpenSession ||
-				ConnectingState == AwaitingConnectionEnum::Starting)
+			if (SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
+				SessionId == sessionId &&
+				remotePMAC != LOLA_LINK_SERVICE_INVALID_PMAC)
 			{
-				RemotePMAC = ATUI.uint;
-
-				ConnectingState = AwaitingConnectionEnum::GotResponse;
+				//Here is where we have the choice to connect or not to this host.
+				//TODO: PMAC Filtering?
+				//TODO: User UI choice?
+				RemotePMAC = remotePMAC;
+				ConnectingState = AwaitingConnectionEnum::SwitchOver;
 				SetNextRunASAP();
 			}
+			else
+			{
+				//Invalid request, that's not our session.
+			}
+			break;
+		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 		case LoLaLinkInfo::LinkStateEnum::Connected:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
 				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
@@ -75,32 +102,12 @@ protected:
 		}
 	}
 
-	void OnHelloReceived(const uint8_t sessionId, uint8_t* data)
+	void OnLinkAcceptedAckReceived()
 	{
-		switch (LinkInfo.LinkState)
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+			ConnectingState == AwaitingConnectionEnum::SwitchOver)
 		{
-		case LoLaLinkInfo::LinkStateEnum::Setup:
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-			SetNextRunASAP();
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Connecting:
-		case LoLaLinkInfo::LinkStateEnum::Connected:
-			ATUI.array[0] = data[0];
-			ATUI.array[1] = data[1];
-			ATUI.array[2] = data[2];
-			ATUI.array[3] = data[3];
-
-			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
-				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
-				(RemotePMAC == ATUI.uint && SessionId != sessionId))
-			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
-			}
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Disabled:
-		default:
-			break;
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
 		}
 	}
 
@@ -116,79 +123,65 @@ protected:
 			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-				SetNextRunDelay(LOLA_LINK_SERVICE_SLEEP_PERIOD);
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_BROADCAST_PERIOD)
 			{
-				BroadCast();
+				PreparePacketBroadcast();
+				RequestSendPacket(true);
 			}
 			else
 			{
 				SetNextRunDelay(LOLA_LINK_SERVICE_BROADCAST_PERIOD);
 			}
 			break;
-		case AwaitingConnectionEnum::GotResponse:
-			if (RemotePMAC != LOLA_LINK_SERVICE_INVALID_PMAC)
+		case AwaitingConnectionEnum::SwitchOver:
+			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
+				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
+				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
 			{
-				ConnectingState = AwaitingConnectionEnum::ResponseOk;
+				//Go to sleep then wake up to trigger a full link reset.
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+				SetNextRunASAP();
+				return;
+			}
+			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD)
+			{
+				//Send the switch-over packet with Ack.
+				PrepareLinkRequestAccepted();
+				RequestSendPacket(true);
 			}
 			else
 			{
-#ifdef DEBUG_LOLA
-				Serial.println(F("ResponseNotOk"));
-#endif
-				ConnectingState = AwaitingConnectionEnum::ResponseNotOk;
+				SetNextRunDefault();
 			}
-			SetNextRunASAP();
-			break;
-		case AwaitingConnectionEnum::ResponseOk:
-			PrepareResponseOk();
-			RequestSendPacket(true);
-			ConnectingState = AwaitingConnectionEnum::SendingResponseOk;
-			SetNextRunASAP();
-			break;
-		case AwaitingConnectionEnum::ResponseNotOk:
-			ConnectingState = AwaitingConnectionEnum::Starting;
-			RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
-			SetNextRunASAP();
-			break;
-		case AwaitingConnectionEnum::SendingResponseOk:
-			SetNextRunASAP();
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
 			break;
 		default:
-			ConnectingState = AwaitingConnectionEnum::ResponseNotOk;
+			ConnectingState = AwaitingConnectionEnum::BroadcastingOpenSession;
 			SetNextRunASAP();
+			break;
+		}
+	}
+
+	void OnConnecting()
+	{
+		switch (ConnectingState)
+		{
+		case ConnectingStagesEnum::ChallengeStage:
+			break;
+		case ConnectingStagesEnum::ClockSyncStage:
+			break;
+		case ConnectingStagesEnum::LinkProtocolStage:
+			break;
+		default:
 			break;
 		}
 	}
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
 	{
-		switch (newState)
+		if (newState == LoLaLinkInfo::LinkStateEnum::AwaitingLink)
 		{
-		case LoLaLinkInfo::LinkStateEnum::Setup:
-			SetNextRunASAP();
 			NewSession();
-			break;
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			NewSession();
-			ConnectingState = AwaitingConnectionEnum::Starting;
-			SetNextRunASAP();
-			break;
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-			ConnectingState = AwaitingConnectionEnum::Starting;
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Connecting:
-			ConnectingState = ConnectingEnum::ConnectingStarting;
-			SetNextRunASAP();
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Connected:
-			SetNextRunASAP();
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Disabled:
-		default:
-			break;
 		}
 	}
 
@@ -199,20 +192,18 @@ private:
 		SessionId = 1 + random(0xFE);
 	}
 
-	void BroadCast()
+	void PrepareLinkRequestAccepted()
 	{
-		PreparePacketBroadcast();
-		RequestSendPacket(true);
+		PrepareBasePacketWithAck(LOLA_LINK_SERVICE_SUBHEADER_LINK_REQUEST_ACCEPTED);
+		ATUI.uint = 0;
+		ArrayToPayload();
 	}
 
 	void PreparePacketBroadcast()
 	{
-		PrepareBasePacketMAC(LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_BROADCAST);
-	}
-
-	void PrepareResponseOk()
-	{
-		PrepareBasePacketMAC(LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED);
+		PrepareBasePacket(LOLA_LINK_SERVICE_SUBHEADER_HOST_BROADCAST);
+		ATUI.uint = LinkPMAC;
+		ArrayToPayload();
 	}
 };
 #endif

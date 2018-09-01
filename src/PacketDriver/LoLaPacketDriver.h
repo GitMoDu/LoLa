@@ -56,6 +56,7 @@ public:
 	LoLaServicesManager* GetServices();
 	uint32_t GetLastValidReceivedMillis();
 	int16_t GetLastValidRSSI();
+	void SetCryptoSeedSource(ISeedSource* cryptoSeedSource);
 
 public:
 	virtual bool SendPacket(ILoLaPacket* packet);

@@ -25,8 +25,11 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <Crypto\UniqueIdProvider.h>
+#include <Crypto\ISeedSource.h>
 
 #include <ClockSource.h>
+
+
 
 class ILoLa
 {
@@ -174,6 +177,7 @@ protected:
 		return &CurrentChannel;
 	}
 
+
 public:
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
 	virtual bool Setup() { return true; }
@@ -185,6 +189,8 @@ public:
 	virtual uint8_t GetTransmitPowerMin() { return 0; }
 	virtual int16_t GetRSSIMax() { return 0; }
 	virtual int16_t GetRSSIMin() { return ILOLA_DEFAULT_MIN_RSSI; }
+
+	virtual void SetCryptoSeedSource(ISeedSource* cryptoSeedSource) {}
 
 	virtual void OnWakeUpTimer() {}
 	virtual void OnReceiveBegin(const uint8_t length, const  int16_t rssi) {}
