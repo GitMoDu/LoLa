@@ -3,7 +3,7 @@
 #ifndef _RADIOSERVICESMANAGER_h
 #define _RADIOSERVICESMANAGER_h
 
-#define DEBUG_PACKET_INPUT
+//#define DEBUG_PACKET_INPUT
 
 #include <Packet\LoLaPacket.h>
 #include <Services\ILoLaService.h>
