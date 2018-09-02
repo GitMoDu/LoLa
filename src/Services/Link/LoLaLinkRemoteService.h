@@ -90,7 +90,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (ConnectingState = AwaitingConnectionEnum::SearchingForHost &&
+			if (ConnectingState == AwaitingConnectionEnum::SearchingForHost &&
 				remotePMAC != LOLA_LINK_SERVICE_INVALID_PMAC &&
 				sessionId != LOLA_LINK_SERVICE_INVALID_SESSION)
 			{
@@ -100,6 +100,8 @@ protected:
 				RemotePMAC = remotePMAC;
 				SessionId = sessionId;
 				ConnectingState = AwaitingConnectionEnum::GotHost;
+				ResetLastSentTimeStamp();
+				ConnectingStateStartTime = Millis();
 				SetNextRunASAP();
 			}
 			break;
@@ -135,19 +137,27 @@ protected:
 			}
 			else
 			{
-				SetNextRunDefault();
+				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 			}
 			break;
 		case AwaitingConnectionEnum::GotHost:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
-				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
-				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC)
 			{
+				Serial.print("Invalid Session on GotHost");
+				Serial.println(GetElapsedSinceStateStart());
 				ConnectingState = AwaitingConnectionEnum::SearchingForHost;
-				SetNextRunDefault();
-				return;
+				ResetLastSentTimeStamp();
+				SetNextRunASAP();
 			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD)
+			else if (Millis() - ConnectingStateStartTime > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+			{
+				Serial.print("Time out elapsed GotHost: ");
+				Serial.println(GetElapsedSinceStateStart());
+				ConnectingState = AwaitingConnectionEnum::SearchingForHost;
+				SetNextRunASAP();
+			}
+			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
 			{
 				//Send an Hello to wake up potential hosts.
 				PrepareLinkRequest();
@@ -155,7 +165,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDefault();
+				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_RESEND_PERIOD);
 			}
 			break;
 		default:
@@ -180,9 +190,16 @@ protected:
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
 	{
-		if (newState == LoLaLinkInfo::LinkStateEnum::AwaitingLink)
+		switch (newState)
 		{
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			ClearSession();
+		case LoLaLinkInfo::LinkStateEnum::Connecting:
+			ConnectingStateStartTime = Millis();
+			break;
+		default:
+			break;
 		}
 	}
 

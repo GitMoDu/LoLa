@@ -78,6 +78,8 @@ protected:
 				//TODO: User UI choice?
 				RemotePMAC = remotePMAC;
 				ConnectingState = AwaitingConnectionEnum::SwitchOver;
+				ConnectingStateStartTime = Millis();
+				ResetLastSentTimeStamp();
 				SetNextRunASAP();
 			}
 			else
@@ -86,6 +88,8 @@ protected:
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+			SetNextRunASAP();
+			break;
 		case LoLaLinkInfo::LinkStateEnum::Connected:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
 				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
@@ -102,7 +106,7 @@ protected:
 		}
 	}
 
-	void OnLinkAcceptedAckReceived()
+	void OnLinkPacketAckReceived()
 	{
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			ConnectingState == AwaitingConnectionEnum::SwitchOver)
@@ -117,15 +121,18 @@ protected:
 		{
 		case AwaitingConnectionEnum::Starting:
 			ConnectingState = AwaitingConnectionEnum::BroadcastingOpenSession;
+			ConnectingStateStartTime = Millis();
+			ResetLastSentTimeStamp();
 			SetNextRunASAP();
 			break;
 		case AwaitingConnectionEnum::BroadcastingOpenSession:
-			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
+			if (Millis() - ConnectingStateStartTime > LOLA_LINK_SERVICE_BROADCAST_PERIOD)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_BROADCAST_PERIOD)
+			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
 			{
+				TimeStampLastSent();
 				PreparePacketBroadcast();
 				RequestSendPacket(true);
 			}
@@ -136,13 +143,17 @@ protected:
 			break;
 		case AwaitingConnectionEnum::SwitchOver:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
-				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC ||
-				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC)
 			{
 				//Go to sleep then wake up to trigger a full link reset.
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				SetNextRunASAP();
-				return;
+
+			}else if (Millis() - ConnectingStateStartTime > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+			{
+				//Go to sleep then wake up to trigger a full link reset.
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+				SetNextRunASAP();
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_PERIOD)
 			{
@@ -157,6 +168,7 @@ protected:
 			break;
 		default:
 			ConnectingState = AwaitingConnectionEnum::BroadcastingOpenSession;
+			ConnectingStateStartTime = Millis();
 			SetNextRunASAP();
 			break;
 		}
@@ -179,9 +191,16 @@ protected:
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
 	{
-		if (newState == LoLaLinkInfo::LinkStateEnum::AwaitingLink)
+		switch (newState)
 		{
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			NewSession();
+		case LoLaLinkInfo::LinkStateEnum::Connecting:
+			ConnectingStateStartTime = Millis();
+			break;
+		default:
+			break;
 		}
 	}
 
