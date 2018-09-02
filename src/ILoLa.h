@@ -4,7 +4,7 @@
 #define _ILOLA_h
 
 #define DEBUG_LOLA
-#define MOCK_RADIO
+//#define MOCK_RADIO
 
 #if !defined(UINT16_MAX) || !defined(INT16_MIN) || !defined(UINT32_MAX) || defined(UINT8_MAX)
 #include <stdint.h>
