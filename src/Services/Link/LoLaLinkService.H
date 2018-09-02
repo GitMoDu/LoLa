@@ -130,7 +130,7 @@ public:
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
 	{
-		PMACGenerator.SetIdSource(loLa->GetIdPointer(), loLa->GetIdLength());
+		PMACGenerator.SetId(loLa->GetIdPointer(), loLa->GetIdLength());
 
 		LinkInfo.SetDriver(loLa);
 		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
@@ -370,6 +370,17 @@ protected:
 			SetNextRunDefault();
 			ClearSession();
 			LinkPMAC = PMACGenerator.GetPMAC();
+
+#ifdef DEBUG_LOLA
+			ATUI.uint = LinkPMAC;
+			Serial.print(F("Link PMAC: 0x"));
+			for (uint8_t i = 0; i < 4; i++)
+			{
+				Serial.print(ATUI.array[i], HEX);
+			}
+			Serial.println();
+#endif
+
 			StateStartTime = Millis();
 			return true;
 		}
