@@ -32,15 +32,17 @@ public:
 #if defined(ARDUINO_ARCH_STM32F1)
 		uint16 *idBase0 = (uint16 *)ID_ADDRESS_POINTER;
 		byte* bytes = (byte*)idBase0;
-		for (uint8_t i = 0; i < ID_STM32_LENGTH; i++) {
+		for (uint8_t i = 0; i < min(ID_STM32_LENGTH, UNIQUE_ID_MAX_LENGTH); i++)
+		{
 			UUID[i] = bytes[i];
 		}
-		for (uint8_t i = ID_STM32_LENGTH; i < UNIQUE_ID_MAX_LENGTH; i++) {
+
+		for (uint8_t i = min(ID_STM32_LENGTH, UNIQUE_ID_MAX_LENGTH); i < UNIQUE_ID_MAX_LENGTH; i++)
+		{
 			UUID[i] = 0;
 		}
 
 #elif defined(ARDUINO_ARCH_AVR)
-
 		if (!ReadSerialFromEEPROM())
 		{
 			WriteNewSerialToEEPROM();
@@ -63,7 +65,6 @@ public:
 
 	uint8_t * GetUUIDPointer()
 	{
-
 		return UUID;
 	}
 	
