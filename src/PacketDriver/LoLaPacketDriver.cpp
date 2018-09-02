@@ -107,7 +107,7 @@ bool LoLaPacketDriver::HotAfterSend()
 {
 	if (LastSent != ILOLA_INVALID_MILLIS)
 	{
-		return GetMillis() - LastSent > LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS;
+		return GetMillis() - LastSent < LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS;
 	}
 	return false;
 }
@@ -116,7 +116,7 @@ bool LoLaPacketDriver::HotAfterReceive()
 {
 	if (LastValidReceived != ILOLA_INVALID_MILLIS)
 	{
-		return GetMillis() - LastValidReceived > LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS;
+		return GetMillis() - LastValidReceived < LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS;
 	}
 	return false;
 }
