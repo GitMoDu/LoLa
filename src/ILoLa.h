@@ -180,10 +180,10 @@ public:
 	virtual void Debug(Stream* serial)
 	{
 		uint8_t * Id = GetIdPointer();
-		Serial.print(F("Device Id: "));
+		Serial.print(F("Device Id: 0x"));
 		for (uint8_t i = 0; i < GetIdLength(); i++)
 		{
-			Serial.print(Id[i]);
+			Serial.print(Id[i], HEX);
 		}
 		Serial.println();
 
