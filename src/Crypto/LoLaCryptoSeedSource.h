@@ -30,13 +30,21 @@ public:
 	void Reset()
 	{
 		CalculatorCRC.Reset();
-		Offset = 0;
+		CachedBaseCRC = 0;
 		TOTPEnabled = false;
 	}
 
 	void SetTOTPEnabled(const bool enabled)
 	{
-		//TOTPEnabled = enabled;//TODO:
+		TOTPEnabled = enabled;
+	}
+
+	inline void PMACToArrayToCRC()
+	{
+		CalculatorCRC.Update(PMACToArray.array[0]);
+		CalculatorCRC.Update(PMACToArray.array[1]);
+		CalculatorCRC.Update(PMACToArray.array[2]);
+		CalculatorCRC.Update(PMACToArray.array[3]);
 	}
 
 	void SetBaseSeed(const uint32_t hostPMAC, const uint32_t remotePMAC, const uint8_t sessionId)
@@ -44,16 +52,10 @@ public:
 		CalculatorCRC.Reset();
 
 		PMACToArray.uint = hostPMAC;
-		for (uint8_t i = 0; i < sizeof(uint32_t); i++)
-		{
-			CalculatorCRC.Update(PMACToArray.array[i]);
-		}
+		PMACToArrayToCRC();
 
 		PMACToArray.uint = remotePMAC;
-		for (uint8_t i = 0; i < sizeof(uint32_t); i++)
-		{
-			CalculatorCRC.Update(PMACToArray.array[i]);
-		}
+		PMACToArrayToCRC();
 
 		CalculatorCRC.Update(sessionId);
 
@@ -62,20 +64,20 @@ public:
 		if (CachedBaseCRC == 0)
 		{
 			CachedBaseCRC++;
-		}		
+		}
+
+		Serial.print("SetBaseSeed: ");
+		Serial.println(CachedBaseCRC);
 	}
 
 	uint8_t GetSeed()
 	{
-		if (TOTPEnabled)
+		if (false && TOTPEnabled)//TODO:
 		{
 			CalculatorCRC.Reset(CachedBaseCRC);
 
 			PMACToArray.uint = GetTOTP();
-			for (uint8_t i = 0; i < sizeof(uint32_t); i++)
-			{
-				CalculatorCRC.Update(PMACToArray.array[i]);
-			}
+			PMACToArrayToCRC();
 
 			return CalculatorCRC.GetCurrent();
 		}
