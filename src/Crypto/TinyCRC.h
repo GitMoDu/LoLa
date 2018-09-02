@@ -45,6 +45,13 @@ const uint8_t crc_table_smbus[256] PROGMEM = {
 	0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
 };
 
+const uint32_t crc32_table[16] PROGMEM = {
+	0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
+	0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+	0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
+	0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
+};
+
 enum CrcTypes
 {
 	Modbus8
@@ -61,21 +68,23 @@ public:
 		Seed = seed;
 	}
 
-	virtual T Reset()
+	virtual T GetCurrent()
+	{
+		return Seed;
+	}
+
+public:
+	virtual T Update(const uint8_t value) {}
+
+	//Reference implementations, no guarantee on template.
+	virtual T Reset() 
 	{
 		Seed = 0;
 
 		return Seed;
 	}
 
-	T GetCurrent()
-	{
-		return Seed;
-	}
-
-	virtual T Update(const uint8_t value);
-
-	virtual T Update(const uint8_t data[], const uint8_t size)
+	virtual T Update(uint8_t* data, const uint8_t size)
 	{
 		for (uint8_t i = 0; i < size; i++)
 		{
@@ -96,7 +105,7 @@ public:
 		return Seed;
 	}
 
-	uint8_t Update(const uint8_t data[], const uint8_t size)
+	uint8_t Update(uint8_t *data, const uint8_t size)
 	{
 		for (uint8_t i = 0; i < size; i++)
 		{
@@ -104,6 +113,54 @@ public:
 		}
 
 		return Seed;
+	}
+
+	uint8_t Reset()
+	{
+		Seed = 0;
+
+		return Seed;
+	}
+};
+
+//TODO: Not up to specifications of standard CRC-32, can't replicate 3rd party results. Good enough for now.
+class TinyCrc32 : public AbstractTinyCrc<uint32_t>
+{
+	uint8_t TableIndex = 0;
+
+public:
+	uint32_t Update(const uint8_t value)
+	{
+		// via http://forum.arduino.cc/index.php?topic=91179.0
+
+		TableIndex = (Seed ^ (value >> (0 * 4))) & 0x0F;
+		Seed = pgm_read_dword(&crc32_table[TableIndex]) ^ (Seed >> 4);
+		TableIndex = (Seed ^ (value >> (1 * 4))) & 0x0F;
+		Seed = pgm_read_dword(&crc32_table[TableIndex]) ^ (Seed >> 4);
+
+		return Seed;
+	}
+
+	uint32_t Update(uint8_t* data, const uint8_t size)
+	{
+		for (uint8_t i = 0; i < size; i++)
+		{
+			Update(data[i]);
+		}
+
+		return Seed;
+	}
+
+	uint32_t Reset()
+	{
+		Seed = ~0L;
+
+		return Seed;
+	}
+
+	uint32_t GetCurrent()
+	{
+		return ~Seed;
 	}
 };
 #endif
