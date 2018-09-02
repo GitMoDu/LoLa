@@ -132,14 +132,6 @@ public:
 		serial->print("Service: ");
 		PrintName(serial);
 	}
-	int TestValue = 0;
-	void Test(const uint8_t testValue)
-	{
-		if (testValue == 2)
-		{
-			TestValue++;
-		}
-	}
 #endif // DEBUG_LOLA
 
 public:
