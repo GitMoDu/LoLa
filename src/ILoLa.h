@@ -118,6 +118,11 @@ public:
 
 	uint32_t GetMillis()
 	{
+		return millis();
+	}
+
+	uint32_t GetMillisSync()
+	{
 		return SyncedClock.GetMillis();
 	}
 
