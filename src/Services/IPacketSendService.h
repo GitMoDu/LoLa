@@ -96,7 +96,7 @@ public:
 			break;
 		case SendStatusEnum::SendingPacket:
 			if (SendStartMillis == ILOLA_INVALID_MILLIS ||
-				((Millis() - SendStartMillis) > (SendStartMillis + SendTimeOutDuration)))
+				((Millis() - SendStartMillis) > SendTimeOutDuration))
 			{				
 				OnSendTimedOut();
 #ifdef DEBUG_PACKET_SERVICE
