@@ -16,7 +16,7 @@
 #include <Crypto\LoLaCryptoSeedSource.h>
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 
-#include <ClockSource.h>
+#include <Services\Link\LoLaLinkClockSyncer.h>
 
 class LoLaLinkService : public IPacketSendService
 {
@@ -50,8 +50,7 @@ protected:
 	LoLaLinkInfo LinkInfo;
 
 	//Synced Clock.
-	ClockSource * SyncedClock = nullptr;
-	boolean SyncedClockIsSynced = false;
+	LoLaLinkClockSyncer ClockSyncer;
 
 	//Optimized memory usage grunt packet.
 	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
@@ -189,6 +188,10 @@ private:
 			RequestSendPacket();
 		}
 	}
+	void ClearChallenge()
+	{
+
+	}
 
 	void OnHelloReceived(const uint8_t sessionId)
 	{
@@ -223,7 +226,17 @@ protected:
 	virtual void OnLinkWarningHigh() {}
 
 	virtual void OnAwaitingConnection() {}
-	virtual void OnConnecting() {}
+
+	//Possibly CPU intensive task.
+	virtual bool IsChallengeComplete()
+	{
+		//TODO: Reset challenge on ClearSession()
+
+		return false;
+	}
+
+	virtual bool IsClockSyncComplete() { return false; }
+
 
 protected:
 #ifdef DEBUG_LOLA
@@ -260,8 +273,6 @@ protected:
 				LinkInfo.ResetLinkStarted();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Setup:
-				//Clock is set to random at start.
-				SyncedClock->SetRandom();
 				ClearSession();
 				SetNextRunDefault();
 				break;
@@ -328,6 +339,9 @@ protected:
 	{
 		SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
+
+		ClearChallenge();
+		ClockSyncer.Reset();
 	}
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
@@ -392,11 +406,9 @@ protected:
 		if (IPacketSendService::OnSetup())
 		{
 			GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
-			SyncedClock = GetLoLa()->GetClockSource();
-
 			GetLoLa()->SetLinkIndicator(&LinkInfo);
 
-			return SyncedClock != nullptr;
+			return ClockSyncer.Setup(GetLoLa()->GetClockSource());
 		}
 		return false;
 	}
@@ -497,7 +509,7 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
-			OnConnectingInternal();
+			OnConnecting();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connected:
 			if (GetLoLa()->GetLastValidReceivedMillis() != ILOLA_INVALID_MILLIS)
@@ -574,7 +586,7 @@ protected:
 	}
 
 private:
-	void OnConnectingInternal()
+	void OnConnecting()
 	{
 		if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
 			RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC)
