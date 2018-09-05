@@ -30,6 +30,11 @@
 #include <ClockSource.h>
 
 
+class ILinkActiveIndicator
+{
+public:
+	virtual bool HasLink() { return false; }
+};
 
 class ILoLa
 {
@@ -48,7 +53,8 @@ protected:
 	///
 
 	///Status
-	bool LinkActive = false;
+	//bool LinkActive = false;
+	ILinkActiveIndicator* LinkIndicator = nullptr;
 	bool EvenSlot = false;
 	///
 
@@ -66,6 +72,8 @@ public:
 	ILoLa() : IdProvider()
 	{
 	}
+
+
 
 	uint8_t GetIdLength()
 	{
@@ -91,9 +99,9 @@ public:
 		Enabled = false;
 	}
 
-	void SetLinkStatus(const bool active)
+	void SetLinkIndicator(ILinkActiveIndicator * indicator)
 	{
-		LinkActive = active;
+		LinkIndicator = indicator;
 	}
 
 	void SetDuplexSlot(const bool evenSlot)
@@ -103,7 +111,14 @@ public:
 
 	bool IsLinkActive()
 	{
-		return LinkActive;
+		if (LinkIndicator != nullptr)
+		{
+			return LinkIndicator->HasLink();
+		}
+		else 
+		{
+			return false;
+		}
 	}
 
 	ClockSource* GetClockSource()

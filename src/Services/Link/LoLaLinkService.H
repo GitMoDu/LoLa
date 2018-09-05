@@ -256,7 +256,6 @@ protected:
 			{
 			case LoLaLinkInfo::LinkStateEnum::Connected:
 				//Notify all link dependent services to stop.
-				GetLoLa()->SetLinkStatus(false);
 				ServicesManager->NotifyServicesLinkUpdated(false);
 				LinkInfo.ResetLinkStarted();
 				break;
@@ -267,7 +266,6 @@ protected:
 				SetNextRunDefault();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Connecting:
-				
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
@@ -289,7 +287,6 @@ protected:
 				SetBaseSeed();
 
 				//Notify all link dependent services they can start.
-				GetLoLa()->SetLinkStatus(true);
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				SetNextRunASAP();
 				break;
@@ -396,6 +393,8 @@ protected:
 		{
 			GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
 			SyncedClock = GetLoLa()->GetClockSource();
+
+			GetLoLa()->SetLinkIndicator(&LinkInfo);
 
 			return SyncedClock != nullptr;
 		}

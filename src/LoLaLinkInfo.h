@@ -7,7 +7,7 @@
 
 #define LOLA_LINK_INFO_MAX_STALENESS	3000
 
-class LoLaLinkInfo
+class LoLaLinkInfo : public ILinkActiveIndicator
 {
 private:
 	ILoLa * Driver = nullptr;
