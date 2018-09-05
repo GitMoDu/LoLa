@@ -594,11 +594,40 @@ private:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			SetNextRunASAP();
 		}
+		else if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
+		{
+			//General time out for the connecting state. Prevents any issue with link being stuck
+			//in connection limbo.
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CONNECTING_CANCEL_SLEEP_DURATION);
+		}
 		else
 		{
-			Serial.println("Debug OnConnecting, straight to connection!");
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
-			//OnConnecting();
+			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			switch (ConnectingState)
+			{
+			case ConnectingStagesEnum::ChallengeStage:
+				if (IsChallengeComplete())
+				{
+					ConnectingState = ConnectingStagesEnum::ClockSyncStage;
+					ConnectingStateStartTime = Millis();
+					SetNextRunASAP();
+				}
+				break;
+			case ConnectingStagesEnum::ClockSyncStage:
+				if (IsClockSyncComplete())
+				{
+					ConnectingState = ConnectingStagesEnum::LinkProtocolStage;
+					ConnectingStateStartTime = Millis();
+					SetNextRunASAP();
+				}
+				break;
+			case ConnectingStagesEnum::LinkProtocolStage:
+
+				break;
+			default:
+				break;
+			}
 		}
 	}
 };
