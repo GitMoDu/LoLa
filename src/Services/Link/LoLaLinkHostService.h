@@ -208,7 +208,7 @@ private:
 	void NewSession()
 	{
 		ClearSession();
-		SessionId = 1 + random(0xFE);
+		SessionId = random(1, UINT8_MAX - 1 );
 	}
 
 	void PrepareLinkRequestAccepted()
