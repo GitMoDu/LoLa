@@ -39,6 +39,7 @@ protected:
 	LinkPacketDefinition		LinkDefinition;
 	LinkPacketWithAckDefinition	LinkWithAckDefinition;
 
+
 	uint8_t ConnectingState = 0;
 
 	//Link session variables.
@@ -50,6 +51,9 @@ protected:
 
 	//Synced Clock.
 	LoLaLinkClockSyncer ClockSyncer;
+
+	//Latency measurement.
+	uint32_t LastSentWithAck = ILOLA_INVALID_MILLIS;
 
 	//Optimized memory usage grunt packet.
 	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
@@ -123,7 +127,7 @@ public:
 	}
 
 protected:
-	void OnAckReceived(const uint8_t header, const uint8_t id) 
+	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
 		if (header == PACKET_DEFINITION_LINK_WITH_ACK_HEADER &&
 			SessionId == id)
@@ -203,27 +207,20 @@ private:
 
 protected:
 	///Host packet handling.
-	//Only the Host exposes the internal clock.
-	//virtual void OnClockReceived(const uint32_t clock) {}
-
 	virtual void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
 	virtual void OnLinkPacketAckReceived() {}
+	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	///
 
 	///Remote packet handling.
-	//Only the Remote adjusts it's internal clock to follow the host.
-	//virtual void OnClockReplyReceived(const uint32_t clockError) {}
-
 	virtual void OnBroadcastReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
 	virtual void OnLinkRequestAcceptedReceived(const uint32_t token) {}
+	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const uint32_t estimatedError) {}
 	///
-
-	virtual void SetBaseSeed() {}
-
+	
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
-
+	virtual void SetBaseSeed() {}
 	virtual void OnLinkWarningHigh() {}
-
 	virtual void OnAwaitingConnection() {}
 
 	//Possibly CPU intensive task.
@@ -234,7 +231,7 @@ protected:
 		return false;
 	}
 
-	virtual bool IsClockSyncComplete() { return false; }
+	virtual void OnClockSync() {}
 
 
 protected:
@@ -365,15 +362,15 @@ protected:
 			case LOLA_LINK_SERVICE_SUBHEADER_REMOTE_LINK_REQUEST:
 				OnLinkRequestReceived(incomingPacket->GetId(), ATUI.uint);
 				break;
-			//case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
-			//	OnChallengeAcceptedReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
-			//	break;
-			//case LOLA_LINK_SERVICE_SUBHEADER_NTP:
-			//	OnClockReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
-			//	break;
-			//case LOLA_LINK_SERVICE_SUBHEADER_NTP_REPLY:
-			//	OnClockReplyReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
-			//	break;
+				//case LOLA_LINK_SERVICE_SUBHEADER_CHALLENGE_ACCEPTED:
+				//	OnChallengeAcceptedReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
+				//	break;
+			case LOLA_LINK_SERVICE_SUBHEADER_NTP:
+				OnClockSyncRequestReceived(incomingPacket->GetId(), ATUI.uint);
+				break;
+			case LOLA_LINK_SERVICE_SUBHEADER_NTP_REPLY:
+				OnClockSyncResponseReceived(incomingPacket->GetId(), ATUI.uint);
+				break;
 			default:
 				break;
 			}
@@ -412,18 +409,14 @@ protected:
 		return false;
 	}
 
-	uint32_t LastSentWithAck = ILOLA_INVALID_MILLIS;
-
-	void OnPreSend()
+	virtual void OnPreSend()
 	{
-		ATUI.uint = Millis();
-		LastSentWithAck = ATUI.uint;
-		
-		/*if (PacketHolder.GetDataHeader() == LinkWithAckDefinition.GetHeader() &&
-			PacketHolder.GetPayload()[0] == LOLA_LINK_SERVICE_SUBHEADER_NTP)
+		if (PacketHolder.GetDefinition()->HasACK())
 		{
-			ArrayToPayload();
-		}*/
+			//Piggy back on any link with ack packets to measure latency.
+			ATUI.uint = Millis();
+			LastSentWithAck = ATUI.uint;
+		}
 	}
 
 	virtual void OnClockSyncWarning()
@@ -464,10 +457,10 @@ protected:
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 				SetNextRunASAP();
 			}
-		/*	else if (!OnKeepingClockSynced())
-			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
-			}*/
+			/*	else if (!OnKeepingClockSynced())
+				{
+					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
+				}*/
 			else if (elapsedSinceLastReceived > LOLA_LINK_SERVICE_PANIC)
 			{
 				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
@@ -537,7 +530,7 @@ protected:
 
 	void PrepareHello()
 	{
-		PrepareBasePacket(LOLA_LINK_SERVICE_SUBHEADER_HELLO);
+		PrepareSessionPacket(LOLA_LINK_SERVICE_SUBHEADER_HELLO);
 		ATUI.uint = 0;
 		ArrayToPayload();
 	}
@@ -549,35 +542,14 @@ protected:
 	//	//TODO: Add Rssi indicator to tail, for future auto-gain.
 	//}
 
-	//void PrepareClockSync()
-	//{
-	//	PacketHolder.SetDefinition(&LinkDefinition);
-	//	PacketHolder.SetId(SessionId);
-	//	PacketHolder.GetPayload()[0] = LOLA_LINK_SERVICE_SUBHEADER_NTP;
-
-	//	//Actual clock value is set on PreSend(), as we don't know when the packet will actually be sent.
-	//	ATUI.uint = 0;
-	//	ArrayToPayload(1);
-	//}
-
-	//void PrepareClockSyncReply(const uint32_t clockError)
-	//{
-	//	PacketHolder.SetDefinition(&LinkDefinition);
-	//	PacketHolder.SetId(SessionId);
-	//	PacketHolder.GetPayload()[0] = LOLA_LINK_SERVICE_SUBHEADER_NTP_REPLY;
-
-	//	ATUI.uint = clockError;
-	//	ArrayToPayload(1);
-	//}
-
-	void PrepareBasePacketWithAck(const uint8_t subHeader)
+	void PrepareSessionPacketWithAck(const uint8_t subHeader)
 	{
 		PacketHolder.SetDefinition(&LinkWithAckDefinition);
 		PacketHolder.SetId(SessionId);
 		PacketHolder.GetPayload()[1] = subHeader;
 	}
 
-	void PrepareBasePacket(const uint8_t subHeader)
+	void PrepareSessionPacket(const uint8_t subHeader)
 	{
 		PacketHolder.SetDefinition(&LinkDefinition);
 		PacketHolder.SetId(SessionId);
@@ -597,7 +569,7 @@ private:
 		{
 			//General time out for the connecting state. Prevents any issue with link being stuck
 			//in connection limbo.
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			SetNextRunDelay(LOLA_LINK_SERVICE_CONNECTING_CANCEL_SLEEP_DURATION);
 		}
 		else
@@ -610,15 +582,21 @@ private:
 				{
 					ConnectingState = ConnectingStagesEnum::ClockSyncStage;
 					ConnectingStateStartTime = Millis();
+					ResetLastSentTimeStamp();
 					SetNextRunASAP();
 				}
 				break;
 			case ConnectingStagesEnum::ClockSyncStage:
-				if (IsClockSyncComplete())
+				if (ClockSyncer.IsSynced())
 				{
 					ConnectingState = ConnectingStagesEnum::LinkProtocolStage;
 					ConnectingStateStartTime = Millis();
+					ResetLastSentTimeStamp();
 					SetNextRunASAP();
+				}
+				else
+				{
+					OnClockSync();
 				}
 				break;
 			case ConnectingStagesEnum::LinkProtocolStage:
