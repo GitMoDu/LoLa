@@ -36,7 +36,6 @@ protected:
 
 	LoLaCryptoSeedSource CryptoSeed;
 
-	//LinkShortPacketDefinition	LinkShortDefinition;
 	LinkPacketDefinition		LinkDefinition;
 	LinkPacketWithAckDefinition	LinkWithAckDefinition;
 

@@ -24,6 +24,8 @@ public:
 		loLa->SetDuplexSlot(true);
 	}
 
+	ClockSyncRequestTransaction ClockSyncTransaction;
+
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -144,28 +146,23 @@ protected:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
 				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC)
 			{
-				Serial.print("Invalid Session on GotHost");
-				Serial.println(GetElapsedSinceStateStart());
 				ConnectingState = AwaitingConnectionEnum::SearchingForHost;
 				ResetLastSentTimeStamp();
 				SetNextRunASAP();
 			}
 			else if (Millis() - ConnectingStateStartTime > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
 			{
-				Serial.print("Time out elapsed GotHost: ");
-				Serial.println(GetElapsedSinceStateStart());
 				ConnectingState = AwaitingConnectionEnum::SearchingForHost;
 				SetNextRunASAP();
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
 			{
-				//Send an Hello to wake up potential hosts.
 				PrepareLinkRequest();
 				RequestSendPacket(true);
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_RESEND_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 			}
 			break;
 		default:
@@ -173,18 +170,54 @@ protected:
 		}
 	}
 
-	void OnConnecting()
+	//Possibly CPU intensive task.
+	bool IsChallengeComplete()
 	{
-		switch (ConnectingState)
+		//TODO:
+		//TODO: Reset challenge on ClearSession()
+
+		return true;
+	}
+
+	void OnClockSync()
+	{
+		if (ClockSyncTransaction.IsResultWaiting())
 		{
-		case ConnectingStagesEnum::ChallengeStage:
-			break;
-		case ConnectingStagesEnum::ClockSyncStage:
-			break;
-		case ConnectingStagesEnum::LinkProtocolStage:
-			break;
-		default:
-			break;
+			ClockSyncer.OnEstimationErrorReceived(ClockSyncTransaction.GetResult());
+			ClockSyncTransaction.Reset();
+			SetNextRunASAP();
+		}
+		else if (ClockSyncer.IsSynced())
+		{
+			//TODO: Escalate clock sync to synced to Host.
+
+			ConnectingState = ConnectingStagesEnum::LinkProtocolStage;
+			ConnectingStateStartTime = Millis();
+			ResetLastSentTimeStamp();
+			SetNextRunASAP();
+		}
+		else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+		{
+			ClockSyncTransaction.Reset();
+			PrepareClockSyncRequest(ClockSyncTransaction.GetId());
+			ClockSyncTransaction.SetRequested();//TODO: Only set requested on OnSendOk, to reduce the possible DOS window.
+			RequestSendPacket(true);
+		}
+		else
+		{
+			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+		}
+	}
+
+	void OnClockSyncResponseReceived(const uint8_t requestId, const uint32_t estimatedError)
+	{
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
+			ConnectingState == ConnectingStagesEnum::ClockSyncStage &&
+			ClockSyncTransaction.IsRequested() &&
+			ClockSyncTransaction.GetId() == requestId)
+		{
+			ClockSyncTransaction.SetResult(estimatedError);
+			SetNextRunASAP();
 		}
 	}
 
@@ -195,6 +228,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			ClearSession();
+			ClockSyncTransaction.Reset();
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			ConnectingStateStartTime = Millis();
 			break;
@@ -203,11 +237,32 @@ protected:
 		}
 	}
 
+	void OnPreSend()
+	{
+		LoLaLinkService::OnPreSend();
+
+		if (PacketHolder.GetDataHeader() == LinkWithAckDefinition.GetHeader() &&
+			PacketHolder.GetPayload()[0] == LOLA_LINK_SERVICE_SUBHEADER_NTP)
+		{
+			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
+			ATUI.uint = ClockSyncer.GetMillisSync();
+			ArrayToPayload();
+		}
+	}
 
 private:
+	void PrepareClockSyncRequest(const uint8_t requestId)
+	{
+		PacketHolder.SetDefinition(&LinkDefinition);
+		PacketHolder.SetId(requestId);
+		PacketHolder.GetPayload()[0] = LOLA_LINK_SERVICE_SUBHEADER_NTP;
+
+		//Rest of Payload is set on OnPreSend.
+	}
+
 	void PrepareLinkRequest()
 	{
-		PrepareBasePacket(LOLA_LINK_SERVICE_SUBHEADER_REMOTE_LINK_REQUEST);
+		PrepareSessionPacket(LOLA_LINK_SERVICE_SUBHEADER_REMOTE_LINK_REQUEST);
 		ATUI.uint = LinkPMAC;
 		ArrayToPayload();
 	}
