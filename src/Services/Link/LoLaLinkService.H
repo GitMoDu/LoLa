@@ -138,8 +138,6 @@ protected:
 		//if()//TODO: Catch and measure packet round trip time
 		if (SessionId == id && header == PACKET_DEFINITION_LINK_WITH_ACK_HEADER)
 		{
-			
-
 			OnLinkPacketAckReceived();
 		}
 	}
@@ -251,7 +249,7 @@ protected:
 	}
 
 	virtual void OnClockSync() {}
-	virtual void OnClockSyncAck() {}
+	virtual void OnClockSyncSwitchOver() {}
 
 protected:
 #ifdef DEBUG_LOLA
@@ -628,7 +626,7 @@ private:
 				}
 				break;
 			case ConnectingStagesEnum::ClockSyncSwitchOver:
-				OnClockSyncAck();
+				OnClockSyncSwitchOver();
 				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 				//We transition forward when we receive the approriate ack.
 				break;

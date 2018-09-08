@@ -115,7 +115,6 @@ protected:
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
 			{
-				TimeStampLastSent();
 				PreparePacketBroadcast();
 				RequestSendPacket(true);
 			}
@@ -181,7 +180,7 @@ protected:
 		}
 	}
 
-	void OnClockSyncAck()
+	void OnClockSyncSwitchOver()
 	{
 		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 		{
