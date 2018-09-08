@@ -228,7 +228,7 @@ private:
 
 	void PrepareLinkRequestAccepted()
 	{
-		PrepareSessionPacket(LOLA_LINK_SERVICE_SUBHEADER_LINK_REQUEST_ACCEPTED);
+		PrepareSessionPacketWithAck(LOLA_LINK_SERVICE_SUBHEADER_LINK_REQUEST_ACCEPTED);
 		ATUI.uint = 0;
 		ArrayToPayload();
 	}
