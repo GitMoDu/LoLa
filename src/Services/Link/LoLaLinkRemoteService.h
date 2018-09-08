@@ -16,15 +16,17 @@ private:
 
 	uint32_t ClockSyncHelper = 0;
 	uint32_t LastKeepingClockSynced = 0;
+
+	LinkRemoteClockSyncer ClockSyncerRemote;
+	ClockSyncRequestTransaction ClockSyncTransaction;
+
 public:
 	LoLaLinkRemoteService(Scheduler* scheduler, ILoLa* loLa)
-		: LoLaLinkService(scheduler, loLa)
+		: LoLaLinkService(scheduler, loLa, &ClockSyncerRemote)
 	{
 		LinkPMAC = LOLA_LINK_REMOTE_PMAC;
 		loLa->SetDuplexSlot(true);
 	}
-
-	ClockSyncRequestTransaction ClockSyncTransaction;
 
 protected:
 #ifdef DEBUG_LOLA
@@ -39,38 +41,6 @@ protected:
 	{
 		CryptoSeed.SetBaseSeed(RemotePMAC, LinkPMAC, SessionId);
 	}
-
-	/*void OnClockSyncWarning()
-	{
-		if (!SyncedClockIsSynced && Millis() - LastKeepingClockSynced > LOLA_LINK_SERVICE_CLOCK_SYNC_LOOP_PERIOD) {
-			LastKeepingClockSynced = Millis();
-			PrepareClockSync();
-			RequestSendPacket();
-		}
-	}*/
-
-	//void OnClockReplyReceived(const uint8_t sessionId, uint8_t* data)
-	//{
-	//	ATUI.array[0] = data[0];
-	//	ATUI.array[1] = data[1];
-	//	ATUI.array[2] = data[2];
-	//	ATUI.array[3] = data[3];
-
-	//	SyncedClock->AddOffset(ATUI.uint);
-
-	//	if (ATUI.uint == 0) 
-	//	{
-	//		//NTP reports clocks synced.
-	//		SyncedClockIsSynced = true;
-	//	}
-	//	else 
-	//	{
-	//		//NTP reports clocks not synced.
-	//		SyncedClockIsSynced = false;
-	//		LastKeepingClockSynced = 0;
-	//	}
-	//}
-
 
 	void OnBroadcastReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
@@ -101,10 +71,7 @@ protected:
 				//TODO: User UI choice?
 				RemotePMAC = remotePMAC;
 				SessionId = sessionId;
-				ConnectingState = AwaitingConnectionEnum::GotHost;
-				ResetLastSentTimeStamp();
-				ConnectingStateStartTime = Millis();
-				SetNextRunASAP();
+				SetConnectingState(AwaitingConnectionEnum::GotHost);
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
@@ -113,12 +80,21 @@ protected:
 		}
 	}
 
-	void OnLinkRequestAcceptedReceived(const uint32_t token)
+	void OnLinkRequestAcceptedReceived(const uint8_t sessionId, const uint32_t token)
 	{
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			ConnectingState == AwaitingConnectionEnum::GotHost)
 		{
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
+		}
+	}
+
+	void OnClockSyncAcceptedReceived(const uint8_t sessionId, const uint32_t token)
+	{
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
+			ConnectingState == ConnectingStagesEnum::ClockSyncSwitchOver)
+		{
+			SetConnectingState(ConnectingStagesEnum::LinkProtocolStage);
 		}
 	}
 
@@ -146,14 +122,11 @@ protected:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
 				RemotePMAC == LOLA_LINK_SERVICE_INVALID_PMAC)
 			{
-				ConnectingState = AwaitingConnectionEnum::SearchingForHost;
-				ResetLastSentTimeStamp();
-				SetNextRunASAP();
+				SetConnectingState(AwaitingConnectionEnum::SearchingForHost);
 			}
 			else if (Millis() - ConnectingStateStartTime > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
 			{
-				ConnectingState = AwaitingConnectionEnum::SearchingForHost;
-				SetNextRunASAP();
+				SetConnectingState(AwaitingConnectionEnum::SearchingForHost);
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
 			{
@@ -183,17 +156,8 @@ protected:
 	{
 		if (ClockSyncTransaction.IsResultWaiting())
 		{
-			ClockSyncer.OnEstimationErrorReceived(ClockSyncTransaction.GetResult());
+			ClockSyncerRemote.OnEstimationErrorReceived(ClockSyncTransaction.GetResult());
 			ClockSyncTransaction.Reset();
-			SetNextRunASAP();
-		}
-		else if (ClockSyncer.IsSynced())
-		{
-			//TODO: Escalate clock sync to synced to Host.
-
-			ConnectingState = ConnectingStagesEnum::LinkProtocolStage;
-			ConnectingStateStartTime = Millis();
-			ResetLastSentTimeStamp();
 			SetNextRunASAP();
 		}
 		else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
@@ -245,7 +209,7 @@ protected:
 			PacketHolder.GetPayload()[0] == LOLA_LINK_SERVICE_SUBHEADER_NTP)
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
-			ATUI.uint = ClockSyncer.GetMillisSync();
+			ATUI.uint = ClockSyncerRemote.GetMillisSync();
 			ArrayToPayload();
 		}
 	}

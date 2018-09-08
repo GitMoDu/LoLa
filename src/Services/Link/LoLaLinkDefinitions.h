@@ -73,9 +73,13 @@
 
 enum ConnectingStagesEnum : uint8_t
 {
-	ChallengeStage = 1,
+	ChallengeStage = 0,
+	ChallengeSwitchOver = 1,
 	ClockSyncStage = 2,
-	LinkProtocolStage = 3
+	ClockSyncSwitchOver = 3,
+	LinkProtocolStage = 4,
+	LinkProtocolSwitchOver = 5,
+	ConnectingStagesEnumSize = 6
 };
 
 class LinkPacketWithAckDefinition : public PacketDefinition

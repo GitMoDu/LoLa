@@ -6,16 +6,32 @@
 #include <ClockSource.h>
 
 #define CLOCK_SYNC_REQUEST_TRANSACTION_MAX_DURATION_MILLIS 300
+#define CLOCK_SYNC_ESTIMATION_MIN_INTERVAL_MILLIS 50
 #define CLOCK_SYNC_GOOD_ENOUGH_COUNT 3
 
-class LoLaLinkClockSyncer
+
+class ILinkClockSyncer
 {
 private:
 	ClockSource * SyncedClock = nullptr;
-	uint32_t Helper;
-
 	uint8_t SyncGoodCount = 0;
 
+protected:
+	virtual void OnReset() {}
+
+protected:
+	void ResetSyncGoodCount()
+	{
+		SyncGoodCount = 0;
+	}
+
+	void StampSyncGood()
+	{
+		if (SyncGoodCount < UINT8_MAX)
+		{
+			SyncGoodCount++;
+		}
+	}
 
 public:
 	bool Setup(ClockSource * syncedClock)
@@ -28,56 +44,6 @@ public:
 	bool IsSynced()
 	{
 		return SyncGoodCount > CLOCK_SYNC_GOOD_ENOUGH_COUNT;
-	}
-
-	void StampSyncGood()
-	{
-		if (SyncGoodCount < UINT8_MAX)
-		{
-			SyncGoodCount++;
-		}
-	}
-
-	//Only for Host clock.
-	void OnEstimationReceived(const uint32_t absoluteMillis)
-	{
-		if(SyncedClock->GetMillis() - absoluteMillis == 0)
-		{
-			StampSyncGood();
-		}
-		else 
-		{
-			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
-			SyncGoodCount = 0;
-		}
-	}
-
-	//Only for Remote clock.
-	void OnEstimationErrorReceived(const uint32_t estimationError)
-	{
-		if (estimationError == 0)
-		{
-			StampSyncGood();
-		}
-		else
-		{
-			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
-			SyncGoodCount = 0;
-		}
-	}
-
-	uint32_t Sync(const uint32_t absoluteMillis)
-	{
-		if (SyncedClock != nullptr)
-		{
-			Helper = SyncedClock->GetMillis() - absoluteMillis;
-
-			SyncedClock->AddOffset(Helper);
-
-			return Helper;
-		}
-
-		return UINT32_MAX;
 	}
 
 	uint32_t GetMillisSync()
@@ -96,8 +62,70 @@ public:
 		{
 			SyncedClock->SetRandom();
 		}
+		OnReset();
 	}
 };
+
+class LinkRemoteClockSyncer : public ILinkClockSyncer
+{
+private:
+
+public:
+	void OnEstimationErrorReceived(const uint32_t estimationError)
+	{
+		if (estimationError == 0)
+		{
+			StampSyncGood();
+		}
+		else
+		{
+			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
+			ResetSyncGoodCount();
+		}
+	}
+};
+
+class LinkHostClockSyncer : public ILinkClockSyncer
+{
+private:
+	uint32_t LastEstimation = 0;
+	uint32_t LastError = UINT32_MAX;
+
+protected:
+	void OnReset()
+	{
+		LastEstimation = 0;
+		LastError = UINT32_MAX;
+	}
+
+public:
+	uint32_t GetLastError()
+	{
+		return LastError;
+	}
+
+	void OnEstimationReceived(const uint32_t absoluteMillis)
+	{
+		LastError = GetMillisSync() - absoluteMillis;
+		if (LastError == 0)
+		{
+			if (millis() - LastEstimation > CLOCK_SYNC_ESTIMATION_MIN_INTERVAL_MILLIS)
+			{
+				StampSyncGood();
+			}
+			else
+			{
+				Serial.println("ClockSyncer skipped an estimation");
+			}
+		}
+		else
+		{
+			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
+			ResetSyncGoodCount();
+		}
+	}
+};
+
 
 class AbstractClockSyncTransaction
 {
