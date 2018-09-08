@@ -206,7 +206,7 @@ protected:
 	{
 		LoLaLinkService::OnPreSend();
 
-		if (PacketHolder.GetDataHeader() == LinkWithAckDefinition.GetHeader() &&
+		if (PacketHolder.GetDataHeader() == LinkDefinition.GetHeader() &&
 			PacketHolder.GetPayload()[0] == LOLA_LINK_SERVICE_SUBHEADER_NTP)
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
