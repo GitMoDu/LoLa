@@ -175,10 +175,10 @@ protected:
 	{
 		Serial.print("Connecting State: ");
 		Serial.println(connectingState);
+
 		ConnectingState = connectingState;
 		ResetLastSentTimeStamp();
 		ConnectingStateStartTime = Millis();
-		SetNextRunASAP();
 	}
 
 	void ResetLastSentTimeStamp()
@@ -253,7 +253,6 @@ protected:
 	virtual void OnClockSync() {}
 	virtual void OnClockSyncAck() {}
 
-
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -319,6 +318,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				SetConnectingState(0);
+				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 				SetNextRunDelay(LOLA_LINK_SERVICE_SLEEP_PERIOD);
@@ -326,6 +326,7 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Connecting:
 				SetBaseSeed();
 				SetConnectingState(0);
+				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
 			default:
@@ -603,11 +604,13 @@ private:
 				if (IsChallengeComplete())
 				{
 					SetConnectingState(ConnectingStagesEnum::ChallengeSwitchOver);
+					SetNextRunASAP();
 				}
 				break;
 			case ConnectingStagesEnum::ChallengeSwitchOver:
 				///Temporary TODO: Replace with actual challenge ack transition.
 				SetConnectingState(ConnectingStagesEnum::ClockSyncStage);
+				SetNextRunASAP();
 
 				//TODO:
 				//SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
@@ -617,6 +620,7 @@ private:
 				if (ClockSyncerPointer->IsSynced())
 				{					
 					SetConnectingState(ConnectingStagesEnum::ClockSyncSwitchOver);
+					SetNextRunASAP();
 				}
 				else
 				{

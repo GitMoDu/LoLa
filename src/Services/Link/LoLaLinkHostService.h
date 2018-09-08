@@ -54,6 +54,7 @@ protected:
 				//TODO: PMAC Filtering?
 				RemotePMAC = remotePMAC;
 				SetConnectingState(AwaitingConnectionEnum::SwitchOver);
+				SetNextRunASAP();
 			}
 			else
 			{
@@ -94,6 +95,7 @@ protected:
 			{
 				//We just need to advance the state.
 				SetConnectingState(ConnectingState + 1);
+				SetNextRunASAP();
 			}
 		}
 	}
@@ -103,8 +105,8 @@ protected:
 		switch (ConnectingState)
 		{
 		case AwaitingConnectionEnum::Starting:
-			ConnectingState = AwaitingConnectionEnum::BroadcastingOpenSession;
-			SetConnectingState(0);
+			SetConnectingState(AwaitingConnectionEnum::BroadcastingOpenSession);
+			SetNextRunASAP();
 			break;
 		case AwaitingConnectionEnum::BroadcastingOpenSession:
 			if (Millis() - ConnectingStateStartTime > LOLA_LINK_SERVICE_BROADCAST_PERIOD)
@@ -150,6 +152,7 @@ protected:
 			break;
 		default:
 			SetConnectingState(0);
+			SetNextRunASAP();
 			break;
 		}
 	}
