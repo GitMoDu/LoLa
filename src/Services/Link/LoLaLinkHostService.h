@@ -146,7 +146,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDefault();
+				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 			}
 			break;
 		default:
