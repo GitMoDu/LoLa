@@ -50,7 +50,7 @@ protected:
 	LoLaLinkInfo LinkInfo;
 
 	//Synced Clock.
-	ILinkClockSyncer* ClockSyncer;
+	ILinkClockSyncer* ClockSyncerPointer;
 
 	//Latency measurement.
 	uint32_t LastSentWithAck = ILOLA_INVALID_MILLIS;
@@ -67,7 +67,7 @@ protected:
 	Signal<uint8_t> LinkStatusUpdated;
 
 public:
-	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa, ILinkClockSyncer* clockSyncer)
+	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
@@ -82,7 +82,6 @@ public:
 			loLa->SetLinkIndicator(&LinkInfo);
 		}
 
-		ClockSyncer = clockSyncer;
 		ClearSession();
 	}
 
@@ -356,9 +355,9 @@ protected:
 		RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 
 		ClearChallenge();
-		if (ClockSyncer != nullptr)
+		if (ClockSyncerPointer != nullptr)
 		{
-			ClockSyncer->Reset();
+			ClockSyncerPointer->Reset();
 		}	
 	}
 
@@ -426,7 +425,8 @@ protected:
 	{
 		if (IPacketSendService::OnSetup())
 		{
-			return ClockSyncer != nullptr && ClockSyncer->Setup(GetLoLa()->GetClockSource());
+			return ClockSyncerPointer != nullptr && ClockSyncerPointer->Setup(GetLoLa()->GetClockSource());
+
 		}
 		return false;
 	}
@@ -614,8 +614,8 @@ private:
 				//We transition forward when we receive the approriate ack.
 				break;
 			case ConnectingStagesEnum::ClockSyncStage:
-				if (ClockSyncer->IsSynced())
-				{
+				if (ClockSyncerPointer->IsSynced())
+				{					
 					SetConnectingState(ConnectingStagesEnum::ClockSyncSwitchOver);
 				}
 				else

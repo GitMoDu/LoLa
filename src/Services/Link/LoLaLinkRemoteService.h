@@ -17,14 +17,15 @@ private:
 	uint32_t ClockSyncHelper = 0;
 	uint32_t LastKeepingClockSynced = 0;
 
-	LinkRemoteClockSyncer ClockSyncerRemote;
+	LinkRemoteClockSyncer ClockSyncer;
 	ClockSyncRequestTransaction ClockSyncTransaction;
 
 public:
 	LoLaLinkRemoteService(Scheduler* scheduler, ILoLa* loLa)
-		: LoLaLinkService(scheduler, loLa, &ClockSyncerRemote)
+		: LoLaLinkService(scheduler, loLa)
 	{
 		LinkPMAC = LOLA_LINK_REMOTE_PMAC;
+		ClockSyncerPointer = &ClockSyncer;
 		loLa->SetDuplexSlot(true);
 	}
 
@@ -156,7 +157,7 @@ protected:
 	{
 		if (ClockSyncTransaction.IsResultWaiting())
 		{
-			ClockSyncerRemote.OnEstimationErrorReceived(ClockSyncTransaction.GetResult());
+			ClockSyncer.OnEstimationErrorReceived(ClockSyncTransaction.GetResult());
 			ClockSyncTransaction.Reset();
 			SetNextRunASAP();
 		}
@@ -209,7 +210,7 @@ protected:
 			PacketHolder.GetPayload()[0] == LOLA_LINK_SERVICE_SUBHEADER_NTP)
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
-			ATUI.uint = ClockSyncerRemote.GetMillisSync();
+			ATUI.uint = ClockSyncer.GetMillisSync();
 			ArrayToPayload();
 		}
 	}

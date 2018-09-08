@@ -15,14 +15,15 @@ private:
 		SwitchOver = 2
 	};
 
-	LinkHostClockSyncer ClockSyncerHost;
+	LinkHostClockSyncer ClockSyncer;
 	ClockSyncResponseTransaction ClockSyncTransaction;
 
 public:
 	LoLaLinkHostService(Scheduler *scheduler, ILoLa* loLa)
-		: LoLaLinkService(scheduler, loLa, &ClockSyncerHost)
+		: LoLaLinkService(scheduler, loLa)
 	{
 		LinkPMAC = LOLA_LINK_HOST_PMAC;
+		ClockSyncerPointer = &ClockSyncer;
 		loLa->SetDuplexSlot(false);
 	}
 protected:
@@ -166,8 +167,8 @@ protected:
 	{
 		if (ClockSyncTransaction.IsResultReady())
 		{
-			ClockSyncerHost.OnEstimationReceived(ClockSyncTransaction.GetResult());
-			PrepareClockSyncResponse(ClockSyncTransaction.GetId(), ClockSyncerHost.GetLastError());
+			ClockSyncer.OnEstimationReceived(ClockSyncTransaction.GetResult());
+			PrepareClockSyncResponse(ClockSyncTransaction.GetId(), ClockSyncer.GetLastError());
 			ClockSyncTransaction.Reset();
 			RequestSendPacket(true);
 		}
