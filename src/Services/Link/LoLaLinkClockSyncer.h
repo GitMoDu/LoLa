@@ -74,10 +74,6 @@ public:
 	void Reset()
 	{
 		SyncGoodCount = 0;
-		if (SyncedClock != nullptr)
-		{
-			SyncedClock->SetRandom();
-		}
 		OnReset();
 	}
 };
@@ -95,6 +91,7 @@ public:
 		}
 		else
 		{
+			AddOffset(-estimationError);
 			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
 			ResetSyncGoodCount();
 		}
@@ -112,6 +109,8 @@ protected:
 	{
 		LastEstimation = 0;
 		LastError = UINT32_MAX;
+
+		SetRandom();
 	}
 
 public:
