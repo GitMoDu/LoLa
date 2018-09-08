@@ -170,7 +170,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
 		}
 	}
 
