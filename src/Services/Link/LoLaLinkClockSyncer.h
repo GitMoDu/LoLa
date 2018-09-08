@@ -33,6 +33,22 @@ protected:
 		}
 	}
 
+	void AddOffset(const uint32_t offset)
+	{
+		if (SyncedClock != nullptr)
+		{
+			SyncedClock->AddOffset(offset);
+		}
+	}
+
+	void SetRandom()
+	{
+		if (SyncedClock != nullptr)
+		{
+			SyncedClock->SetRandom();
+		}
+	}
+
 public:
 	bool Setup(ClockSource * syncedClock)
 	{
