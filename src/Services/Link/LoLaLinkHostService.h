@@ -224,6 +224,7 @@ private:
 	{
 		ClearSession();
 		SessionId = random(1, UINT8_MAX - 1);
+		ClockSyncer.Reset();
 	}
 
 	void PrepareLinkRequestAccepted()
