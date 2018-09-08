@@ -30,6 +30,7 @@ protected:
 	union ArrayToUint32 {
 		byte array[4];
 		uint32_t uint;
+		int32_t iint;
 	} ATUI;
 
 	uint32_t ConnectingStateStartTime = 0;
@@ -231,7 +232,7 @@ protected:
 	///Remote packet handling.
 	virtual void OnBroadcastReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
 	virtual void OnLinkRequestAcceptedReceived(const uint8_t sessionId, const uint32_t token) {}
-	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const uint32_t estimatedError) {}
+	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	virtual void OnClockSyncAcceptedReceived(const uint8_t sessionId, const uint32_t token) {}
 	///
 	
@@ -389,7 +390,7 @@ protected:
 				OnClockSyncRequestReceived(incomingPacket->GetId(), ATUI.uint);
 				break;
 			case LOLA_LINK_SERVICE_SUBHEADER_NTP_REPLY:
-				OnClockSyncResponseReceived(incomingPacket->GetId(), ATUI.uint);
+				OnClockSyncResponseReceived(incomingPacket->GetId(), ATUI.iint);
 				break;
 			default:
 				break;

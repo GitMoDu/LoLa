@@ -174,7 +174,7 @@ protected:
 		}
 	}
 
-	void OnClockSyncResponseReceived(const uint8_t requestId, const uint32_t estimatedError)
+	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ClockSyncStage &&
@@ -211,7 +211,7 @@ protected:
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
 			ATUI.uint = ClockSyncer.GetMillisSync();
-			ArrayToPayload();
+			ArrayToPayload();			
 		}
 	}
 

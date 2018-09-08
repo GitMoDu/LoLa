@@ -33,7 +33,7 @@ protected:
 		}
 	}
 
-	void AddOffset(const uint32_t offset)
+	void AddOffset(const int32_t offset)
 	{
 		if (SyncedClock != nullptr)
 		{
@@ -80,10 +80,8 @@ public:
 
 class LinkRemoteClockSyncer : public ILinkClockSyncer
 {
-private:
-
 public:
-	void OnEstimationErrorReceived(const uint32_t estimationError)
+	void OnEstimationErrorReceived(const int32_t estimationError)
 	{
 		if (estimationError == 0)
 		{
@@ -91,7 +89,8 @@ public:
 		}
 		else
 		{
-			AddOffset(-estimationError);
+			AddOffset(estimationError);
+
 			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
 			ResetSyncGoodCount();
 		}
@@ -102,7 +101,7 @@ class LinkHostClockSyncer : public ILinkClockSyncer
 {
 private:
 	uint32_t LastEstimation = 0;
-	uint32_t LastError = UINT32_MAX;
+	int32_t LastError = INT32_MAX;
 
 protected:
 	void OnReset()
@@ -114,14 +113,14 @@ protected:
 	}
 
 public:
-	uint32_t GetLastError()
+	int32_t GetLastError()
 	{
 		return LastError;
 	}
 
-	void OnEstimationReceived(const uint32_t absoluteMillis)
+	void OnEstimationReceived(const int32_t estimationError)
 	{
-		LastError = GetMillisSync() - absoluteMillis;
+		LastError = estimationError;
 		if (LastError == 0)
 		{
 			if (millis() - LastEstimation > CLOCK_SYNC_ESTIMATION_MIN_INTERVAL_MILLIS)
@@ -141,7 +140,6 @@ public:
 	}
 };
 
-
 class AbstractClockSyncTransaction
 {
 protected:
@@ -152,7 +150,7 @@ protected:
 		Stage2 = 2
 	} Stage = TransactionStage::Clear;
 
-	uint32_t Result = 0;
+	int32_t Result = 0;
 
 	uint8_t Id = 0;
 
@@ -167,7 +165,7 @@ public:
 		return Id;
 	}
 
-	uint32_t GetResult()
+	int32_t GetResult()
 	{
 		return Result;
 	}
@@ -190,7 +188,7 @@ public:
 		LastRequested = 0;
 	}
 
-	void SetResult(const uint32_t resultError)
+	void SetResult(const int32_t resultError)
 	{
 		Result = resultError;
 		Stage = TransactionStage::Stage2;
@@ -236,7 +234,7 @@ public:
 		return Stage == TransactionStage::Stage1;
 	}
 
-	void SetResult(const uint8_t requestId, const uint32_t resultError)
+	void SetResult(const uint8_t requestId, const int32_t resultError)
 	{
 		Id = requestId;
 		Result = resultError;

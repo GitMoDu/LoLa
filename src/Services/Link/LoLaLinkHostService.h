@@ -198,7 +198,7 @@ protected:
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ClockSyncStage)
 		{
-			ClockSyncTransaction.SetResult(requestId, GetLoLa()->GetMillisSync() - estimatedMillis);
+			ClockSyncTransaction.SetResult(requestId, (int32_t)(GetLoLa()->GetMillisSync() - estimatedMillis));
 			SetNextRunASAP();
 		}
 	}
