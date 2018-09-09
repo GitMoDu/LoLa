@@ -78,6 +78,11 @@ void LoLaPacketDriver::OnReceived()
 					{
 						LastSent = GetMillis();
 					}
+					else
+					{
+						//Transmit failed.
+						//TODO: Store statistics.
+					}
 				}
 			}
 			//Handle packet.
@@ -92,6 +97,9 @@ bool LoLaPacketDriver::Setup()
 	if (Receiver.Setup(&PacketMap) &&
 		Sender.Setup(&PacketMap))
 	{
+		//TODO: Get comms entropy source, abstracted.
+		//randomSeed(...);
+
 		SetupOk = true;
 	}
 

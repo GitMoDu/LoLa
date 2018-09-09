@@ -22,6 +22,9 @@
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 #endif
 
+//TODO: This class is too big, separate layers by funcionality.
+// Link Layer
+// ClockSyncLayer
 class LoLaLinkService : public IPacketSendService
 {
 private:
@@ -272,12 +275,7 @@ protected:
 
 	bool ShouldProcessReceived()
 	{
-		return true;
-		//return IPacketSendService::ShouldProcessReceived() ||
-		//	SessionId != LOLA_LINK_SERVICE_INVALID_SESSION ||
-		//	LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink ||
-		//	LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping ||
-		//	LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting;
+		return IsSetupOk();
 	}
 
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)

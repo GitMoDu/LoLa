@@ -66,8 +66,6 @@ protected:
 	virtual void OnDisable() { }
 	virtual bool OnSetup()
 	{
-		//TODO: Get comms entropy source, abstracted.
-		//randomSeed(...);
 		return Packet != nullptr;
 	}
 

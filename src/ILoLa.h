@@ -54,7 +54,6 @@ protected:
 	///
 
 	///Status
-	//bool LinkActive = false;
 	ILinkActiveIndicator* LinkIndicator = nullptr;
 	bool EvenSlot = false;
 	///
