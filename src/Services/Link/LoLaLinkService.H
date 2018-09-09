@@ -464,30 +464,6 @@ protected:
 		}
 	}
 
-	virtual void OnClockSyncWarning()
-	{
-	}
-
-	////Returns false if clock is out of the error margin.
-	//inline bool OnKeepingClockSynced()
-	//{
-	//	if (SyncedClock->GetLastSyncElapsedMillis() > LOLA_LINK_SERVICE_MAX_SYNC_ELAPSED)
-	//	{
-	//		//Too much time has elapsed since the last sync.
-	//		return false;
-	//	}
-	//	else if (SyncedClock->GetLastSyncElapsedMillis() > LOLA_LINK_SERVICE_MIN_ELAPSED_RESYNC)
-	//	{
-	//		//Remote should send a NTP refresh, otherwise Host will disconnect.
-	//		//TODO: Document in protocol.
-	//		OnClockSyncWarning();
-
-	//		return false;
-	//	}
-
-	//	return true;
-	//}
-
 	void OnKeepingConnected(const uint32_t elapsedSinceLastReceived)
 	{
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
@@ -580,13 +556,6 @@ protected:
 		ArrayToPayload();
 	}
 
-	//void PrepareRssi()
-	//{
-	//	PrepareShortPacket(LOLA_LINK_SERVICE_SHORT_SUBHEADER_HELLO, SessionId);
-
-	//	//TODO: Add Rssi indicator to tail, for future auto-gain.
-	//}
-
 	void PrepareSessionPacketWithAck(const uint8_t subHeader)
 	{
 		PacketHolder.SetDefinition(&LinkWithAckDefinition);
@@ -666,5 +635,37 @@ private:
 			}
 		}
 	}
+
+	//void PrepareRssi()
+	//{
+	//	PrepareShortPacket(LOLA_LINK_SERVICE_SHORT_SUBHEADER_HELLO, SessionId);
+
+	//	//TODO: Add Rssi indicator to tail, for future auto-gain.
+	//}
+
+	//TODO:
+	//virtual void OnClockSyncWarning()
+	//{
+	//}
+
+	////Returns false if clock is out of the error margin.
+	//inline bool OnKeepingClockSynced()
+	//{
+	//	if (SyncedClock->GetLastSyncElapsedMillis() > LOLA_LINK_SERVICE_MAX_SYNC_ELAPSED)
+	//	{
+	//		//Too much time has elapsed since the last sync.
+	//		return false;
+	//	}
+	//	else if (SyncedClock->GetLastSyncElapsedMillis() > LOLA_LINK_SERVICE_MIN_ELAPSED_RESYNC)
+	//	{
+	//		//Remote should send a NTP refresh, otherwise Host will disconnect.
+	//		//TODO: Document in protocol.
+	//		OnClockSyncWarning();
+
+	//		return false;
+	//	}
+
+	//	return true;
+	//}
 };
 #endif
