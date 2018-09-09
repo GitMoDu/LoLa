@@ -22,7 +22,6 @@ public:
 	LoLaLinkHostService(Scheduler *scheduler, ILoLa* loLa)
 		: LoLaLinkService(scheduler, loLa)
 	{
-		LinkPMAC = LOLA_LINK_HOST_PMAC;
 		ClockSyncerPointer = &ClockSyncer;
 		loLa->SetDuplexSlot(false);
 	}

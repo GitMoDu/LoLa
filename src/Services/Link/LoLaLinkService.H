@@ -14,9 +14,13 @@
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
 #include <Crypto\LoLaCryptoSeedSource.h>
-#include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
+#include <Crypto\PseudoMacGenerator.h>
+
+#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
+#include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
+#endif
 
 class LoLaLinkService : public IPacketSendService
 {
@@ -43,7 +47,10 @@ protected:
 
 	uint8_t ConnectingState = 0;
 
-	//Link session variables.
+	//MAC Helper
+	PseudoMacGenerator PMACGenerator;
+
+	//Link session variables
 	uint32_t LinkPMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	uint32_t RemotePMAC = LOLA_LINK_SERVICE_INVALID_PMAC;
 	uint8_t SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
@@ -74,6 +81,9 @@ public:
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
 	{
+		PMACGenerator.SetId(loLa->GetIdPointer(), loLa->GetIdLength());
+		LinkPMAC = PMACGenerator.GetPMAC();
+
 		LinkInfo.SetDriver(loLa);
 		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
 
@@ -425,6 +435,20 @@ protected:
 	{
 		if (IPacketSendService::OnSetup())
 		{
+			ClearSession();
+
+#ifdef DEBUG_LOLA
+			ATUI.uint = LinkPMAC;
+			Serial.print(F("Link PMAC: 0x"));
+			for (uint8_t i = 0; i < 4; i++)
+			{
+				Serial.print(ATUI.array[i], HEX);
+			}
+			Serial.println();
+#endif
+			StateStartTime = Millis();
+			SetNextRunASAP();
+
 			return ClockSyncerPointer != nullptr && ClockSyncerPointer->Setup(GetLoLa()->GetClockSource());
 
 		}

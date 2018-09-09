@@ -51,9 +51,6 @@
 
 #define LOLA_LINK_SERVICE_INVALID_SESSION					0
 
-//TODO: Replace with one time random number.
-#define LOLA_LINK_HOST_PMAC									0x0E0F
-#define LOLA_LINK_REMOTE_PMAC								0x1A1B
 #define LOLA_LINK_SERVICE_INVALID_PMAC						UINT32_MAX
 
 
