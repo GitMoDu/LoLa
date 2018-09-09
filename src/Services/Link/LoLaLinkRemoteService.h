@@ -95,6 +95,7 @@ protected:
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ClockSyncSwitchOver)
 		{
+			ClockSyncer.SetSynced();
 			SetConnectingState(ConnectingStagesEnum::LinkProtocolStage);
 		}
 	}
