@@ -5,6 +5,7 @@
 
 #define DEBUG_LOLA
 //#define MOCK_RADIO
+#define USE_TIME_SLOT
 
 #if !defined(UINT16_MAX) || !defined(INT16_MIN) || !defined(UINT32_MAX) || defined(UINT8_MAX)
 #include <stdint.h>

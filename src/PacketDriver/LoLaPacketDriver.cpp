@@ -123,35 +123,50 @@ bool LoLaPacketDriver::HotAfterReceive()
 
 bool LoLaPacketDriver::IsInSendSlot()
 {
-	if (IsLinkActive())
-	{
-		SendSlotElapsed = GetMillis() % DuplexPeriodMillis;
+	SendSlotElapsed = GetMillisSync() % DuplexPeriodMillis;
 
-		if (EvenSlot)
+	//Even spread of true and false across the DuplexPeriod
+	if (EvenSlot)
+	{
+		if (SendSlotElapsed < DuplexPeriodMillis / 2)
 		{
-			if (SendSlotElapsed < DuplexPeriodMillis / 2)
-			{
-				return true;
-			}
-		}
-		else //The limbo of SendSlotElapsed == DuplexHalfPeriodMillis will always return false.
-		{
-			if (SendSlotElapsed > DuplexPeriodMillis / 2)
-			{
-				return true;
-			}
+			return true;
 		}
 	}
-	return false;
+	else
+	{
+		if (SendSlotElapsed >= DuplexPeriodMillis / 2)
+		{
+			return true;
+		}
+	}
 }
 
 bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 {
+	if (!Enabled)
+	{
+		return false;
+	}
+
+#ifdef USE_TIME_SLOT
+	if (IsLinkActive())
+	{
+		return CanTransmit() &&
+			(overridePermission || IsInSendSlot());
+}
+	else 
+	{
+		return CanTransmit() && overridePermission &&
+			!HotAfterSend() && !HotAfterReceive();
+	}
+	
+#else
 	return Enabled &&
-		!HotAfterSend() && //TODO: Deprecate and remove to maximize throughput when slot sending is working.
-		!HotAfterReceive() && //TODO: Deprecate and remove to maximize throughput when slot sending is working.
+		!HotAfterSend() && !HotAfterReceive() &&
 		CanTransmit() &&
-		(overridePermission || IsInSendSlot());
+		(overridePermission || IsLinkActive());
+#endif
 }
 
 void LoLaPacketDriver::SetCryptoSeedSource(ISeedSource* cryptoSeedSource)
