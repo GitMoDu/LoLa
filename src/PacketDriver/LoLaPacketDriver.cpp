@@ -140,6 +140,8 @@ bool LoLaPacketDriver::IsInSendSlot()
 			return true;
 		}
 	}
+
+	return false;
 }
 
 bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
