@@ -627,7 +627,7 @@ private:
 				break;
 			case ConnectingStagesEnum::ClockSyncSwitchOver:
 				OnClockSyncSwitchOver();
-				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
 				//We transition forward when we receive the approriate ack.
 				break;
 			case ConnectingStagesEnum::LinkProtocolStage:
