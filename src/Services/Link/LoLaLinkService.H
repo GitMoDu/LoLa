@@ -436,8 +436,7 @@ protected:
 		if (PacketHolder.GetDefinition()->HasACK())
 		{
 			//Piggy back on any link with ack packets to measure latency.
-			ATUI.uint = Millis();
-			LastSentWithAck = ATUI.uint;
+			LastSentWithAck = GetLoLa()->GetLastSentMillis();
 		}
 	}
 
