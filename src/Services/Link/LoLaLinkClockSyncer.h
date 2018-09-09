@@ -95,7 +95,7 @@ protected:
 public:
 	bool IsSynced()
 	{
-		return HostSynced;
+		return SyncGoodCount > 0 && HostSynced;
 	}
 
 	void SetSynced()
