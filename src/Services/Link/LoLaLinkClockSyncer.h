@@ -6,7 +6,6 @@
 #include <ClockSource.h>
 
 #define CLOCK_SYNC_REQUEST_TRANSACTION_MAX_DURATION_MILLIS 300
-#define CLOCK_SYNC_ESTIMATION_MIN_INTERVAL_MILLIS 50
 #define CLOCK_SYNC_GOOD_ENOUGH_COUNT 2
 
 
@@ -14,17 +13,14 @@ class ILinkClockSyncer
 {
 private:
 	ClockSource * SyncedClock = nullptr;
+	
+protected:
 	uint8_t SyncGoodCount = 0;
 
 protected:
 	virtual void OnReset() {}
 
 protected:
-	void ResetSyncGoodCount()
-	{
-		SyncGoodCount = 0;
-	}
-
 	void StampSyncGood()
 	{
 		if (SyncGoodCount < UINT8_MAX)
@@ -57,11 +53,6 @@ public:
 		return SyncedClock != nullptr;
 	}
 
-	bool IsSynced()
-	{
-		return SyncGoodCount > CLOCK_SYNC_GOOD_ENOUGH_COUNT;
-	}
-
 	uint32_t GetMillisSync()
 	{
 		if (SyncedClock != nullptr)
@@ -71,16 +62,47 @@ public:
 		return 0;
 	}
 
+	uint32_t GetMillisSynced(const uint32_t sourceMillis)
+	{
+		if (SyncedClock != nullptr)
+		{
+			return SyncedClock->GetMillisSynced(sourceMillis);
+		}
+		return 0;
+	}
+
 	void Reset()
 	{
 		SyncGoodCount = 0;
 		OnReset();
 	}
+
+public:
+	virtual bool IsSynced() { return false; }
 };
 
 class LinkRemoteClockSyncer : public ILinkClockSyncer
 {
+private:
+	boolean HostSynced = false;
+
+protected:
+	void OnReset()
+	{
+		HostSynced = false;
+	}
+
 public:
+	bool IsSynced()
+	{
+		return HostSynced;
+	}
+
+	void SetSynced()
+	{
+		HostSynced = true;
+	}
+
 	void OnEstimationErrorReceived(const int32_t estimationError)
 	{
 		if (estimationError == 0)
@@ -90,9 +112,6 @@ public:
 		else
 		{
 			AddOffset(estimationError);
-
-			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
-			ResetSyncGoodCount();
 		}
 	}
 };
@@ -118,24 +137,17 @@ public:
 		return LastError;
 	}
 
+	bool IsSynced()
+	{
+		return SyncGoodCount >= CLOCK_SYNC_GOOD_ENOUGH_COUNT;
+	}
+
 	void OnEstimationReceived(const int32_t estimationError)
 	{
 		LastError = estimationError;
 		if (LastError == 0)
 		{
-			if (millis() - LastEstimation > CLOCK_SYNC_ESTIMATION_MIN_INTERVAL_MILLIS)
-			{
-				StampSyncGood();
-			}
-			else
-			{
-				Serial.println("ClockSyncer skipped an estimation");
-			}
-		}
-		else
-		{
-			//Either we get CLOCK_SYNC_GOOD_ENOUGH_COUNT in a row or we start again.
-			ResetSyncGoodCount();
+			StampSyncGood();
 		}
 	}
 };
