@@ -30,10 +30,6 @@ public:
 	
 	void ProcessPacket(ILoLaPacket* receivedPacket)
 	{
-#ifdef DEBUG_PACKET_INPUT
-		Serial.print(F("Received:"));
-		Serial.println(receivedPacket->GetDataHeader());
-#endif
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
 			if (Services[i] != nullptr && Services[i]->ReceivedPacket(receivedPacket, receivedPacket->GetDataHeader()))
@@ -53,7 +49,7 @@ public:
 				{
 					Services[i]->OnLinkEstablished();
 				}
-				else 
+				else
 				{
 					Services[i]->OnLinkLost();
 				}
@@ -63,15 +59,9 @@ public:
 
 	void ProcessAck(ILoLaPacket* receivedPacket)
 	{
-		uint8_t header = receivedPacket->GetPayload()[0];
-		uint8_t id = receivedPacket->GetPayload()[1];
-#ifdef DEBUG_PACKET_INPUT
-		Serial.print(F("Ack:"));
-		Serial.println(header);
-#endif
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
-			if (Services[i] != nullptr && Services[i]->ReceivedAck(header, id))
+			if (Services[i] != nullptr && Services[i]->ProcessAck(receivedPacket->GetPayload()[0], receivedPacket->GetPayload()[1]))
 			{
 				return;
 			}
@@ -166,30 +156,7 @@ public:
 				serial->println();
 			}
 		}
-		//Benchmark services check.
-		uint32_t Start, End;
-		Start = micros();
-		for (uint8_t i = 0; i < MAX_RADIO_SERVICES_COUNT; i++)
-		{
-			if (Services[i] != nullptr)
-			{
-				Services[i]->Test(i);
-			}
-			else
-			{
-				Services[0]->Test(i);
-			}
-		}
-		End = micros();
-
-		serial->print(F("Services Look Up worst case benchmark took: "));
-		serial->print(End - Start);
-		serial->print(F(" us."));
-		serial->println();
-
 	}
 #endif
 };
-
 #endif
-
