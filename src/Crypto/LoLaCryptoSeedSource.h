@@ -65,9 +65,6 @@ public:
 		{
 			CachedBaseCRC++;
 		}
-
-		Serial.print("SetBaseSeed: ");
-		Serial.println(CachedBaseCRC);
 	}
 
 	uint8_t GetSeed()
