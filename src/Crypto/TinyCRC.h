@@ -52,39 +52,25 @@ const uint32_t crc32_table[16] PROGMEM = {
 	0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
 };
 
-enum CrcTypes
+class TinyCrcModbus8
 {
-	Modbus8
-};
-
-template <class T> class AbstractTinyCrc
-{
-protected:
-	T Seed = 0;
+private:
+	uint8_t Seed = 0;
 
 public:
-	void Reset(const T seed)
-	{
-		Seed = seed;
-	}
-
-	virtual T GetCurrent()
+	uint8_t GetCurrent()
 	{
 		return Seed;
 	}
 
-public:
-	virtual T Update(const uint8_t value) {}
-
-	//Reference implementations, no guarantee on template.
-	virtual T Reset() 
+	uint8_t Update(const uint8_t value)
 	{
-		Seed = 0;
+		Seed = pgm_read_byte(&crc_table_smbus[Seed ^ value]);
 
 		return Seed;
 	}
 
-	virtual T Update(uint8_t* data, const uint8_t size)
+	uint8_t Update(uint8_t *data, const uint8_t size)
 	{
 		for (uint8_t i = 0; i < size; i++)
 		{
@@ -93,24 +79,10 @@ public:
 
 		return Seed;
 	}
-};
 
-class TinyCrcModbus8 : public AbstractTinyCrc<uint8_t>
-{
-public:
-	uint8_t Update(const uint8_t value)
+	uint8_t Reset(const uint8_t seed)
 	{
-		Seed = pgm_read_byte(&crc_table_smbus[Seed ^ value]);
-		
-		return Seed;
-	}
-
-	uint8_t Update(uint8_t *data, const uint8_t size)
-	{
-		for (uint8_t i = 0; i < size; i++)
-		{
-			Seed = pgm_read_byte(&crc_table_smbus[Seed ^ data[i]]);
-		}
+		Seed = seed;
 
 		return Seed;
 	}
@@ -124,11 +96,18 @@ public:
 };
 
 //TODO: Not up to specifications of standard CRC-32, can't replicate 3rd party results. Good enough for now.
-class TinyCrc32 : public AbstractTinyCrc<uint32_t>
+class TinyCrc32
 {
+private:
 	uint8_t TableIndex = 0;
-
+	uint32_t Seed = 0;
+	
 public:
+	uint8_t GetCurrent()
+	{
+		return ~Seed;
+	}
+
 	uint32_t Update(const uint8_t value)
 	{
 		// via http://forum.arduino.cc/index.php?topic=91179.0
@@ -158,9 +137,11 @@ public:
 		return Seed;
 	}
 
-	uint32_t GetCurrent()
+	uint8_t Reset(const uint8_t seed)
 	{
-		return ~Seed;
+		Seed = seed;
+
+		return Seed;
 	}
 };
 #endif
