@@ -205,10 +205,13 @@ public:
 	virtual void OnStart() {}
 	virtual uint32_t GetLastValidReceivedMillis() { return LastReceived; }
 	virtual int16_t GetLastValidRSSI() { return LastReceivedRssi; }
-	virtual uint8_t GetTransmitPowerMax() { return 0xFF; }
-	virtual uint8_t GetTransmitPowerMin() { return 0; }
-	virtual int16_t GetRSSIMax() { return 0; }
-	virtual int16_t GetRSSIMin() { return ILOLA_DEFAULT_MIN_RSSI; }
+
+	virtual uint8_t GetTransmitPowerMax() const { return 0xFF; }
+	virtual uint8_t GetTransmitPowerMin() const { return 0; }
+	virtual int16_t GetRSSIMax() const { return 0; }
+	virtual int16_t GetRSSIMin() const { return ILOLA_DEFAULT_MIN_RSSI; }
+	virtual uint8_t GetChannelMax() const { return 100; }
+	virtual uint8_t GetChannelMin() const { return 0; }
 
 	virtual void SetCryptoSeedSource(ISeedSource* cryptoSeedSource) {}
 
