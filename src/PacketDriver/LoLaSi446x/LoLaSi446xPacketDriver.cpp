@@ -187,29 +187,29 @@ void LoLaSi446xPacketDriver::OnStart()
 #endif
 }
 
-uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMax()
+uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMax() const
 {
 	return SI4463_MAX_TRANSMIT_POWER;
 }
-uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMin()
+uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMin() const
 {
 	return 0;
 }
 
-int16_t LoLaSi446xPacketDriver::GetRSSIMax() 
+int16_t LoLaSi446xPacketDriver::GetRSSIMax() const
 { 
 	return SI4463_MAX_RSSI;
 }
-int16_t LoLaSi446xPacketDriver::GetRSSIMin()
+int16_t LoLaSi446xPacketDriver::GetRSSIMin() const
 { 
 	return SI4463_MIN_RSSI;
 }
 
-uint8_t LoLaSi446xPacketDriver::GetChannelMax()
+uint8_t LoLaSi446xPacketDriver::GetChannelMax() const
 {
 	return SI4463_MAX_CHANNEL;
 }
-uint8_t LoLaSi446xPacketDriver::GetChannelMin()
+uint8_t LoLaSi446xPacketDriver::GetChannelMin() const
 {
 	return SI4463_MIN_CHANNEL;
 }

@@ -143,8 +143,8 @@ public:
 	uint8_t GetChannelMax() const;
 	uint8_t GetChannelMin() const;
 
-	void OnChannelUpdated() {};
-	void OnTransmitPowerUpdated() {};
+	void OnChannelUpdated();
+	void OnTransmitPowerUpdated();
 
 };
 #endif
