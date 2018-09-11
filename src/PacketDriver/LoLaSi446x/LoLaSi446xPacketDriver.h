@@ -38,7 +38,6 @@
 #define PART_NUMBER_SI4463X 17507
 
 
- 
 #define SI4463_MIN_RSSI (int16_t(-110))
 #define SI4463_MAX_RSSI (int16_t(-50))
 
@@ -143,5 +142,9 @@ public:
 
 	uint8_t GetChannelMax() const;
 	uint8_t GetChannelMin() const;
+
+	void OnChannelUpdated() {};
+	void OnTransmitPowerUpdated() {};
+
 };
 #endif

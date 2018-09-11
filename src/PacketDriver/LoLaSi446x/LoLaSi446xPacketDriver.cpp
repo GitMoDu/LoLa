@@ -168,6 +168,16 @@ void LoLaSi446xPacketDriver::OnReceivedFail(const int16_t rssi)
 	EnableInterrupts();
 }
 
+void LoLaSi446xPacketDriver::OnChannelUpdated()
+{
+
+}
+
+void LoLaSi446xPacketDriver::OnTransmitPowerUpdated() 
+{
+
+}
+
 void LoLaSi446xPacketDriver::OnStart()
 {
 #ifndef MOCK_RADIO
