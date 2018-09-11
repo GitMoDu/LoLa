@@ -73,8 +73,6 @@ public:
 	{
 	}
 
-
-
 	uint8_t GetIdLength()
 	{
 		return IdProvider.GetUUIDLength();
@@ -161,7 +159,7 @@ public:
 		return TransmitPower;
 	}
 
-	virtual bool SetTransmitPower(const uint8_t transmitPower)
+	bool SetTransmitPower(const uint8_t transmitPower)
 	{
 		TransmitPower = transmitPower;
 
@@ -173,7 +171,7 @@ public:
 		return CurrentChannel;
 	}
 
-	virtual bool SetChannel(const int16_t channel)
+	bool SetChannel(const int16_t channel)
 	{
 		CurrentChannel = channel;
 
