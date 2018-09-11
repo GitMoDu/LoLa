@@ -60,7 +60,6 @@ public:
 		LoLa->Enable();
 		GetLinkService()->Enable();
 		return true;
-
 	}
 
 	bool Stop()

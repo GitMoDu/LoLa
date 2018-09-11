@@ -94,6 +94,10 @@ public:
 
 	void Disable()
 	{
+		if (Enabled)
+		{
+			OnStop();
+		}
 		Enabled = false;
 	}
 
@@ -205,6 +209,7 @@ public:
 	virtual bool Setup() { return true; }
 	virtual bool AllowedSend(const bool overridePermission = false) { return true; }
 	virtual void OnStart() {}
+	virtual void OnStop() {}
 	virtual uint32_t GetLastValidReceivedMillis() { return LastReceived; }
 	virtual int16_t GetLastValidRSSI() { return LastReceivedRssi; }
 
