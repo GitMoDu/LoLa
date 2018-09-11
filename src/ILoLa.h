@@ -50,7 +50,7 @@ protected:
 	uint8_t TransmitPower = 0;
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
 	bool Enabled = false;
-	uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
+	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
 	///
 
 	///Status
