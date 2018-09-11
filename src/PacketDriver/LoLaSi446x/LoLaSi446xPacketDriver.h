@@ -42,6 +42,9 @@
 #define SI4463_MIN_RSSI (int16_t(-110))
 #define SI4463_MAX_RSSI (int16_t(-50))
 
+#define SI4463_MIN_CHANNEL 5
+#define SI4463_MAX_CHANNEL 120
+
 
 #define _TASK_OO_CALLBACKS
 #define PROCESS_EVENT_QUEUE_MAX_QUEUE_DEPTH 5
@@ -132,10 +135,13 @@ public:
 	void OnReceivedFail(const int16_t rssi);
 	void OnReceived();
 
-	uint8_t GetTransmitPowerMax();
-	uint8_t GetTransmitPowerMin();
+	uint8_t GetTransmitPowerMax() const;
+	uint8_t GetTransmitPowerMin() const;
 
-	int16_t GetRSSIMax();
-	int16_t GetRSSIMin();
+	int16_t GetRSSIMax() const;
+	int16_t GetRSSIMin() const;
+
+	uint8_t GetChannelMax() const;
+	uint8_t GetChannelMin() const;
 };
 #endif

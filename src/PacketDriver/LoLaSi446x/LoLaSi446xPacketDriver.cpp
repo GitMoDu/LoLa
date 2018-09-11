@@ -195,6 +195,15 @@ int16_t LoLaSi446xPacketDriver::GetRSSIMin()
 	return SI4463_MIN_RSSI;
 }
 
+uint8_t LoLaSi446xPacketDriver::GetChannelMax()
+{
+	return SI4463_MAX_CHANNEL;
+}
+uint8_t LoLaSi446xPacketDriver::GetChannelMin()
+{
+	return SI4463_MIN_CHANNEL;
+}
+
 bool LoLaSi446xPacketDriver::Setup()
 {
 	if (LoLaPacketDriver::Setup())
