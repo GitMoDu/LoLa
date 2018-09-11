@@ -163,6 +163,8 @@ public:
 	{
 		TransmitPower = transmitPower;
 
+		OnTransmitPowerUpdated();
+
 		return true;
 	}
 
@@ -174,6 +176,8 @@ public:
 	bool SetChannel(const int16_t channel)
 	{
 		CurrentChannel = channel;
+
+		OnChannelUpdated();
 
 		return true;
 	}
@@ -219,6 +223,10 @@ public:
 	virtual void OnReceived() {}
 	virtual void OnSentOk() {}
 	virtual void OnIncoming(const int16_t rssi) {}
+
+
+	virtual void OnChannelUpdated() {}
+	virtual void OnTransmitPowerUpdated() {}
 
 	virtual void OnBatteryAlarm() {}
 
