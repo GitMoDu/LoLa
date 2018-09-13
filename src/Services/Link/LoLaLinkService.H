@@ -161,6 +161,12 @@ protected:
 		LastSent = Millis();
 	}
 
+	void OnSendFailed()
+	{
+		//In case the send fails, this prevents from immediate resending.
+		SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+	}
+
 	void ResetStateStartTime()
 	{
 		StateStartTime = Millis();
