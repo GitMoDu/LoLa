@@ -12,104 +12,63 @@
 #include <Packet\LoLaPacketMap.h>
 
 
-#define LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS			100
-#define LOLA_SYNC_SURFACE_BACK_OFF_DURATION_MILLIS				200
+#define ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS   (uint32_t)5
+#define ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS		(uint32_t)1
 
-#define LOLA_SYNC_FAST_MAX_BLOCK_COUNT							PACKET_DEFINITION_SYNC_STATUS_PAYLOAD_SIZE
-
-#define SYNC_SURFACE_PACKET_DEFINITION_COUNT					3
-
-#define SYNC_SURFACE_STATUS_SUB_HEADER_FINISHED_SYNCED			1
-
-#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_SYNC			0
-#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_DISABLE		1
-#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_STARTING_SYNC			2
-#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_FINISHING_SYNC			3
-#define SYNC_SURFACE_PROTOCOL_SUB_HEADER_DOUBLE_CHECK			4
-
+#define SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY		0
+#define SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHING			1
+#define SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHED			2
+#define SYNC_SURFACE_META_SUB_HEADER_FINISHING_RESPONSE		3
 
 class SyncSurfaceBase : public AbstractSync
 {
 public:
 	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
-		: AbstractSync(scheduler, LOLA_SYNC_SURFACE_SERVICE_UPDATE_PERIOD_MILLIS, loLa, trackedSurface)
+		: AbstractSync(scheduler, ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS, loLa, trackedSurface)
 	{
-		SyncReportDefinition.SetBaseHeader(baseHeader);
+		SyncMetaDefinition.SetBaseHeader(baseHeader);
 		DataPacketDefinition.SetBaseHeader(baseHeader);
-		ProtocolPacketDefinition.SetBaseHeader(baseHeader);
 	}
 
 private:
-	SyncReportPacketDefinition SyncReportDefinition;
+	SyncMetaPacketDefinition SyncMetaDefinition;
 	SyncDataPacketDefinition DataPacketDefinition;
-	SyncProtocolPacketDefinition ProtocolPacketDefinition;
 
-	uint32_t LastDoubleCheckSentMillis = ILOLA_INVALID_MILLIS;
-
-protected:
-	uint8_t SyncTryCount = 0;
+	union ArrayToUint32 {
+		byte array[4];
+		uint32_t uint;
+	} ATUI;
 
 protected:
 	virtual void OnBlockReceived(const uint8_t index, uint8_t * payload) {}
 
 	//Reader
 	virtual void OnSyncFinishingReceived() {}
-	virtual void OnSyncStartingReceived() {}
+	virtual void OnSyncFinishedReceived() {}
 
 	//Writer
-	virtual void OnSyncReportReceived(uint8_t * payload) {}
-	virtual void OnSyncStartRequestReceived() {}
-	virtual void OnSyncDisableRequestReceived() {}
+	virtual void OnServiceDiscoveryReceived() {}
+	virtual void OnSyncResponseReceived() {}
 
 	//Common
-	virtual void OnDoubleCheckReceived() {}
+	virtual void OnSyncStateUpdated(const SyncStateEnum newState) {}
 
 protected:
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
-		if (!packetMap->AddMapping(&SyncReportDefinition) ||
-			!packetMap->AddMapping(&DataPacketDefinition) ||
-			!packetMap->AddMapping(&ProtocolPacketDefinition))
+		if (!packetMap->AddMapping(&SyncMetaDefinition) ||
+			!packetMap->AddMapping(&DataPacketDefinition))
 		{
 			return false;
 		}
 
 		return true;
 	}
-	
-	virtual void OnStateUpdated(const SyncStateEnum newState)
-	{
-		switch (newState)
-		{
-		case SyncStateEnum::Starting:
-			SyncTryCount = 0;
-			TrackedSurface->GetTracker()->SetAll();
-			break;
-		case SyncStateEnum::FullSync:
-			TrackedSurface->GetTracker()->SetAll();
-			break;
-		default:
-			break;
-		}
-	}
 
-	void OnSyncedService()
+	void OnStateUpdated(const SyncStateEnum newState)
 	{
-		if (TrackedSurface->GetTracker()->HasSet())
-		{
-			UpdateState(SyncStateEnum::Resync);
-		}
-		else if (!HashesMatch())
-		{
-			UpdateState(SyncStateEnum::Starting);
-		}
-		else if (LastDoubleCheckSentMillis == ILOLA_INVALID_MILLIS || Millis() - LastDoubleCheckSentMillis > ABSTRACT_SURFACE_SYNC_KEEP_ALIVE_MILLIS)
-		{
-			LastDoubleCheckSentMillis = Millis();
-			
-			PrepareDoubleCheckProtocolPacket();
-			RequestSendPacket();
-		}		
+		AbstractSync::OnStateUpdated(newState);
+		OnSyncStateUpdated(newState);
 	}
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
@@ -123,46 +82,36 @@ protected:
 
 		if (header == DataPacketDefinition.GetHeader())
 		{
-			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());//To Reader.
+			//To Reader.
+			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
+
 			return true;
 		}
-		else if (header == ProtocolPacketDefinition.GetHeader())
+		else if (header == SyncMetaDefinition.GetHeader())
 		{
 			SetRemoteHash(incomingPacket->GetPayload()[0]);
+
 			switch (incomingPacket->GetId())
-			{			
-			//To Writer.
-			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_SYNC:
-				OnSyncStartRequestReceived();
-				break;
-			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_REQUEST_DISABLE:
-				OnSyncDisableRequestReceived();
-				break;			
-
-			//To Reader.
-			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_FINISHING_SYNC:
-				SetRemoteHash(incomingPacket->GetPayload()[0]);
+			{
+				//To Reader.
+			case SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHING:
 				OnSyncFinishingReceived();
-				break;		
-			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_STARTING_SYNC:
-				OnSyncStartingReceived();
+				break;
+			case SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHED:
+				OnSyncFinishedReceived();
 				break;
 
-			//To both.
-			case SYNC_SURFACE_PROTOCOL_SUB_HEADER_DOUBLE_CHECK:
-				SetRemoteHash(incomingPacket->GetPayload()[0]);
-				OnDoubleCheckReceived();
+				//To Writer.
+			case SYNC_SURFACE_META_SUB_HEADER_FINISHING_RESPONSE:
+				OnSyncResponseReceived();
+				break;
+			case SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY:
+				OnServiceDiscoveryReceived();
 				break;
 			default:
 				break;
 			}
-		}
-		else if (header == SyncReportDefinition.GetHeader())
-		{
-			SetRemoteHash(incomingPacket->GetId());
 
-			//To Writer.
-			OnSyncReportReceived(incomingPacket->GetPayload());
 			return true;
 		}
 
@@ -189,39 +138,32 @@ protected:
 		}
 	}
 
-	void PrepareTrackerStatusPayload()
+	void PrepareMetaPacket(const uint8_t subHeader)
 	{
-		for (uint8_t i = 0; i < min(TrackedSurface->GetTracker()->GetBitCount(), LOLA_SYNC_FAST_MAX_BLOCK_COUNT); i++)
-		{
-			if (i < TrackedSurface->GetTracker()->GetSize())
-			{
-				Packet->GetPayload()[i] = TrackedSurface->GetTracker()->GetRawBlock(i);
-			}
-			else
-			{
-				Packet->GetPayload()[i] = 0; //Unused value in this packet.
-			}
-		}
-	}
-
-	void PrepareReportPacketHeader()
-	{
-		Packet->SetDefinition(&SyncReportDefinition);
-		UpdateLocalHash();
-		Packet->SetId(GetLocalHash());
-	}
-
-	void PrepareProtocolPacket(const uint8_t id)
-	{
-		Packet->SetDefinition(&ProtocolPacketDefinition);
-		Packet->SetId(id);
+		Packet->SetDefinition(&SyncMetaDefinition);
+		Packet->SetId(subHeader);
 		UpdateLocalHash();
 		Packet->GetPayload()[0] = GetLocalHash();
 	}
 
-	void PrepareDoubleCheckProtocolPacket()
+	void PrepareServiceDiscoveryPacket()
 	{
-		PrepareProtocolPacket(SYNC_SURFACE_PROTOCOL_SUB_HEADER_DOUBLE_CHECK);
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY);
+	}
+
+	void PrepareFinishingSyncPacket()
+	{
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHING);
+	}
+
+	void PrepareFinishedSyncPacket()
+	{
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHED);
+	}
+
+	void PrepareFinishingResponsePacket()
+	{
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_FINISHING_RESPONSE);
 	}
 
 	bool PrepareBlockPacketHeader(const uint8_t index)
