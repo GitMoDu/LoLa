@@ -12,12 +12,11 @@
 
 #include <Services\LoLaServicesManager.h>
 
+
 class LoLaManager
 {
 protected:
-	//LoLa packet manager.
 	LoLaPacketDriver * LoLa = nullptr;
-
 
 protected:
 	virtual LoLaLinkService * GetLinkService() { return nullptr; }
@@ -26,7 +25,6 @@ protected:
 	{
 		return true;
 	}
-
 
 protected:
 	bool SetupServices()
