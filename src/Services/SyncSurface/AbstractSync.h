@@ -189,22 +189,12 @@ protected:
 			ResetLastSentTimeStamp();
 			SetNextRunASAP();
 
+			Enable(); //Make sure we are running.
+
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 			Serial.print(Millis());
 			Serial.print(F(": Updated State to "));
 #endif
-
-			switch (SyncState)
-			{
-			case SyncStateEnum::Disabled:
-				if (newState != SyncStateEnum::Disabled)
-				{
-					Enable();
-				}
-				break;
-			default:
-				break;
-			}
 
 			switch (newState)
 			{
