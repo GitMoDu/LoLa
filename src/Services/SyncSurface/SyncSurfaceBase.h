@@ -22,14 +22,6 @@
 
 class SyncSurfaceBase : public AbstractSync
 {
-public:
-	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
-		: AbstractSync(scheduler, ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS, loLa, trackedSurface)
-	{
-		SyncMetaDefinition.SetBaseHeader(baseHeader);
-		DataPacketDefinition.SetBaseHeader(baseHeader);
-	}
-
 private:
 	SyncMetaPacketDefinition SyncMetaDefinition;
 	SyncDataPacketDefinition DataPacketDefinition;
@@ -38,6 +30,16 @@ private:
 		byte array[4];
 		uint32_t uint;
 	} ATUI;
+
+	TemplateLoLaPacket<LOLA_PACKET_MIN_WITH_ID_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
+
+public:
+	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
+		: AbstractSync(scheduler, ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS, loLa, trackedSurface, &PacketHolder)
+	{
+		SyncMetaDefinition.SetBaseHeader(baseHeader);
+		DataPacketDefinition.SetBaseHeader(baseHeader);
+	}
 
 protected:
 	virtual void OnBlockReceived(const uint8_t index, uint8_t * payload) {}
