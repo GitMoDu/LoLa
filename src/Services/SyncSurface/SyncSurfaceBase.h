@@ -75,13 +75,6 @@ protected:
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
 	{
-		if (!IsSetupOk())
-		{
-			return false;
-		}
-
-		//Todo: Filter Should process packet
-
 		if (header == DataPacketDefinition.GetHeader())
 		{
 			//To Reader.
