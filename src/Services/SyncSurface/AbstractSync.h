@@ -279,7 +279,8 @@ protected:
 			OnSyncActive();
 			break;
 		case SyncStateEnum::Synced:
-			if (!HashesMatch())
+			if (TrackedSurface->GetTracker()->HasSet() ||
+				!HashesMatch())
 			{
 				UpdateSyncState(SyncStateEnum::Syncing);
 			}
