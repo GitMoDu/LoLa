@@ -89,7 +89,7 @@ protected:
 				Serial.print(F(": WaitingForDataUpdate Timeout. Elapsed: "));
 				Serial.print(GetElapsedSinceStateStart());
 #endif
-				UpdateSyncState(SyncStateEnum::Syncing);
+				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			}
 			else
 			{
