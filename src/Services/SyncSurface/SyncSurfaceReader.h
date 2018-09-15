@@ -59,13 +59,9 @@ protected:
 
 	void OnSyncStateUpdated(const SyncStateEnum newState)
 	{
-		switch (newState)
+		if (newState == SyncStateEnum::Syncing)
 		{
-		case SyncStateEnum::Syncing:
 			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
-			break;
-		default:
-			break;
 		}
 	}
 
