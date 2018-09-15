@@ -39,7 +39,6 @@ protected:
 		{
 		case SyncStateEnum::WaitingForServiceDiscovery:
 			UpdateSyncState(SyncStateEnum::Syncing);
-			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
 			break;
 		case SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->SetAll();
