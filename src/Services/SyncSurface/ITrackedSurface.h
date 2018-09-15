@@ -9,9 +9,9 @@
 
 #define DEBUG_BIT_TRACKER
 
-#define SYNC_SURFACE_BLOCK_SIZE 4 //4 bytes per block, enough for a 32 bit value (uint32_t, int32_t);
+#define SYNC_SURFACE_BLOCK_SIZE					4 //4 bytes per block, enough for a 32 bit value (uint32_t, int32_t);
 
-#define SYNC_SURFACE_PACKET_DEFINITION_COUNT				2
+#define SYNC_SURFACE_PACKET_DEFINITION_COUNT	2
 
 class ITrackedSurface
 {
