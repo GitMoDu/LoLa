@@ -46,10 +46,7 @@ protected:
 			UpdateSyncState(SyncStateEnum::Syncing);
 			break;
 		case SyncStateEnum::Syncing:
-			if (ReaderState == SyncReaderState::WaitingForSyncComplete)
-			{
-				UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
-			}
+			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
 			break;
 		default:
 			break;
