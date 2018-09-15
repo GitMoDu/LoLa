@@ -72,6 +72,33 @@ protected:
 		Disable();
 	}
 
+	void OnSyncResponseReceived()
+	{
+		if (SyncState == SyncStateEnum::Syncing)
+		{
+			switch (WriterState)
+			{
+			case SyncSurfaceWriter::UpdatingBlocks:
+			case SyncSurfaceWriter::SendingBlock:
+				if (HashesMatch())
+				{
+					PrepareFinishedSyncPacket();
+					RequestSendPacket();
+					UpdateSyncingState(SyncWriterState::SendingSyncComplete);
+				}
+				else
+				{
+					TrackedSurface->GetTracker()->SetAll();
+				}
+				break;
+			case SyncSurfaceWriter::SendingSyncComplete:
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
 	void OnSyncActive()
 	{
 		switch (WriterState)
