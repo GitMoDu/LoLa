@@ -80,16 +80,6 @@ public:
 	inline virtual uint8_t GetBlockCount() { return 0; };
 	virtual void SetAllPending() {};
 
-
-protected:
-	//Helper methods.
-	inline uint16_t Get8(const uint8_t blockIndex, const uint8_t offset = 0);
-	inline void Set8(const uint8_t blockIndex, const uint8_t value, const uint8_t offset = 0);
-	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset = 0);
-	inline void Set16(const uint8_t blockIndex, const uint16_t value, const uint8_t offset = 0);
-	inline uint32_t Get32(const uint8_t blockIndex);
-	inline void Set32(const uint8_t blockIndex, const uint32_t value);
-
 public:
 #ifdef DEBUG_BIT_TRACKER
 	void Debug(Stream * serial)
