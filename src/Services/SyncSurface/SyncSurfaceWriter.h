@@ -109,7 +109,6 @@ protected:
 		}
 	}
 
-
 	void OnSendDelayed()
 	{
 		if (SyncState == SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
@@ -177,29 +176,6 @@ private:
 		SurfaceSendingIndex = TrackedSurface->GetTracker()->GetNextSetIndex(SurfaceSendingIndex);
 		PrepareBlockPacketHeader(SurfaceSendingIndex);
 		PrepareBlockPacketPayload(SurfaceSendingIndex, Packet->GetPayload());
-	}
-
-	void SetLastSentBlockAsPending()
-	{
-		if (SurfaceSendingIndex < TrackedSurface->GetBlockCount())
-		{
-			TrackedSurface->GetTracker()->SetBit(SurfaceSendingIndex);
-			if (SurfaceSendingIndex > 1)
-			{
-				SurfaceSendingIndex--;
-			}
-		}
-		else
-		{
-			if (SurfaceSendingIndex > 0)
-			{
-				TrackedSurface->GetTracker()->SetBit(SurfaceSendingIndex - 1);
-				if (SurfaceSendingIndex > 1)
-				{
-					SurfaceSendingIndex--;
-				}
-			}
-		}
 	}
 };
 #endif
