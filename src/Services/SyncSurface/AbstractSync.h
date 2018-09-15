@@ -30,28 +30,24 @@ private:
 protected:
 	enum SyncStateEnum : uint8_t
 	{
-		WaitingForServiceDiscovery = 1,
-		Syncing = 2,
-		Synced = 3,
-		Disabled = 4
-	};
+		WaitingForServiceDiscovery = 0,
+		Syncing = 1,
+		Synced = 2,
+		Disabled = 3
+	} SyncState = SyncStateEnum::Disabled;
 
 	ITrackedSurface * TrackedSurface = nullptr;
-
-	SyncStateEnum SyncState = SyncStateEnum::Disabled;
-	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
 
 protected:
 	virtual void OnWaitingForServiceDiscovery() {}
 	virtual void OnSyncActive() {}
-	virtual void OnSyncedService() {}
 
 	virtual void OnSurfaceDataChanged() {}
 	virtual void OnStateUpdated(const SyncStateEnum newState) {}
 
 public:
-	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurface* trackedSurface)
-		: IPacketSendService(scheduler, period, loLa, &PacketHolder)
+	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder)
+		: IPacketSendService(scheduler, period, loLa, packetHolder)
 	{
 		TrackedSurface = trackedSurface;
 
