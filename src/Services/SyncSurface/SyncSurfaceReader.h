@@ -123,6 +123,7 @@ protected:
 			case SyncReaderState::WaitingForSyncComplete:
 				if (HashesMatch())
 				{
+					TrackedSurface->GetTracker()->ClearAll();
 					UpdateSyncState(SyncStateEnum::Synced);
 				}				
 				break;
