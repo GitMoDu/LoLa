@@ -21,7 +21,7 @@ class AbstractSync : public IPacketSendService
 {
 private:
 	uint8_t LastRemoteHash = ABSTRACT_SURFACE_DEFAULT_HASH;
-	uint32_t LastRemoteHashReceived = ILOLA_INVALID_MILLIS;
+	bool RemoteHashIsSet = false;
 
 	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
 
@@ -106,17 +106,13 @@ protected:
 
 	void SetRemoteHash(const uint8_t remoteHash)
 	{
-		LastRemoteHashReceived = Millis();
-		if (LastRemoteHashReceived == ILOLA_INVALID_MILLIS)
-		{
-			LastRemoteHashReceived--;
-		}
+		RemoteHashIsSet = true;
 		LastRemoteHash = remoteHash;
 	}
 
 	inline bool HasRemoteHash()
 	{
-		return LastRemoteHashReceived != ILOLA_INVALID_MILLIS;
+		return RemoteHashIsSet;
 	}
 
 	bool HashesMatch()
@@ -153,7 +149,7 @@ protected:
 	inline void InvalidateRemoteHash()
 	{
 		LastRemoteHash = ABSTRACT_SURFACE_DEFAULT_HASH;
-		LastRemoteHashReceived = ILOLA_INVALID_MILLIS;
+		RemoteHashIsSet = false;
 	}
 
 	uint32_t GetElapsedSinceStateStart()
