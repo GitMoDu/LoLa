@@ -61,7 +61,10 @@ protected:
 
 	void OnServiceDiscoveryReceived()
 	{
-		UpdateSyncState(SyncStateEnum::Syncing);
+		if (SyncState != SyncStateEnum::Disabled)
+		{
+			UpdateSyncState(SyncStateEnum::Syncing);
+		}
 	}
 
 	void OnWaitingForServiceDiscovery()
