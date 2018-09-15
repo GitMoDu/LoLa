@@ -104,7 +104,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS);
 			}
 			break;
 		default:
