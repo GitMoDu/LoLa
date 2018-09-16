@@ -106,9 +106,10 @@ private:
 	{
 		for (uint8_t i = 0; i < HopPeriod; i++)
 		{
-			if (millisSync + i % HopPeriod == 0)
+			//We search backwards because for most of the time, the first iteration will return a result.
+			if ((millisSync + HopPeriod - i) % HopPeriod == 0)
 			{
-				return i;
+				return HopPeriod - i;
 			}
 		}
 
