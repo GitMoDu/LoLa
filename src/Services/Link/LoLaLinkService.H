@@ -88,6 +88,7 @@ protected:
 
 protected:
 	///Host packet handling.
+	virtual void OnLinkDiscoveryReceived() {}
 	virtual void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
 	virtual void OnLinkRequestReadyReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
 	virtual void OnLinkPacketAckReceived(const uint8_t requestId) {}
@@ -273,15 +274,6 @@ private:
 		{
 			PreparePing();
 			RequestSendPacket();
-		}
-	}
-
-	void OnHelloReceived(const uint8_t sessionId)
-	{
-		Serial.println("OnHelloReceived");
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
-		{
-			SetNextRunASAP();
 		}
 	}
 
@@ -626,8 +618,8 @@ protected:
 			switch (incomingPacket->GetPayload()[0])
 			{
 				//To both.
-			case LOLA_LINK_SUBHEADER_HELLO:
-				OnHelloReceived(incomingPacket->GetId());
+			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
+				OnLinkDiscoveryReceived();
 				break;
 			case LOLA_LINK_SUBHEADER_PING:
 				Serial.print("Ping");
@@ -690,9 +682,9 @@ protected:
 		PacketHolder.GetPayload()[4] = ATUI_S.array[3];
 	}
 
-	void PrepareHello()
+	void PrepareLinkDiscovery()
 	{
-		PrepareLinkPacket(SessionId, LOLA_LINK_SUBHEADER_HELLO);
+		PrepareLinkPacket(SessionId, LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
 		ATUI_S.uint = 0;
 		ArrayToPayload();
 	}

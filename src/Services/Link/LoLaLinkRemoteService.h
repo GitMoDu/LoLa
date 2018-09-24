@@ -197,7 +197,7 @@ protected:
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD)
 			{
 				//Send an Hello to wake up potential hosts.
-				PrepareHello();
+				PrepareLinkDiscovery();
 				RequestSendPacket(true);
 			}
 			else

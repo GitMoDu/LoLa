@@ -52,6 +52,14 @@ protected:
 		CryptoSeed.SetBaseSeed(PMACGenerator.GetPMAC(), RemotePMAC, SessionId);
 	}
 
+	void OnLinkDiscoveryReceived()
+	{
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
+		{
+			SetNextRunASAP();
+		}
+	}
+
 	void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
 		switch (LinkInfo.LinkState)
