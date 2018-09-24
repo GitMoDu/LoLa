@@ -41,7 +41,7 @@ protected:
 	{
 		if (SyncedClock != nullptr)
 		{
-			SyncedClock->SetRandom();
+			SyncedClock->SetRandom();		
 		}
 	}
 
@@ -95,12 +95,17 @@ protected:
 public:
 	bool IsSynced()
 	{
-		return SyncGoodCount > 0 && HostSynced;
+		return HasEstimation() && HostSynced;
 	}
 
 	void SetSynced()
 	{
 		HostSynced = true;
+	}
+
+	bool HasEstimation()
+	{
+		return SyncGoodCount > 0;
 	}
 
 	void OnEstimationErrorReceived(const int32_t estimationError)
@@ -149,27 +154,31 @@ public:
 		{
 			StampSyncGood();
 		}
+		else if(!IsSynced() && (LastError > 1))
+		{
+			SyncGoodCount = 0;
+		}
 	}
 };
 
-class AbstractClockSyncTransaction
+class IClockSyncTransaction
 {
 protected:
-	enum TransactionStage : uint8_t
-	{
-		Clear = 0,
-		Stage1 = 1,
-		Stage2 = 2
-	} Stage = TransactionStage::Clear;
-
+	uint8_t Stage = 0;
 	int32_t Result = 0;
-
 	uint8_t Id = 0;
 
 public:
+	virtual void Reset()
+	{
+		Id = 0;
+		Stage = 0;
+		Result = 0;
+	}
+
 	bool IsClear()
 	{
-		return Stage == TransactionStage::Clear;
+		return Stage == 0;
 	}
 
 	uint8_t GetId()
@@ -182,20 +191,25 @@ public:
 		return Result;
 	}
 
-	virtual void Reset() {}
 	virtual void SetResult(const uint32_t resultError) {}
 };
 
-class ClockSyncRequestTransaction : public AbstractClockSyncTransaction
+class ClockSyncRequestTransaction : public IClockSyncTransaction
 {
 private:
 	uint32_t LastRequested = 0;
+
+	enum TransactionStage : uint8_t
+	{
+		Requested = 1,
+		ResultIn = 2
+	};
 
 public:
 	void Reset()
 	{
 		Id--;
-		Stage = TransactionStage::Clear;
+		Stage = 0;
 		Result = 0;
 		LastRequested = 0;
 	}
@@ -203,54 +217,52 @@ public:
 	void SetResult(const int32_t resultError)
 	{
 		Result = resultError;
-		Stage = TransactionStage::Stage2;
+		Stage = TransactionStage::ResultIn;
 	}
 
 	void SetRequested()
 	{
-		Stage = TransactionStage::Stage1;
+		Stage = TransactionStage::Requested;
 		LastRequested = millis();
 	}
 
 	bool IsRequested()
 	{
-		return Stage == TransactionStage::Stage1 && millis() - LastRequested < CLOCK_SYNC_REQUEST_TRANSACTION_MAX_DURATION_MILLIS;
+		return Stage == TransactionStage::Requested && millis() - LastRequested < CLOCK_SYNC_REQUEST_TRANSACTION_MAX_DURATION_MILLIS;
 	}
 
 	bool IsResultWaiting()
 	{
-		return Stage == TransactionStage::Stage2;
+		return Stage == TransactionStage::ResultIn;
 	}
 
 	void SetResultWaiting()
 	{
-		if (Stage == TransactionStage::Stage1)
+		if (Stage == TransactionStage::Requested)
 		{
-			Stage = TransactionStage::Stage2;
+			Stage = TransactionStage::ResultIn;
 		}
 	}
 };
 
-class ClockSyncResponseTransaction : public AbstractClockSyncTransaction
+class ClockSyncResponseTransaction : public IClockSyncTransaction
 {
-public:
-	void Reset()
+private:
+	enum TransactionStage : uint8_t
 	{
-		Id = 0;
-		Stage = TransactionStage::Clear;
-		Result = 0;
-	}
-
+		ResultIn = 1
+	};
+public:
 	bool IsResultReady()
 	{
-		return Stage == TransactionStage::Stage1;
+		return Stage == TransactionStage::ResultIn;
 	}
 
 	void SetResult(const uint8_t requestId, const int32_t resultError)
 	{
 		Id = requestId;
 		Result = resultError;
-		Stage = TransactionStage::Stage1;
+		Stage = TransactionStage::ResultIn;
 	}
 };
 #endif
