@@ -34,7 +34,7 @@ public:
 		TOTPEnabled = false;
 	}
 
-	void SetTOTPEnabled(const bool enabled)
+	void SetTOTPEnabled(const bool enabled, const uint32_t seed = 0)
 	{
 		TOTPEnabled = enabled;
 	}
