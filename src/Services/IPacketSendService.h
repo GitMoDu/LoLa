@@ -55,7 +55,7 @@ private:
 protected:
 	virtual void OnAckFailed(const uint8_t header, const uint8_t id) { }
 	virtual void OnAckReceived(const uint8_t header, const uint8_t id) { }
-	virtual void OnSendOk(const uint32_t sendDuration) { SetNextRunASAP(); }
+	virtual void OnSendOk(const uint8_t header, const uint32_t sendDuration) { SetNextRunASAP(); }
 	virtual void OnSendFailed() { SetNextRunASAP(); }
 	virtual void OnService() { SetNextRunDelay(LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS); }
 	virtual void OnSendTimedOut() { SetNextRunASAP(); }
@@ -141,7 +141,7 @@ public:
 			}
 			break;
 		case SendStatusEnum::SentOk:
-			OnSendOk(Millis() - SendStartMillis);
+			OnSendOk(Packet->GetDataHeader(), Millis() - SendStartMillis);
 #ifdef DEBUG_PACKET_SERVICE
 			Serial.print(F("OnSendOk:"));
 			if (Packet != nullptr && Packet->GetDefinition() != nullptr)
