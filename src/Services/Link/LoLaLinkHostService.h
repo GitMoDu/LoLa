@@ -73,8 +73,9 @@ protected:
 				//Here is where we have the first choice to reject this remote.
 				//TODO: PMAC Filtering?
 				RemotePMAC = remotePMAC;
-				Serial.println("LinkRequested");
+#ifdef DEBUG_LOLA
 				ConnectionProcessStart = millis();
+#endif
 				SetConnectingState(AwaitingConnectionEnum::LinkRequested);
 			}
 			break;
@@ -85,32 +86,21 @@ protected:
 
 	void OnLinkRequestReadyReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
-		Serial.print("LinkReadyReceived. ConnectingState: ");
-		Serial.println(ConnectingState);
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			ConnectingState == AwaitingConnectionEnum::LinkRequested &&
 			SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
 			SessionId == sessionId &&
 			RemotePMAC == remotePMAC)
 		{
-			Serial.println("ConnectingSwitchOver");
 			SetConnectingState(AwaitingConnectionEnum::ConnectingSwitchOver);
 		}
 	}
 
 	void OnLinkPacketAckReceived(const uint8_t requestId)
 	{
-		Serial.print("OnLinkPacketAckReceived: ");
-		Serial.print(requestId);
-		Serial.print(" (0x");
-		Serial.print(requestId, HEX);
-		Serial.println(")");
-
 		switch (LinkInfo.LinkState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			Serial.print("AwaitingLinkState = ");
-			Serial.println(ConnectingState);
 			if (ConnectingState == AwaitingConnectionEnum::ConnectingSwitchOver &&
 				SessionId == requestId)
 			{
@@ -118,8 +108,6 @@ protected:
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
-			Serial.print("ConnectingState = ");
-			Serial.println(ConnectingState);
 			switch (ConnectingState)
 			{
 			case ConnectingStagesEnum::ClockSyncSwitchOver:
@@ -127,25 +115,17 @@ protected:
 				{
 					SetConnectingState(ConnectingStagesEnum::ChallengeStage);
 				}
-				else {
-					Serial.println("Denied!");
-				}
 				break;
 			case ConnectingStagesEnum::ChallengeSwitchOver:
 				if (requestId == ChallengeTransaction->GetTransactionId())
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
 				}
-				else {
-					Serial.println("Denied!");
-				}
+				break;
 			case ConnectingStagesEnum::LinkProtocolSwitchOver:
 				if (requestId == SessionId)
 				{
 					SetConnectingState(ConnectingStagesEnum::AllConnectingStagesDone);
-				}
-				else {
-					Serial.println("Denied!");
 				}
 				break;
 			default:
@@ -215,10 +195,6 @@ protected:
 			HostClockSyncTransaction.SetResult(requestId,
 				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
 			SetNextRunASAP();
-		}
-		else {
-			Serial.print("ClockSyncRequest rejected. Conning State: ");
-			Serial.println(ConnectingState);
 		}
 	}
 
@@ -321,7 +297,6 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			NewSession();
-			Serial.println("New Session");
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			HostChallengeTransaction.NewRequest();

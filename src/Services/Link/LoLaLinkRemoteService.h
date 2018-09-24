@@ -74,13 +74,6 @@ protected:
 				//TODO: User UI choice?
 				RemotePMAC = remotePMAC;
 				SessionId = sessionId;
-				Serial.println("GotHost");
-				Serial.print("RemotePMAc: ");
-				PrintPMAC(RemotePMAC);
-				Serial.println();
-				Serial.print("Session: ");
-				Serial.print(SessionId);
-				Serial.println();
 				SetConnectingState(AwaitingConnectionEnum::GotHost);
 			}
 			break;
@@ -91,37 +84,19 @@ protected:
 
 	void OnLinkRequestAcceptedReceived(const uint8_t requestId, const uint32_t localPMAC)
 	{
-		Serial.print("OnLinkRequestAcceptedReceived. ConnectingState: ");
-		Serial.print(ConnectingState);
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			ConnectingState == AwaitingConnectionEnum::GotHost &&
 			PMACGenerator.GetPMAC() == localPMAC)
 		{
-			Serial.println("LinkRequest Accepted");
-			ConnectionProcessStart = millis();
+#ifdef DEBUG_LOLA
+				ConnectionProcessStart = millis();
+#endif
 			SetConnectingState(AwaitingConnectionEnum::AcknowledgingHost);
-		}
-		else 
-		{
-			Serial.println("LinkRequest Accepted Denied");
-			Serial.print("PMACGenerator.GetPMAC(): ");
-			PrintPMAC(PMACGenerator.GetPMAC());
-			Serial.println();
-			Serial.print("localPMAC: ");
-			PrintPMAC(localPMAC);
-			Serial.println();
 		}
 	}
 
 	void OnLinkSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
 	{
-		Serial.print("OnLinkSwitchOverReceived 0x");
-		Serial.println(subHeader, HEX);
-		Serial.print("requestId: ");
-		Serial.println(requestId);
-
-		Serial.print("Substate: ");
-		Serial.println(ConnectingState);
 		switch (LinkInfo.LinkState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
@@ -131,10 +106,10 @@ protected:
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
 			}
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connecting:			
+		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			switch (ConnectingState)
 			{
-			case ConnectingStagesEnum::ClockSyncStage:			
+			case ConnectingStagesEnum::ClockSyncStage:
 				//If we break here, we need to receive two of the same protocol packet.
 			case ConnectingStagesEnum::ClockSyncSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_NTP_SWITCHOVER &&
@@ -151,7 +126,6 @@ protected:
 				}
 				else
 				{
-					Serial.println("Challenge failed!");
 					break;
 				}
 				//If we break here, we need to receive two of the same protocol packet.
@@ -161,20 +135,12 @@ protected:
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
 				}
-				else
-				{
-					Serial.println("ChallengeSwitchOver failed!");
-				}
 				break;
 			case ConnectingStagesEnum::LinkProtocolSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER &&
 					requestId == SessionId)
 				{
 					SetConnectingState(ConnectingStagesEnum::AllConnectingStagesDone);
-				}
-				else
-				{
-					Serial.println("LinkProtocolSwitchOver failed!");
 				}
 				break;
 			default:

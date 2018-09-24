@@ -77,6 +77,10 @@ protected:
 	//Optimized memory usage grunt packet.
 	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
 
+#ifdef DEBUG_LOLA
+	uint32_t ConnectionProcessStart = 0;
+#endif
+
 	//Subservices.
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 	LoLaDiagnosticsService Diagnostics;
@@ -237,8 +241,6 @@ protected:
 
 	void SetConnectingState(const uint8_t connectingState)
 	{
-		Serial.println(connectingState);
-
 		ConnectingState = connectingState;
 		ResetLastSentTimeStamp();
 		SetNextRunASAP();
@@ -342,10 +344,6 @@ protected:
 
 	bool ShouldProcessReceived()
 	{
-		if (!IsSetupOk())
-		{
-			Serial.println("!IsSetupOk()");
-		}
 		return IsSetupOk();
 	}
 
@@ -459,10 +457,12 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Connecting:
 				SetBaseSeed();
 				SetConnectingState(0);
+#ifdef DEBUG_LOLA
 				Serial.print("Connecting to: 0x");
 				Serial.print(RemotePMAC, HEX);
 				Serial.print(" Session code: ");
 				Serial.println(SessionId);
+#endif
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Connected:
@@ -472,14 +472,15 @@ protected:
 				//Notify all link dependent services they can start.
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				SetNextRunASAP();
-
+				
+#ifdef DEBUG_LOLA
 				Serial.print("Link took ");
 				Serial.print(millis() - ConnectionProcessStart);
 				Serial.println(" ms to establish.");
 
 				Serial.print("Conneted Synced TimeStamp");
 				Serial.println(ClockSyncerPointer->GetMillisSync());
-
+#endif
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
 			default:
@@ -515,8 +516,6 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
 			{
-				Serial.print("Kicked out: ");
-				Serial.println(GetElapsedSinceStateStart());
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				SetNextRunASAP();
 			}
@@ -607,13 +606,10 @@ protected:
 		switch (header)
 		{
 		case PACKET_DEFINITION_LINK_HEADER:
-			//Serial.print("LINK_HEADER: ");
 			ATUI_R.array[0] = incomingPacket->GetPayload()[1];
 			ATUI_R.array[1] = incomingPacket->GetPayload()[2];
 			ATUI_R.array[2] = incomingPacket->GetPayload()[3];
 			ATUI_R.array[3] = incomingPacket->GetPayload()[4];
-
-			//Serial.println(ATUI_R.uint);
 
 			switch (incomingPacket->GetPayload()[0])
 			{
@@ -622,12 +618,10 @@ protected:
 				OnLinkDiscoveryReceived();
 				break;
 			case LOLA_LINK_SUBHEADER_PING:
-				Serial.print("Ping");
 				PingedPending = true;
 				SetNextRunASAP();
 				break;
 			case LOLA_LINK_SUBHEADER_PONG:
-				Serial.print("Pong");
 				SetNextRunASAP();
 				break;
 
