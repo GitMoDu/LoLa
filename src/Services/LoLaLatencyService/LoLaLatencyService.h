@@ -161,7 +161,7 @@ private:
 
 	void PreparePacket()
 	{
-		SentId = random(0xFF);
+		SentId = (uint8_t)random((long)UINT8_MAX);
 		PacketHolder.SetDefinition(&PingDefinition);
 		PacketHolder.SetId(SentId);
 	}

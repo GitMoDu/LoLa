@@ -25,7 +25,7 @@ public:
 
 	void SetRandom()
 	{
-		Offset = random(UINT32_MAX);
+		Offset = (uint32_t)random(INT32_MAX);
 	}
 
 	void SetMillis(const uint32_t timeMillis)
