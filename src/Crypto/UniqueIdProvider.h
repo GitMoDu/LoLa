@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+#include <Crypto\TinyCRC.h>
 
 #define UNIQUE_ID_MAX_LENGTH	16
 
@@ -14,7 +15,7 @@
 #elif defined(ARDUINO_ARCH_AVR)
 //For AVR Arduino: first UNIQUE_ID_MAX_LENGTH + 1 bytes of EEPROM are reserved for Serial Id.
 #include <EEPROM.h>
-#include <Crypto\TinyCRC.h>
+
 #else
 #error Platform not supported.
 #endif
@@ -23,6 +24,8 @@ class UniqueIdProvider
 {
 private:
 	uint8_t UUID[UNIQUE_ID_MAX_LENGTH];
+
+	TinyCrcModbus8 CalculatorCRC;
 
 public:
 	UniqueIdProvider()
@@ -71,8 +74,6 @@ public:
 #ifdef ARDUINO_ARCH_AVR
 	bool ReadSerialFromEEPROM()
 	{
-		TinyCrcModbus8 CalculatorCRC;
-
 		CalculatorCRC.Reset();
 		for (uint8_t i = 0; i < UNIQUE_ID_MAX_LENGTH; i++) {
 			UUID[i] = EEPROM.read(i);
