@@ -8,9 +8,6 @@
 
 #define LOLA_INVALID_PMAC						UINT32_MAX
 
-//#if defined(ARDUINO_ARCH_STM32F1)
-//#elif defined(ARDUINO_ARCH_AVR)
-
 class PseudoMacGenerator
 {
 private:

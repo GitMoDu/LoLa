@@ -604,8 +604,6 @@ protected:
 			switch (incomingPacket->GetPayload()[0])
 			{
 				//To both.
-			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
-				OnLinkDiscoveryReceived();
 				break;
 			case LOLA_LINK_SUBHEADER_PING:
 				PingedPending = true;
@@ -616,6 +614,9 @@ protected:
 				break;
 
 				//To Host.
+			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
+				OnLinkDiscoveryReceived();
+				break;
 			case LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST:
 				OnLinkRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
