@@ -24,9 +24,6 @@
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 #endif
 
-//TODO: This class is too big, separate layers by funcionality.
-// Link Layer
-// ClockSyncLayer
 class LoLaLinkService : public IPacketSendService
 {
 private:
@@ -89,7 +86,6 @@ protected:
 	//Callback handler.
 	Signal<uint8_t> LinkStatusUpdated;
 
-
 protected:
 	///Host packet handling.
 	virtual void OnLinkDiscoveryReceived() {}
@@ -108,19 +104,92 @@ protected:
 	virtual void OnLinkSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
 	///
 
-	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 	virtual void SetBaseSeed() {}
-
+	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 	virtual void OnAwaitingConnection() {}
-
-	//Possibly CPU intensive task.
 	virtual void OnChallenging() {}
 	virtual void OnChallengeSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
-
 	virtual void OnClockSync() {}
 	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
-
 	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
+
+private:
+	inline void OnLinkWarningHigh()
+	{
+		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
+		{
+			PreparePing();
+			RequestSendPacket();
+		}
+	}
+
+	inline void OnLinkWarningLow()
+	{
+	}
+
+	inline void OnLinkWarningMedium()
+	{
+		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD)
+		{
+			PreparePing();
+			RequestSendPacket();
+		}
+	}
+
+	void OnConnecting()
+	{
+		if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
+			RemotePMAC == LOLA_INVALID_PMAC)
+		{
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+			SetNextRunASAP();
+		}
+		else
+		{
+			switch (ConnectingState)
+			{
+			case ConnectingStagesEnum::ClockSyncStage:
+				if (ClockSyncerPointer->IsSynced())
+				{
+					SetConnectingState(ConnectingStagesEnum::ClockSyncSwitchOver);
+				}
+				else
+				{
+					OnClockSync();
+				}
+				break;
+			case ConnectingStagesEnum::ClockSyncSwitchOver:
+				OnClockSyncSwitchOver();
+				//We transition forward when we receive the appropriate message.
+				break;
+			case ConnectingStagesEnum::ChallengeStage:
+				if (ChallengeTransaction->IsChallengeComplete())
+				{
+					SetConnectingState(ConnectingStagesEnum::ChallengeSwitchOver);
+					SetNextRunASAP();
+				}
+				else
+				{
+					OnChallenging();
+				}
+				break;
+			case ConnectingStagesEnum::ChallengeSwitchOver:
+				OnChallengeSwitchOver();
+				break;
+			case ConnectingStagesEnum::LinkProtocolSwitchOver:
+				OnLinkProtocolSwitchOver();
+				break;
+			case ConnectingStagesEnum::AllConnectingStagesDone:
+				//All connecting stages complete, we have a link.
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
+				break;
+			default:
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+				SetNextRunASAP();
+				break;
+			}
+		}
+	}
 
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
@@ -256,85 +325,6 @@ protected:
 		LastSent = Millis();
 	}
 
-private:
-	inline void OnLinkWarningHigh()
-	{
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
-		{
-			PreparePing();
-			RequestSendPacket();
-		}
-	}
-
-	inline void OnLinkWarningLow()
-	{
-	}
-
-	inline void OnLinkWarningMedium()
-	{
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD)
-		{
-			PreparePing();
-			RequestSendPacket();
-		}
-	}
-
-	void OnConnecting()
-	{
-		if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
-			RemotePMAC == LOLA_INVALID_PMAC)
-		{
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-			SetNextRunASAP();
-		}
-		else
-		{
-			switch (ConnectingState)
-			{
-			case ConnectingStagesEnum::ClockSyncStage:
-				if (ClockSyncerPointer->IsSynced())
-				{
-					SetConnectingState(ConnectingStagesEnum::ClockSyncSwitchOver);
-				}
-				else
-				{
-					OnClockSync();
-				}
-				break;
-			case ConnectingStagesEnum::ClockSyncSwitchOver:
-				OnClockSyncSwitchOver();
-				//We transition forward when we receive the appropriate message.
-				break;
-			case ConnectingStagesEnum::ChallengeStage:
-				if (ChallengeTransaction->IsChallengeComplete())
-				{
-					SetConnectingState(ConnectingStagesEnum::ChallengeSwitchOver);
-					SetNextRunASAP();
-				}
-				else
-				{
-					OnChallenging();
-				}
-				break;
-			case ConnectingStagesEnum::ChallengeSwitchOver:
-				OnChallengeSwitchOver();
-				break;
-			case ConnectingStagesEnum::LinkProtocolSwitchOver:
-				OnLinkProtocolSwitchOver();
-				break;
-			case ConnectingStagesEnum::AllConnectingStagesDone:
-				//All connecting stages complete, we have a link.
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
-				break;
-			default:
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-				SetNextRunASAP();
-				break;
-			}
-		}
-	}
-
-protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
@@ -796,38 +786,5 @@ private:
 		PacketHolder.SetId(requestId);
 		PacketHolder.GetPayload()[0] = subHeader;
 	}
-
-	//void PrepareRssi()
-	//{
-	//	PrepareShortPacket(LOLA_LINK_SERVICE_SHORT_SUBHEADER_HELLO, SessionId);
-
-	//	//TODO: Add Rssi indicator to tail, for future auto-gain.
-	//}
-
-	//TODO:
-	//virtual void OnClockSyncWarning()
-	//{
-	//}
-
-	////Returns false if clock is out of the error margin.
-	//inline bool OnKeepingClockSynced()
-	//{
-	//	if (SyncedClock->GetLastSyncElapsedMillis() > LOLA_LINK_SERVICE_MAX_SYNC_ELAPSED)
-	//	{
-	//		//Too much time has elapsed since the last sync.
-	//		return false;
-	//	}
-	//	else if (SyncedClock->GetLastSyncElapsedMillis() > LOLA_LINK_SERVICE_MIN_ELAPSED_RESYNC)
-	//	{
-	//		//Remote should send a NTP refresh, otherwise Host will disconnect.
-	//		//TODO: Document in protocol.
-	//		OnClockSyncWarning();
-
-	//		return false;
-	//	}
-
-	//	return true;
-	//}
-	///
 };
 #endif

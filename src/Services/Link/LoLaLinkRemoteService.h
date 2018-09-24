@@ -16,9 +16,6 @@ private:
 		WaitingForSwitchOver = 3
 	};
 
-	uint32_t ClockSyncHelper = 0;
-	uint32_t LastKeepingClockSynced = 0;
-
 	LinkRemoteClockSyncer ClockSyncer;
 	ClockSyncRequestTransaction RemoteClockSyncTransaction;
 
