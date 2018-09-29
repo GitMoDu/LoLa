@@ -458,7 +458,7 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Connected:
 				LinkInfo.StampLinkStarted();
 				SetBaseSeed();
-				CryptoSeed.SetTOTPEnabled(true, ChallengeTransaction->GetToken());
+				CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
 				//Notify all link dependent services they can start.
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				SetNextRunASAP();
