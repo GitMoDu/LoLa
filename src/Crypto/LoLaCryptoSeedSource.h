@@ -5,83 +5,90 @@
 
 #include <Crypto\TinyCRC.h>
 
+// Hop period should be a multiple of Send Slot Period.
+#define LOLA_CRYPTO_TOTP_PERIOD_MILLIS	(10*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS) //Max 256 ms of hop period.
+
+
 class LoLaCryptoSeedSource : public ISeedSource
 {
 private:
-	uint8_t CachedBaseCRC = 0;
+	uint8_t CachedToken = 0;
 	TinyCrcModbus8 CalculatorCRC;
 	boolean TOTPEnabled = false;
 
+	const uint8_t TOTPPeriod = LOLA_CRYPTO_TOTP_PERIOD_MILLIS;
+	uint32_t TOTPSeed = 0;
+
 	uint8_t Offset = 0;
 
-	union ArrayToUint32 {
-		byte array[4];
-		uint32_t uint;
-	} PMACToArray;
+	ClockSource* SyncedClock = nullptr;
+
+	//Helper.
+	uint32_t TOTPIndex = 0;
 
 private:
 	uint32_t GetTOTP()
 	{
-		//TODO: Get extra TOTP seed
-		return 0;
+		TOTPIndex = SyncedClock->GetMillis() / TOTPPeriod;
+
+		return TOTPIndex;
+	}
+
+	uint8_t GetSeed()
+	{
+		if (TOTPSeed == 0)
+		{
+			return TOTPSeed + 1;
+		}
+
+		return TOTPSeed;
 	}
 
 public:
 	void Reset()
 	{
 		CalculatorCRC.Reset();
-		CachedBaseCRC = 0;
+		CachedToken = 0;
 		TOTPEnabled = false;
 	}
 
-	void SetTOTPEnabled(const bool enabled, const uint32_t seed = 0)
+	void SetTOTPEnabled(const bool enabled, ClockSource* syncedClock, const uint32_t seed = 0)
 	{
-		TOTPEnabled = enabled;
-	}
-
-	inline void PMACToArrayToCRC()
-	{
-		CalculatorCRC.Update(PMACToArray.array[0]);
-		CalculatorCRC.Update(PMACToArray.array[1]);
-		CalculatorCRC.Update(PMACToArray.array[2]);
-		CalculatorCRC.Update(PMACToArray.array[3]);
+		SyncedClock = syncedClock;
+		TOTPEnabled = enabled && (SyncedClock != nullptr);
+		TOTPSeed = seed;
 	}
 
 	void SetBaseSeed(const uint32_t hostPMAC, const uint32_t remotePMAC, const uint8_t sessionId)
 	{
 		CalculatorCRC.Reset();
 
-		PMACToArray.uint = hostPMAC;
-		PMACToArrayToCRC();
-
-		PMACToArray.uint = remotePMAC;
-		PMACToArrayToCRC();
-
+		CalculatorCRC.Update32(hostPMAC);
+		CalculatorCRC.Update32(remotePMAC);
 		CalculatorCRC.Update(sessionId);
 
-		CachedBaseCRC = CalculatorCRC.GetCurrent();
+		CachedToken = CalculatorCRC.GetCurrent();
 
-		if (CachedBaseCRC == 0)
+		if (CachedToken == 0)
 		{
-			CachedBaseCRC++;
+			CachedToken++;
 		}
 	}
 
-	uint8_t GetSeed()
+	uint8_t GetToken()
 	{
-		if (false && TOTPEnabled)//TODO:
+		if (TOTPEnabled)
 		{
-			CalculatorCRC.Reset(CachedBaseCRC);
+			CalculatorCRC.Reset(CachedToken);
 
-			PMACToArray.uint = GetTOTP();
-			PMACToArrayToCRC();
+			CalculatorCRC.Update32(GetTOTP());
 
 			return CalculatorCRC.GetCurrent();
 		}
 		else
 		{
-			return CachedBaseCRC;
-		}		
+			return CachedToken;
+		}
 	}
 };
 #endif

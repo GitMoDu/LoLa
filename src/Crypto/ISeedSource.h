@@ -8,6 +8,6 @@
 class ISeedSource
 {
 public:
-	virtual uint8_t GetSeed() { return 0; }
+	virtual uint8_t GetToken() { return 0; }
 };
 #endif

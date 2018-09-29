@@ -89,7 +89,7 @@ public:
 	{
 		if (CryptoSeed != nullptr)
 		{
-			return CryptoSeed->GetSeed();
+			return CryptoSeed->GetToken();
 		}
 		else
 		{
