@@ -57,6 +57,11 @@ class TinyCrcModbus8
 private:
 	uint8_t Seed = 0;
 
+	union ArrayToUint32 {
+		byte array[4];
+		uint32_t uint;
+	} ATUI;
+
 public:
 	uint8_t GetCurrent()
 	{
@@ -66,6 +71,17 @@ public:
 	uint8_t Update(const uint8_t value)
 	{
 		Seed = pgm_read_byte(&crc_table_smbus[Seed ^ value]);
+
+		return Seed;
+	}
+
+	uint8_t Update32(const uint32_t value)
+	{
+		ATUI.uint = value;
+		Update(ATUI.array[0]);
+		Update(ATUI.array[1]);
+		Update(ATUI.array[2]);
+		Update(ATUI.array[3]);
 
 		return Seed;
 	}
