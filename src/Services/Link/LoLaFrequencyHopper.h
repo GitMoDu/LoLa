@@ -83,7 +83,7 @@ public:
 
 	bool Callback()
 	{
-		GetLoLa()->SetChannel(GetHopChannel(MillisSync));
+		GetLoLa()->SetChannel(GetHopChannel(MillisSync()));
 
 		//Instead of relying purely on the scheduler, we adapt to any timming mis-sync on every hop.
 		SetNextRunDelay(GetNextSwitchOverDelay(MillisSync()));
