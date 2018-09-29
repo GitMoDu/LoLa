@@ -130,10 +130,7 @@ private:
 		//Ooooooor, we can use the synced seed as a common source for a pseudo-random distribution.
 		Hasher.Reset(TokenCachedHash);
 
-		Hasher.Update(HopSeed.array[0]);
-		Hasher.Update(HopSeed.array[1]);
-		Hasher.Update(HopSeed.array[2]);
-		Hasher.Update(HopSeed.array[3]);
+		Hasher.Update32(HopSeed);
 
 		return map(Hasher.GetCurrent(), 0, UINT8_MAX, ChannelMin, ChannelMax);
 	}
