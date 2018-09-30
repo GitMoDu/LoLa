@@ -25,10 +25,7 @@ void LoLaPacketDriver::OnIncoming(const int16_t rssi)
 {
 	LastReceived = GetMillis();
 	LastReceivedRssi = rssi;
-	if (!IncomingInfo.HasInfo())
-	{
-		IncomingInfo.SetInfo(LastReceived, LastReceivedRssi);
-	}
+	IncomingInfo.SetInfo(LastReceived, LastReceivedRssi);
 }
 
 //When RF has packet to read.
@@ -58,9 +55,9 @@ void LoLaPacketDriver::OnReceived()
 	{
 	}
 	else
-	{	//Packet received Ok, let's update that info really quick.
-		LastValidReceived = IncomingInfo.PacketTime;
-		LastValidReceivedRssi = IncomingInfo.PacketRSSI;
+	{	//Packet received Ok, let's commit that info really quick.
+		LastValidReceived = IncomingInfo.GetPacketTime();
+		LastValidReceivedRssi = IncomingInfo.GetPacketRSSI();
 		IncomingInfo.Clear();
 		//Is Ack
 		if (Receiver.GetIncomingDefinition()->GetHeader() == PACKET_DEFINITION_ACK_HEADER)
@@ -99,6 +96,7 @@ bool LoLaPacketDriver::Setup()
 	{
 		//TODO: Get comms entropy source, abstracted.
 		//randomSeed(...);
+		IncomingInfo.Clear();
 
 		SetupOk = true;
 	}
@@ -201,14 +199,4 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 	}
 
 	return false;
-}
-
-uint32_t LoLaPacketDriver::GetLastValidReceivedMillis()
-{
-	return  LastValidReceived;
-}
-
-int16_t LoLaPacketDriver::GetLastValidRSSI()
-{
-	return LastValidReceivedRssi;
 }
