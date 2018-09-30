@@ -11,7 +11,7 @@
 #include <stdint.h>
 #endif
 
-#define ILOLA_DEFAULT_CHANNEL				20
+#define ILOLA_DEFAULT_CHANNEL				1
 
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
 
