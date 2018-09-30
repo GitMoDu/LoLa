@@ -86,7 +86,7 @@ protected:
 			PMACGenerator.GetPMAC() == localPMAC)
 		{
 #ifdef DEBUG_LOLA
-				ConnectionProcessStart = millis();
+			ConnectionProcessStart = millis();
 #endif
 			SetConnectingState(AwaitingConnectionEnum::AcknowledgingHost);
 		}
@@ -223,6 +223,53 @@ protected:
 		}
 	}
 
+	void OnKeepingConnected()
+	{
+		if (RemoteClockSyncTransaction.IsResultWaiting())
+		{
+			if (RemoteClockSyncTransaction.GetResult() == 0)
+			{
+				ClockSyncer.StampSynced();
+			}
+			else if(abs(RemoteClockSyncTransaction.GetResult()) < CLOCK_SYNC_MAX_TUNE_ERROR)
+			{
+				ClockSyncer.OnEstimationErrorReceived(RemoteClockSyncTransaction.GetResult());
+				Serial.print("Clock Sync tuned: ");
+				Serial.println(RemoteClockSyncTransaction.GetResult());
+			}
+			else 
+			{
+				Serial.print("Clock Sync tune outlier rejected: ");
+				Serial.println(RemoteClockSyncTransaction.GetResult());
+			}
+
+			RemoteClockSyncTransaction.Reset();
+			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+		}
+		else if (ClockSyncer.IsTimeToTune())
+		{
+			if (!RemoteClockSyncTransaction.IsRequested())
+			{
+				RemoteClockSyncTransaction.Reset();
+				PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
+				RemoteClockSyncTransaction.SetRequested();
+				RequestSendPacket();
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			}
+		}
+		//else if (false)
+		//{
+		//	//TODO: Link info update.
+		//}
+		else
+		{
+			SetNextRunDelay(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD);
+		}
+	}
+
 	void OnClockSync()
 	{
 		if (RemoteClockSyncTransaction.IsResultWaiting())
@@ -243,11 +290,22 @@ protected:
 			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
 		}
 	}
-
+	
 	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
 		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ClockSyncStage &&
+			RemoteClockSyncTransaction.IsRequested() &&
+			RemoteClockSyncTransaction.GetId() == requestId)
+		{
+			RemoteClockSyncTransaction.SetResult(estimatedError);
+			SetNextRunASAP();
+		}
+	}
+
+	void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError)
+	{
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
 		{
@@ -264,6 +322,9 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			ClearSession();
 			break;
+		case LoLaLinkInfo::LinkStateEnum::Connected:
+			RemoteClockSyncTransaction.Reset();
+			break;
 		default:
 			break;
 		}
@@ -274,7 +335,8 @@ protected:
 		LoLaLinkService::OnPreSend();
 
 		if (PacketHolder.GetDataHeader() == LinkDefinition.GetHeader() &&
-			PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_REQUEST)
+			(PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_REQUEST ||
+				PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST))
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
 			ATUI_S.uint = ClockSyncer.GetMillisSync();

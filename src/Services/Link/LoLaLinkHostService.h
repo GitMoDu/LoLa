@@ -197,6 +197,46 @@ protected:
 			SetNextRunASAP();
 		}
 	}
+	
+	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
+	{
+		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
+		{
+			HostClockSyncTransaction.SetResult(requestId,
+				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
+			SetNextRunASAP();
+		}
+	}
+
+	void OnKeepingConnected()
+	{
+		if (HostClockSyncTransaction.IsResultReady())
+		{
+			if (HostClockSyncTransaction.GetResult() == 0)
+			{
+				ClockSyncer.StampSynced();
+			}
+			else
+			{
+				Serial.print("Clock Sync error: ");
+				Serial.println(HostClockSyncTransaction.GetResult());
+			}
+
+			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
+
+			PrepareClockSyncTuneResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastError());
+			HostClockSyncTransaction.Reset();
+			RequestSendPacket();
+		}
+		//else if (false)
+		//{
+		//	//TODO: Link info update.
+		//}
+		else
+		{
+			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+		}
+	}
 
 	void OnClockSync()
 	{
@@ -300,6 +340,9 @@ protected:
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			HostChallengeTransaction.NewRequest();
+			break;
+		case LoLaLinkInfo::LinkStateEnum::Connected:
+			HostClockSyncTransaction.Reset();
 			break;
 		default:
 			break;
