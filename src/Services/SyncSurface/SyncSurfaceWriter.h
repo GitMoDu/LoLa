@@ -161,7 +161,7 @@ private:
 			ResetLastSentTimeStamp();
 
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			Serial.print(Millis());
+			Serial.print(GetLoLa()->GetMillisSync());
 			Serial.print(F(": Updated Writer Syncing to "));
 #endif
 			switch (newState)
