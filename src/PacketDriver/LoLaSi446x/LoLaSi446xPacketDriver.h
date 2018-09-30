@@ -18,8 +18,8 @@
 #endif // !MOCK_RADIO
 
 
-//Channel to listen to(0 - 255)
-#define CHANNEL 100
+//Channel to listen to(0 - 20)
+#define CHANNEL 1
 
 
 #define TRANSMIT_POWER 12
