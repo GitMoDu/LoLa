@@ -153,7 +153,7 @@ public:
 		return Seed;
 	}
 
-	uint8_t Reset(const uint8_t seed)
+	uint32_t Reset(const uint32_t seed)
 	{
 		Seed = seed;
 
