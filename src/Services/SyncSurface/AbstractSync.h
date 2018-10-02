@@ -122,9 +122,13 @@ protected:
 		{
 			Serial.println(F("No Remote hash"));
 		}
-		if (GetLocalHash() != LastRemoteHash)
+		else if (GetLocalHash() != LastRemoteHash)
 		{
 			Serial.println(F("Hash mismatch"));
+		}
+		else 
+		{
+			Serial.println(F("Hash match"));
 		}
 #endif
 		return (HasRemoteHash() &&
