@@ -33,7 +33,7 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	void OnSendOk(const uint32_t sendDuration)
+	void OnSendOk(const uint8_t header, const uint32_t sendDuration)
 	{
 		if (SyncState == SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
 		{
