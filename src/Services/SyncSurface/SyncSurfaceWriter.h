@@ -4,8 +4,6 @@
 #define _SYNCSURFACEWRITER_h
 
 
-//#define LOLA_SYNC_SURFACE_SERVICE_SEND_NEXT_BLOCK_BACK_OFF_PERIOD_MILLIS	2
-
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 
 class SyncSurfaceWriter : public SyncSurfaceBase

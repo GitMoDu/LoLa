@@ -86,12 +86,11 @@ protected:
 		switch (ReaderState)
 		{
 		case SyncReaderState::WaitingForDataUpdate:
-			if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
+			if (GetElapsedSinceLastReceived() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
 			{
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(Millis());
-				Serial.print(F(": WaitingForDataUpdate Timeout. Elapsed: "));
-				Serial.print(GetElapsedSinceStateStart());
+				Serial.print(F("WaitingForDataUpdate Timeout. Elapsed since last received: "));
+				Serial.print(GetElapsedSinceLastReceived());
 #endif
 				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			}
