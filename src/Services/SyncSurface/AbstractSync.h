@@ -117,7 +117,7 @@ protected:
 
 	bool HashesMatch()
 	{
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 		if (!HasRemoteHash())
 		{
 			Serial.println(F("No Remote hash"));
