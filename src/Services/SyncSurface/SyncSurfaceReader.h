@@ -55,9 +55,20 @@ protected:
 
 	void OnSyncStateUpdated(const SyncStateEnum newState)
 	{
-		if (newState == SyncStateEnum::Syncing)
+		switch (newState)
 		{
+		case SyncStateEnum::WaitingForServiceDiscovery:
+			break;
+		case SyncStateEnum::Syncing:
 			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
+			break;
+		case SyncStateEnum::Synced:
+			TrackedSurface->GetTracker()->ClearAll();
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
 		}
 	}
 

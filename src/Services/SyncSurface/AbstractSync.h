@@ -215,14 +215,6 @@ protected:
 				TrackedSurface->GetTracker()->SetAll();
 				break;
 			case SyncStateEnum::Synced:
-				if (TrackedSurface->GetTracker()->HasSet())
-				{
-					//State progression denied while there are set bits in tracker.
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-					Serial.println(F("State progression denied while there are set bits in tracker."));
-#endif
-					return;
-				}
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Synced"));
 #endif
