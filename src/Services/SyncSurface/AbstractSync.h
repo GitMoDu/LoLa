@@ -211,6 +211,7 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("FullSync"));
 #endif
+				InvalidateLocalHash();
 				InvalidateRemoteHash();
 				TrackedSurface->GetTracker()->SetAll();
 				break;
@@ -218,7 +219,7 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("Synced"));
 #endif
-				InvalidateRemoteHash();
+				InvalidateLocalHash();
 				break;
 			case SyncStateEnum::Disabled:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
@@ -261,8 +262,7 @@ protected:
 			OnSyncActive();
 			break;
 		case SyncStateEnum::Synced:
-			if (TrackedSurface->GetTracker()->HasSet() ||
-				!HashesMatch())
+			if (TrackedSurface->GetTracker()->HasSet())
 			{
 				UpdateSyncState(SyncStateEnum::Syncing);
 			}
