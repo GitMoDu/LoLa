@@ -16,9 +16,8 @@
 #define ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS		(uint32_t)1
 
 #define SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY		0
-#define SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHING			1
-#define SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHED			2
-#define SYNC_SURFACE_META_SUB_HEADER_FINISHING_RESPONSE		3
+#define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED		1
+#define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY	2
 
 class SyncSurfaceBase : public AbstractSync
 {
@@ -47,12 +46,12 @@ protected:
 	virtual void OnBlockReceived(const uint8_t index, uint8_t * payload) {}
 
 	//Reader
-	virtual void OnSyncFinishingReceived() {}
+	virtual void OnUpdateFinishedReceived() {}
 	virtual void OnSyncFinishedReceived() {}
 
 	//Writer
 	virtual void OnServiceDiscoveryReceived() {}
-	virtual void OnSyncResponseReceived() {}
+	virtual void OnUpdateFinishedReplyReceived() {}
 
 	//Common
 	virtual void OnSyncStateUpdated(const SyncStateEnum newState) {}
@@ -106,18 +105,24 @@ protected:
 			switch (incomingPacket->GetId())
 			{
 				//To Reader.
-			case SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHING:
-				OnSyncFinishingReceived();
-				break;
-			case SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHED:
-				OnSyncFinishedReceived();
+			case SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED:
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+				Serial.println(F("OnUpdateFinishedReceived"));
+#endif
+				OnUpdateFinishedReceived();
 				break;
 
 				//To Writer.
-			case SYNC_SURFACE_META_SUB_HEADER_FINISHING_RESPONSE:
-				OnSyncResponseReceived();
+			case SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY:
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+				Serial.println(F("OnUpdateFinishedReplyReceived"));
+#endif
+				OnUpdateFinishedReplyReceived();
 				break;
 			case SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY:
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+				Serial.println(F("OnServiceDiscoveryReceived"));
+#endif
 				OnServiceDiscoveryReceived();
 				break;
 			default:
@@ -163,19 +168,14 @@ protected:
 		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY);
 	}
 
-	void PrepareFinishingSyncPacket()
+	void PrepareUpdateFinishedPacket()
 	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHING);
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED);
 	}
 
-	void PrepareFinishedSyncPacket()
+	void PrepareUpdateFinishedReplyPacket()
 	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SYNC_FINISHED);
-	}
-
-	void PrepareFinishingResponsePacket()
-	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_FINISHING_RESPONSE);
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
 	}
 
 	bool PrepareBlockPacketHeader(const uint8_t index)

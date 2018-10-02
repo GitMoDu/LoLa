@@ -21,7 +21,7 @@ private:
 	{
 		UpdatingBlocks = 0,
 		SendingBlock = 1,
-		SendingSyncComplete = 2,
+		SendingFinished = 2
 	} WriterState = SyncWriterState::UpdatingBlocks;
 
 	uint8_t SurfaceSendingIndex = 0;
@@ -72,26 +72,21 @@ protected:
 		Disable();
 	}
 
-	void OnSyncResponseReceived()
+	void OnUpdateFinishedReplyReceived()
 	{
 		if (SyncState == SyncStateEnum::Syncing)
 		{
 			switch (WriterState)
 			{
-			case SyncSurfaceWriter::UpdatingBlocks:
-			case SyncSurfaceWriter::SendingBlock:
-				if (HashesMatch())
+			case SyncSurfaceWriter::SendingFinished:
+				if (!TrackedSurface->GetTracker()->HasSet() && HashesMatch())
 				{
-					PrepareFinishedSyncPacket();
-					RequestSendPacket();
-					UpdateSyncingState(SyncWriterState::SendingSyncComplete);
+					UpdateSyncState(SyncStateEnum::Synced);
 				}
 				else
 				{
-					TrackedSurface->GetTracker()->SetAll();
+					SetNextRunASAP();
 				}
-				break;
-			case SyncSurfaceWriter::SendingSyncComplete:
 				break;
 			default:
 				break;
@@ -112,24 +107,25 @@ protected:
 			}
 			else
 			{
-				if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS)
-				{
-					PrepareFinishingSyncPacket();
-					RequestSendPacket();
-				}
-				else
-				{
-					SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
-				}
+				UpdateSyncingState(SyncWriterState::SendingFinished);
 			}
 			break;
 		case SyncWriterState::SendingBlock:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			TrackedSurface->GetTracker()->Debug(&Serial);
 			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
 			break;
-		case SyncWriterState::SendingSyncComplete:
-			UpdateSyncState(SyncStateEnum::Synced);
-			break;
+		case SyncWriterState::SendingFinished:
+			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS)
+			{
+				PrepareUpdateFinishedPacket();
+				RequestSendPacket();
+			}
+			else
+			{
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
+			}			
+			break;			 
 		default:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
@@ -176,9 +172,9 @@ private:
 				Serial.println(F("SendingBlock"));
 #endif
 				break;
-			case SyncWriterState::SendingSyncComplete:
+			case SyncWriterState::SendingFinished:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("SyncComplete"));
+				Serial.println(F("SendingFinished"));
 #endif
 				break;
 			default:

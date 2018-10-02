@@ -57,15 +57,11 @@ protected:
 	{
 		switch (newState)
 		{
-		case SyncStateEnum::WaitingForServiceDiscovery:
-			break;
 		case SyncStateEnum::Syncing:
 			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
 			break;
 		case SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->ClearAll();
-			break;
-		case SyncStateEnum::Disabled:
 			break;
 		default:
 			break;
@@ -105,15 +101,9 @@ protected:
 			}
 			break;
 		case SyncReaderState::WaitingForSyncComplete:
-			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS)
-			{
-				PrepareFinishingResponsePacket();
-				RequestSendPacket();
-			}
-			else
-			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS);
-			}
+			PrepareUpdateFinishedReplyPacket();
+			RequestSendPacket();
+			//We assume we are synced as soon as the packet gets sent ok.
 			break;
 		default:
 			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
@@ -121,33 +111,18 @@ protected:
 		}
 	}
 
-	void OnSyncFinishedReceived()
+	void OnSendOk(const uint8_t header, const uint32_t sendDuration)
 	{
-		switch (SyncState)
+		if (SyncState == SyncStateEnum::Syncing &&
+			ReaderState == SyncReaderState::WaitingForSyncComplete &&
+			HashesMatch())
 		{
-		case SyncStateEnum::Syncing:
-			switch (ReaderState)
-			{
-			case SyncReaderState::WaitingForSyncComplete:
-				if (HashesMatch())
-				{
-					TrackedSurface->GetTracker()->ClearAll();
-					UpdateSyncState(SyncStateEnum::Synced);
-				}				
-				break;
-			default:
-				break;
-			}
-			break;
-		case SyncStateEnum::Synced:
-			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-			break;
-		default:
-			break;
+			UpdateSyncState(SyncStateEnum::Synced);
 		}
+		SetNextRunASAP();
 	}
 
-	void OnSyncFinishingReceived()
+	void OnUpdateFinishedReceived()
 	{
 		switch (SyncState)
 		{
@@ -155,13 +130,22 @@ protected:
 			switch (ReaderState)
 			{
 			case SyncReaderState::WaitingForDataUpdate:
-				UpdateSyncingState(SyncReaderState::WaitingForSyncComplete);
+				if (HashesMatch())
+				{
+					UpdateSyncingState(SyncReaderState::WaitingForSyncComplete);
+				}
+				//else 
+				//{
+				//	//TODO: Add resync sub-state, where the reader just asks the writer to start again.
+				//	//UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+				//}
 				break;
 			default:
 				break;
 			}
 			break;
 		case SyncStateEnum::Synced:
+			//TODO: Add resync sub-state, where the reader just asks the writer to start again.
 			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			break;
 		default:
