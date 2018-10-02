@@ -13,13 +13,6 @@ public:
 	{
 	}
 
-private:
-	enum SyncReaderState : uint8_t
-	{
-		WaitingForDataUpdate = 0,
-		WaitingForSyncComplete = 1,
-	} ReaderState = WaitingForDataUpdate;
-
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -45,9 +38,6 @@ protected:
 			TrackedSurface->GetTracker()->ClearBit(index);
 			UpdateSyncState(SyncStateEnum::Syncing);
 			break;
-		case SyncStateEnum::Syncing:
-			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
-			break;
 		default:
 			break;
 		}
@@ -58,10 +48,12 @@ protected:
 		switch (newState)
 		{
 		case SyncStateEnum::Syncing:
-			UpdateSyncingState(SyncReaderState::WaitingForDataUpdate);
+			TrackedSurface->GetTracker()->SetAll();
+			TrackedSurface->GetTracker()->Debug(&Serial);
 			break;
 		case SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->ClearAll();
+			TrackedSurface->GetTracker()->Debug(&Serial);
 			break;
 		default:
 			break;
@@ -70,7 +62,11 @@ protected:
 
 	void OnWaitingForServiceDiscovery()
 	{
-		if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_RETRY_PERIDO)
+		if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
+		{
+			Disable();
+		}
+		else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_RETRY_PERIDO)
 		{
 			PrepareServiceDiscoveryPacket();
 			RequestSendPacket();
@@ -83,42 +79,20 @@ protected:
 
 	void OnSyncActive()
 	{
-		switch (ReaderState)
+		if (GetElapsedSinceLastReceived() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
 		{
-		case SyncReaderState::WaitingForDataUpdate:
-			if (GetElapsedSinceLastReceived() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
-			{
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(F("WaitingForDataUpdate Timeout. Elapsed since last received: "));
-				Serial.print(GetElapsedSinceLastReceived());
+			Serial.print(F("WaitingForDataUpdate Timeout. Elapsed since last received: "));
+			Serial.print(GetElapsedSinceLastReceived());
 #endif
-				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-			}
-			else
-			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD);
-			}
-			break;
-		case SyncReaderState::WaitingForSyncComplete:
-			PrepareUpdateFinishedReplyPacket();
-			RequestSendPacket();
-			//We assume we are synced as soon as the packet gets sent ok.
-			break;
-		default:
 			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-			break;
 		}
-	}
-
-	void OnSendOk(const uint8_t header, const uint32_t sendDuration)
-	{
-		if (SyncState == SyncStateEnum::Syncing &&
-			ReaderState == SyncReaderState::WaitingForSyncComplete &&
-			HashesMatch())
+		else
 		{
-			UpdateSyncState(SyncStateEnum::Synced);
+			InvalidateLocalHash();
+			UpdateLocalHash();
+			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD);
 		}
-		SetNextRunASAP();
 	}
 
 	void OnUpdateFinishedReceived()
@@ -126,62 +100,28 @@ protected:
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
-			switch (ReaderState)
+			UpdateLocalHash();
+			PrepareUpdateFinishedReplyPacket();
+			RequestSendPacket();
+			if (HashesMatch())
 			{
-			case SyncReaderState::WaitingForDataUpdate:
-				if (HashesMatch())
-				{
-					UpdateSyncingState(SyncReaderState::WaitingForSyncComplete);
-				}
-				//else 
-				//{
-				//	//TODO: Add resync sub-state, where the reader just asks the writer to start again.
-				//	//UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-				//}
-				break;
-			default:
-				break;
+				UpdateSyncState(SyncStateEnum::Synced);
 			}
-			break;
 		case SyncStateEnum::Synced:
+			UpdateLocalHash();
+			if (HashesMatch())
+			{
+				PrepareUpdateFinishedReplyPacket();
+				RequestSendPacket();
+			}
+			else
+			{
+				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+			}
 			//TODO: Add resync sub-state, where the reader just asks the writer to start again.
-			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			break;
 		default:
 			break;
-		}
-	}
-
-private:
-	void UpdateSyncingState(const SyncReaderState newState)
-	{
-		if (ReaderState != newState)
-		{
-			SetNextRunASAP();
-
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			Serial.print(Millis());
-			Serial.print(F(": Updated Reader to "));
-#endif
-			ReaderState = newState;
-
-			switch (ReaderState)
-			{
-			case SyncReaderState::WaitingForDataUpdate:
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("WaitingForDataUpdate"));
-#endif
-				InvalidateLocalHash();
-				break;
-			case SyncReaderState::WaitingForSyncComplete:
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("WaitingForSyncComplete"));
-#endif
-				break;
-			default:
-				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-				break;
-			}
 		}
 	}
 };

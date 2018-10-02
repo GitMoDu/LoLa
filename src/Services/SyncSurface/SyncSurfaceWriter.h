@@ -48,6 +48,7 @@ protected:
 		switch (newState)
 		{
 		case SyncStateEnum::WaitingForServiceDiscovery:
+			InvalidateRemoteHash();
 			Disable();
 		case SyncStateEnum::Syncing:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
@@ -59,9 +60,20 @@ protected:
 
 	void OnServiceDiscoveryReceived()
 	{
-		if (SyncState != SyncStateEnum::Disabled)
+		switch (SyncState)
 		{
+		case SyncStateEnum::Syncing:
+			if (WriterState == SyncWriterState::SendingFinished)
+			{
+				TrackedSurface->GetTracker()->SetAll();
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			}			
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
 			UpdateSyncState(SyncStateEnum::Syncing);
+			break;
 		}
 	}
 
@@ -76,14 +88,18 @@ protected:
 		{
 			switch (WriterState)
 			{
-			case SyncSurfaceWriter::SendingFinished:
-				if (!TrackedSurface->GetTracker()->HasSet() && HashesMatch())
+			case SyncWriterState::SendingFinished:
+				if (TrackedSurface->GetTracker()->HasSet())
+				{
+					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+				}
+				else if (HashesMatch())
 				{
 					UpdateSyncState(SyncStateEnum::Synced);
 				}
-				else
+				else 
 				{
-					SetNextRunASAP();
+					TrackedSurface->GetTracker()->SetAll();	
 				}
 				break;
 			default:
@@ -114,14 +130,15 @@ protected:
 			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::SendingFinished:
-			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS)
+			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_RETRY_PERIDO)
 			{
+				UpdateLocalHash();
 				PrepareUpdateFinishedPacket();
 				RequestSendPacket();
 			}
 			else
 			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
 			}			
 			break;			 
 		default:
@@ -169,6 +186,7 @@ private:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("SendingBlock"));
 #endif
+				InvalidateRemoteHash();
 				break;
 			case SyncWriterState::SendingFinished:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
