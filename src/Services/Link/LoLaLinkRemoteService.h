@@ -227,21 +227,7 @@ protected:
 	{
 		if (RemoteClockSyncTransaction.IsResultWaiting())
 		{
-			if (RemoteClockSyncTransaction.GetResult() == 0)
-			{
-				ClockSyncer.StampSynced();
-			}
-			else if(abs(RemoteClockSyncTransaction.GetResult()) < CLOCK_SYNC_MAX_TUNE_ERROR)
-			{
-				ClockSyncer.OnEstimationErrorReceived(RemoteClockSyncTransaction.GetResult());
-				Serial.print("Clock Sync tuned: ");
-				Serial.println(RemoteClockSyncTransaction.GetResult());
-			}
-			else 
-			{
-				Serial.print("Clock Sync tune outlier rejected: ");
-				Serial.println(RemoteClockSyncTransaction.GetResult());
-			}
+			ClockSyncer.OnTuneErrorReceived(RemoteClockSyncTransaction.GetResult());
 
 			RemoteClockSyncTransaction.Reset();
 			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);

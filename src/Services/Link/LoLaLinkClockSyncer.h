@@ -12,6 +12,9 @@
 #define CLOCK_SYNC_MAX_TUNE_ERROR							5
 #define CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS		(uint32_t)1000
 
+#define LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR				(int8_t)10
+#define LOLA_CLOCK_SYNC_TUNE_RATIO					(int8_t)2
+
 class LoLaLinkClockSyncer
 {
 private:
@@ -107,6 +110,8 @@ class LinkRemoteClockSyncer : public LoLaLinkClockSyncer
 private:
 	boolean HostSynced = false;
 
+	int8_t ClockTuneAccumulator = 0;
+
 protected:
 	void OnReset()
 	{
@@ -144,6 +149,62 @@ public:
 		else
 		{
 			AddOffset(estimationError);
+		}
+	}
+
+	void OnTuneErrorReceived(const int32_t estimationError)
+	{
+		if (abs(estimationError > CLOCK_SYNC_MAX_TUNE_ERROR))
+		{
+			Serial.print("Clock Sync tune outlier rejected: ");
+			Serial.println(estimationError);
+		}
+		else if (estimationError == 0)
+		{
+			ClockTuneAccumulator = 0;
+			StampSynced();
+		}
+		else
+		{
+			if (estimationError > 0)
+			{
+				if (ClockTuneAccumulator < INT8_MAX - LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
+				{
+					ClockTuneAccumulator += LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
+				}
+				else 
+				{
+					Serial.print("Clock Sync tune at upper limit.");
+				}
+			}
+			else
+			{
+				if (ClockTuneAccumulator < INT8_MIN + LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
+				{
+					ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR);
+				}
+				else 
+				{
+					Serial.print("Clock Sync tune at lower limit.");
+				}
+			}
+
+			//Debug only.
+			int8t_t TuneValue = (ClockTuneAccumulator / (LOLA_CLOCK_SYNC_TUNE_RATIO * LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR));
+
+			Serial.print("Clock Sync tuned: ");
+			if (TuneValue > 0)
+			{
+				Serial.print('+');
+			}
+			else if (TuneValue < 0)
+			{
+				Serial.print('-');
+			}
+			Serial.print(TuneValue);
+			Serial.println(" ms.");
+
+			AddOffset(GetOffset() + (int32_t)TuneValue);
 		}
 	}
 };
