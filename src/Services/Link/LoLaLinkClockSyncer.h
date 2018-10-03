@@ -9,11 +9,16 @@
 #define CLOCK_SYNC_GOOD_ENOUGH_COUNT						2
 
 #define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)10000
-#define CLOCK_SYNC_MAX_TUNE_ERROR							5
+#define CLOCK_SYNC_MAX_TUNE_ERROR							100
 #define CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS		(uint32_t)1000
 
-#define LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR				(int8_t)10
-#define LOLA_CLOCK_SYNC_TUNE_RATIO					(int8_t)2
+#define LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR				(int8_t)4
+#define LOLA_CLOCK_SYNC_TUNE_RATIO							(int8_t)2
+
+#define LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX				(INT8_MAX - LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
+#define LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN				(INT8_MIN + LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
+#define LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR			(LOLA_CLOCK_SYNC_TUNE_RATIO * LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
+
 
 class LoLaLinkClockSyncer
 {
@@ -116,6 +121,7 @@ protected:
 	void OnReset()
 	{
 		HostSynced = false;
+		ClockTuneAccumulator = 0;
 	}
 
 public:
@@ -133,6 +139,7 @@ public:
 	{
 		HostSynced = true;
 		StampSynced();
+		ClockTuneAccumulator = 0;
 	}
 
 	bool HasEstimation()
@@ -145,6 +152,7 @@ public:
 		if (estimationError == 0)
 		{
 			StampSyncGood();
+			ClockTuneAccumulator = 0;
 		}
 		else
 		{
@@ -156,8 +164,8 @@ public:
 	{
 		if (abs(estimationError > CLOCK_SYNC_MAX_TUNE_ERROR))
 		{
-			Serial.print("Clock Sync tune outlier rejected: ");
-			Serial.println(estimationError);
+			//TODO: Count sequential high error tune results, break connection on threshold value.
+			return;
 		}
 		else if (estimationError == 0)
 		{
@@ -168,43 +176,30 @@ public:
 		{
 			if (estimationError > 0)
 			{
-				if (ClockTuneAccumulator < INT8_MAX - LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
+				if (ClockTuneAccumulator < LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX)
 				{
 					ClockTuneAccumulator += LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
 				}
 				else 
 				{
-					Serial.print("Clock Sync tune at upper limit.");
+					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX/ LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+					ClockTuneAccumulator = 0;
 				}
 			}
 			else
 			{
-				if (ClockTuneAccumulator < INT8_MIN + LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
+				if (ClockTuneAccumulator > LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN)
 				{
 					ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
 				}
 				else 
 				{
-					Serial.print("Clock Sync tune at lower limit.");
+					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+					ClockTuneAccumulator = 0;
 				}
 			}
 
-			//Debug only.
-			int8_t TuneValue = (ClockTuneAccumulator / (LOLA_CLOCK_SYNC_TUNE_RATIO * LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR));
-
-			Serial.print("Clock Sync tuned: ");
-			if (TuneValue > 0)
-			{
-				Serial.print('+');
-			}
-			else if (TuneValue < 0)
-			{
-				Serial.print('-');
-			}
-			Serial.print(TuneValue);
-			Serial.println(" ms.");
-
-			AddOffset(GetOffset() + (int32_t)TuneValue);
+			AddOffset(ClockTuneAccumulator / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
 		}
 	}
 };
