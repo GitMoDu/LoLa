@@ -34,6 +34,11 @@ public:
 		Offset = timeMillis - LastSetMillis;
 	}
 
+	int32_t GetOffset()
+	{
+		return Offset;
+	}
+
 	void AddOffset(const int32_t offset)
 	{
 		Offset = Offset + offset;

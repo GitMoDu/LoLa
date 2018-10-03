@@ -33,7 +33,7 @@ protected:
 		}
 	}
 
-	void AddOffset(const int32_t offset)
+	inline void AddOffset(const int32_t offset)
 	{
 		if (SyncedClock != nullptr)
 		{
@@ -41,6 +41,15 @@ protected:
 		}
 	}
 
+	inline int32_t GetOffset()
+	{
+		if (SyncedClock != nullptr)
+		{
+			return SyncedClock->GetOffset();
+		}
+
+		return 0;
+	}
 	void SetRandom()
 	{
 		if (SyncedClock != nullptr)
