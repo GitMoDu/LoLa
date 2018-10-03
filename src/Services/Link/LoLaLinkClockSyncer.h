@@ -235,20 +235,22 @@ public:
 		return SyncGoodCount >= CLOCK_SYNC_GOOD_ENOUGH_COUNT;
 	}
 
-	//TODO: ClockSyncWarning
-	//bool IsTimeToTune()
-	//{
-	//	return LastSynced == 0 || !IsSynced() || ((millis() - LastSynced) > CLOCK_SYNC_TUNE_ELAPSED_MILLIS);
-	//}
+	bool IsTimeToTune()
+	{
+		return IsSynced() && LastSynced != 0 &&
+			(LastEstimation == 0 ||
+			(millis() - LastEstimation) > CLOCK_SYNC_TUNE_ELAPSED_MILLIS);
+	}
 
 	void OnEstimationReceived(const int32_t estimationError)
 	{
+		LastEstimation = millis();
 		LastError = estimationError;
 		if (LastError == 0)
 		{
 			StampSyncGood();
 		}
-		else if(!IsSynced() && (LastError > 1))
+		else if (!IsSynced() && (LastError > 1))
 		{
 			SyncGoodCount = 0;
 		}
