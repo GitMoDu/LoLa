@@ -23,7 +23,7 @@ private:
 protected:
 	uint8_t SyncGoodCount = 0;
 	uint32_t LastSynced = 0;
-	
+
 protected:
 	virtual void OnReset() {}
 
@@ -57,7 +57,7 @@ protected:
 	{
 		if (SyncedClock != nullptr)
 		{
-			SyncedClock->SetRandom();		
+			SyncedClock->SetRandom();
 		}
 	}
 
