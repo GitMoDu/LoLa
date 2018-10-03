@@ -49,15 +49,6 @@ protected:
 		}
 	}
 
-	inline int32_t GetOffset()
-	{
-		if (SyncedClock != nullptr)
-		{
-			return SyncedClock->GetOffset();
-		}
-
-		return 0;
-	}
 	void SetRandom()
 	{
 		if (SyncedClock != nullptr)
