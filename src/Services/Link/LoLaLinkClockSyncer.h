@@ -181,7 +181,7 @@ public:
 			{
 				if (ClockTuneAccumulator < INT8_MIN + LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
 				{
-					ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR);
+					ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
 				}
 				else 
 				{
@@ -190,7 +190,7 @@ public:
 			}
 
 			//Debug only.
-			int8t_t TuneValue = (ClockTuneAccumulator / (LOLA_CLOCK_SYNC_TUNE_RATIO * LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR));
+			int8_t TuneValue = (ClockTuneAccumulator / (LOLA_CLOCK_SYNC_TUNE_RATIO * LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR));
 
 			Serial.print("Clock Sync tuned: ");
 			if (TuneValue > 0)
