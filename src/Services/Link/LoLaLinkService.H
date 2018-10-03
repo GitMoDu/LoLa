@@ -62,7 +62,7 @@ protected:
 	LoLaLinkInfo LinkInfo;
 
 	//Synced Clock.
-	ILinkClockSyncer* ClockSyncerPointer = nullptr;
+	LoLaLinkClockSyncer* ClockSyncerPointer = nullptr;
 	IClockSyncTransaction* ClockSyncTransaction = nullptr;
 
 	//Crypto Challenge.

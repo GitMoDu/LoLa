@@ -12,7 +12,7 @@
 #define CLOCK_SYNC_MAX_TUNE_ERROR							5
 #define CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS		1000
 
-class ILinkClockSyncer
+class LoLaLinkClockSyncer
 {
 private:
 	ClockSource * SyncedClock = nullptr;
@@ -93,7 +93,7 @@ public:
 	virtual bool IsTimeToTune() { return false; };
 };
 
-class LinkRemoteClockSyncer : public ILinkClockSyncer
+class LinkRemoteClockSyncer : public LoLaLinkClockSyncer
 {
 private:
 	boolean HostSynced = false;
@@ -139,7 +139,7 @@ public:
 	}
 };
 
-class LinkHostClockSyncer : public ILinkClockSyncer
+class LinkHostClockSyncer : public LoLaLinkClockSyncer
 {
 private:
 	uint32_t LastEstimation = 0;
