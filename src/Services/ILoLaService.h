@@ -79,7 +79,7 @@ public:
 
 	void Enable()
 	{
-		enable();
+		enableIfNot();
 	}
 
 	void Disable()
