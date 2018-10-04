@@ -225,8 +225,7 @@ bool LoLaSi446xPacketDriver::Setup()
 		//The SPI interface is designed to operate at a maximum of 10 MHz.
 #if defined(ARDUINO_ARCH_AVR)
 		SPI.setClockDivider(SPI_CLOCK_DIV2); // 16 MHz / 2 = 8 MHz
-#elif defined(ARDUINO_ARCH_STM32)
-
+#elif defined(ARDUINO_ARCH_STM32F1)
 		SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 MHz / 8 = 9 MHz
 #endif
 
