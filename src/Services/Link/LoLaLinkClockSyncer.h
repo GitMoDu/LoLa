@@ -9,7 +9,7 @@
 #define CLOCK_SYNC_GOOD_ENOUGH_COUNT						2
 
 #define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)10000
-#define CLOCK_SYNC_MAX_TUNE_ERROR							100
+#define CLOCK_SYNC_MAX_TUNE_ERROR							(int32_t)100
 #define CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS		(uint32_t)1000
 
 #define LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR				(int8_t)4
@@ -236,8 +236,9 @@ public:
 		{
 			StampSyncGood();
 		}
-		else if (!IsSynced() && (LastError > 1))
+		else if (!IsSynced())
 		{
+			//Only reset the sync good count when syncing.
 			SyncGoodCount = 0;
 		}
 	}
