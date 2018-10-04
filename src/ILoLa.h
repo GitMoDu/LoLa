@@ -50,7 +50,10 @@ protected:
 	///
 
 	///Configurations
-	uint8_t TransmitPower = 0;
+	//Unitless value, from 0 to UINT8_MAX.
+	uint8_t TransmitPowerRatio = 0;
+
+	//From 0 to UINT8_MAX, limited by driver.
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
 	bool Enabled = false;
 	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
