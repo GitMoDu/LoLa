@@ -18,7 +18,7 @@
 class ILoLaService : Task
 {
 private:
-	enum ServiceStateBasic
+	enum ServiceStateBasic : uint8_t
 	{
 		Loading,
 		Failed,
