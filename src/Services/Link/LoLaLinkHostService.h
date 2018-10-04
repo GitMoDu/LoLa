@@ -10,10 +10,9 @@ class LoLaLinkHostService : public LoLaLinkService
 private:
 	enum AwaitingConnectionEnum : uint8_t
 	{
-		Starting = 0,
-		BroadcastingOpenSession = 1,
-		LinkRequested = 2,
-		ConnectingSwitchOver = 3
+		BroadcastingOpenSession = 0,
+		LinkRequested = 1,
+		ConnectingSwitchOver = 2
 	};
 
 	LinkHostClockSyncer ClockSyncer;
@@ -141,10 +140,6 @@ protected:
 	{
 		switch (ConnectingState)
 		{
-		case AwaitingConnectionEnum::Starting:
-			SetConnectingState(AwaitingConnectionEnum::BroadcastingOpenSession);
-			SetNextRunASAP();
-			break;
 		case AwaitingConnectionEnum::BroadcastingOpenSession:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_BROADCAST_PERIOD)
 			{
