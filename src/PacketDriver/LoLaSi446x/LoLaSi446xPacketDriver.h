@@ -18,11 +18,9 @@
 #endif // !MOCK_RADIO
 
 
-//Channel to listen to(0 - 20)
-#define CHANNEL 1
-
-
-#define TRANSMIT_POWER 12
+//Channel range.
+#define SI4463_CHANNEL_MIN			0
+#define SI4463_CHANNEL_MAX			20
 
 //Power range.
 //   0 = -32dBm	(<1uW)

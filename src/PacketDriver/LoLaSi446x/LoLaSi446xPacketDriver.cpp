@@ -170,12 +170,13 @@ void LoLaSi446xPacketDriver::OnReceivedFail(const int16_t rssi)
 
 void LoLaSi446xPacketDriver::OnChannelUpdated()
 {
-
+	//TODO: Replace with FIFO preserving channel change.
+	Si446x_RX(CurrentChannel);
 }
 
 void LoLaSi446xPacketDriver::OnTransmitPowerUpdated() 
 {
-
+	Si446x_setTxPower(map(TransmitPowerRatio, 0, UINT8_MAX, SI4463_TRANSMIT_POWER_MIN, SI4463_TRANSMIT_POWER_MAX));
 }
 
 void LoLaSi446xPacketDriver::OnStart()
@@ -210,9 +211,6 @@ bool LoLaSi446xPacketDriver::Setup()
 {
 	if (LoLaPacketDriver::Setup())
 	{
-		SetTransmitPower(TRANSMIT_POWER);
-		SetChannel(CHANNEL);
-
 #ifndef MOCK_RADIO
 		//The SPI interface is designed to operate at a maximum of 10 MHz.
 #if defined(ARDUINO_ARCH_AVR)
@@ -229,13 +227,12 @@ bool LoLaSi446xPacketDriver::Setup()
 
 		if (info.part == PART_NUMBER_SI4463X)
 		{
-			Si446x_setTxPower(TransmitPower);
+			Si446x_setTxPower(SI4463_TRANSMIT_POWER_MIN);
 			Si446x_setupCallback(SI446X_CBS_RXBEGIN | SI446X_CBS_SENT, 1); // Enable packet RX begin and packet sent callbacks
 			Si446x_setLowBatt(3200); // Set low battery voltage to 3200mV
 			Si446x_setupWUT(1, 8192, 0, SI446X_WUT_BATT); // Run check battery every 2 seconds.
 
-			CheckForPending();
-
+			Si446x_SERVICE();
 			Si446x_sleep();
 #ifdef DEBUG_LOLA
 			Serial.println(F("Si4463 Present"));
