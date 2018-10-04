@@ -24,6 +24,7 @@
 
 #define TRANSMIT_POWER 12
 
+//Power range.
 //   0 = -32dBm	(<1uW)
 //   7 =  0dBm	(1mW)
 //  12 =  5dBm	(3.2mW)
@@ -31,9 +32,8 @@
 //  40 =  15dBm	(32mW)
 // 100 = 20dBm	(100mW) Requires Dual Antennae
 // 127 = ABSOLUTE_MAX
-#define SI4463_MAX_TRANSMIT_POWER 40
-
-
+#define SI4463_TRANSMIT_POWER_MIN	0
+#define SI4463_TRANSMIT_POWER_MAX	40
 
 #define PART_NUMBER_SI4463X 17507
 
@@ -133,9 +133,6 @@ public:
 
 	void OnReceivedFail(const int16_t rssi);
 	void OnReceived();
-
-	uint8_t GetTransmitPowerMax() const;
-	uint8_t GetTransmitPowerMin() const;
 
 	int16_t GetRSSIMax() const;
 	int16_t GetRSSIMin() const;

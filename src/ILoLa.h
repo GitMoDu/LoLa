@@ -171,14 +171,14 @@ public:
 		return LastValidReceivedRssi;
 	}
 
-	uint8_t GetTransmitPower()
+	uint8_t GetTransmitPowerRatio()
 	{
-		return TransmitPower;
+		return TransmitPowerRatio;
 	}
 
-	bool SetTransmitPower(const uint8_t transmitPower)
+	bool SetTransmitPowerRatio(const uint8_t transmitPowerRatio)
 	{
-		TransmitPower = transmitPower;
+		TransmitPowerRatio = transmitPowerRatio;
 
 		OnTransmitPowerUpdated();
 
@@ -204,19 +204,6 @@ public:
 		return &PacketMap;
 	}
 
-protected:
-
-	uint8_t * GetTransmitPowerPointer()
-	{
-		return &TransmitPower;
-	}
-
-	uint8_t* GetChannelPointer()
-	{
-		return &CurrentChannel;
-	}
-
-
 public:
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
 	virtual bool Setup() { return true; }
@@ -224,8 +211,6 @@ public:
 	virtual void OnStart() {}
 	virtual void OnStop() {}
 
-	virtual uint8_t GetTransmitPowerMax() const { return 0xFF; }
-	virtual uint8_t GetTransmitPowerMin() const { return 0; }
 	virtual int16_t GetRSSIMax() const { return 0; }
 	virtual int16_t GetRSSIMin() const { return ILOLA_DEFAULT_MIN_RSSI; }
 	virtual uint8_t GetChannelMax() const { return 100; }
