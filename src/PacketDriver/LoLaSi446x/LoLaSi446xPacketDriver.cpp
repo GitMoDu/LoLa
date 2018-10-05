@@ -114,7 +114,7 @@ void LoLaSi446xPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t 
 	//Disable Si interrupts until we have processed the received packet.
 	DisableInterruptsInternal();
 
-	StaticSi446LoLa->OnReceived();
+	OnReceived();
 }
 
 void LoLaSi446xPacketDriver::OnReceived()
