@@ -117,18 +117,9 @@ protected:
 	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD); }
 
 private:
-	inline void OnLinkWarningHigh()
+	inline void TrySendPing(const uint32_t resendPeriod)
 	{
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
-		{
-			PreparePing();
-			RequestSendPacket();
-		}
-	}
-
-	inline void OnLinkWarningMedium()
-	{
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD)
+		if (GetElapsedSinceLastSent() > resendPeriod)
 		{
 			PreparePing();
 			RequestSendPacket();
@@ -192,7 +183,7 @@ private:
 
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
-		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_POLL_PERIOD_MILLIS, loLa, &PacketHolder)
+		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_FAST_CHECK_PERIOD, loLa, &PacketHolder)
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
@@ -494,7 +485,7 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				SetNextRunASAP();
@@ -554,8 +545,15 @@ protected:
 
 	inline void OnKeepingConnectedInternal()
 	{
-		if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+		if(PingedPending) 
 		{
+			PreparePong();
+			RequestSendPacket();
+			SetNextRunASAP();
+		}
+		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+		{
+			//Link time out check.
 #ifdef DEBUG_LOLA
 			Serial.print(F("Bi directional commms lost over "));
 			Serial.print(LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT / 1000);
@@ -564,21 +562,15 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			SetNextRunASAP();
 		}
-		else if(PingedPending) 
-		{
-			PreparePong();
-			RequestSendPacket();
-			SetNextRunASAP();
-		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PANIC)
 		{
 			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
-			OnLinkWarningHigh();
+			TrySendPing(LOLA_LINK_SERVICE_LINK_RESEND_PERIOD);
 		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION)
 		{
 			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
-			OnLinkWarningMedium();
+			TrySendPing(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD);
 		}
 		else
 		{
