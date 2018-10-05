@@ -92,6 +92,11 @@ public:
 		}
 		serial->println();
 	}
+
+	virtual void PrintName(Stream * serial)
+	{
+		serial->print(F("ItrackedSurface"));
+	}
 #endif 
 };
 

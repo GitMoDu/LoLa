@@ -129,7 +129,7 @@ public:
 #ifdef DEBUG_LOLA
 	void Debug(Stream* serial)
 	{
-		serial->print("Service: ");
+		serial->print(' ');
 		PrintName(serial);
 	}
 #endif // DEBUG_LOLA

@@ -41,7 +41,7 @@ protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Connection Host service"));
+		serial->print(F("Link Host"));
 	}
 #endif // DEBUG_LOLA
 

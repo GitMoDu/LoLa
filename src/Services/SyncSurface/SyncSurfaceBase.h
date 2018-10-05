@@ -40,6 +40,11 @@ public:
 	{
 		SyncMetaDefinition.SetBaseHeader(baseHeader);
 		DataPacketDefinition.SetBaseHeader(baseHeader);
+
+#ifdef DEBUG_LOLA
+		SyncMetaDefinition.SetOwner(trackedSurface);
+		DataPacketDefinition.SetOwner(trackedSurface);		
+#endif
 	}
 
 protected:

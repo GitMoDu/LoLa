@@ -4,6 +4,7 @@
 #define _SYNCPACKETDEFINITIONS_h
 
 #include <Packet\PacketDefinition.h>
+#include <Services\SyncSurface\ITrackedSurface.h>
 
 #define PACKET_DEFINITION_SYNC_META_HEADER_OFFSET		0
 #define PACKET_DEFINITION_SYNC_META_PAYLOAD_SIZE		1
@@ -34,6 +35,14 @@ public:
 	{
 		BaseHeader = baseHeader;
 	}
+
+#ifdef DEBUG_LOLA
+	ITrackedSurface* Owner = nullptr;
+	void SetOwner(ITrackedSurface* trackedSurface)
+	{
+		Owner = trackedSurface;
+	}
+#endif
 };
 
 class SyncDataPacketDefinition : public SyncAbstractPacketDefinition
@@ -52,7 +61,11 @@ public:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("SyncData"));
+		serial->print(F("SyncData "));
+		if (Owner != nullptr)
+		{
+			Owner->PrintName(serial);
+		}
 	}
 #endif
 };
@@ -72,7 +85,11 @@ public:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("SyncReport"));
+		serial->print(F("SyncMeta "));
+		if (Owner != nullptr)
+		{
+			Owner->PrintName(serial);
+		}
 	}
 #endif
 };

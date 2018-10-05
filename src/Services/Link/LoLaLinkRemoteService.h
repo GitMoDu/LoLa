@@ -35,7 +35,7 @@ protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Connection Remote service"));
+		serial->print(F("Link Remote"));
 	}
 #endif // DEBUG_LOLA
 
