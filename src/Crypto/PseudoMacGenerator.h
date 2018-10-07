@@ -29,6 +29,8 @@ public:
 
 			return true;
 		}
+
+		return false;
 	}
 
 	uint32_t GetPMAC()
