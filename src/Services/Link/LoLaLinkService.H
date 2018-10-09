@@ -469,6 +469,8 @@ protected:
 				Serial.print("Link took ");
 				Serial.print(millis() - ConnectionProcessStart);
 				Serial.println(" ms to establish.");
+				Serial.print("Average latency: ");
+				Serial.print(LatencyMeter.GetAverageLatency() / 2);
 				Serial.print("Sync TimeStamp: ");
 				Serial.println(ClockSyncerPointer->GetMillisSync());
 #endif
