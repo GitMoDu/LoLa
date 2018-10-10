@@ -5,7 +5,7 @@
 
 #define LOLA_LATENCY_METER_DATA_POINT_STACK_SIZE		5
 #define LOLA_LATENCYMETER_PING_TIMEOUT_MILLIS			(uint32_t)50
-#define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS		((uint32_t)LOLA_LATENCY_SERVICE_PING_TIMEOUT_MILLIS*(uint32_t)1000)
+#define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS		((uint32_t)LOLA_LATENCYMETER_PING_TIMEOUT_MILLIS*(uint32_t)1000)
 
 #include <RingBufCPP.h>
 
@@ -17,7 +17,7 @@ private:
 
 	uint32_t Grunt;
 	uint32_t DurationSum;
-	RingBufCPP<uint16_t, LOLA_LATENCY_PING_DATA_POINT_STACK_SIZE> DurationStack;
+	RingBufCPP<uint16_t, LOLA_LATENCY_METER_DATA_POINT_STACK_SIZE> DurationStack;
 
 public:
 	LoLaLinkLatencyMeter()
@@ -29,7 +29,7 @@ public:
 	{
 		LastSentWith = ILOLA_INVALID_MICROS;
 		LastSentPacketId = 0;
-		while (!DurationStack.IsEmpty())
+		while (!DurationStack.isEmpty())
 		{
 			DurationStack.pull();
 		}
@@ -55,7 +55,7 @@ public:
 			}
 
 			//Value is always smaller than uint16, because samples with higher value are filtered out on acquisition.
-			return (uint16_t)DurationSum / DurationStack.numElements();;
+			return (uint16_t)DurationSum / DurationStack.numElements();
 		}
 	}
 
@@ -74,7 +74,7 @@ public:
 
 			if (Grunt < LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS)
 			{
-				DurationStack.push((uint16t_t)Grunt);
+				DurationStack.addForce((uint16_t)Grunt);
 			}
 			else
 			{
