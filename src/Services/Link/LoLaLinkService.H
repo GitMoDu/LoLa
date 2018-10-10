@@ -464,14 +464,15 @@ protected:
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
-				
+
 #ifdef DEBUG_LOLA
-				Serial.print("Link took ");
+				Serial.print(F("Link took "));
 				Serial.print(millis() - ConnectionProcessStart);
-				Serial.println(" ms to establish.");
-				Serial.print("Average latency: ");
-				Serial.println(LatencyMeter.GetAverageLatency() / 2);
-				Serial.print("Sync TimeStamp: ");
+				Serial.println(F(" ms to establish."));
+				Serial.print(F("Average latency: "));
+				Serial.print((float)LatencyMeter.GetAverageLatency() / (float)2000, 2);
+				Serial.println(F(" ms"));
+				Serial.print(F("Sync TimeStamp: "));
 				Serial.println(ClockSyncerPointer->GetMillisSync());
 #endif
 				break;
