@@ -460,8 +460,6 @@ protected:
 				LinkInfo.StampLinkStarted();
 				SetBaseSeed();
 				CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
-				//Notify all link dependent services they can start.
-				ServicesManager->NotifyServicesLinkUpdated(true);
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
 
@@ -475,6 +473,9 @@ protected:
 				Serial.print(F("Sync TimeStamp: "));
 				Serial.println(ClockSyncerPointer->GetMillisSync());
 #endif
+
+				//Notify all link dependent services they can start.
+				ServicesManager->NotifyServicesLinkUpdated(true);
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
 			default:
