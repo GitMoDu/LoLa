@@ -192,7 +192,7 @@ bool LoLaSi446xPacketDriver::Setup()
 #if defined(ARDUINO_ARCH_AVR)
 		SPI.setClockDivider(SPI_CLOCK_DIV2); // 16 MHz / 2 = 8 MHz
 #elif defined(ARDUINO_ARCH_STM32F1)
-		SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 MHz / 8 = 9 MHz
+		SPI.setClockDivider(SPI_CLOCK_DIV8); // 72 MHz / 8 = 9 MHz
 #endif
 
 		// Start up
