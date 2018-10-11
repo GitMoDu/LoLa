@@ -11,8 +11,8 @@
 #include <stdint.h>
 #endif
 
-#define ILOLA_DEFAULT_CHANNEL				1
-
+#define ILOLA_DEFAULT_CHANNEL				0
+#define ILOLA_DEFAULT_TRANSMIT_POWER		10
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
 
 #define ILOLA_DEFAULT_MIN_RSSI				(int16_t(-100))
@@ -50,7 +50,7 @@ protected:
 	///
 
 	///Configurations
-	uint8_t TransmitPower = 0;
+	uint8_t CurrentTransmitPower = ILOLA_DEFAULT_TRANSMIT_POWER;
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
 	bool Enabled = false;
 	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
@@ -173,12 +173,12 @@ public:
 
 	uint8_t GetTransmitPower()
 	{
-		return TransmitPower;
+		return CurrentTransmitPower;
 	}
 
 	bool SetTransmitPower(const uint8_t transmitPower)
 	{
-		TransmitPower = transmitPower;
+		CurrentTransmitPower = transmitPower;
 
 		OnTransmitPowerUpdated();
 
@@ -203,19 +203,6 @@ public:
 	{
 		return &PacketMap;
 	}
-
-protected:
-
-	uint8_t * GetTransmitPowerPointer()
-	{
-		return &TransmitPower;
-	}
-
-	uint8_t* GetChannelPointer()
-	{
-		return &CurrentChannel;
-	}
-
 
 public:
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
@@ -254,4 +241,3 @@ public:
 #endif
 };
 #endif
-

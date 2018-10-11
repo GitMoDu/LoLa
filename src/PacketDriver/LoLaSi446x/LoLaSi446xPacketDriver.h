@@ -3,26 +3,21 @@
 #ifndef _LOLASI446XPACKETDRIVER_h
 #define _LOLASI446XPACKETDRIVER_h
 
-#define _TASK_OO_CALLBACKS
-
 #include <Arduino.h>
-#include <TaskSchedulerDeclarations.h>
+#include <SPI.h>
 #include <PacketDriver\LoLaPacketDriver.h>
 #include <RingBufCPP.h>
-
-#include <SPI.h>
-
 
 #ifndef MOCK_RADIO
 #include <Si446x.h>
 #endif // !MOCK_RADIO
 
+//Expected part number.
+#define PART_NUMBER_SI4463X 17507
 
-//Channel to listen to(0 - 26)
-#define CHANNEL 0
-
-
-#define TRANSMIT_POWER 12
+//Channel to listen to (0 - 26).
+#define SI4463_CHANNEL_MIN 0
+#define SI4463_CHANNEL_MAX 26
 
 //   0 = -32dBm	(<1uW)
 //   7 =  0dBm	(1mW)
@@ -31,22 +26,12 @@
 //  40 =  15dBm	(32mW)
 // 100 = 20dBm	(100mW) Requires Dual Antennae
 // 127 = ABSOLUTE_MAX
-#define SI4463_MAX_TRANSMIT_POWER 40
+#define SI4463_TRANSMIT_POWER_MIN 0
+#define SI4463_TRANSMIT_POWER_MAX 40
 
-
-
-#define PART_NUMBER_SI4463X 17507
-
-
-#define SI4463_MIN_RSSI (int16_t(-110))
-#define SI4463_MAX_RSSI (int16_t(-50))
-
-#define SI4463_MIN_CHANNEL 5
-#define SI4463_MAX_CHANNEL 120
-
-
-#define _TASK_OO_CALLBACKS
-#define PROCESS_EVENT_QUEUE_MAX_QUEUE_DEPTH 5
+//Received RSSI range.
+#define SI4463_RSSI_MIN (int16_t(-110))
+#define SI4463_RSSI_MAX (int16_t(-50))
 
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
@@ -70,17 +55,39 @@ public:
 	void OnReceivedFail(const int16_t rssi);
 	void OnReceived();
 
-	uint8_t GetTransmitPowerMax() const;
-	uint8_t GetTransmitPowerMin() const;
-
-	int16_t GetRSSIMax() const;
-	int16_t GetRSSIMin() const;
-
-	uint8_t GetChannelMax() const;
-	uint8_t GetChannelMin() const;
-
 	void OnChannelUpdated();
 	void OnTransmitPowerUpdated();
 
+	///Driver constants.
+	uint8_t GetTransmitPowerMax() const
+	{
+		return SI4463_TRANSMIT_POWER_MAX;
+	}
+
+	uint8_t GetTransmitPowerMin() const
+	{
+		return SI4463_TRANSMIT_POWER_MIN;
+	}
+
+	int16_t GetRSSIMax() const
+	{
+		return SI4463_RSSI_MAX;
+	}
+
+	int16_t GetRSSIMin() const
+	{
+		return SI4463_RSSI_MIN;
+	}
+
+	uint8_t GetChannelMax() const
+	{
+		return SI4463_CHANNEL_MAX;
+	}
+
+	uint8_t GetChannelMin() const
+	{
+		return SI4463_CHANNEL_MIN;
+	}
+	///
 };
 #endif

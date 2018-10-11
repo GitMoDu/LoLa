@@ -136,12 +136,12 @@ void LoLaSi446xPacketDriver::OnReceivedFail(const int16_t rssi)
 
 void LoLaSi446xPacketDriver::OnChannelUpdated()
 {
-
+	Si446x_RX(CurrentChannel);
 }
 
-void LoLaSi446xPacketDriver::OnTransmitPowerUpdated() 
+void LoLaSi446xPacketDriver::OnTransmitPowerUpdated()
 {
-
+	Si446x_setTxPower(CurrentTransmitPower);
 }
 
 void LoLaSi446xPacketDriver::OnStart()
@@ -153,40 +153,10 @@ void LoLaSi446xPacketDriver::OnStart()
 #endif
 }
 
-uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMax() const
-{
-	return SI4463_MAX_TRANSMIT_POWER;
-}
-uint8_t LoLaSi446xPacketDriver::GetTransmitPowerMin() const
-{
-	return 0;
-}
-
-int16_t LoLaSi446xPacketDriver::GetRSSIMax() const
-{ 
-	return SI4463_MAX_RSSI;
-}
-int16_t LoLaSi446xPacketDriver::GetRSSIMin() const
-{ 
-	return SI4463_MIN_RSSI;
-}
-
-uint8_t LoLaSi446xPacketDriver::GetChannelMax() const
-{
-	return SI4463_MAX_CHANNEL;
-}
-uint8_t LoLaSi446xPacketDriver::GetChannelMin() const
-{
-	return SI4463_MIN_CHANNEL;
-}
-
 bool LoLaSi446xPacketDriver::Setup()
 {
 	if (LoLaPacketDriver::Setup())
 	{
-		SetTransmitPower(TRANSMIT_POWER);
-		SetChannel(CHANNEL);
-
 #ifndef MOCK_RADIO
 		//The SPI interface is designed to operate at a maximum of 10 MHz.
 #if defined(ARDUINO_ARCH_AVR)
@@ -202,7 +172,7 @@ bool LoLaSi446xPacketDriver::Setup()
 
 		if (info.part == PART_NUMBER_SI4463X)
 		{
-			Si446x_setTxPower(TransmitPower);
+			Si446x_setTxPower(CurrentTransmitPower);
 			Si446x_setupCallback(SI446X_CBS_RXBEGIN | SI446X_CBS_SENT, 1); // Enable packet RX begin and packet sent callbacks
 			Si446x_setLowBatt(3200); // Set low battery voltage to 3200mV
 			Si446x_setupWUT(1, 8192, 0, SI446X_WUT_BATT); // Run check battery every 2 seconds.
@@ -237,7 +207,7 @@ bool LoLaSi446xPacketDriver::Setup()
 #else 
 		return true;
 #endif
-		}
+	}
 
 	return false;
 }

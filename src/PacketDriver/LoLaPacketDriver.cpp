@@ -162,13 +162,13 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 	{
 		return CanTransmit() &&
 			(overridePermission || IsInSendSlot());
-}
-	else 
+	}
+	else
 	{
 		return CanTransmit() && overridePermission &&
 			!HotAfterSend() && !HotAfterReceive();
 	}
-	
+
 #else
 	return Enabled &&
 		!HotAfterSend() && !HotAfterReceive() &&
