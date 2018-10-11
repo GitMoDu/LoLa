@@ -53,7 +53,7 @@ protected:
 
 	void OnLinkDiscoveryReceived()
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
 		{
 			SetNextRunASAP();
 		}
@@ -61,7 +61,7 @@ protected:
 
 	void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
-		switch (LinkInfo.LinkState)
+		switch (LinkInfo.GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
@@ -85,7 +85,7 @@ protected:
 
 	void OnLinkRequestReadyReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			ConnectingState == AwaitingConnectionEnum::LinkRequested &&
 			SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
 			SessionId == sessionId &&
@@ -97,7 +97,7 @@ protected:
 
 	void OnLinkPacketAckReceived(const uint8_t requestId)
 	{
-		switch (LinkInfo.LinkState)
+		switch (LinkInfo.GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (ConnectingState == AwaitingConnectionEnum::ConnectingSwitchOver &&
@@ -187,7 +187,7 @@ protected:
 	///Clock Sync.
 	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ClockSyncStage)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
@@ -198,7 +198,7 @@ protected:
 	
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
 				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
@@ -291,7 +291,7 @@ protected:
 
 	void OnChallengeResponseReceived(const uint8_t requestId, const uint32_t token)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ChallengeStage)
 		{
 			HostChallengeTransaction.OnReply(requestId, token);

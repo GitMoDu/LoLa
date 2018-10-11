@@ -90,7 +90,9 @@ public:
 	{
 	}
 
+protected:
 	LoLaLinkService * GetLinkService() { return &LinkService; }
+	
 };
 
 class LoLaManagerRemote : public LoLaManager
@@ -106,6 +108,12 @@ public:
 	{
 	}
 
+	LoLaLinkInfo* GetLinkInfo()
+	{
+		return LinkService.GetLinkInfo();
+	}
+
+protected:
 	LoLaLinkService * GetLinkService() { return &LinkService; }
 };
 #endif

@@ -9,13 +9,6 @@
 
 class LoLaLinkInfo : public ILinkActiveIndicator
 {
-private:
-	ILoLa * Driver = nullptr;
-	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
-
-	uint16_t RTT = ILOLA_INVALID_LATENCY;
-	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
-
 public:
 	enum LinkStateEnum : uint8_t
 	{
@@ -25,11 +18,45 @@ public:
 		AwaitingSleeping = 3,
 		Connecting = 4,
 		Connected = 5
-	} LinkState;
+	};
+
+private:
+	ILoLa * Driver = nullptr;
+	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
+
+	uint16_t RTT = ILOLA_INVALID_LATENCY;
+	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
+
+	//Callback handler.
+	Signal<const LinkStateEnum> LinkStatusUpdated;
+
+	LinkStateEnum LinkState;
+
+public:
+	LinkStateEnum GetLinkState()
+	{
+		return LinkState;
+	}
 
 	void SetDriver(ILoLa* driver)
 	{
 		Driver = driver;
+	}
+
+	void Reset()
+	{
+		LinkState = LinkStateEnum::Disabled;
+	}
+
+	void UpdateState(LinkStateEnum newState)
+	{
+		LinkState = newState;
+		LinkStatusUpdated.fire(LinkState);
+	}
+
+	void AttachOnLinkStatusUpdated(const Slot<const LinkStateEnum>& slot)
+	{
+		LinkStatusUpdated.attach(slot);
 	}
 
 	void ResetLatency()

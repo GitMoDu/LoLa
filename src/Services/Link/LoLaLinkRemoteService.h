@@ -47,7 +47,7 @@ protected:
 
 	void OnBroadcastReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
-		switch (LinkInfo.LinkState)
+		switch (LinkInfo.GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::Connected:
 			if (remotePMAC != LOLA_INVALID_PMAC && RemotePMAC == remotePMAC)
@@ -81,7 +81,7 @@ protected:
 
 	void OnLinkRequestAcceptedReceived(const uint8_t requestId, const uint32_t localPMAC)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			ConnectingState == AwaitingConnectionEnum::GotHost &&
 			PMACGenerator.GetPMAC() == localPMAC)
 		{
@@ -94,7 +94,7 @@ protected:
 
 	void OnLinkSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
 	{
-		switch (LinkInfo.LinkState)
+		switch (LinkInfo.GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (subHeader == LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER &&
@@ -216,7 +216,7 @@ protected:
 
 	void OnChallengeRequestReceived(const uint8_t requestId, const uint32_t token)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ChallengeStage)
 		{
 			RemoteChallengeTransaction.Clear();
@@ -281,7 +281,7 @@ protected:
 	
 	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			ConnectingState == ConnectingStagesEnum::ClockSyncStage &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
@@ -293,7 +293,7 @@ protected:
 
 	void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
-		if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected &&
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
 		{

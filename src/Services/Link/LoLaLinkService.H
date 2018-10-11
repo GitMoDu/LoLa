@@ -88,9 +88,6 @@ protected:
 	LoLaDiagnosticsService Diagnostics;
 #endif
 
-	//Callback handler.
-	Signal<uint8_t> LinkStatusUpdated;
-
 protected:
 	///Host packet handling.
 	virtual void OnLinkDiscoveryReceived() {}
@@ -185,7 +182,7 @@ public:
 #endif
 	{
 		LinkInfo.SetDriver(loLa);
-		LinkInfo.LinkState = LoLaLinkInfo::LinkStateEnum::Disabled;
+		LinkInfo.Reset();
 
 		if (loLa != nullptr)
 		{
@@ -198,13 +195,6 @@ public:
 	LoLaLinkInfo* GetLinkInfo()
 	{
 		return &LinkInfo;
-	}
-
-	//Param uint8_t is 
-	//LoLaLinkInfo::LinkState enum
-	void AttachOnLinkStatusUpdated(const Slot<uint8_t>& slot)
-	{
-		LinkStatusUpdated.attach(slot);
 	}
 
 	bool AddSubServices(LoLaServicesManager * servicesManager)
@@ -398,6 +388,9 @@ protected:
 			return true;
 
 		}
+
+		Serial.print(F("Link Setup failed."));
+
 		return false;
 	}
 
@@ -412,13 +405,13 @@ protected:
 
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
 	{
-		if (LinkInfo.LinkState != newState)
+		if (LinkInfo.GetLinkState() != newState)
 		{
 			ResetStateStartTime();
 			ResetLastSentTimeStamp();
 
 			//Previous state.
-			if (LinkInfo.LinkState == LoLaLinkInfo::LinkStateEnum::Connected)
+			if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
@@ -426,10 +419,7 @@ protected:
 				PowerBalancer.Reset();
 			}
 
-			LinkInfo.LinkState = newState;
-
-			//New state.
-			switch (LinkInfo.LinkState)
+			switch (newState)
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 				ClearSession();
@@ -484,20 +474,19 @@ protected:
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
+				LinkInfo.Reset();
 			default:
 				break;
 			}
 
-			OnLinkStateChanged(LinkInfo.LinkState);
-			LinkStatusUpdated.fire(LinkInfo.LinkState);
-
-			PowerBalancer.Update();
+			OnLinkStateChanged(newState);
+			LinkInfo.UpdateState(newState);
 		}
 	}
 
 	void OnService()
 	{
-		switch (LinkInfo.LinkState)
+		switch (LinkInfo.GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
