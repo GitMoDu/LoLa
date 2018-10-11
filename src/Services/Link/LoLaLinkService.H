@@ -20,6 +20,7 @@
 
 #include <Services\Link\LoLaLinkCryptoChallenge.h>
 
+#include <Services\Link\LoLaLinkPowerBalancer.h>
 #include <Services\Link\LoLaLinkLatencyMeter.h>
 
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
@@ -35,6 +36,8 @@ private:
 	bool PingedPending = false;
 
 	LoLaServicesManager * ServicesManager = nullptr;
+
+	LoLaLinkPowerBalancer PowerBalancer;
 
 protected:
 	union ArrayToUint32 {
@@ -377,7 +380,8 @@ protected:
 		if (IPacketSendService::OnSetup() &&
 			ClockSyncerPointer != nullptr && 
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
-			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()))
+			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()) &&
+			PowerBalancer.Setup(GetLoLa()))
 		{
 			ClearSession();
 
@@ -419,6 +423,7 @@ protected:
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
 				LinkInfo.ResetLinkStarted();
+				PowerBalancer.Reset();
 			}
 
 			LinkInfo.LinkState = newState;
@@ -434,6 +439,7 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				CryptoSeed.Reset();
 				SetConnectingState(0);
+				PowerBalancer.Reset();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
@@ -484,6 +490,8 @@ protected:
 
 			OnLinkStateChanged(LinkInfo.LinkState);
 			LinkStatusUpdated.fire(LinkInfo.LinkState);
+
+			PowerBalancer.Update();
 		}
 	}
 
@@ -583,6 +591,10 @@ protected:
 		{
 			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 			TrySendPing(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD);
+		}
+		else if ()
+		{
+
 		}
 		else
 		{
@@ -744,7 +756,6 @@ protected:
 
 		//Rest of Payload is set on OnPreSend.
 	}
-
 
 	void PrepareClockSyncResponse(const uint8_t requestId, const uint32_t estimationError)
 	{														//Host
