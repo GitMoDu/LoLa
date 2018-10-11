@@ -120,36 +120,6 @@ public:
 				serial->println();
 			}
 		}
-
-		//Benchmark packet definition get mapping
-		uint32_t Start, End;
-		uint8_t Header = PACKET_DEFINITION_ACK_HEADER;
-		uint8_t BenchmarkCounter = 0;
-		PacketDefinition* BenchmarkDefinition = nullptr;
-
-		Start = micros();
-		BenchmarkDefinition = GetDefinition(Header);
-		if (BenchmarkDefinition != nullptr)
-		{
-			BenchmarkCounter++;
-			End = micros();
-		}
-		else
-		{
-			End = micros();
-		}
-
-		if (BenchmarkCounter > 0)
-		{
-			serial->print(F("Packet header mapping benchmark took: "));
-			serial->print(End - Start);
-			serial->print(F(" us."));
-			serial->println();
-		}
-		else
-		{
-			serial->println(F("Packet header mapping benchmark failed."));
-		}
 	}
 #endif
 };

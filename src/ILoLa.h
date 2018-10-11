@@ -11,8 +11,8 @@
 #include <stdint.h>
 #endif
 
-#define ILOLA_DEFAULT_CHANNEL				1
-
+#define ILOLA_DEFAULT_CHANNEL				0
+#define ILOLA_DEFAULT_TRANSMIT_POWER		10
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
 
 #define ILOLA_DEFAULT_MIN_RSSI				(int16_t(-100))
@@ -50,10 +50,8 @@ protected:
 	///
 
 	///Configurations
-	//Unitless value, from 0 to UINT8_MAX.
-	uint8_t TransmitPowerRatio = 0;
-
 	//From 0 to UINT8_MAX, limited by driver.
+	uint8_t CurrentTransmitPower = ILOLA_DEFAULT_TRANSMIT_POWER;
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
 	bool Enabled = false;
 	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
@@ -123,7 +121,7 @@ public:
 		{
 			return LinkIndicator->HasLink();
 		}
-		else 
+		else
 		{
 			return false;
 		}
@@ -174,14 +172,14 @@ public:
 		return LastValidReceivedRssi;
 	}
 
-	uint8_t GetTransmitPowerRatio()
+	uint8_t GetTransmitPower()
 	{
-		return TransmitPowerRatio;
+		return CurrentTransmitPower;
 	}
 
-	bool SetTransmitPowerRatio(const uint8_t transmitPowerRatio)
+	bool SetTransmitPower(const uint8_t transmitPower)
 	{
-		TransmitPowerRatio = transmitPowerRatio;
+		CurrentTransmitPower = transmitPower;
 
 		OnTransmitPowerUpdated();
 
@@ -216,8 +214,10 @@ public:
 
 	virtual int16_t GetRSSIMax() const { return 0; }
 	virtual int16_t GetRSSIMin() const { return ILOLA_DEFAULT_MIN_RSSI; }
-	virtual uint8_t GetChannelMax() const { return 100; }
+	virtual uint8_t GetChannelMax() const { return 0; }
 	virtual uint8_t GetChannelMin() const { return 0; }
+	virtual uint8_t GetTransmitPowerMax() const { return 0; }
+	virtual uint8_t GetTransmitPowerMin() const { return 0; }
 
 	virtual void SetCryptoSeedSource(ISeedSource* cryptoSeedSource) {}
 
@@ -242,4 +242,3 @@ public:
 #endif
 };
 #endif
-

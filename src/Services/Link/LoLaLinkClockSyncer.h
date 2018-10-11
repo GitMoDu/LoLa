@@ -27,7 +27,7 @@ private:
 
 protected:
 	uint8_t SyncGoodCount = 0;
-	uint32_t LastSynced = 0;
+	uint32_t LastSynced = ILOLA_INVALID_MILLIS;
 
 protected:
 	virtual void OnReset() {}
@@ -92,7 +92,7 @@ public:
 	void Reset()
 	{
 		SyncGoodCount = 0;
-		LastSynced = 0;
+		LastSynced = ILOLA_INVALID_MILLIS;
 		OnReset();
 	}
 
@@ -123,7 +123,7 @@ public:
 
 	bool IsTimeToTune()
 	{
-		return LastSynced == 0 || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS - CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS));
+		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS - CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS));
 	}
 
 	void SetSynced()
@@ -163,35 +163,32 @@ public:
 			ClockTuneAccumulator = 0;
 			StampSynced();
 		}
-		else
+		else if (estimationError > 0)
 		{
-			if (estimationError > 0)
+			if (ClockTuneAccumulator < LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX)
 			{
-				if (ClockTuneAccumulator < LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX)
-				{
-					ClockTuneAccumulator += LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
-				}
-				else 
-				{
-					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX/ LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
-					ClockTuneAccumulator = 0;
-				}
+				ClockTuneAccumulator += LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
 			}
 			else
 			{
-				if (ClockTuneAccumulator > LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN)
-				{
-					ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
-				}
-				else 
-				{
-					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
-					ClockTuneAccumulator = 0;
-				}
+				AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+				ClockTuneAccumulator = 0;
 			}
-
-			AddOffset(ClockTuneAccumulator / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
 		}
+		else
+		{
+			if (ClockTuneAccumulator > LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN)
+			{
+				ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
+			}
+			else
+			{
+				AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+				ClockTuneAccumulator = 0;
+			}
+		}
+
+		AddOffset(ClockTuneAccumulator / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
 	}
 };
 
@@ -223,7 +220,7 @@ public:
 
 	bool IsTimeToTune()
 	{
-		return IsSynced() && LastSynced != 0 &&
+		return IsSynced() && LastSynced != ILOLA_INVALID_MILLIS &&
 			(LastEstimation == 0 ||
 			(millis() - LastEstimation) > CLOCK_SYNC_TUNE_ELAPSED_MILLIS);
 	}
@@ -267,7 +264,6 @@ public:
 		return Id;
 	}
 };
-
 
 class ClockSyncRequestTransaction : public IClockSyncTransaction
 {
@@ -340,6 +336,7 @@ private:
 	{
 		ResultIn = 1
 	};
+
 public:
 	bool IsResultReady()
 	{

@@ -35,7 +35,7 @@ protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Connection Remote service"));
+		serial->print(F("Link Remote"));
 	}
 #endif // DEBUG_LOLA
 
@@ -131,6 +131,8 @@ protected:
 					RemoteChallengeTransaction.IsChallengeComplete())
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
+					//The last step is to exchange a packet with TOTP enabled.
+					SetTOTPEnabled();
 				}
 				break;
 			case ConnectingStagesEnum::LinkProtocolSwitchOver:

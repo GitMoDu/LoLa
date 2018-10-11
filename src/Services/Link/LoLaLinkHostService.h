@@ -41,7 +41,7 @@ protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Connection Host service"));
+		serial->print(F("Link Host"));
 	}
 #endif // DEBUG_LOLA
 
@@ -101,6 +101,7 @@ protected:
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (ConnectingState == AwaitingConnectionEnum::ConnectingSwitchOver &&
+				RemotePMAC != LOLA_INVALID_PMAC && 
 				SessionId == requestId)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
@@ -119,6 +120,8 @@ protected:
 				if (requestId == ChallengeTransaction->GetTransactionId())
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
+					//The last step is to exchange a packet with TOTP enabled.
+					SetTOTPEnabled();
 				}
 				break;
 			case ConnectingStagesEnum::LinkProtocolSwitchOver:
