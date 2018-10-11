@@ -389,8 +389,6 @@ protected:
 
 		}
 
-		Serial.print(F("Link Setup failed."));
-
 		return false;
 	}
 
