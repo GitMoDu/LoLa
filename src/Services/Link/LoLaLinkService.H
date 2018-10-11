@@ -116,7 +116,7 @@ protected:
 	virtual void OnClockSync() {}
 	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
 	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
-	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD); }
+	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
 
 private:
 	inline void TrySendPing(const uint32_t resendPeriod)
