@@ -592,10 +592,10 @@ protected:
 			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 			TrySendPing(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD);
 		}
-		else if ()
-		{
-
-		}
+		//else if ()
+		//{
+		//TODO: Handle power balancer.
+		//}
 		else
 		{
 			OnKeepingConnected();
