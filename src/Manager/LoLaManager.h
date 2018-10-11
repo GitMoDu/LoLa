@@ -53,6 +53,11 @@ public:
 		LoLa = loLa;
 	}
 
+	LoLaLinkInfo* GetLinkInfo()
+	{
+		return GetLinkService()->GetLinkInfo();
+	}
+
 	bool Start()
 	{		
 		LoLa->Enable();
@@ -92,7 +97,6 @@ public:
 
 protected:
 	LoLaLinkService * GetLinkService() { return &LinkService; }
-	
 };
 
 class LoLaManagerRemote : public LoLaManager
@@ -106,11 +110,6 @@ public:
 		: LoLaManager(loLa)
 		, LinkService(scheduler, loLa)
 	{
-	}
-
-	LoLaLinkInfo* GetLinkInfo()
-	{
-		return LinkService.GetLinkInfo();
 	}
 
 protected:
