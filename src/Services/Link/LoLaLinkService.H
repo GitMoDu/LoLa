@@ -199,9 +199,6 @@ public:
 			loLa->SetLinkIndicator(&LinkInfo);
 		}
 
-		CryptoSeed.Reset();
-
-		ClearSession();
 	}
 
 	LoLaLinkInfo* GetLinkInfo()
@@ -380,9 +377,11 @@ protected:
 
 	bool OnSetup()
 	{
-		if (IPacketSendService::OnSetup())
+		if (IPacketSendService::OnSetup() &&
+			ClockSyncerPointer != nullptr && 
+			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
+			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()))
 		{
-			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength());
 			ClearSession();
 
 #ifdef DEBUG_LOLA
@@ -390,10 +389,12 @@ protected:
 			PrintPMAC(PMACGenerator.GetPMAC());
 			Serial.println();
 #endif
+
+			CryptoSeed.Reset();
 			ResetStateStartTime();
 			SetNextRunASAP();
 
-			return ClockSyncerPointer != nullptr && ClockSyncerPointer->Setup(GetLoLa()->GetClockSource());
+			return true;
 
 		}
 		return false;
