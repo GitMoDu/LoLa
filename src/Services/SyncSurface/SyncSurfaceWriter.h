@@ -63,6 +63,7 @@ protected:
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
+			//TODO: Replace with explicit invalidation packet.
 			if (WriterState == SyncWriterState::SendingFinished)
 			{
 				TrackedSurface->GetTracker()->SetAll();

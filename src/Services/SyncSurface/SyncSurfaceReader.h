@@ -116,6 +116,7 @@ protected:
 			}
 			else
 			{
+				//TODO: Replace with explicit invalidation packet.
 				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			}
 			//TODO: Add resync sub-state, where the reader just asks the writer to start again.
