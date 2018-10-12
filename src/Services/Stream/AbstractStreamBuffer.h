@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include <Services\IPacketSendService.h>
 
-#include <Services\Stream\ITrackedBuffer.h>
+#include <Services\Stream\ITrackedStream.h>
 
 
 class AbstractStreamBuffer : public IPacketSendService
