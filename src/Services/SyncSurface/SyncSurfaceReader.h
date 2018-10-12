@@ -109,16 +109,15 @@ protected:
 			}
 		case SyncStateEnum::Synced:
 			UpdateLocalHash();
-			if (HashesMatch())
-			{
-				PrepareUpdateFinishedReplyPacket();
-				RequestSendPacket();
-			}
-			else
+			PrepareUpdateFinishedReplyPacket();
+			RequestSendPacket();
+
+			if (!HashesMatch())
 			{
 				//TODO: Replace with explicit invalidation packet.
 				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			}
+
 			//TODO: Add resync sub-state, where the reader just asks the writer to start again.
 			break;
 		default:
