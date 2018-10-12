@@ -93,7 +93,7 @@ protected:
 
 	void OnService()
 	{
-		switch (StreamStateEnum)
+		switch (StreamState)
 		{
 		case StreamStateEnum::WaitingForServiceDiscovery:
 			OnWaitingForServiceDiscovery();
