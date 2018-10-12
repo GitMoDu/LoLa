@@ -85,8 +85,13 @@ protected:
 
 	void OnUpdateFinishedReplyReceived()
 	{
-		if (SyncState == SyncStateEnum::Syncing)
+		UpdateLocalHash();
+
+		switch (SyncState)
 		{
+		case SyncStateEnum::WaitingForServiceDiscovery:
+			break;
+		case SyncStateEnum::Syncing:
 			switch (WriterState)
 			{
 			case SyncWriterState::SendingFinished:
@@ -98,14 +103,26 @@ protected:
 				{
 					UpdateSyncState(SyncStateEnum::Synced);
 				}
-				else 
+				else
 				{
-					TrackedSurface->GetTracker()->SetAll();	
+					TrackedSurface->GetTracker()->SetAll();
 				}
 				break;
 			default:
 				break;
 			}
+			break;
+		case SyncStateEnum::Synced:
+			if (!HashesMatch())
+			{
+				TrackedSurface->GetTracker()->SetAll();
+				UpdateSyncState(SyncStateEnum::Syncing);
+			}
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
 		}
 	}
 
