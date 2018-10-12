@@ -9,10 +9,71 @@
 
 #include <Services\Stream\ITrackedStream.h>
 
+#define ABSTRACT_STREAM_RETRY_PERIDO					((uint32_t)50)
+#define ABSTRACT_STREAM_REPLY_CHECK_PERIOD				(ABSTRACT_STREAM_RETRY_PERIDO*2)
+
+class AbstractStreamReader : public AbstractStream
+{
+public:
+	AbstractStreamReader(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedStream* trackedStream)
+		: AbstractStream(scheduler, loLa, baseHeader, trackedStream)
+	{
+	}
+
+protected:
+	void OnWaitingForServiceDiscovery()
+	{
+		if (LastSent != ILOLA_INVALID_MILLIS ||
+			Millis() - LastSent > ABSTRACT_STREAM_RETRY_PERIDO)
+		{
+			PrepareServiceDiscoveryPacket();
+			RequestSendPacket();
+		}
+		else
+		{
+			SetNextRunDelay(ABSTRACT_STREAM_REPLY_CHECK_PERIOD);
+		}
+	}
+};
+
+class AbstractStreamWriter : public AbstractStream
+{
+public:
+	AbstractStreamReader(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedStream* trackedStream)
+		: AbstractStream(scheduler, loLa, baseHeader, trackedStream)
+	{
+	}
+
+protected:
+	void OnServiceDiscoveryReceived()
+	{
+		switch (StreamState)
+		{
+		case StreamStateEnum::WaitingForServiceDiscovery:
+			StreamState = StreamStateEnum::Active;
+			Enable();
+			SetNextRunASAP();
+			break;
+		case StreamStateEnum::Active:
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
+		}
+	}
+
+	void OnStreamActive() 
+	{
+		//TODO:
+	}
+};
 
 class AbstractStream : public IPacketSendService
 {
 private:
+	uint32_t LastSent = ILOLA_INVALID_MILLIS;
+
 
 protected:
 	ITrackedStream * TrackedStream = nullptr;
@@ -53,11 +114,14 @@ public:
 	void OnLinkEstablished()
 	{
 		Enable();
+		StreamState = StreamStateEnum::WaitingForServiceDiscovery;
+		SetNextRunASAP();
 	}
 
 	void OnLinkLost()
 	{
 		Disable();
+		StreamState = StreamStateEnum::Disabled;
 	}
 
 	void OnNewDataAvailableEvent(uint8_t param)
@@ -107,7 +171,6 @@ protected:
 			break;
 		}
 	}
-
 };
 #endif
 
