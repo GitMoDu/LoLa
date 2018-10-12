@@ -53,12 +53,14 @@ private:
 public:
 	DataType GetOldest()
 	{
-		if (CircularBuffer.isEmpty())
+		if (!CircularBuffer.isEmpty())
 		{
-			return (DataType)0;
+			CircularBuffer.pull(Grunt);
 		}
-
-		CircularBuffer.pull(Grunt);
+		else
+		{
+			Grunt = 0;
+		}
 
 		return Grunt;
 	}
