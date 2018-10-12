@@ -1,7 +1,7 @@
 // ITrackedStream.h
 
-#ifndef _ITRACKEDBUFFER_h
-#define _ITRACKEDBUFFER_h
+#ifndef _ITRACKED_STREAM_h
+#define _ITRACKED_STREAM_h
 
 #include <BitTracker.h>
 #include <Callback.h>
@@ -74,6 +74,14 @@ public:
 	bool HasData()
 	{
 		return !CircularBuffer.isEmpty();
+	}
+
+	void Clear()
+	{
+		while (!CircularBuffer.isEmpty())
+		{
+			CircularBuffer.pull();
+		}
 	}
 };
 #endif

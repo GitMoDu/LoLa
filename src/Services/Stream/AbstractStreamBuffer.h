@@ -1,7 +1,7 @@
-// AbstractStreamBuffer.h
+// AbstractStream.h
 
-#ifndef _ABSTRACTSTREAMBUFFER_h
-#define _ABSTRACTSTREAMBUFFER_h
+#ifndef _ABSTRACT_STREAM_h
+#define _ABSTRACT_STREAM_h
 
 
 #include <Arduino.h>
@@ -10,21 +10,34 @@
 #include <Services\Stream\ITrackedStream.h>
 
 
-class AbstractStreamBuffer : public IPacketSendService
+class AbstractStream : public IPacketSendService
 {
 private:
 
 protected:
 	ITrackedStream * TrackedStream = nullptr;
 
+	enum StreamStateEnum : uint8_t
+	{
+		WaitingForServiceDiscovery = 0,
+		Active = 1,
+		Disabled = 2
+	} StreamState = StreamStateEnum::Disabled;
+
 protected:
 	virtual void OnWaitingForServiceDiscovery() {}
+	virtual void OnNewDataAvailable() {}
+	virtual void Clear() {};
+
+	virtual void OnStreamActive() {}
 
 public:
-	AbstractSync(Scheduler* scheduler, ILoLa* loLa, ITrackedStream* trackedStream, ILoLaPacket* packetHolder)
+	AbstractStream(Scheduler* scheduler, ILoLa* loLa, ITrackedStream* trackedStream, ILoLaPacket* packetHolder)
 		: IPacketSendService(scheduler, 0, loLa, packetHolder)
 	{
 		TrackedStream = trackedStream;
+
+		StreamState = StreamStateEnum::Disabled;
 	}
 
 	bool OnEnable()
@@ -39,18 +52,33 @@ public:
 
 	void OnLinkEstablished()
 	{
+		Enable();
 	}
 
 	void OnLinkLost()
 	{
+		Disable();
 	}
 
-	void SurfaceDataChangedEvent(uint8_t param)
+	void OnNewDataAvailableEvent(uint8_t param)
 	{
-
+		OnNewDataAvailable();
 	}
 
-	void NotifyDataChanged()
+protected:
+	virtual bool OnSetup()
+	{
+		if (IPacketSendService::OnSetup() && TrackedStream != nullptr)
+		{
+			MethodSlot<AbstractSync, uint8_t> memFunSlot(this, &AbstractStreamBuffer::OnNewDataAvailableEvent);
+			TrackedSurface->AttachOnNewDataAvailableCallback(memFunSlot);
+			return true;
+		}
+
+		return false;
+	}
+
+	inline void NotifyDataChanged()
 	{
 		if (TrackedStream != nullptr)
 		{
@@ -58,21 +86,26 @@ public:
 		}
 	}
 
-protected:
-	virtual bool OnSetup()
+	void Clear()
 	{
-		if (IPacketSendService::OnSetup() && TrackedSurface != nullptr)
-		{
-			MethodSlot<AbstractSync, uint8_t> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
-			TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
-			return true;
-		}
-
-		return false;
+		TrackedStream->Clear();
 	}
 
 	void OnService()
 	{
+		switch (StreamStateEnum)
+		{
+		case StreamStateEnum::WaitingForServiceDiscovery:
+			OnWaitingForServiceDiscovery();
+			break;
+		case StreamStateEnum::Active:
+			OnStreamActive();
+			break;
+		case StreamStateEnum::Disabled:
+		default:
+			SetNextRunLong();
+			break;
+		}
 	}
 
 };
