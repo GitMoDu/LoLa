@@ -107,6 +107,7 @@ protected:
 			{
 				UpdateSyncState(SyncStateEnum::Synced);
 			}
+			break;
 		case SyncStateEnum::Synced:
 			UpdateLocalHash();
 			PrepareUpdateFinishedReplyPacket();
