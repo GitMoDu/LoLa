@@ -13,14 +13,14 @@ class ITrackedStream
 {
 private:
 	//Callback handler.
-	Signal<uint8_t> OnStreamUpdatedCallback;
+	Signal<uint8_t> OnNewDataAvailableCallback;
 
 public:
 	ITrackedStream() {}
 
-	void AttachOnStreamUpdated(const Slot<uint8_t>& slot)
+	void AttachOnNewDataAvailableCallback(const Slot<uint8_t>& slot)
 	{
-		OnStreamUpdatedCallback.attach(slot);
+		OnNewDataAvailableCallback.attach(slot);
 	}
 
 	void NotifyDataChanged()
@@ -35,9 +35,9 @@ public:
 	}
 
 protected:
-	inline void OnDataChanged()
+	inline void OnNewDataAvailable()
 	{
-		OnStreamUpdatedCallback.fire(0);
+		OnNewDataAvailableCallback.fire(0);
 	}
 };
 
@@ -51,7 +51,7 @@ private:
 	DataType Grunt;
 
 public:
-	DataType GetNext()
+	DataType GetOldest()
 	{
 		if (CircularBuffer.isEmpty())
 		{
@@ -61,7 +61,12 @@ public:
 		CircularBuffer.pull(Grunt);
 
 		return Grunt;
-		
+	}
+
+	void AddNew(const DataType newValue)
+	{
+		CircularBuffer.addForce(newValue);
+		OnNewDataAvailable();
 	}
 
 	bool HasData()
