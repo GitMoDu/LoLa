@@ -34,6 +34,11 @@ public:
 		return false;
 	}
 
+	virtual uint8_t GetChunckSize()
+	{
+		return 0;
+	}
+
 protected:
 	inline void OnNewDataAvailable()
 	{
@@ -63,6 +68,11 @@ public:
 		}
 
 		return Grunt;
+	}
+
+	virtual uint8_t GetChunckSize()
+	{
+		return sizeof(DataType);
 	}
 
 	void AddNew(const DataType newValue)
