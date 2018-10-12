@@ -97,10 +97,10 @@ protected:
 
 	void OnUpdateFinishedReceived()
 	{
+		UpdateLocalHash();
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
-			UpdateLocalHash();
 			PrepareUpdateFinishedReplyPacket();
 			RequestSendPacket();
 			if (HashesMatch())
@@ -109,12 +109,11 @@ protected:
 			}
 			break;
 		case SyncStateEnum::Synced:
-			UpdateLocalHash();
 			PrepareUpdateFinishedReplyPacket();
 			RequestSendPacket();
 
 			if (!HashesMatch())
-			{
+			{	
 				//TODO: Replace with explicit invalidation packet.
 				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			}
