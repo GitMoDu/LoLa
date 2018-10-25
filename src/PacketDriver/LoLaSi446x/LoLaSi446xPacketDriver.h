@@ -51,7 +51,7 @@ public:
 
 	void EnableInterrupts();
 
-	void OnReceiveBegin(const uint8_t length, const  int16_t rssi);
+	void OnReceiveBegin(const uint8_t length, const int16_t rssi);
 
 	void OnReceivedFail(const int16_t rssi);
 	void OnReceived();
