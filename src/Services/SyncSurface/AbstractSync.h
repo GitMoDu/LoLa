@@ -260,14 +260,7 @@ protected:
 			OnSyncActive();
 			break;
 		case SyncStateEnum::Synced:
-			if (TrackedSurface->GetTracker()->HasSet())
-			{
-				UpdateSyncState(SyncStateEnum::Syncing);
-			}
-			else
-			{
-				SetNextRunLong();
-			}
+			SetNextRunLong();
 			break;
 		case SyncStateEnum::Disabled:
 		default:
