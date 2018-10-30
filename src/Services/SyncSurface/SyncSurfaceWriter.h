@@ -106,6 +106,7 @@ protected:
 				else
 				{
 					TrackedSurface->GetTracker()->SetAll();
+					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 				}
 				break;
 			default:
