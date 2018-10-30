@@ -66,8 +66,11 @@ protected:
 
 	void OnWaitingForServiceDiscovery()
 	{
-		if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
+		if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_NO_DISCOVERY_MILLIS)
 		{
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+			Serial.println(F("Sync Surface: No service found."));
+#endif
 			Disable();
 		}
 		else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD)
