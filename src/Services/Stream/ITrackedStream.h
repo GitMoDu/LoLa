@@ -25,7 +25,7 @@ public:
 
 	void NotifyDataChanged()
 	{
-		OnDataChanged();
+		OnNewDataAvailable();
 	}
 
 public:
@@ -47,16 +47,16 @@ protected:
 };
 
 
-template <const uint8_t BufferSize, class DataType>
+template <class DataType, const uint8_t BufferSize>
 class TemplateTrackedStreamBuffer : public ITrackedStream
 {
 private:
-	RingBufCPP<uintDataType16_t, BufferSize> CircularBuffer;
+	RingBufCPP<DataType, BufferSize> CircularBuffer;
 
 	DataType Grunt;
 
 public:
-	DataType GetOldest()
+	DataType * PullOldest()
 	{
 		if (!CircularBuffer.isEmpty())
 		{
@@ -64,21 +64,27 @@ public:
 		}
 		else
 		{
-			Grunt = 0;
+			return nullptr;
 		}
 
-		return Grunt;
+		return &Grunt;
 	}
 
-	virtual uint8_t GetChunckSize()
+	uint8_t GetChunckSize() const
 	{
 		return sizeof(DataType);
 	}
-
+	 
 	void AddNew(const DataType newValue)
 	{
 		CircularBuffer.addForce(newValue);
+		//This should be optimized to only check on a set flag.
 		OnNewDataAvailable();
+	}
+
+	inline uint8_t GetCount()
+	{
+		return CircularBuffer.numElements();
 	}
 
 	bool HasData()
