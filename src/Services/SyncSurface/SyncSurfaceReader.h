@@ -102,21 +102,29 @@ protected:
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
-			PrepareUpdateFinishedReplyPacket();
-			RequestSendPacket();
 			if (HashesMatch())
 			{
+				PrepareUpdateFinishedReplyPacket();
+				RequestSendPacket();
 				UpdateSyncState(SyncStateEnum::Synced);
+			}
+			else
+			{
+				PrepareInvalidateRequestPacket();
+				RequestSendPacket();
 			}
 			break;
 		case SyncStateEnum::Synced:
-			PrepareUpdateFinishedReplyPacket();
-			RequestSendPacket();
-
-			if (!HashesMatch())
-			{	
-				//TODO: Replace with explicit invalidation packet.
-				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+			if (HashesMatch())
+			{
+				PrepareUpdateFinishedReplyPacket();
+				RequestSendPacket();
+			}
+			else
+			{
+				PrepareInvalidateRequestPacket();
+				RequestSendPacket();
+				UpdateSyncState(SyncStateEnum::Syncing);
 			}
 
 			//TODO: Add resync sub-state, where the reader just asks the writer to start again.
