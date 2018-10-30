@@ -123,6 +123,27 @@ protected:
 		}
 	}
 
+	void OnInvalidateRequestReceived()
+	{
+		switch (SyncState)
+		{
+		case SyncStateEnum::WaitingForServiceDiscovery:
+			break;
+		case SyncStateEnum::Syncing:
+			TrackedSurface->GetTracker()->SetAll();
+			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			break;
+		case SyncStateEnum::Synced:
+			TrackedSurface->GetTracker()->SetAll();
+			UpdateSyncState(SyncStateEnum::Syncing);
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
+		}
+	}
+
 	void OnSyncActive()
 	{
 		switch (WriterState)
