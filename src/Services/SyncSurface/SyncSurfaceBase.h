@@ -19,7 +19,7 @@
 #define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED		1
 
 #define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY	2
-#define SYNC_SURFACE_META_SUB_HEADER_INVALIDATE				3
+#define SYNC_SURFACE_META_SUB_HEADER_INVALIDATE_REQUEST		3
 
 class SyncSurfaceBase : public AbstractSync
 {
@@ -59,7 +59,7 @@ protected:
 	//Writer
 	virtual void OnServiceDiscoveryReceived() {}
 	virtual void OnUpdateFinishedReplyReceived() {}
-	virtual void OnInvalidateReceived() {}
+	virtual void OnInvalidateRequestReceived() {}
 
 	//Common
 	virtual void OnSyncStateUpdated(const SyncStateEnum newState) {}
@@ -75,7 +75,6 @@ protected:
 
 		return true;
 	}
-
 
 	uint32_t GetElapsedSinceLastReceived()
 	{
@@ -127,11 +126,11 @@ protected:
 #endif
 				OnUpdateFinishedReplyReceived();
 				break;
-			case SYNC_SURFACE_META_SUB_HEADER_INVALIDATE:
+			case SYNC_SURFACE_META_SUB_HEADER_INVALIDATE_REQUEST:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnInvalidateReceived"));
 #endif
-				OnInvalidateReceived();
+				OnInvalidateRequestReceived();
 				break;
 			case SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
@@ -208,9 +207,9 @@ protected:
 		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
 	}
 
-	void PrepareInvalidatePacket()
+	void PrepareInvalidateRequestPacket()
 	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_INVALIDATE);
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_INVALIDATE_REQUEST);
 	}
 };
 #endif
