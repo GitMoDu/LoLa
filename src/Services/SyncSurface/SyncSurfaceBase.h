@@ -46,9 +46,8 @@ public:
 	}
 
 protected:
-	virtual void OnBlockReceived(const uint8_t index, uint8_t * payload) {}
-
 	//Reader
+	virtual void OnBlockReceived(const uint8_t index, uint8_t * payload) {}
 	virtual void OnUpdateFinishedReceived() {}
 	virtual void OnSyncFinishedReceived() {}
 
