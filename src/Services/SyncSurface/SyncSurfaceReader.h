@@ -58,6 +58,8 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 			TrackedSurface->GetTracker()->Debug(&Serial);
 #endif
+			InvalidateLocalHash();
+			UpdateLocalHash();
 			break;
 		default:
 			break;
@@ -86,20 +88,7 @@ protected:
 
 	void OnSyncActive()
 	{
-		if (GetElapsedSinceLastReceived() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
-		{
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			Serial.print(F("WaitingForDataUpdate Timeout. Elapsed since last received: "));
-			Serial.print(GetElapsedSinceLastReceived());
-#endif
-			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-		}
-		else
-		{
-			InvalidateLocalHash();
-			UpdateLocalHash();
-			SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
-		}
+		SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
 	}
 
 	void OnUpdateFinishedReceived()

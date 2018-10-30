@@ -23,8 +23,6 @@ private:
 	SyncMetaPacketDefinition SyncMetaDefinition;
 	SyncDataPacketDefinition DataPacketDefinition;
 
-	uint32_t LastReceived = ILOLA_INVALID_MILLIS;
-
 	union ArrayToUint32 {
 		byte array[4];
 		uint32_t uint;
@@ -68,23 +66,10 @@ protected:
 		return true;
 	}
 
-	uint32_t GetElapsedSinceLastReceived()
-	{
-		if (LastReceived == ILOLA_INVALID_MILLIS)
-		{
-			return ILOLA_INVALID_MILLIS;
-		}
-		else
-		{
-			return Millis() - LastReceived;
-		}
-	}
-
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
 	{
 		if (header == DataPacketDefinition.GetHeader())
 		{
-			LastReceived = Millis();
 			//To Reader.
 			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
 
@@ -92,7 +77,6 @@ protected:
 		}
 		else if (header == SyncMetaDefinition.GetHeader())
 		{
-			LastReceived = Millis();
 			SetRemoteHash(incomingPacket->GetPayload()[0]);
 
 			switch (incomingPacket->GetId())
