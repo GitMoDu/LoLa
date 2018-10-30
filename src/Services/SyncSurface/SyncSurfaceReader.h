@@ -66,14 +66,14 @@ protected:
 		{
 			Disable();
 		}
-		else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_RETRY_PERIDO)
+		else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD)
 		{
 			PrepareServiceDiscoveryPacket();
 			RequestSendPacket();
 		}
 		else
 		{
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+			SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
 		}
 	}
 
@@ -91,13 +91,14 @@ protected:
 		{
 			InvalidateLocalHash();
 			UpdateLocalHash();
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD);
+			SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
 		}
 	}
 
 	void OnUpdateFinishedReceived()
 	{
 		UpdateLocalHash();
+
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
