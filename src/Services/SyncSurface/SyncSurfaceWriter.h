@@ -144,7 +144,11 @@ protected:
 			SetNextRunDelay(ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::SendingFinished:
-			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_RESEND_PERIOD_MILLIS)
+			if (TrackedSurface->GetTracker()->HasSet())
+			{
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			}
+			else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_RESEND_PERIOD_MILLIS)
 			{
 				UpdateLocalHash();
 				PrepareUpdateFinishedPacket();
