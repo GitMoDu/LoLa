@@ -11,10 +11,6 @@
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacketMap.h>
 
-
-#define ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS   (uint32_t)5
-#define ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS		(uint32_t)1
-
 #define SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY		0
 #define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED		1
 
@@ -38,7 +34,7 @@ private:
 
 public:
 	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
-		: AbstractSync(scheduler, ABSTRACT_SURFACE_SYNC_FAST_CHECK_PERIOD_MILLIS, loLa, trackedSurface, &PacketHolder)
+		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, loLa, trackedSurface, &PacketHolder)
 	{
 		SyncMetaDefinition.SetBaseHeader(baseHeader);
 		DataPacketDefinition.SetBaseHeader(baseHeader);

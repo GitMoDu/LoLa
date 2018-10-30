@@ -141,10 +141,10 @@ protected:
 			break;
 		case SyncWriterState::SendingBlock:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
+			SetNextRunDelay(ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::SendingFinished:
-			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_RETRY_PERIDO)
+			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_RESEND_PERIOD_MILLIS)
 			{
 				UpdateLocalHash();
 				PrepareUpdateFinishedPacket();
@@ -152,7 +152,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+				SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
 			}			
 			break;			 
 		default:
