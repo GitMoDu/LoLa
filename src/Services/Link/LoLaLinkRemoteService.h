@@ -278,7 +278,7 @@ protected:
 			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
 		}
 	}
-	
+
 	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
 		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&

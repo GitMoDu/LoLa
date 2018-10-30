@@ -284,7 +284,7 @@ protected:
 	}
 
 	inline void SetTOTPEnabled()
-	{		
+	{
 		SetBaseSeed();
 		CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
 	}
@@ -368,7 +368,7 @@ protected:
 	bool OnSetup()
 	{
 		if (IPacketSendService::OnSetup() &&
-			ClockSyncerPointer != nullptr && 
+			ClockSyncerPointer != nullptr &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
 			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()) &&
 			PowerBalancer.Setup(GetLoLa()))
@@ -505,7 +505,7 @@ protected:
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
-				RemotePMAC == LOLA_INVALID_PMAC || 
+				RemotePMAC == LOLA_INVALID_PMAC ||
 				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
@@ -552,7 +552,7 @@ protected:
 
 	inline void OnKeepingConnectedInternal()
 	{
-		if(PingedPending) 
+		if (PingedPending)
 		{
 			PreparePong();
 			RequestSendPacket();

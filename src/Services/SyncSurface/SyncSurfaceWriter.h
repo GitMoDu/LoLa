@@ -178,8 +178,8 @@ protected:
 			else
 			{
 				SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
-			}			
-			break;			 
+			}
+			break;
 		default:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
