@@ -49,15 +49,9 @@ protected:
 		{
 		case SyncStateEnum::Syncing:
 			TrackedSurface->GetTracker()->SetAll();
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			TrackedSurface->GetTracker()->Debug(&Serial);
-#endif
 			break;
 		case SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->ClearAll();
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			TrackedSurface->GetTracker()->Debug(&Serial);
-#endif
 			InvalidateLocalHash();
 			UpdateLocalHash();
 			break;
