@@ -43,7 +43,7 @@ protected:
 		SetNextRunASAP();
 	}
 
-	void OnSyncStateUpdated(const SyncStateEnum newState)
+	void OnStateUpdated(const SyncStateEnum newState)
 	{
 		switch (newState)
 		{

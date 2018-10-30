@@ -56,9 +56,6 @@ protected:
 	virtual void OnUpdateFinishedReplyReceived() {}
 	virtual void OnInvalidateRequestReceived() {}
 
-	//Common
-	virtual void OnSyncStateUpdated(const SyncStateEnum newState) {}
-
 protected:
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
@@ -81,12 +78,6 @@ protected:
 		{
 			return Millis() - LastReceived;
 		}
-	}
-
-	void OnStateUpdated(const SyncStateEnum newState)
-	{
-		AbstractSync::OnStateUpdated(newState);
-		OnSyncStateUpdated(newState);
 	}
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
