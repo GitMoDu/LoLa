@@ -17,7 +17,9 @@
 
 #define SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY		0
 #define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED		1
+
 #define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY	2
+#define SYNC_SURFACE_META_SUB_HEADER_INVALIDATE				3
 
 class SyncSurfaceBase : public AbstractSync
 {
@@ -57,6 +59,7 @@ protected:
 	//Writer
 	virtual void OnServiceDiscoveryReceived() {}
 	virtual void OnUpdateFinishedReplyReceived() {}
+	virtual void OnInvalidateReceived() {}
 
 	//Common
 	virtual void OnSyncStateUpdated(const SyncStateEnum newState) {}
@@ -124,6 +127,12 @@ protected:
 #endif
 				OnUpdateFinishedReplyReceived();
 				break;
+			case SYNC_SURFACE_META_SUB_HEADER_INVALIDATE:
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+				Serial.println(F("OnInvalidateReceived"));
+#endif
+				OnInvalidateReceived();
+				break;
 			case SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnServiceDiscoveryReceived"));
@@ -168,19 +177,10 @@ protected:
 		Packet->GetPayload()[0] = GetLocalHash();
 	}
 
-	void PrepareServiceDiscoveryPacket()
-	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY);
-	}
-
+	//Writer
 	void PrepareUpdateFinishedPacket()
 	{
 		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED);
-	}
-
-	void PrepareUpdateFinishedReplyPacket()
-	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
 	}
 
 	bool PrepareBlockPacketHeader(const uint8_t index)
@@ -195,6 +195,22 @@ protected:
 		{
 			return false;
 		}
+	}
+
+	//Reader
+	void PrepareServiceDiscoveryPacket()
+	{
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY);
+	}
+
+	void PrepareUpdateFinishedReplyPacket()
+	{
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
+	}
+
+	void PrepareInvalidatePacket()
+	{
+		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_INVALIDATE);
 	}
 };
 #endif
