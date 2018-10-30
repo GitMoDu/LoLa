@@ -63,12 +63,8 @@ protected:
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
-			//TODO: Replace with explicit invalidation packet.
-			if (WriterState == SyncWriterState::SendingFinished)
-			{
-				TrackedSurface->GetTracker()->SetAll();
-				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			}			
+			TrackedSurface->GetTracker()->SetAll();
+			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
 		case SyncStateEnum::Disabled:
 			break;
@@ -145,7 +141,6 @@ protected:
 			break;
 		case SyncWriterState::SendingBlock:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			TrackedSurface->GetTracker()->Debug(&Serial);
 			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::SendingFinished:
