@@ -63,8 +63,6 @@ protected:
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
-			TrackedSurface->GetTracker()->SetAll();
-			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
 		case SyncStateEnum::Disabled:
 			break;
