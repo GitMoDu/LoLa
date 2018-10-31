@@ -3,8 +3,6 @@
 #ifndef _LOLA_LINK_SERVICE_h
 #define _LOLA_LINK_SERVICE_h
 
-//#define LOLA_LINK_DIAGNOSTICS_ENABLED
-
 #include <Services\Link\LoLaLinkDefinitions.h>
 
 #include <Services\IPacketSendService.h>
@@ -210,13 +208,6 @@ public:
 		{
 			return false;
 		}
-
-#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
-		if (!ServicesManager->Add(&Diagnostics) || !Diagnostics.AddSubServices(ServicesManager))
-		{
-			return false;
-		}
-#endif
 
 		return true;
 	}

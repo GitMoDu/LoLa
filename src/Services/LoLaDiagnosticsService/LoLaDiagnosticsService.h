@@ -5,7 +5,7 @@
 
 #include <LoLaLinkInfo.h>
 #include <Services\ILoLaService.h>
-#include <Services\LoLaLatencyService\LoLaLatencyService.h>
+#include <Services\LoLaDiagnosticsService\LoLaLatencyService.h>
 
 
 #define LOLA_DIAGNOSTICS_SERVICE_POLL_PERIOD_MILLIS				500
