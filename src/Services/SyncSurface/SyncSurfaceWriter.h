@@ -158,6 +158,8 @@ protected:
 			else
 			{
 				UpdateSyncingState(SyncWriterState::SendingFinished);
+				ResetLastSentTimeStamp();
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS);
 			}
 			break;
 		case SyncWriterState::SendingBlock:
@@ -169,7 +171,7 @@ protected:
 			{
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			}
-			else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_RESEND_PERIOD_MILLIS)
+			else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
 			{
 				UpdateLocalHash();
 				PrepareUpdateFinishedPacket();
