@@ -111,8 +111,6 @@ protected:
 				RequestSendPacket();
 				UpdateSyncState(SyncStateEnum::Syncing);
 			}
-
-			//TODO: Add resync sub-state, where the reader just asks the writer to start again.
 			break;
 		default:
 			break;
