@@ -19,7 +19,6 @@
 
 
 #define _TASK_OO_CALLBACKS
-#define _TASK_PRIORITY          // Support for layered scheduling priority
 
 
 #include <TaskScheduler.h>
@@ -30,11 +29,11 @@
 
 
 ///Process scheduler.
-Scheduler SchedulerBase, SchedulerHighPriority;
+Scheduler SchedulerBase;
 ///
 
 ///Radio manager and driver.
-LoLaSi446xPacketDriver LoLaDriver(&SchedulerHighPriority);
+LoLaSi446xPacketDriver LoLaDriver(&SchedulerBase);
 HostManager LoLa(&SchedulerBase, &LoLaDriver);
 ///
 
@@ -62,7 +61,6 @@ void setup()
 	Serial.println(F("Example Host"));
 #endif	
 
-	SchedulerBase.setHighPriorityScheduler(&SchedulerHighPriority);
 
 	if (!LoLa.Setup())
 	{
