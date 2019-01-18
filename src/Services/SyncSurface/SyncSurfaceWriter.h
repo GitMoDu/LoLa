@@ -43,7 +43,7 @@ protected:
 		SetNextRunASAP();
 	}
 
-	void OnSyncStateUpdated(const SyncStateEnum newState)
+	void OnStateUpdated(const SyncStateEnum newState)
 	{
 		switch (newState)
 		{
@@ -63,12 +63,6 @@ protected:
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
-			//TODO: Replace with explicit invalidation packet.
-			if (WriterState == SyncWriterState::SendingFinished)
-			{
-				TrackedSurface->GetTracker()->SetAll();
-				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			}			
 			break;
 		case SyncStateEnum::Disabled:
 			break;
@@ -85,8 +79,13 @@ protected:
 
 	void OnUpdateFinishedReplyReceived()
 	{
-		if (SyncState == SyncStateEnum::Syncing)
+		UpdateLocalHash();
+
+		switch (SyncState)
 		{
+		case SyncStateEnum::WaitingForServiceDiscovery:
+			break;
+		case SyncStateEnum::Syncing:
 			switch (WriterState)
 			{
 			case SyncWriterState::SendingFinished:
@@ -98,14 +97,48 @@ protected:
 				{
 					UpdateSyncState(SyncStateEnum::Synced);
 				}
-				else 
+				else
 				{
-					TrackedSurface->GetTracker()->SetAll();	
+					TrackedSurface->GetTracker()->SetAll();
+					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 				}
 				break;
 			default:
 				break;
 			}
+			break;
+		case SyncStateEnum::Synced:
+			if (!HashesMatch())
+			{
+				TrackedSurface->GetTracker()->SetAll();
+				UpdateSyncState(SyncStateEnum::Syncing);
+			}
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
+		}
+	}
+
+	void OnInvalidateRequestReceived()
+	{
+		switch (SyncState)
+		{
+		case SyncStateEnum::WaitingForServiceDiscovery:
+			break;
+		case SyncStateEnum::Syncing:
+			TrackedSurface->GetTracker()->SetAll();
+			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			break;
+		case SyncStateEnum::Synced:
+			TrackedSurface->GetTracker()->SetAll();
+			UpdateSyncState(SyncStateEnum::Syncing);
+			break;
+		case SyncStateEnum::Disabled:
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -123,15 +156,20 @@ protected:
 			else
 			{
 				UpdateSyncingState(SyncWriterState::SendingFinished);
+				ResetLastSentTimeStamp();
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS);
 			}
 			break;
 		case SyncWriterState::SendingBlock:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			TrackedSurface->GetTracker()->Debug(&Serial);
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_SEND_BACK_OFF_PERIOD_MILLIS);
+			SetNextRunDelay(ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::SendingFinished:
-			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_RETRY_PERIDO)
+			if (TrackedSurface->GetTracker()->HasSet())
+			{
+				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
+			}
+			else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
 			{
 				UpdateLocalHash();
 				PrepareUpdateFinishedPacket();
@@ -139,9 +177,9 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
-			}			
-			break;			 
+				SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+			}
+			break;
 		default:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;

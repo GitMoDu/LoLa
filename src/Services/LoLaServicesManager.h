@@ -70,7 +70,7 @@ public:
 
 	ILoLaService* Get(uint8_t index)
 	{
-		if (index > ServicesCount || index > MAX_RADIO_SERVICES_COUNT)
+		if (index >= ServicesCount || index > MAX_RADIO_SERVICES_COUNT)
 		{
 			return nullptr;
 		}

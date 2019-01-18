@@ -3,7 +3,7 @@
 #ifndef _ABSTRACTSURFACE_h
 #define _ABSTRACTSURFACE_h
 
-#define LOLA_SYNC_FULL_DEBUG
+//#define LOLA_SYNC_FULL_DEBUG
 
 #include <Arduino.h>
 #include <Crypto\TinyCRC.h>
@@ -12,10 +12,16 @@
 
 #define ABSTRACT_SURFACE_DEFAULT_HASH 0
 
-#define ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST			(uint32_t)1000
+#define ABSTRACT_SURFACE_MAX_ELAPSED_NO_DISCOVERY_MILLIS	(uint32_t)5000
 
-#define ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD			(uint32_t)50
-#define ABSTRACT_SURFACE_SYNC_RETRY_PERIDO					(ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD*2)
+#define ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS			(uint32_t)1
+#define ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS			(uint32_t)200
+
+#define ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD		(uint32_t)50
+#define ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS		(uint32_t)0
+#define ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS	(uint32_t)20
+#define ABSTRACT_SURFACE_SEND_FAILED_RETRY_PERIDO			(uint32_t)100
+
 
 class AbstractSync : public IPacketSendService
 {
@@ -101,7 +107,7 @@ protected:
 	void OnSendFailed()
 	{
 		//In case the send fails, this prevents from immediate resending.
-		SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+		SetNextRunDelay(ABSTRACT_SURFACE_SEND_FAILED_RETRY_PERIDO);
 	}
 
 	void SetRemoteHash(const uint8_t remoteHash)
@@ -260,14 +266,7 @@ protected:
 			OnSyncActive();
 			break;
 		case SyncStateEnum::Synced:
-			if (TrackedSurface->GetTracker()->HasSet())
-			{
-				UpdateSyncState(SyncStateEnum::Syncing);
-			}
-			else
-			{
-				SetNextRunLong();
-			}
+			SetNextRunLong();
 			break;
 		case SyncStateEnum::Disabled:
 		default:

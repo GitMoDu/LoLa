@@ -3,8 +3,6 @@
 #ifndef _LOLA_LINK_SERVICE_h
 #define _LOLA_LINK_SERVICE_h
 
-//#define LOLA_LINK_DIAGNOSTICS_ENABLED
-
 #include <Services\Link\LoLaLinkDefinitions.h>
 
 #include <Services\IPacketSendService.h>
@@ -211,13 +209,6 @@ public:
 			return false;
 		}
 
-#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
-		if (!ServicesManager->Add(&Diagnostics) || !Diagnostics.AddSubServices(ServicesManager))
-		{
-			return false;
-		}
-#endif
-
 		return true;
 	}
 
@@ -249,7 +240,7 @@ protected:
 		LastSent = Millis();
 
 		if (PingedPending && header == LinkDefinition.GetHeader() &&
-			PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_PONG);
+			PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_PONG)
 		{
 			PingedPending = false;
 		}
@@ -284,7 +275,7 @@ protected:
 	}
 
 	inline void SetTOTPEnabled()
-	{		
+	{
 		SetBaseSeed();
 		CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
 	}
@@ -368,7 +359,7 @@ protected:
 	bool OnSetup()
 	{
 		if (IPacketSendService::OnSetup() &&
-			ClockSyncerPointer != nullptr && 
+			ClockSyncerPointer != nullptr &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
 			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()) &&
 			PowerBalancer.Setup(GetLoLa()))
@@ -505,7 +496,7 @@ protected:
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
-				RemotePMAC == LOLA_INVALID_PMAC || 
+				RemotePMAC == LOLA_INVALID_PMAC ||
 				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
@@ -552,7 +543,7 @@ protected:
 
 	inline void OnKeepingConnectedInternal()
 	{
-		if(PingedPending) 
+		if (PingedPending)
 		{
 			PreparePong();
 			RequestSendPacket();
@@ -603,7 +594,6 @@ protected:
 			switch (incomingPacket->GetPayload()[0])
 			{
 				//To both.
-				break;
 			case LOLA_LINK_SUBHEADER_PING:
 				PingedPending = true;
 				SetNextRunASAP();

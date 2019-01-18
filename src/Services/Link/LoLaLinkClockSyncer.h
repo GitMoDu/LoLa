@@ -153,7 +153,7 @@ public:
 
 	void OnTuneErrorReceived(const int32_t estimationError)
 	{
-		if (abs(estimationError > CLOCK_SYNC_MAX_TUNE_ERROR))
+		if (abs(estimationError) > CLOCK_SYNC_MAX_TUNE_ERROR)
 		{
 			//TODO: Count sequential high error tune results, break connection on threshold value.
 			return;

@@ -43,17 +43,17 @@ protected:
 		}
 	}
 
-	void OnSyncStateUpdated(const SyncStateEnum newState)
+	void OnStateUpdated(const SyncStateEnum newState)
 	{
 		switch (newState)
 		{
 		case SyncStateEnum::Syncing:
 			TrackedSurface->GetTracker()->SetAll();
-			TrackedSurface->GetTracker()->Debug(&Serial);
 			break;
 		case SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->ClearAll();
-			TrackedSurface->GetTracker()->Debug(&Serial);
+			InvalidateLocalHash();
+			UpdateLocalHash();
 			break;
 		default:
 			break;
@@ -62,53 +62,44 @@ protected:
 
 	void OnWaitingForServiceDiscovery()
 	{
-		if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
+		if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_NO_DISCOVERY_MILLIS)
 		{
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+			Serial.println(F("Sync Surface: No service found."));
+#endif
 			Disable();
 		}
-		else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_RETRY_PERIDO)
+		else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD)
 		{
 			PrepareServiceDiscoveryPacket();
 			RequestSendPacket();
 		}
 		else
 		{
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_RETRY_PERIDO);
+			SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
 		}
 	}
 
 	void OnSyncActive()
 	{
-		if (GetElapsedSinceLastReceived() > ABSTRACT_SURFACE_MAX_ELAPSED_DATA_SYNC_LOST)
-		{
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			Serial.print(F("WaitingForDataUpdate Timeout. Elapsed since last received: "));
-			Serial.print(GetElapsedSinceLastReceived());
-#endif
-			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-		}
-		else
-		{
-			InvalidateLocalHash();
-			UpdateLocalHash();
-			SetNextRunDelay(ABSTRACT_SURFACE_SYNC_REPLY_CHECK_PERIOD);
-		}
+		SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
 	}
 
 	void OnUpdateFinishedReceived()
 	{
+		UpdateLocalHash();
+
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
-			UpdateLocalHash();
 			PrepareUpdateFinishedReplyPacket();
 			RequestSendPacket();
 			if (HashesMatch())
 			{
 				UpdateSyncState(SyncStateEnum::Synced);
 			}
+			break;
 		case SyncStateEnum::Synced:
-			UpdateLocalHash();
 			if (HashesMatch())
 			{
 				PrepareUpdateFinishedReplyPacket();
@@ -116,10 +107,10 @@ protected:
 			}
 			else
 			{
-				//TODO: Replace with explicit invalidation packet.
-				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+				PrepareInvalidateRequestPacket();
+				RequestSendPacket();
+				UpdateSyncState(SyncStateEnum::Syncing);
 			}
-			//TODO: Add resync sub-state, where the reader just asks the writer to start again.
 			break;
 		default:
 			break;
