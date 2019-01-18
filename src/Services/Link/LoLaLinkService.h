@@ -240,7 +240,7 @@ protected:
 		LastSent = Millis();
 
 		if (PingedPending && header == LinkDefinition.GetHeader() &&
-			PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_PONG);
+			PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_PONG)
 		{
 			PingedPending = false;
 		}
@@ -594,7 +594,6 @@ protected:
 			switch (incomingPacket->GetPayload()[0])
 			{
 				//To both.
-				break;
 			case LOLA_LINK_SUBHEADER_PING:
 				PingedPending = true;
 				SetNextRunASAP();
