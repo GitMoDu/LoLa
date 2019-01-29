@@ -171,7 +171,6 @@ protected:
 			}
 			else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
 			{
-				UpdateLocalHash();
 				PrepareUpdateFinishedPacket();
 				RequestSendPacket();
 			}
