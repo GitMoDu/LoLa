@@ -176,7 +176,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS - GetElapsedSinceLastSent());
 			}
 			break;
 		default:
