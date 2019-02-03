@@ -75,8 +75,8 @@ protected:
 			RequestSendPacket();
 		}
 		else
-		{
-			SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+		{			
+			SetNextRunDelay(ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD - GetElapsedSinceLastSent());
 		}
 	}
 

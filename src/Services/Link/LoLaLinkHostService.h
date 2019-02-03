@@ -308,9 +308,43 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
 		}
 	}
+	///
+
+	///Link info sync and report updates.
+	void OnInfoSync() 
+	{
+		switch (InfoSyncTransaction->Stage)
+		{
+		case IInfoSyncTransaction::StageEnum::StageRTT:
+			//TODO: Send RTT
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareChallengeSwitchOver();
+				RequestSendPacket(true);
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+			}
+
+			LinkInfo.SetRTT(LatencyMeter.GetAverageLatency());
+			InfoSyncTransaction->Stage = IInfoSyncTransaction::StageRSSI;
+			break;
+		case IInfoSyncTransaction::StageEnum::StageRSSI:
+			//TODO: Send RSSI
+			InfoSyncTransaction->Stage = IInfoSyncTransaction::StagesDone;
+			break;
+		case IInfoSyncTransaction::StageEnum::StagesDone:
+			//If we are here, we're done.
+			break;
+		default:
+			InfoSyncTransaction->Clear();
+			break;
+		}
+		
 	///
 
 	///Protocol promotion to connection!
