@@ -13,7 +13,7 @@ protected:
 	uint8_t TransactionState = 0;
 
 public:
-	virtual bool IsChallengeComplete() { return false; }
+	virtual bool IsComplete() { return false; }
 
 public:
 	virtual void Clear()
@@ -51,7 +51,7 @@ private:
 	}
 
 public:
-	bool IsChallengeComplete()
+	bool IsComplete()
 	{
 		return TransactionState == TransactionStage::Complete;
 	}
@@ -98,7 +98,7 @@ public:
 		return TransactionState == TransactionStage::ReplyReady;
 	}
 
-	bool IsChallengeComplete()
+	bool IsComplete()
 	{
 		return TransactionState == TransactionStage::Complete;
 	}
@@ -114,7 +114,7 @@ public:
 			Clear();
 		}
 
-		return IsChallengeComplete();
+		return IsComplete();
 	}
 
 	void OnRequest(const uint8_t transactionId, const uint32_t token)

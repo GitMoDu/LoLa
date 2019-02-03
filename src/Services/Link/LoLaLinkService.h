@@ -145,7 +145,7 @@ private:
 			//We transition forward when we receive the appropriate message.
 			break;
 		case ConnectingStagesEnum::ChallengeStage:
-			if (ChallengeTransaction->IsChallengeComplete())
+			if (ChallengeTransaction->IsComplete())
 			{
 				SetConnectingState(ConnectingStagesEnum::ChallengeSwitchOver);
 				SetNextRunASAP();

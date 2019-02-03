@@ -128,7 +128,7 @@ protected:
 				//If we break here, we need to receive two of the same protocol packet.
 			case ConnectingStagesEnum::ChallengeSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER &&
-					RemoteChallengeTransaction.IsChallengeComplete())
+					RemoteChallengeTransaction.IsComplete())
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
 					//The last step is to exchange a packet with TOTP enabled.
