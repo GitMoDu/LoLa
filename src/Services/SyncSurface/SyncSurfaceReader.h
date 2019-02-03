@@ -112,6 +112,18 @@ protected:
 				UpdateSyncState(SyncStateEnum::Syncing);
 			}
 			break;
+		case SyncStateEnum::WaitingForServiceDiscovery:
+			PrepareUpdateFinishedReplyPacket();
+			RequestSendPacket();
+			if (HashesMatch())
+			{
+				UpdateSyncState(SyncStateEnum::Synced);
+			}
+			else
+			{
+				UpdateSyncState(SyncStateEnum::Syncing);
+			}
+			break;
 		default:
 			break;
 		}
