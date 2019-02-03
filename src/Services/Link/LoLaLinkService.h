@@ -19,7 +19,6 @@
 #include <Services\Link\LoLaLinkCryptoChallenge.h>
 
 #include <Services\Link\LoLaLinkPowerBalancer.h>
-#include <Services\Link\LoLaLinkLatencyMeter.h>
 
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
@@ -71,8 +70,6 @@ protected:
 	//Crypto Challenge.
 	IChallengeTransaction* ChallengeTransaction = nullptr;
 
-	//Latency measurement.
-	LoLaLinkLatencyMeter LatencyMeter;
 
 	//Optimized memory usage grunt packet.
 	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
@@ -224,17 +221,6 @@ public:
 	}
 
 protected:
-	void OnAckReceived(const uint8_t header, const uint8_t id)
-	{
-		//Catch and store acked packets' round trip time.
-		LatencyMeter.OnAckReceived(id);
-
-		if (header == LinkWithAckDefinition.GetHeader())
-		{
-			OnLinkPacketAckReceived(id);
-		}
-	}
-
 	void OnSendOk(const uint8_t header, const uint32_t sendDuration)
 	{
 		LastSent = Millis();
@@ -325,8 +311,6 @@ protected:
 		SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 		RemotePMAC = LOLA_INVALID_PMAC;
 
-		LatencyMeter.Reset();
-
 		if (ClockSyncerPointer != nullptr)
 		{
 			ClockSyncerPointer->Reset();
@@ -381,15 +365,6 @@ protected:
 		}
 
 		return false;
-	}
-
-	virtual void OnPreSend()
-	{
-		if (PacketHolder.GetDefinition()->HasACK())
-		{
-			//Piggy back on any link with ack packets to measure latency.
-			LatencyMeter.OnAckPacketSent(PacketHolder.GetId());
-		}
 	}
 
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)

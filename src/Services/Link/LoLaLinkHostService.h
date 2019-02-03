@@ -5,6 +5,9 @@
 
 #include <Services\Link\LoLaLinkService.h>
 
+#include <Services\Link\LoLaLinkLatencyMeter.h>
+
+
 class LoLaLinkHostService : public LoLaLinkService
 {
 private:
@@ -19,6 +22,10 @@ private:
 	ClockSyncResponseTransaction HostClockSyncTransaction;
 
 	ChallengeRequestTransaction HostChallengeTransaction;
+
+	//Latency measurement.
+	LoLaLinkLatencyMeter LatencyMeter;
+
 
 private:
 	void NewSession()
@@ -378,6 +385,31 @@ protected:
 			break;
 		default:
 			break;
+		}
+	}
+
+	void OnClearSession()
+	{
+		LatencyMeter.Reset();
+	}
+
+	void OnPreSend()
+	{
+		if (PacketHolder.GetDefinition()->HasACK())
+		{
+			//Piggy back on any link with ack packets to measure latency.
+			LatencyMeter.OnAckPacketSent(PacketHolder.GetId());
+		}
+	}
+
+	void OnAckReceived(const uint8_t header, const uint8_t id)
+	{
+		//Catch and store acked packets' round trip time.
+		LatencyMeter.OnAckReceived(id);
+
+		if (header == LinkWithAckDefinition.GetHeader())
+		{
+			OnLinkPacketAckReceived(id);
 		}
 	}
 
