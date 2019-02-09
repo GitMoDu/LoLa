@@ -61,11 +61,6 @@ public:
 		LinkStatusUpdated.attach(slot);
 	}
 
-	void ResetLatency()
-	{
-		RTT = ILOLA_INVALID_LATENCY;
-	}
-
 	bool IsDisabled()
 	{
 		return LinkState == LinkStateEnum::Disabled;
