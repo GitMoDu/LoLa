@@ -331,8 +331,8 @@ protected:
 		switch (HostInfoTransaction.Stage)
 		{
 		case InfoSyncTransaction::StageEnum::StageStart:
-			HostInfoTransaction.Advance();
 			Serial.println(F("InfoTransaction: StageStart"));
+			HostInfoTransaction.Advance();//First move is done by host.
 			SetNextRunASAP();
 			break;
 		case InfoSyncTransaction::StageEnum::StageHostRTT:
@@ -394,6 +394,8 @@ protected:
 		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
 			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI)
 			{
+				Serial.print(F("InfoTransaction: HostRSSI: (normalized) "));
+				Serial.println((uint8_t)content);
 				LinkInfo.SetRemoteRSSINormalized((uint8_t)content);
 				SetNextRunASAP();
 			}

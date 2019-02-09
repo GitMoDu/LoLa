@@ -387,6 +387,7 @@ protected:
 
 		if (RemoteInfoTransaction.OnUpdateReceived(contentId))
 		{
+			//We don't check for Stage here because OnUpdateReceived already validated Stage.
 			switch (contentId)
 			{
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRTT:
