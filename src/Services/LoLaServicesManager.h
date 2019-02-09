@@ -8,6 +8,8 @@
 #include <Packet\LoLaPacket.h>
 #include <Services\ILoLaService.h>
 
+#include <LoLaLinkInfo.h>
+
 #ifndef LOLA_SERVICES_MAX_COUNT
 #define MAX_RADIO_SERVICES_COUNT 10
 #endif
@@ -19,8 +21,13 @@ private:
 	uint8_t ServicesCount = 0;
 	bool Error = false;
 
+
+	///Link Info Source
+	LoLaLinkInfo LinkInfo;
+	///
+
 public:
-	LoLaServicesManager()
+	LoLaServicesManager() : LinkInfo()
 	{
 		for (uint8_t i = 0; i < MAX_RADIO_SERVICES_COUNT; i++)
 		{
@@ -83,6 +90,11 @@ public:
 	uint8_t GetCount()
 	{
 		return ServicesCount;
+	}
+
+	LoLaLinkInfo* GetLinkInfo()
+	{
+		return &LinkInfo;
 	}
 
 	bool Add(ILoLaService* service)

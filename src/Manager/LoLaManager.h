@@ -28,13 +28,13 @@ protected:
 
 protected:
 	bool SetupServices()
-	{
-		if (!LoLa->GetServices()->Add(GetLinkService()))
+	{		
+		if (!GetLinkService()->SetServicesManager(LoLa->GetServices()))
 		{
 			return false;
 		}
 
-		if (!GetLinkService()->AddSubServices(LoLa->GetServices()))
+		if (!LoLa->GetServices()->Add(GetLinkService()))
 		{
 			return false;
 		}

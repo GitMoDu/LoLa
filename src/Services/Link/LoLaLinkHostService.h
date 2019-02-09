@@ -63,7 +63,7 @@ protected:
 
 	void OnLinkDiscoveryReceived()
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
 		{
 			SetNextRunASAP();
 		}
@@ -71,7 +71,7 @@ protected:
 
 	void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
-		switch (LinkInfo.GetLinkState())
+		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
@@ -95,7 +95,7 @@ protected:
 
 	void OnLinkRequestReadyReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::LinkRequested &&
 			SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
 			SessionId == sessionId &&
@@ -107,7 +107,7 @@ protected:
 
 	void OnLinkPacketAckReceived(const uint8_t requestId)
 	{
-		switch (LinkInfo.GetLinkState())
+		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (LinkingState == AwaitingLinkEnum::LinkingSwitchOver &&
@@ -199,7 +199,7 @@ protected:
 	///Clock Sync.
 	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
@@ -210,7 +210,7 @@ protected:
 
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
 				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
@@ -305,7 +305,7 @@ protected:
 
 	void OnChallengeResponseReceived(const uint8_t requestId, const uint32_t token)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			LinkingState == LinkingStagesEnum::ChallengeStage)
 		{
 			HostChallengeTransaction.OnReply(requestId, token);
@@ -333,7 +333,7 @@ protected:
 		switch (HostInfoTransaction.GetStage())
 		{
 		case InfoSyncTransaction::StageEnum::StageStart:
-			LinkInfo.SetRTT(LatencyMeter.GetAverageLatency());
+			LinkInfo->SetRTT(LatencyMeter.GetAverageLatency());
 			HostInfoTransaction.Advance();//First move is done by host.
 			SetNextRunASAP();
 			break;
@@ -351,7 +351,7 @@ protected:
 		case InfoSyncTransaction::StageEnum::StageHostRSSI:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				PrepareLinkInfoSyncUpdate(InfoSyncTransaction::ContentIdEnum::ContentHostRSSI, LinkInfo.GetRSSINormalized());
+				PrepareLinkInfoSyncUpdate(InfoSyncTransaction::ContentIdEnum::ContentHostRSSI, LinkInfo->GetRSSINormalized());
 				RequestSendPacket(true);
 			}
 			else
@@ -360,7 +360,7 @@ protected:
 			}
 			break;
 		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
-			if (LinkInfo.HasRemoteRSSI() && GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			if (LinkInfo->HasRemoteRSSI() && GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareLinkInfoSyncAdvanceRequest(InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI);
 				RequestSendPacket(true);
@@ -388,9 +388,7 @@ protected:
 			case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
 				if (contentId == InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI)
 				{
-					Serial.print(F("InfoTransaction: RemoteRSSI: (normalized) "));
-					Serial.println((uint8_t)content);
-					LinkInfo.SetRemoteRSSINormalized((uint8_t)content);
+					LinkInfo->SetRemoteRSSINormalized((uint8_t)content);
 					SetNextRunASAP();
 				}
 				break;
@@ -402,7 +400,7 @@ protected:
 
 	void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage &&
 			subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE)
 		{

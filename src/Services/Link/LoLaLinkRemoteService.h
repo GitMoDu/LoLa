@@ -50,7 +50,7 @@ protected:
 
 	void OnBroadcastReceived(const uint8_t sessionId, const uint32_t remotePMAC)
 	{
-		switch (LinkInfo.GetLinkState())
+		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::Connected:
 			if (remotePMAC != LOLA_INVALID_PMAC && RemotePMAC == remotePMAC)
@@ -84,7 +84,7 @@ protected:
 
 	void OnLinkRequestAcceptedReceived(const uint8_t requestId, const uint32_t localPMAC)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::GotHost &&
 			PMACGenerator.GetPMAC() == localPMAC)
 		{
@@ -97,7 +97,7 @@ protected:
 
 	void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
 	{
-		switch (LinkInfo.GetLinkState())
+		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (subHeader == LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER &&
@@ -224,7 +224,7 @@ protected:
 
 	void OnChallengeRequestReceived(const uint8_t requestId, const uint32_t token)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			LinkingState == LinkingStagesEnum::ChallengeStage)
 		{
 			RemoteChallengeTransaction.Clear();
@@ -290,7 +290,7 @@ protected:
 
 	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
@@ -302,7 +302,7 @@ protected:
 
 	void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
-		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
 		{
@@ -361,7 +361,7 @@ protected:
 			}
 			break;
 		case InfoSyncTransaction::StageEnum::StageHostRSSI:
-			if (LinkInfo.HasRemoteRSSI())
+			if (LinkInfo->HasRemoteRSSI())
 			{
 				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 				{
@@ -381,7 +381,7 @@ protected:
 		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				PrepareLinkInfoSyncUpdate(InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI, LinkInfo.GetRSSINormalized());
+				PrepareLinkInfoSyncUpdate(InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI, LinkInfo->GetRSSINormalized());
 				RequestSendPacket(true);
 			}
 			else
@@ -406,10 +406,10 @@ protected:
 			switch (contentId)
 			{
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRTT:
-				LinkInfo.SetRTT((uint16_t)content);
+				LinkInfo->SetRTT((uint16_t)content);
 				break;
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRSSI:
-				LinkInfo.SetRemoteRSSINormalized((uint8_t)content);
+				LinkInfo->SetRemoteRSSINormalized((uint8_t)content);
 				break;
 			default:
 				break;
@@ -421,7 +421,7 @@ protected:
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
 		if (header == LinkWithAckDefinition.GetHeader() && 
-			LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+			LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage)
 		{
 			RemoteInfoTransaction.OnRequestAckReceived(id);

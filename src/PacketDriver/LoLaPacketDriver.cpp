@@ -97,6 +97,8 @@ bool LoLaPacketDriver::Setup()
 		//TODO: Get comms entropy source, abstracted.
 		//randomSeed(...);
 		IncomingInfo.Clear();
+		LinkInfo = Services.GetLinkInfo();
+		LinkInfo->Reset();
 
 		SetupOk = true;
 	}
@@ -168,7 +170,6 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 		return CanTransmit() && overridePermission &&
 			!HotAfterSend() && !HotAfterReceive();
 	}
-
 #else
 	return Enabled &&
 		!HotAfterSend() && !HotAfterReceive() &&

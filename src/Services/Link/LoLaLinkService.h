@@ -62,7 +62,7 @@ protected:
 	uint32_t RemotePMAC = LOLA_INVALID_PMAC;
 	uint8_t SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 
-	LoLaLinkInfo LinkInfo;
+	LoLaLinkInfo* LinkInfo = nullptr;
 
 	//Synced Clock.
 	LoLaLinkClockSyncer* ClockSyncerPointer = nullptr;
@@ -194,29 +194,10 @@ public:
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
 	{
-		LinkInfo.SetDriver(loLa);
-		LinkInfo.Reset();
-
-		if (loLa != nullptr)
-		{
-			loLa->SetCryptoSeedSource(&CryptoSeed);
-			loLa->SetLinkIndicator(&LinkInfo);
-		}
-
 	}
 
-	LoLaLinkInfo* GetLinkInfo()
+	bool SetServicesManager(LoLaServicesManager * servicesManager)
 	{
-		return &LinkInfo;
-	}
-
-	bool AddSubServices(LoLaServicesManager * servicesManager)
-	{
-		if (!IPacketSendService::OnSetup())
-		{
-			return false;
-		}
-
 		ServicesManager = servicesManager;
 
 		if (ServicesManager == nullptr)
@@ -379,19 +360,30 @@ protected:
 			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()) &&
 			PowerBalancer.Setup(GetLoLa()))
 		{
-			ClearSession();
+			LinkInfo = ServicesManager->GetLinkInfo();
+
+			if (LinkInfo != nullptr)
+			{
+				LinkInfo->SetDriver(GetLoLa());
+				LinkInfo->Reset();
+
+				GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
+				GetLoLa()->SetLinkIndicator(LinkInfo);
+
+				ClearSession();
 
 #ifdef DEBUG_LOLA
-			Serial.print(F("Link PMAC: "));
-			PrintPMAC(PMACGenerator.GetPMAC());
-			Serial.println();
+				Serial.print(F("Link PMAC: "));
+				PrintPMAC(PMACGenerator.GetPMAC());
+				Serial.println();
 #endif
 
-			CryptoSeed.Reset();
-			ResetStateStartTime();
-			SetNextRunASAP();
+				CryptoSeed.Reset();
+				ResetStateStartTime();
+				SetNextRunASAP();
 
-			return true;
+				return true;
+			}			
 
 		}
 
@@ -400,22 +392,22 @@ protected:
 
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
 	{
-		if (LinkInfo.GetLinkState() != newState)
+		if (LinkInfo->GetLinkState() != newState)
 		{
 			ResetStateStartTime();
 			ResetLastSentTimeStamp();
 
 			//Previous state.
-			if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
+			if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
 #ifdef DEBUG_LOLA
 				Serial.print("Lost connection after ");
-				Serial.print(LinkInfo.GetLinkDuration() / (uint32_t)1000);
+				Serial.print(LinkInfo->GetLinkDuration() / (uint32_t)1000);
 				Serial.println(F(" seconds."));
 #endif
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
-				LinkInfo.ResetLinkStarted();
+				LinkInfo->ResetLinkStarted();
 				PowerBalancer.Reset();
 			}
 
@@ -455,7 +447,7 @@ protected:
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Connected:
-				LinkInfo.StampLinkStarted();
+				LinkInfo->StampLinkStarted();
 				SetTOTPEnabled();
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
@@ -465,10 +457,10 @@ protected:
 				Serial.print(millis() - ConnectionProcessStart);
 				Serial.println(F(" ms to establish."));
 				Serial.print(F("Average latency: "));
-				Serial.print((float)LinkInfo.GetRTT() / (float)2000, 2);
+				Serial.print((float)LinkInfo->GetRTT() / (float)2000, 2);
 				Serial.println(F(" ms"));
 				Serial.print(F("Remote RSSI: "));
-				Serial.print(LinkInfo.GetRemoteRSSINormalized());
+				Serial.print(LinkInfo->GetRemoteRSSINormalized());
 				Serial.println();
 				Serial.print(F("Sync TimeStamp: "));
 				Serial.println(ClockSyncerPointer->GetMillisSync());
@@ -478,18 +470,18 @@ protected:
 				ServicesManager->NotifyServicesLinkUpdated(true);
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
-				LinkInfo.Reset();
+				LinkInfo->Reset();
 			default:
 				break;
 			}
 
-			LinkInfo.UpdateState(newState);
+			LinkInfo->UpdateState(newState);
 		}
 	}
 
 	void OnService()
 	{
-		switch (LinkInfo.GetLinkState())
+		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
