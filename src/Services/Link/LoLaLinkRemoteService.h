@@ -330,5 +330,92 @@ protected:
 			ArrayToPayload();
 		}
 	}
+
+	void OnInfoSync()
+	{
+		switch (RemoteInfoTransaction.Stage)
+		{
+		case InfoSyncTransaction::StageEnum::StageStart:
+			//We wait in this state until we received the first Stage update.
+			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			break;
+		case InfoSyncTransaction::StageEnum::StageHostRTT:
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareLinkInfoSyncAdvanceRequest();
+				RequestSendPacket(true);
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
+			}
+			break;
+		case InfoSyncTransaction::StageEnum::StageHostRSSI:
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareLinkInfoSyncAdvanceRequest();
+				RequestSendPacket(true);
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
+			}
+			break;
+		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareLinkInfoSyncUpdate(InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI, LinkInfo.GetRSSINormalized());
+				RequestSendPacket(true);
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+			}
+			break;
+		case InfoSyncTransaction::StageEnum::StagesDone:
+			SetNextRunASAP();
+			break;
+		default:
+			RemoteInfoTransaction.Clear();
+			break;
+		}
+	}
+
+	void OnLinkInfoSyncUpdateReceived(const uint8_t contentId, const uint32_t content)
+	{
+		Serial.println(F("InfoTransaction: SyncUpdateReceived"));
+
+		if (RemoteInfoTransaction.OnUpdateReceived(contentId))
+		{
+			switch (contentId)
+			{
+			case InfoSyncTransaction::ContentIdEnum::ContentHostRTT:
+				Serial.print(F("InfoTransaction: HostRTT: micros: "));
+				Serial.println(content);
+				LinkInfo.SetRTT((uint16_t)content);
+				break;
+			case InfoSyncTransaction::ContentIdEnum::ContentHostRSSI:
+				Serial.print(F("InfoTransaction: HostRSSI: (normalized) "));
+				Serial.println((uint8_t)content);
+				LinkInfo.SetRemoteRSSINormalized((uint8_t)content);
+				break;
+			default:
+				break;
+			}
+			SetNextRunASAP();
+		}		
+	}
+
+	void OnAckReceived(const uint8_t header, const uint8_t id)
+	{
+		if (header == LinkWithAckDefinition.GetHeader() && 
+			LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+			ConnectingState == ConnectingStagesEnum::InfoSyncStage &&
+			id == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER)
+		{
+			RemoteInfoTransaction.OnRequestAckReceived();
+			SetNextRunASAP();
+		}
+	}
 };
 #endif
