@@ -131,8 +131,6 @@ protected:
 					RemoteChallengeTransaction.IsComplete())
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
-					//The last step is to exchange a packet with TOTP enabled.
-					SetTOTPEnabled();
 				}
 				break;
 			case ConnectingStagesEnum::LinkProtocolSwitchOver:

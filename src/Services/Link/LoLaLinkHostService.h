@@ -127,8 +127,6 @@ protected:
 				if (requestId == ChallengeTransaction->GetTransactionId())
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
-					//The last step is to exchange a packet with TOTP enabled.
-					SetTOTPEnabled();
 				}
 				break;
 			case ConnectingStagesEnum::LinkProtocolSwitchOver:

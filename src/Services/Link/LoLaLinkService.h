@@ -270,6 +270,12 @@ protected:
 	{
 		ConnectingState = connectingState;
 		ResetLastSentTimeStamp();
+		if (ConnectingState == ConnectingStagesEnum::LinkProtocolSwitchOver)
+		{
+			//The last step of establishing a Link is to exchange a packet with TOTP enabled.
+			SetTOTPEnabled();
+		}
+			
 		SetNextRunASAP();
 	}
 
