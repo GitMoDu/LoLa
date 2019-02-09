@@ -104,6 +104,7 @@ protected:
 	///
 
 	virtual void SetBaseSeed() {}
+	virtual void OnClearSession() {};
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 	virtual void OnAwaitingConnection() {}
 	virtual void OnChallenging() {}
@@ -331,6 +332,8 @@ protected:
 		{
 			ChallengeTransaction->Clear();
 		}
+
+		OnClearSession();
 	}
 
 #ifdef DEBUG_LOLA
