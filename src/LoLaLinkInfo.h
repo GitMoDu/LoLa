@@ -4,6 +4,7 @@
 #define _LOLALINK_INFO_h
 
 #include <ILoLa.h>
+#include <Callback.h>
 
 #define LOLA_LINK_INFO_MAX_STALENESS	3000
 
