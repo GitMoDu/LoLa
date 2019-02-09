@@ -17,6 +17,7 @@
 #include <Crypto\PseudoMacGenerator.h>
 
 #include <Services\Link\LoLaLinkCryptoChallenge.h>
+#include <Services\Link\LoLaLinkInfoSyncTransaction.h>
 
 #include <Services\Link\LoLaLinkPowerBalancer.h>
 
@@ -70,6 +71,8 @@ protected:
 	//Crypto Challenge.
 	IChallengeTransaction* ChallengeTransaction = nullptr;
 
+	//Link Info Sync
+	InfoSyncTransaction* InfoTransaction = nullptr;
 
 	//Optimized memory usage grunt packet.
 	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;

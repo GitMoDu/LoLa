@@ -23,9 +23,11 @@ private:
 
 	ChallengeRequestTransaction HostChallengeTransaction;
 
+	HostInfoSyncTransaction HostInfoTransaction;
+
+
 	//Latency measurement.
 	LoLaLinkLatencyMeter LatencyMeter;
-
 
 private:
 	void NewSession()
@@ -41,6 +43,7 @@ public:
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &HostClockSyncTransaction;
 		ChallengeTransaction = &HostChallengeTransaction;
+		InfoTransaction = &HostInfoTransaction;
 		loLa->SetDuplexSlot(false);
 	}
 protected:

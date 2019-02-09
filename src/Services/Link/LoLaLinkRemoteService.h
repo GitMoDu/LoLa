@@ -21,6 +21,8 @@ private:
 
 	ChallengeReplyTransaction RemoteChallengeTransaction;
 
+	RemoteInfoSyncTransaction RemoteInfoTransaction;
+
 public:
 	LoLaLinkRemoteService(Scheduler* scheduler, ILoLa* loLa)
 		: LoLaLinkService(scheduler, loLa)
@@ -28,6 +30,7 @@ public:
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &RemoteClockSyncTransaction;
 		ChallengeTransaction = &RemoteChallengeTransaction;
+		InfoTransaction = &RemoteInfoTransaction;
 		loLa->SetDuplexSlot(true);
 	}
 
