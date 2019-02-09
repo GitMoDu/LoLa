@@ -130,8 +130,12 @@ bool LoLaPacketDriver::HotAfterReceive()
 }
 
 bool LoLaPacketDriver::IsInSendSlot()
-{
-	SendSlotElapsed = GetMillisSync() % DuplexPeriodMillis;
+{	
+#ifdef USE_LATENCY_COMPENSATION
+	SendSlotElapsed = (GetMillisSync() - (uint32_t)LinkInfo->GetETTM()) % DuplexPeriodMillis;
+#else
+	SendSlotElapsed = (GetMillisSync() % DuplexPeriodMillis;
+#endif	
 
 	//Even spread of true and false across the DuplexPeriod
 	if (EvenSlot)
