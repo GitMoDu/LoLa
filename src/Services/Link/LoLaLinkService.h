@@ -278,13 +278,13 @@ protected:
 		}
 	}
 
-	inline void SetTOTPEnabled()
+	void SetTOTPEnabled()
 	{
 		SetBaseSeed();
 		CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
 	}
 
-	inline void SetConnectingState(const uint8_t connectingState)
+	void SetConnectingState(const uint8_t connectingState)
 	{
 		ConnectingState = connectingState;
 		ResetLastSentTimeStamp();
