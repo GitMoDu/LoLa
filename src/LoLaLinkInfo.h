@@ -27,6 +27,8 @@ private:
 	uint16_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
+	uint8_t RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
+
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
 
@@ -47,6 +49,7 @@ public:
 	{
 		LinkState = LinkStateEnum::Disabled;
 		RTT = ILOLA_INVALID_LATENCY;
+		RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 		LinkStarted = ILOLA_INVALID_MILLIS;
 	}
 
@@ -118,6 +121,21 @@ public:
 	void StampLinkStarted()
 	{
 		LinkStarted = Driver->GetMillis();
+	}
+
+	bool HasRemoteRSSI()
+	{
+		return RemoteRSSINormalized != ILOLA_INVALID_RSSI_NORMALIZED;
+	}
+
+	uint8_t GetRemoteRSSINormalized()
+	{
+		return RemoteRSSINormalized;
+	}
+
+	void SetRemoteRSSINormalized(const uint8_t rssiNormalized)
+	{
+		RemoteRSSINormalized = rssiNormalized;
 	}
 
 	int16_t GetRSSI()
