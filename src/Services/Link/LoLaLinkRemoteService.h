@@ -136,6 +136,14 @@ protected:
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
 				}
 				break;
+			case LinkingStagesEnum::InfoSyncStage:				
+				if (subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE)
+				{
+					Serial.println(F("InfoTransaction: SyncAdvanceRequestReceived"));
+					RemoteInfoTransaction.OnAdvanceRequestReceived();
+					SetNextRunASAP();
+				}
+				break;
 			case LinkingStagesEnum::LinkProtocolSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER &&
 					requestId == SessionId)
