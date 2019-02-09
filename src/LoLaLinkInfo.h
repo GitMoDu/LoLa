@@ -124,7 +124,6 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			return constrain(Driver->GetLastRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax());
 			return constrain(Driver->GetLastValidRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax());
 		}
 		return 0;//Unknown.		
