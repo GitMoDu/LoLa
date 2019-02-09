@@ -321,8 +321,6 @@ protected:
 
 	void OnPreSend()
 	{
-		LoLaLinkService::OnPreSend();
-
 		if (PacketHolder.GetDataHeader() == LinkDefinition.GetHeader() &&
 			(PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_REQUEST ||
 				PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST))
