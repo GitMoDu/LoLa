@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 
+//#define DEBUG_LINK_INFO_SYNC
 
 class InfoSyncTransaction
 {
@@ -49,18 +50,34 @@ public:
 		switch (Stage)
 		{
 		case StageEnum::StageStart:
+#ifdef DEBUG_LINK_INFO_SYNC
+			Serial.println(F("InfoSync Advance: StageHostRTT"));
+#endif
 			Stage = InfoSyncTransaction::StageEnum::StageHostRTT;
 			break;
 		case StageEnum::StageHostRTT:
+#ifdef DEBUG_LINK_INFO_SYNC
+			Serial.println(F("InfoSync Advance: StageHostRSSI"));
+#endif
 			Stage = InfoSyncTransaction::StageEnum::StageHostRSSI;
 			break;
 		case StageEnum::StageHostRSSI:
+#ifdef DEBUG_LINK_INFO_SYNC
+			Serial.println(F("InfoSync Advance: StageRemoteRSSI"));
+#endif
 			Stage = InfoSyncTransaction::StageEnum::StageRemoteRSSI;
 			break;
 		case StageEnum::StageRemoteRSSI:
+#ifdef DEBUG_LINK_INFO_SYNC
+			Serial.println(F("InfoSync Advance: StagesDone"));
+#endif
 			Stage = StageEnum::StagesDone;
 			break;
 		default:
+#ifdef DEBUG_LINK_INFO_SYNC
+			Serial.println(F("InfoSync Advance: Error"));
+#endif
+			Stage = StageEnum::StageStart;
 			break;
 		}
 	}

@@ -139,7 +139,6 @@ protected:
 			case LinkingStagesEnum::InfoSyncStage:				
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE)
 				{
-					Serial.println(F("InfoTransaction: SyncAdvanceRequestReceived"));
 					RemoteInfoTransaction.OnAdvanceRequestReceived(requestId);
 					SetNextRunASAP();
 				}
@@ -407,11 +406,9 @@ protected:
 			switch (contentId)
 			{
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRTT:
-				Serial.println(content);
 				LinkInfo.SetRTT((uint16_t)content);
 				break;
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRSSI:
-				Serial.println((uint8_t)content);
 				LinkInfo.SetRemoteRSSINormalized((uint8_t)content);
 				break;
 			default:

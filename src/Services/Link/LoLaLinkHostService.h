@@ -226,11 +226,13 @@ protected:
 			{
 				ClockSyncer.StampSynced();
 			}
+#ifdef DEBUG_LOLA
 			else
 			{
 				Serial.print("Clock Sync error: ");
 				Serial.println(HostClockSyncTransaction.GetResult());
 			}
+#endif
 
 			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
 
@@ -331,7 +333,6 @@ protected:
 		switch (HostInfoTransaction.GetStage())
 		{
 		case InfoSyncTransaction::StageEnum::StageStart:
-			Serial.println(F("InfoTransaction: StageStart"));
 			LinkInfo.SetRTT(LatencyMeter.GetAverageLatency());
 			HostInfoTransaction.Advance();//First move is done by host.
 			SetNextRunASAP();
