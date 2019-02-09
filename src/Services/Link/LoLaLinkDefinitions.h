@@ -55,11 +55,11 @@
 #define LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER		0xF1
 #define LOLA_LINK_SUBHEADER_ACK_NTP_SWITCHOVER				0xF2
 #define LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER		0xF3
-#define LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER			0xF4
+#define LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE			0xF4
+#define LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER		0xF5
+#define LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER			0xFF
 
 
-//TODO: Future.
-//#define LOLA_LINK_SUBHEADER_LINK_REPORT						0X
 
 #define LOLA_LINK_SERVICE_INVALID_SESSION					0
 
@@ -70,8 +70,9 @@ enum ConnectingStagesEnum : uint8_t
 	ClockSyncSwitchOver = 1,
 	ChallengeStage = 2,
 	ChallengeSwitchOver = 3,
-	LinkProtocolSwitchOver = 4,
-	AllConnectingStagesDone = 5
+	InfoSyncStage = 4,
+	LinkProtocolSwitchOver = 5,
+	AllConnectingStagesDone = 6
 };
 
 class LinkPacketWithAckDefinition : public PacketDefinition
