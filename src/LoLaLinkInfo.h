@@ -85,7 +85,7 @@ public:
 	void SetRTT(const uint16_t rtt)
 	{
 		RTT = rtt;
-		ETTM = RTT / 2000;
+		ETTM = (uint8_t)round((float)RTT / (float)2000);
 	}
 
 	uint8_t GetETTM()
