@@ -460,8 +460,12 @@ protected:
 				Serial.print(millis() - ConnectionProcessStart);
 				Serial.println(F(" ms to establish."));
 				Serial.print(F("Average latency: "));
-				Serial.print((float)LinkInfo->GetRTT() / (float)2000, 2);
+				Serial.println((float)LinkInfo->GetRTT() / (float)2000, 2);
+#ifdef USE_LATENCY_COMPENSATION
+				Serial.print(F("Latency compensation: "));
+				Serial.print(LinkInfo->GetETTM());
 				Serial.println(F(" ms"));
+#endif
 				Serial.print(F("Remote RSSI: "));
 				Serial.print(LinkInfo->GetRemoteRSSINormalized());
 				Serial.println();
