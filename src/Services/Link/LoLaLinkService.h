@@ -456,8 +456,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Connected:
 				LinkInfo.StampLinkStarted();
-				SetBaseSeed();
-				CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
+				SetTOTPEnabled();
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
 
