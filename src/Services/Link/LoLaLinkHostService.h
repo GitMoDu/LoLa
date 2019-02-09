@@ -132,6 +132,10 @@ protected:
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
 				}
 				break;
+			case ConnectingStagesEnum::InfoSyncStage:
+				HostInfoTransaction.OnRequestAckReceived();
+				SetNextRunASAP();
+				break;
 			case ConnectingStagesEnum::LinkProtocolSwitchOver:
 				if (requestId == SessionId)
 				{
