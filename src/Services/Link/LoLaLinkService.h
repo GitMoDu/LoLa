@@ -466,8 +466,11 @@ protected:
 				Serial.print(millis() - ConnectionProcessStart);
 				Serial.println(F(" ms to establish."));
 				Serial.print(F("Average latency: "));
-				Serial.print((float)LatencyMeter.GetAverageLatency() / (float)2000, 2);
+				Serial.print((float)LinkInfo.GetRTT() / (float)2000, 2);
 				Serial.println(F(" ms"));
+				Serial.print(F("Remote RSSI: "));
+				Serial.print(LinkInfo.GetRemoteRSSINormalized());
+				Serial.println();
 				Serial.print(F("Sync TimeStamp: "));
 				Serial.println(ClockSyncerPointer->GetMillisSync());
 #endif
