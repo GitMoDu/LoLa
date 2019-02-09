@@ -237,16 +237,22 @@ protected:
 public:
 	bool ProcessAck(const uint8_t header, const uint8_t id)
 	{
-		if (HasSendPendingInternal() && Packet->GetDefinition()->GetHeader() == header && Packet->GetId() == id)
+		//Make sure we eat out own packets.
+		if (Packet->GetDefinition()->GetHeader() == header)
 		{
-			if (SendStatus == SendStatusEnum::WaitingForAck)
+			if (HasSendPendingInternal() && Packet->GetId() == id)
 			{
-				//Notify Ack received will be fired, as soon as the service runs.
-				SendStatus = SendStatusEnum::AckOk;
-				SetNextRunASAP();
+				if (SendStatus == SendStatusEnum::WaitingForAck)
+				{
+					//Notify Ack received will be fired, as soon as the service runs.
+					SendStatus = SendStatusEnum::AckOk;
+					SetNextRunASAP();
+				}
 			}
+
 			return true;
 		}
+		
 		return false;
 	}
 };
