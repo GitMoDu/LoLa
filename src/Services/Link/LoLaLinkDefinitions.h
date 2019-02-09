@@ -64,7 +64,7 @@
 #define LOLA_LINK_SERVICE_INVALID_SESSION					0
 
 
-enum ConnectingStagesEnum : uint8_t
+enum LinkingStagesEnum : uint8_t
 {
 	ClockSyncStage = 0,
 	ClockSyncSwitchOver = 1,
@@ -104,4 +104,5 @@ public:
 	}
 #endif
 };
+
 #endif

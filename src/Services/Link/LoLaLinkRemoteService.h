@@ -8,7 +8,7 @@
 class LoLaLinkRemoteService : public LoLaLinkService
 {
 private:
-	enum AwaitingConnectionEnum
+	enum AwaitingLinkEnum
 	{
 		SearchingForHost = 0,
 		GotHost = 1,
@@ -65,7 +65,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (ConnectingState == AwaitingConnectionEnum::SearchingForHost &&
+			if (LinkingState == AwaitingLinkEnum::SearchingForHost &&
 				remotePMAC != LOLA_INVALID_PMAC &&
 				sessionId != LOLA_LINK_SERVICE_INVALID_SESSION)
 			{
@@ -74,7 +74,7 @@ protected:
 				//TODO: User UI choice?
 				RemotePMAC = remotePMAC;
 				SessionId = sessionId;
-				SetConnectingState(AwaitingConnectionEnum::GotHost);
+				SetLinkingState(AwaitingLinkEnum::GotHost);
 			}
 			break;
 		default:
@@ -85,13 +85,13 @@ protected:
 	void OnLinkRequestAcceptedReceived(const uint8_t requestId, const uint32_t localPMAC)
 	{
 		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
-			ConnectingState == AwaitingConnectionEnum::GotHost &&
+			LinkingState == AwaitingLinkEnum::GotHost &&
 			PMACGenerator.GetPMAC() == localPMAC)
 		{
 #ifdef DEBUG_LOLA
 			ConnectionProcessStart = millis();
 #endif
-			SetConnectingState(AwaitingConnectionEnum::AcknowledgingHost);
+			SetLinkingState(AwaitingLinkEnum::AcknowledgingHost);
 		}
 	}
 
@@ -101,46 +101,46 @@ protected:
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (subHeader == LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER &&
-				ConnectingState == AwaitingConnectionEnum::AcknowledgingHost)
+				LinkingState == AwaitingLinkEnum::AcknowledgingHost)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
-			switch (ConnectingState)
+			switch (LinkingState)
 			{
-			case ConnectingStagesEnum::ClockSyncStage:
+			case LinkingStagesEnum::ClockSyncStage:
 				//If we break here, we need to receive two of the same protocol packet.
-			case ConnectingStagesEnum::ClockSyncSwitchOver:
+			case LinkingStagesEnum::ClockSyncSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_NTP_SWITCHOVER &&
 					requestId == LOLA_LINK_SUBHEADER_ACK_NTP_SWITCHOVER)
 				{
 					ClockSyncer.SetSynced();
-					SetConnectingState(ConnectingStagesEnum::ChallengeStage);
+					SetLinkingState(LinkingStagesEnum::ChallengeStage);
 				}
 				break;
-			case ConnectingStagesEnum::ChallengeStage:
+			case LinkingStagesEnum::ChallengeStage:
 				if (RemoteChallengeTransaction.OnReplyAccepted(requestId))
 				{
-					SetConnectingState(ConnectingStagesEnum::ChallengeSwitchOver);
+					SetLinkingState(LinkingStagesEnum::ChallengeSwitchOver);
 				}
 				else
 				{
 					break;
 				}
 				//If we break here, we need to receive two of the same protocol packet.
-			case ConnectingStagesEnum::ChallengeSwitchOver:
+			case LinkingStagesEnum::ChallengeSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER &&
 					RemoteChallengeTransaction.IsComplete())
 				{
 					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
 				}
 				break;
-			case ConnectingStagesEnum::LinkProtocolSwitchOver:
+			case LinkingStagesEnum::LinkProtocolSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER &&
 					requestId == SessionId)
 				{
-					SetConnectingState(ConnectingStagesEnum::AllConnectingStagesDone);
+					SetLinkingState(LinkingStagesEnum::AllConnectingStagesDone);
 				}
 				break;
 			default:
@@ -153,9 +153,9 @@ protected:
 
 	void OnAwaitingConnection()
 	{
-		switch (ConnectingState)
+		switch (LinkingState)
 		{
-		case AwaitingConnectionEnum::SearchingForHost:
+		case AwaitingLinkEnum::SearchingForHost:
 			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
@@ -171,7 +171,7 @@ protected:
 				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
 			}
 			break;
-		case AwaitingConnectionEnum::GotHost:
+		case AwaitingLinkEnum::GotHost:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareLinkRequest();
@@ -182,7 +182,7 @@ protected:
 				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
 			}
 			break;
-		case AwaitingConnectionEnum::AcknowledgingHost:
+		case AwaitingLinkEnum::AcknowledgingHost:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareLinkRequestReady();
@@ -193,7 +193,7 @@ protected:
 				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
 			}
 			break;
-		case AwaitingConnectionEnum::WaitingForSwitchOver:
+		case AwaitingLinkEnum::WaitingForSwitchOver:
 			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
 			break;
 		default:
@@ -218,7 +218,7 @@ protected:
 	void OnChallengeRequestReceived(const uint8_t requestId, const uint32_t token)
 	{
 		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
-			ConnectingState == ConnectingStagesEnum::ChallengeStage)
+			LinkingState == LinkingStagesEnum::ChallengeStage)
 		{
 			RemoteChallengeTransaction.Clear();
 			RemoteChallengeTransaction.OnRequest(requestId, token);
@@ -283,7 +283,7 @@ protected:
 	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
 		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
-			ConnectingState == ConnectingStagesEnum::ClockSyncStage &&
+			LinkingState == LinkingStagesEnum::ClockSyncStage &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
 		{
@@ -411,7 +411,7 @@ protected:
 	{
 		if (header == LinkWithAckDefinition.GetHeader() && 
 			LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
-			ConnectingState == ConnectingStagesEnum::InfoSyncStage &&
+			LinkingState == LinkingStagesEnum::InfoSyncStage &&
 			id == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER)
 		{
 			RemoteInfoTransaction.OnRequestAckReceived();

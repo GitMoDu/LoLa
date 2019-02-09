@@ -53,7 +53,7 @@ protected:
 	LinkPacketWithAckDefinition	LinkWithAckDefinition;
 
 	//Sub state.
-	uint8_t ConnectingState = 0;
+	uint8_t LinkingState = 0;
 
 	//MAC Helper
 	PseudoMacGenerator PMACGenerator;
@@ -132,26 +132,26 @@ private:
 
 	void OnConnecting()
 	{
-		switch (ConnectingState)
+		switch (LinkingState)
 		{
-		case ConnectingStagesEnum::ClockSyncStage:
+		case LinkingStagesEnum::ClockSyncStage:
 			if (ClockSyncerPointer->IsSynced())
 			{
-				SetConnectingState(ConnectingStagesEnum::ClockSyncSwitchOver);
+				SetLinkingState(LinkingStagesEnum::ClockSyncSwitchOver);
 			}
 			else
 			{
 				OnClockSync();
 			}
 			break;
-		case ConnectingStagesEnum::ClockSyncSwitchOver:
+		case LinkingStagesEnum::ClockSyncSwitchOver:
 			OnClockSyncSwitchOver();
 			//We transition forward when we receive the appropriate message.
 			break;
-		case ConnectingStagesEnum::ChallengeStage:
+		case LinkingStagesEnum::ChallengeStage:
 			if (ChallengeTransaction->IsComplete())
 			{
-				SetConnectingState(ConnectingStagesEnum::ChallengeSwitchOver);
+				SetLinkingState(LinkingStagesEnum::ChallengeSwitchOver);
 				SetNextRunASAP();
 			}
 			else
@@ -159,13 +159,13 @@ private:
 				OnChallenging();
 			}
 			break;
-		case ConnectingStagesEnum::ChallengeSwitchOver:
+		case LinkingStagesEnum::ChallengeSwitchOver:
 			OnChallengeSwitchOver();
 			break;
-		case ConnectingStagesEnum::InfoSyncStage:
+		case LinkingStagesEnum::InfoSyncStage:
 			if (InfoTransaction->IsComplete())
 			{
-				SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
+				SetLinkingState(LinkingStagesEnum::LinkProtocolSwitchOver);
 				SetNextRunASAP();
 			}
 			else
@@ -173,10 +173,10 @@ private:
 				OnInfoSync();
 			}	
 			break;
-		case ConnectingStagesEnum::LinkProtocolSwitchOver:
+		case LinkingStagesEnum::LinkProtocolSwitchOver:
 			OnLinkProtocolSwitchOver();
 			break;
-		case ConnectingStagesEnum::AllConnectingStagesDone:
+		case LinkingStagesEnum::AllConnectingStagesDone:
 			//All connecting stages complete, we have a link.
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
 			break;
@@ -284,11 +284,11 @@ protected:
 		CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
 	}
 
-	void SetConnectingState(const uint8_t connectingState)
+	void SetLinkingState(const uint8_t linkingState)
 	{
-		ConnectingState = connectingState;
+		LinkingState = linkingState;
 		ResetLastSentTimeStamp();
-		if (ConnectingState == ConnectingStagesEnum::LinkProtocolSwitchOver)
+		if (LinkingState == LinkingStagesEnum::LinkProtocolSwitchOver)
 		{
 			//The last step of establishing a Link is to exchange a packet with TOTP enabled.
 			SetTOTPEnabled();
@@ -430,7 +430,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				CryptoSeed.Reset();
-				SetConnectingState(0);
+				SetLinkingState(0);
 				PowerBalancer.Reset();
 				SetNextRunASAP();
 				break;
@@ -440,7 +440,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Connecting:
 				SetBaseSeed();
-				SetConnectingState(0);
+				SetLinkingState(0);
 #ifdef DEBUG_LOLA
 				Serial.print("Connecting to: 0x");
 				PrintPMAC(RemotePMAC);
