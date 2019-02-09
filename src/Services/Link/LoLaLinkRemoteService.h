@@ -95,7 +95,7 @@ protected:
 		}
 	}
 
-	void OnLinkSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
+	void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
 	{
 		switch (LinkInfo.GetLinkState())
 		{
