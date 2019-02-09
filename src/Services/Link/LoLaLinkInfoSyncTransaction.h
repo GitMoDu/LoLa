@@ -22,10 +22,7 @@ public:
 	{
 		ContentHostRTT = 0,
 		ContentHostRSSI = 1,
-		ContentRemoteRSSI = 2,
-/*
-		ContentRemoteRSSIRequest = 0xF0,
-		ContentHostRemoteDone = 0xF1,*/
+		ContentRemoteRSSI = 2
 	};
 
 public:
@@ -44,19 +41,15 @@ public:
 		switch (Stage)
 		{
 		case StageEnum::StageStart:
-			Serial.println(F("InfoTransaction: StageHostRTT"));
 			Stage = InfoSyncTransaction::StageEnum::StageHostRTT;
 			break;
 		case StageEnum::StageHostRTT:
-			Serial.println(F("InfoTransaction: StageHostRSSI"));
 			Stage = InfoSyncTransaction::StageEnum::StageHostRSSI;
 			break;
 		case StageEnum::StageHostRSSI:
-			Serial.println(F("InfoTransaction: StageRemoteRSSI"));
 			Stage = InfoSyncTransaction::StageEnum::StageRemoteRSSI;
 			break;
 		case StageEnum::StageRemoteRSSI:
-			Serial.println(F("InfoTransaction: StagesDone"));
 			Stage = StageEnum::StagesDone;
 			break;
 		default:
@@ -86,22 +79,12 @@ public:
 				Advance();
 				return true;
 			}
-			else
-			{
-				Serial.print(F("InfoTransaction: Content Id Rejected 1: "));
-				Serial.println(id);
-			}
 			break;
 		case StageEnum::StageHostRTT:
 			if (id == ContentIdEnum::ContentHostRSSI)
 			{
 				Advance();
 				return true;
-			}
-			else
-			{
-				Serial.print(F("InfoTransaction: Content Id Rejected 2: "));
-				Serial.println(id);
 			}
 			break;
 		default:
@@ -156,11 +139,6 @@ public:
 			{
 				Advance();
 				return true;
-			}
-			else
-			{
-				Serial.print(F("InfoTransaction: Content Id Rejected 1: "));
-				Serial.println(id);
 			}
 			break;
 		default:
