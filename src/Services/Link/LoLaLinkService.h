@@ -817,7 +817,7 @@ protected:
 	
 	void PrepareLinkInfoSyncAdvanceRequest()						//Both.
 	{
-		PrepareLinkPacketWithAck(SessionId, LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER);
+		PrepareLinkPacketWithAck(LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER, LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER);
 	}
 private:
 	inline void PrepareLinkPacketWithAck(const uint8_t requestId, const uint8_t subHeader)
