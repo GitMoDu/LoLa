@@ -111,7 +111,7 @@ protected:
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (ConnectingState == AwaitingConnectionEnum::ConnectingSwitchOver &&
-				RemotePMAC != LOLA_INVALID_PMAC && 
+				RemotePMAC != LOLA_INVALID_PMAC &&
 				SessionId == requestId)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
@@ -203,7 +203,7 @@ protected:
 			SetNextRunASAP();
 		}
 	}
-	
+
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
 		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
@@ -322,38 +322,98 @@ protected:
 	///
 
 	///Link info sync and report updates.
-	void OnInfoSync() 
+	void OnInfoSync()
 	{
-		switch (InfoSyncTransaction->Stage)
+		switch (HostInfoTransaction.Stage)
 		{
-		case IInfoSyncTransaction::StageEnum::StageRTT:
-			//TODO: Send RTT
+		case InfoSyncTransaction::StageEnum::StageStart:
+			HostInfoTransaction.Advance();
+			Serial.println(F("InfoTransaction: StageStart"));
+			SetNextRunASAP();
+			break;
+		case InfoSyncTransaction::StageEnum::StageHostRTT:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				PrepareChallengeSwitchOver();
+				PrepareLinkInfoSyncUpdate(InfoSyncTransaction::ContentIdEnum::ContentHostRTT, LatencyMeter.GetAverageLatency());
 				RequestSendPacket(true);
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
 			}
-
-			LinkInfo.SetRTT(LatencyMeter.GetAverageLatency());
-			InfoSyncTransaction->Stage = IInfoSyncTransaction::StageRSSI;
 			break;
-		case IInfoSyncTransaction::StageEnum::StageRSSI:
-			//TODO: Send RSSI
-			InfoSyncTransaction->Stage = IInfoSyncTransaction::StagesDone;
+		case InfoSyncTransaction::StageEnum::StageHostRSSI:
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareLinkInfoSyncUpdate(InfoSyncTransaction::ContentIdEnum::ContentHostRSSI, LatencyMeter.GetAverageLatency());
+				RequestSendPacket(true);
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
+			}
 			break;
-		case IInfoSyncTransaction::StageEnum::StagesDone:
-			//If we are here, we're done.
+		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
+			if (LinkInfo.HasRemoteRSSI())
+			{
+				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+				{
+					PrepareLinkInfoSyncAdvanceRequest();
+					RequestSendPacket(true);
+				}
+				else
+				{
+					SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
+				}
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			}
+			break;
+		case InfoSyncTransaction::StageEnum::StagesDone:
+			SetNextRunASAP();
 			break;
 		default:
-			InfoSyncTransaction->Clear();
+			HostInfoTransaction.Clear();
 			break;
 		}
-		
+	}
+
+
+	void OnLinkInfoSyncUpdateReceived(const uint8_t contentId, const uint32_t content)
+	{
+		Serial.println(F("InfoTransaction: SyncUpdateReceived"));
+
+		switch (HostInfoTransaction.Stage)
+		{
+		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
+			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI)
+			{
+				LinkInfo.SetRemoteRSSINormalized((uint8_t)content);
+				SetNextRunASAP();
+			}
+			break;
+		default:
+			break;
+		}
+
+		HostInfoTransaction.OnUpdateReceived(contentId);
+	}
 	///
+
+	void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
+	{
+		if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+			ConnectingState == ConnectingStagesEnum::InfoSyncStage &&
+			subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER &&
+			requestId == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER)
+		{
+			Serial.println(F("InfoTransaction: SyncAdvanceRequestReceived"));
+			HostInfoTransaction.OnAdvanceRequestReceived();
+			SetNextRunASAP();
+		}
+	}
 
 	///Protocol promotion to connection!
 	void OnLinkProtocolSwitchOver()
@@ -365,7 +425,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
 		}
 	}
 	///
@@ -413,6 +473,5 @@ protected:
 			OnLinkPacketAckReceived(id);
 		}
 	}
-
 };
 #endif

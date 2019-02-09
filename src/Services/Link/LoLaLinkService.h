@@ -87,6 +87,8 @@ protected:
 #endif
 
 protected:
+	///Common packet handling.
+	virtual void OnLinkInfoSyncUpdateReceived(const uint8_t contentId, const uint32_t content) {}
 	///Host packet handling.
 	virtual void OnLinkDiscoveryReceived() {}
 	virtual void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
@@ -103,7 +105,6 @@ protected:
 	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	virtual void OnChallengeRequestReceived(const uint8_t requestId, const uint32_t token) {}
-	virtual void OnLinkSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
 	///
 
 	virtual void SetBaseSeed() {}
@@ -113,8 +114,10 @@ protected:
 	virtual void OnChallenging() {}
 	virtual void OnChallengeSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
 	virtual void OnClockSync() {}
+	virtual void OnInfoSync() {}
 	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
 	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
+	virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
 	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
 
 private:
@@ -158,6 +161,17 @@ private:
 			break;
 		case ConnectingStagesEnum::ChallengeSwitchOver:
 			OnChallengeSwitchOver();
+			break;
+		case ConnectingStagesEnum::InfoSyncStage:
+			if (InfoTransaction->IsComplete())
+			{
+				SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
+				SetNextRunASAP();
+			}
+			else
+			{
+				OnInfoSync();
+			}	
 			break;
 		case ConnectingStagesEnum::LinkProtocolSwitchOver:
 			OnLinkProtocolSwitchOver();
@@ -334,6 +348,11 @@ protected:
 		if (ChallengeTransaction != nullptr)
 		{
 			ChallengeTransaction->Clear();
+		}
+
+		if (InfoTransaction != nullptr)
+		{
+			InfoTransaction->Clear();
 		}
 
 		OnClearSession();
@@ -594,6 +613,9 @@ protected:
 			case LOLA_LINK_SUBHEADER_PONG:
 				SetNextRunASAP();
 				break;
+			case LOLA_LINK_SUBHEADER_INFO_SYNC_UPDATE:
+				OnLinkInfoSyncUpdateReceived(incomingPacket->GetId(), ATUI_R.uint);
+				break;
 
 				//To Host.
 			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
@@ -636,8 +658,8 @@ protected:
 			}
 			break;
 		case PACKET_DEFINITION_LINK_WITH_ACK_HEADER:
-			//To remote.
-			OnLinkSwitchOverReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[0]);
+			//To both.
+			OnLinkingSwitchOverReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[0]);
 			break;
 		default:
 			return false;
@@ -773,13 +795,27 @@ protected:
 	void PrepareChallengeSwitchOver()						//Host.
 	{
 		PrepareLinkPacketWithAck(ChallengeTransaction->GetTransactionId(), LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER);
-	}
+	}	
 
 	void PrepareLinkProtocolSwitchOver()					//Host.
 	{
 		PrepareLinkPacketWithAck(SessionId, LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER);
 	}
 
+	void PrepareLinkInfoSyncUpdate(const uint8_t contentId, const uint32_t content) //Host
+	{
+		PacketHolder.SetDefinition(&LinkDefinition);
+		PacketHolder.SetId(contentId);
+		PacketHolder.GetPayload()[0] = LOLA_LINK_SUBHEADER_INFO_SYNC_UPDATE;
+
+		ATUI_S.uint = content;
+		ArrayToPayload();
+	}
+	
+	void PrepareLinkInfoSyncAdvanceRequest()						//Both.
+	{
+		PrepareLinkPacketWithAck(SessionId, LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER);
+	}
 private:
 	inline void PrepareLinkPacketWithAck(const uint8_t requestId, const uint8_t subHeader)
 	{
