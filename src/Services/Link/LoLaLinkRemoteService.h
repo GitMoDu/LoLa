@@ -133,7 +133,7 @@ protected:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER &&
 					RemoteChallengeTransaction.IsComplete())
 				{
-					SetConnectingState(ConnectingStagesEnum::LinkProtocolSwitchOver);
+					SetLinkingState(LinkingStagesEnum::InfoSyncStage);
 				}
 				break;
 			case LinkingStagesEnum::InfoSyncStage:				
