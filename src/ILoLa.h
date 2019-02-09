@@ -69,6 +69,8 @@ protected:
 
 	///Synced clock
 	ClockSource SyncedClock;
+	///
+
 	///Unique Id
 	UniqueIdProvider IdProvider;
 	///
