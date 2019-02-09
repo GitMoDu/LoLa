@@ -15,25 +15,33 @@ public:
 		StageHostRTT = 1,
 		StageHostRSSI = 2,
 		StageRemoteRSSI = 3,
-		StagesDone = 5
-	} Stage = StageEnum::StageStart;
+		StagesDone = 4
+	};
 
 	enum ContentIdEnum : uint8_t
 	{
-		ContentHostRTT = 0,
-		ContentHostRSSI = 1,
-		ContentRemoteRSSI = 2
+		ContentHostRTT = (0xFF - 01),
+		ContentHostRSSI = (0xFF - 02),
+		ContentRemoteRSSI = (0xFF - 03),
 	};
 
+protected:
+	StageEnum Stage = StageEnum::StageStart;
+
 public:
-	virtual bool OnUpdateReceived(const uint8_t id) {}
-	virtual void OnRequestAckReceived() {}
-	virtual void OnAdvanceRequestReceived() {}
+	virtual bool OnUpdateReceived(const uint8_t contentId) {}
+	virtual void OnRequestAckReceived(const uint8_t contentId) {}
+	virtual void OnAdvanceRequestReceived(const uint8_t contentId) {}
 
 public:
 	void Clear()
 	{
 		Stage = StageEnum::StageStart;
+	}
+
+	StageEnum GetStage()
+	{
+		return Stage;
 	}
 
 	void Advance()
@@ -69,21 +77,20 @@ public:
 
 	}
 
-	bool OnUpdateReceived(const uint8_t id)
+	bool OnUpdateReceived(const uint8_t contentId)
 	{
 		switch (Stage)
 		{
 		case StageEnum::StageStart:
-			if (id == ContentIdEnum::ContentHostRTT)
+			if (contentId == ContentIdEnum::ContentHostRTT)
 			{
 				Advance();
 				return true;
 			}
 			break;
-		case StageEnum::StageHostRTT:
-			if (id == ContentIdEnum::ContentHostRSSI)
+		case StageEnum::StageHostRSSI:
+			if (contentId == ContentIdEnum::ContentHostRSSI)
 			{
-				Advance();
 				return true;
 			}
 			break;
@@ -94,27 +101,39 @@ public:
 		return false;
 	}
 
-	void OnAdvanceRequestReceived()
+	void OnAdvanceRequestReceived(const uint8_t contentId)
 	{
 		switch (Stage)
 		{
 		case StageEnum::StageRemoteRSSI:
-			Advance();
+			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI)
+			{
+				Advance();
+				return;
+			}
 			break;
 		default:
 			break;
 		}
 	}
 
-	void OnRequestAckReceived()
+	void OnRequestAckReceived(const uint8_t contentId)
 	{
 		switch (Stage)
 		{
-		case StageEnum::StageHostRTT:			
-			Advance();
+		case StageEnum::StageHostRTT:
+			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentHostRTT)
+			{
+				Advance();
+				return;
+			}
 			break;
 		case StageEnum::StageHostRSSI:
-			Advance();
+			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentHostRSSI)
+			{
+				Advance();
+				return;
+			}
 			break;
 		default:
 			break;
@@ -130,14 +149,13 @@ public:
 
 	}
 
-	bool OnUpdateReceived(const uint8_t id)
+	bool OnUpdateReceived(const uint8_t contentId)
 	{
 		switch (Stage)
 		{
 		case StageEnum::StageRemoteRSSI:
-			if (id == ContentIdEnum::ContentRemoteRSSI)
+			if (contentId == ContentIdEnum::ContentRemoteRSSI)
 			{
-				Advance();
 				return true;
 			}
 			break;
@@ -148,27 +166,39 @@ public:
 		return false;
 	}
 
-	void OnRequestAckReceived()
+	void OnRequestAckReceived(const uint8_t contentId)
 	{
 		switch (Stage)
 		{
 		case StageEnum::StageRemoteRSSI:
-			Advance();
+			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI)
+			{
+				Advance();
+				return;
+			}
 			break;
 		default:
 			break;
 		}
 	}
 
-	void OnAdvanceRequestReceived()
+	void OnAdvanceRequestReceived(const uint8_t contentId)
 	{
 		switch (Stage)
 		{
 		case StageEnum::StageHostRTT:
-			Advance();
+			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentHostRTT)
+			{
+				Advance();
+				return;
+			}
 			break;
 		case StageEnum::StageHostRSSI:
-			Advance();
+			if (contentId == InfoSyncTransaction::ContentIdEnum::ContentHostRSSI)
+			{
+				Advance();
+				return;
+			}
 			break;
 		default:
 			break;

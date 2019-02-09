@@ -112,13 +112,13 @@ protected:
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 	virtual void OnAwaitingConnection() {}
 	virtual void OnChallenging() {}
-	virtual void OnChallengeSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
+	virtual void OnChallengeSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
 	virtual void OnClockSync() {}
 	virtual void OnInfoSync() {}
-	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
-	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
+	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
+	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
 	virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
-	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD); }
+	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
 
 private:
 	inline void TrySendPing(const uint32_t resendPeriod)
@@ -189,7 +189,7 @@ private:
 
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
-		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_FAST_CHECK_PERIOD, loLa, &PacketHolder)
+		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, loLa, &PacketHolder)
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
@@ -253,7 +253,7 @@ protected:
 	void OnSendFailed()
 	{
 		//In case the send fails, this prevents from immediate resending.
-		SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+		SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 	}
 
 	void ResetStateStartTime()
@@ -411,7 +411,7 @@ protected:
 #ifdef DEBUG_LOLA
 				Serial.print("Lost connection after ");
 				Serial.print(LinkInfo.GetLinkDuration() / (uint32_t)1000);
-				Serial.print(F(" seconds."));
+				Serial.println(F(" seconds."));
 #endif
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
@@ -576,12 +576,12 @@ protected:
 		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PANIC)
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			TrySendPing(LOLA_LINK_SERVICE_LINK_RESEND_PERIOD);
 		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION)
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			TrySendPing(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD);
 		}
 		//else if ()
@@ -814,9 +814,9 @@ protected:
 		ArrayToPayload();
 	}
 	
-	void PrepareLinkInfoSyncAdvanceRequest()						//Both.
+	void PrepareLinkInfoSyncAdvanceRequest(const uint8_t contentId)						//Both.
 	{
-		PrepareLinkPacketWithAck(LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER, LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER);
+		PrepareLinkPacketWithAck(contentId, LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE);
 	}
 private:
 	inline void PrepareLinkPacketWithAck(const uint8_t requestId, const uint8_t subHeader)

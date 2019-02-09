@@ -140,7 +140,7 @@ protected:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE)
 				{
 					Serial.println(F("InfoTransaction: SyncAdvanceRequestReceived"));
-					RemoteInfoTransaction.OnAdvanceRequestReceived();
+					RemoteInfoTransaction.OnAdvanceRequestReceived(requestId);
 					SetNextRunASAP();
 				}
 				break;
@@ -176,7 +176,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
 		case AwaitingLinkEnum::GotHost:
@@ -187,7 +187,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
 		case AwaitingLinkEnum::AcknowledgingHost:
@@ -198,11 +198,11 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
 		case AwaitingLinkEnum::WaitingForSwitchOver:
-			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			break;
 		default:
 			break;
@@ -219,7 +219,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 		}
 	}
 
@@ -241,7 +241,7 @@ protected:
 			ClockSyncer.OnTuneErrorReceived(RemoteClockSyncTransaction.GetResult());
 
 			RemoteClockSyncTransaction.Reset();
-			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 		}
 		else if (ClockSyncer.IsTimeToTune())
 		{
@@ -254,7 +254,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 		}
 		//else if (false)
@@ -267,6 +267,7 @@ protected:
 		}
 	}
 
+	///Clock Sync
 	void OnClockSync()
 	{
 		if (RemoteClockSyncTransaction.IsResultWaiting())
@@ -284,7 +285,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 		}
 	}
 
@@ -310,6 +311,7 @@ protected:
 			SetNextRunASAP();
 		}
 	}
+	///
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
 	{
@@ -339,34 +341,42 @@ protected:
 		}
 	}
 
+	///Info Sync
 	void OnInfoSync()
 	{
-		switch (RemoteInfoTransaction.Stage)
+		switch (RemoteInfoTransaction.GetStage())
 		{
 		case InfoSyncTransaction::StageEnum::StageStart:
 			//We wait in this state until we received the first Stage update.
-			SetNextRunDelay(LOLA_LINK_SERVICE_FAST_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			break;
 		case InfoSyncTransaction::StageEnum::StageHostRTT:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				PrepareLinkInfoSyncAdvanceRequest();
+				PrepareLinkInfoSyncAdvanceRequest(InfoSyncTransaction::ContentIdEnum::ContentHostRTT);
 				RequestSendPacket(true);
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
 		case InfoSyncTransaction::StageEnum::StageHostRSSI:
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			if (LinkInfo.HasRemoteRSSI())
 			{
-				PrepareLinkInfoSyncAdvanceRequest();
-				RequestSendPacket(true);
+				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+				{
+					PrepareLinkInfoSyncAdvanceRequest(InfoSyncTransaction::ContentIdEnum::ContentHostRSSI);
+					RequestSendPacket(true);
+				}
+				else
+				{
+					SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+				}
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD - GetElapsedSinceLastSent());
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
 		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
@@ -377,7 +387,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_LINK_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
 		case InfoSyncTransaction::StageEnum::StagesDone:
@@ -391,20 +401,16 @@ protected:
 
 	void OnLinkInfoSyncUpdateReceived(const uint8_t contentId, const uint32_t content)
 	{
-		Serial.println(F("InfoTransaction: SyncUpdateReceived"));
-
 		if (RemoteInfoTransaction.OnUpdateReceived(contentId))
 		{
 			//We don't check for Stage here because OnUpdateReceived already validated Stage.
 			switch (contentId)
 			{
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRTT:
-				Serial.print(F("InfoTransaction: HostRTT: micros: "));
 				Serial.println(content);
 				LinkInfo.SetRTT((uint16_t)content);
 				break;
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRSSI:
-				Serial.print(F("InfoTransaction: HostRSSI: (normalized) "));
 				Serial.println((uint8_t)content);
 				LinkInfo.SetRemoteRSSINormalized((uint8_t)content);
 				break;
@@ -419,12 +425,12 @@ protected:
 	{
 		if (header == LinkWithAckDefinition.GetHeader() && 
 			LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
-			LinkingState == LinkingStagesEnum::InfoSyncStage &&
-			id == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_SWITCHOVER)
+			LinkingState == LinkingStagesEnum::InfoSyncStage)
 		{
-			RemoteInfoTransaction.OnRequestAckReceived();
+			RemoteInfoTransaction.OnRequestAckReceived(id);
 			SetNextRunASAP();
 		}
 	}
+	///
 };
 #endif
