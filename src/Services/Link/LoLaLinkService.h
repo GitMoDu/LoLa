@@ -392,6 +392,8 @@ protected:
 				PowerBalancer.Reset();
 			}
 
+			OnLinkStateChanged(newState);
+
 			switch (newState)
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
@@ -452,7 +454,6 @@ protected:
 				break;
 			}
 
-			OnLinkStateChanged(newState);
 			LinkInfo.UpdateState(newState);
 		}
 	}
