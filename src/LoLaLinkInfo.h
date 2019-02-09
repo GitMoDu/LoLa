@@ -46,6 +46,8 @@ public:
 	void Reset()
 	{
 		LinkState = LinkStateEnum::Disabled;
+		RTT = ILOLA_INVALID_LATENCY;
+		LinkStarted = ILOLA_INVALID_MILLIS;
 	}
 
 	void UpdateState(LinkStateEnum newState)
