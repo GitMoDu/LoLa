@@ -355,7 +355,10 @@ protected:
 	bool OnSetup()
 	{
 		if (IPacketSendService::OnSetup() &&
+			ClockSyncTransaction != nullptr &&
 			ClockSyncerPointer != nullptr &&
+			ChallengeTransaction != nullptr &&
+			ServicesManager != nullptr &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
 			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()) &&
 			PowerBalancer.Setup(GetLoLa()))
