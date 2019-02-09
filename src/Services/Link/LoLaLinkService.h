@@ -386,6 +386,11 @@ protected:
 			//Previous state.
 			if (LinkInfo.GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
+#ifdef DEBUG_LOLA
+				Serial.print("Lost connection after ");
+				Serial.print(LinkInfo.GetLinkDuration() / (uint32_t)1000);
+				Serial.print(F(" seconds."));
+#endif
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
 				LinkInfo.ResetLinkStarted();
