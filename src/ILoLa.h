@@ -77,7 +77,10 @@ protected:
 	///
 
 public:
-	ILoLa() : IdProvider()
+	ILoLa() : PacketMap(), IdProvider() , SyncedClock()
+	{
+	}
+
 	{
 	}
 
