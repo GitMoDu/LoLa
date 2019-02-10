@@ -287,7 +287,7 @@ protected:
 	///Challenge. Possibly CPU intensive task.
 	void OnChallenging()
 	{
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD)
+		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
 		{
 			HostChallengeTransaction.NewRequest();
 		}

@@ -130,7 +130,7 @@ private:
 		}
 	}
 
-	void OnConnecting()
+	void OnLinking()
 	{
 		switch (LinkingState)
 		{
@@ -244,7 +244,14 @@ protected:
 
 	uint32_t GetElapsedSinceStateStart()
 	{
-		return Millis() - StateStartTime;
+		if (StateStartTime == ILOLA_INVALID_MILLIS)
+		{
+			return ILOLA_INVALID_MILLIS;
+		}
+		else
+		{
+			return Millis() - StateStartTime;
+		}
 	}
 
 	uint32_t GetElapsedSinceLastSent()
@@ -517,7 +524,7 @@ protected:
 			}
 			else
 			{
-				OnConnecting();
+				OnLinking();
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connected:
@@ -576,12 +583,12 @@ protected:
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PANIC)
 		{
 			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			TrySendPing(LOLA_LINK_SERVICE_LINK_RESEND_PERIOD);
+			TrySendPing(LOLA_LINK_SERVICE_PANIC);
 		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION)
 		{
 			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			TrySendPing(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD);
+			TrySendPing(LOLA_LINK_SERVICE_PERIOD_INTERVENTION);
 		}
 		//else if ()
 		//{

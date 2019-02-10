@@ -167,7 +167,7 @@ protected:
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD)
+			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				//Send an Hello to wake up potential hosts.
 				PrepareLinkDiscovery();
@@ -262,7 +262,7 @@ protected:
 		//}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_KEEP_ALIVE_SEND_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 		}
 	}
 
