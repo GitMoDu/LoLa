@@ -5,6 +5,7 @@
 
 #define DEBUG_LOLA
 //#define MOCK_RADIO
+//#define USE_MOCK_PACKET_LOSS
 #define USE_TIME_SLOT
 #define USE_LATENCY_COMPENSATION
 
@@ -49,6 +50,14 @@ protected:
 
 	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
 	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
+
+#ifdef USE_MOCK_PACKET_LOSS
+#define MOCK_PACKET_LOSS_SOFT				1
+#define MOCK_PACKET_LOSS_SEVERE				2
+#define MOCK_PACKET_LOSS_USELESS			3
+	const uint8_t PacketLossLevel = MOCK_PACKET_LOSS_SEVERE;
+#endif
+
 	///
 
 	///Configurations
@@ -81,8 +90,22 @@ public:
 	{
 	}
 
+#ifdef USE_MOCK_PACKET_LOSS
+	bool GetLossChance()
 	{
+		switch (PacketLossLevel)
+		{
+		case MOCK_PACKET_LOSS_SOFT:
+			return random(1000) > 50;
+		case MOCK_PACKET_LOSS_SEVERE:
+			return random(1000) > 150;
+		case MOCK_PACKET_LOSS_USELESS:
+			return random(1000) > 200;
+		default:
+			return false;
+		}
 	}
+#endif
 
 	uint8_t GetIdLength()
 	{

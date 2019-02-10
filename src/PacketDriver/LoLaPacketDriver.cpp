@@ -62,6 +62,15 @@ void LoLaPacketDriver::OnReceived()
 		//Is Ack
 		if (Receiver.GetIncomingDefinition()->GetHeader() == PACKET_DEFINITION_ACK_HEADER)
 		{
+#ifdef USE_MOCK_PACKET_LOSS
+			if (!GetLossChance())
+			{
+#ifdef DEBUG_LOLA
+				Serial.println("Packet Lost, Oh noes!");
+#endif
+				return;
+			}
+#endif
 			Services.ProcessAck(Receiver.GetIncomingPacket());
 		}
 		//Is packet
@@ -71,6 +80,15 @@ void LoLaPacketDriver::OnReceived()
 			{
 				if (Sender.SendAck(Receiver.GetIncomingDefinition(), Receiver.GetIncomingPacket()->GetId()))
 				{
+#ifdef USE_MOCK_PACKET_LOSS
+					if (!GetLossChance())
+					{
+#ifdef DEBUG_LOLA
+						Serial.println("Packet Lost, Oh noes!");
+#endif
+						return;
+					}
+#endif
 					if (Transmit())
 					{
 						LastSent = GetMillis();
@@ -82,6 +100,16 @@ void LoLaPacketDriver::OnReceived()
 					}
 				}
 			}
+
+#ifdef USE_MOCK_PACKET_LOSS
+			if (!GetLossChance())
+			{
+#ifdef DEBUG_LOLA
+				Serial.println("Packet Lost, Oh noes!");
+#endif
+				return;
+			}
+#endif
 			//Handle packet.
 			Services.ProcessPacket(Receiver.GetIncomingPacket());
 		}
@@ -130,7 +158,7 @@ bool LoLaPacketDriver::HotAfterReceive()
 }
 
 bool LoLaPacketDriver::IsInSendSlot()
-{	
+{
 #ifdef USE_LATENCY_COMPENSATION
 	SendSlotElapsed = (GetMillisSync() - (uint32_t)LinkInfo->GetETTM()) % DuplexPeriodMillis;
 #else
@@ -195,11 +223,26 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 	{
 		if (Sender.SendPacket(packet))
 		{
+#ifdef USE_MOCK_PACKET_LOSS
+			if (!GetLossChance())
+			{
+#ifdef DEBUG_LOLA
+				Serial.println("Packet Lost, Oh noes!");
+				return true;
+#endif
+			}
+			else if(Transmit())
+			{
+				LastSent = GetMillis();
+				return true;
+			}
+#else
 			if (Transmit())
 			{
 				LastSent = GetMillis();
 				return true;
 			}
+#endif			
 		}
 	}
 

@@ -72,7 +72,7 @@ public:
 			{
 				return;
 			}
-		}
+		}		
 	}
 
 	ILoLaService* Get(uint8_t index)
