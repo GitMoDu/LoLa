@@ -25,6 +25,14 @@
 #define ILOLA_INVALID_MICROS				ILOLA_INVALID_MILLIS
 #define ILOLA_INVALID_LATENCY				((uint16_t)UINT16_MAX)
 
+#ifdef USE_MOCK_PACKET_LOSS
+#define MOCK_PACKET_LOSS_SOFT				8
+#define MOCK_PACKET_LOSS_HARD				12
+#define MOCK_PACKET_LOSS_SMOKE_SIGNALS		40
+#define MOCK_PACKET_LOSS_LINKING			MOCK_PACKET_LOSS_HARD
+#define MOCK_PACKET_LOSS_LINKED				MOCK_PACKET_LOSS_SMOKE_SIGNALS
+#endif
+
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
@@ -50,14 +58,6 @@ protected:
 
 	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
 	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
-
-#ifdef USE_MOCK_PACKET_LOSS
-#define MOCK_PACKET_LOSS_SOFT				1
-#define MOCK_PACKET_LOSS_SEVERE				2
-#define MOCK_PACKET_LOSS_USELESS			3
-	const uint8_t PacketLossLevel = MOCK_PACKET_LOSS_SEVERE;
-#endif
-
 	///
 
 	///Configurations
@@ -86,23 +86,21 @@ protected:
 	///
 
 public:
-	ILoLa() : PacketMap(), IdProvider() , SyncedClock()
+	ILoLa() : PacketMap(), IdProvider(), SyncedClock()
 	{
 	}
 
 #ifdef USE_MOCK_PACKET_LOSS
 	bool GetLossChance()
 	{
-		switch (PacketLossLevel)
+		if (LinkIndicator->HasLink())
 		{
-		case MOCK_PACKET_LOSS_SOFT:
-			return random(1000) > 50;
-		case MOCK_PACKET_LOSS_SEVERE:
-			return random(1000) > 150;
-		case MOCK_PACKET_LOSS_USELESS:
-			return random(1000) > 200;
-		default:
-			return false;
+			return random(100) + 1 >= MOCK_PACKET_LOSS_LINKED;
+		}
+		else
+		{
+			return random(100) + 1 >= MOCK_PACKET_LOSS_LINKING;
+	
 		}
 	}
 #endif
