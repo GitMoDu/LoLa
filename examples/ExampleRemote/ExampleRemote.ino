@@ -77,6 +77,10 @@ void setup()
 	}
 	ControllerOutput = LoLa.GetControllerSurface();
 
+	ControllerOutput->SetDirection(31000);
+	ControllerOutput->SetDirectionTrim(+100);
+	ControllerOutput->SetPropulsion(32001);
+	ControllerOutput->SetPropulsionTrim(-100);
 	FunctionSlot<uint8_t> ptrSlot(OnSurfaceUpdated);
 	ControllerOutput->AttachOnSurfaceUpdated(ptrSlot);
 

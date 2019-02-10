@@ -9,7 +9,7 @@
 #include <Services\SyncSurface\SyncSurfaceReader.h>
 #include <Services\SyncSurface\SyncSurfaceWriter.h>
 
-#define CONTROLLER_SURFACE_BASE_HEADER (PACKET_DEFINITION_PING_HEADER + 1)
+#define CONTROLLER_SURFACE_BASE_HEADER (PACKET_DEFINITION_USER_HEADERS_START + 1)
 
 class HostManager : public LoLaManagerHost
 {
@@ -17,6 +17,12 @@ private:
 	ControllerSurface Controller;
 
 	SyncSurfaceReader Reader;
+
+protected:
+	bool OnSetupServices()
+	{
+		return LoLa->GetServices()->Add(&Reader);
+	}
 
 public:
 	HostManager(Scheduler* scheduler, LoLaPacketDriver* loLa)

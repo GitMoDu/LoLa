@@ -9,7 +9,7 @@
 #include <Services\SyncSurface\SyncSurfaceReader.h>
 #include <Services\SyncSurface\SyncSurfaceWriter.h>
 
-#define CONTROLLER_SURFACE_BASE_HEADER (PACKET_DEFINITION_PING_HEADER + 1)
+#define CONTROLLER_SURFACE_BASE_HEADER (PACKET_DEFINITION_USER_HEADERS_START + 1)
 
 class RemoteManager : public LoLaManagerRemote
 {
@@ -17,6 +17,12 @@ private:
 	ControllerSurface Controller;
 
 	SyncSurfaceWriter Writer;
+
+protected:
+	bool OnSetupServices()
+	{
+		return LoLa->GetServices()->Add(&Writer);
+	}
 
 public:
 	RemoteManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
