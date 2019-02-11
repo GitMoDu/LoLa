@@ -87,7 +87,7 @@ protected:
 
 	///For use of estimated latency features
 #ifdef USE_LATENCY_COMPENSATION
-	int8_t ETTM = 0;//Estimated transmission time in millis.
+	uint8_t ETTM = 0;//Estimated transmission time in millis.
 #endif
 	///
 
@@ -106,7 +106,7 @@ public:
 		else
 		{
 			return random(100) + 1 >= MOCK_PACKET_LOSS_LINKING;
-	
+
 		}
 	}
 #endif
@@ -122,12 +122,12 @@ public:
 	}
 
 #ifdef USE_LATENCY_COMPENSATION
-	int8_t GetETTM()
+	uint8_t GetETTM()
 	{
 		return ETTM;
 	}
 
-	void SetETTM(const int8_t ettm)
+	void SetETTM(const uint8_t ettm)
 	{
 		ETTM = ettm;
 	}
