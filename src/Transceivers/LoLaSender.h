@@ -11,7 +11,7 @@ class LoLaSender : public LoLaBuffer
 private:
 	PacketDefinition* AckDefinition;
 
-	TemplateLoLaPacket<LOLA_PACKET_NO_PAYLOAD_SIZE + 1> AckPacket;
+	TemplateLoLaPacket<LOLA_PACKET_MIN_WITH_ID_SIZE> AckPacket;
 
 public:
 	//Fast Ack, Nack, Ack with Id and Nack with Id packet sender, writes directly to output.
