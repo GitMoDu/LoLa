@@ -123,7 +123,10 @@ public:
 
 	void StampLinkStarted()
 	{
-		LinkStarted = Driver->GetMillis();
+		if (Driver != nullptr)
+		{
+			LinkStarted = Driver->GetMillis();
+		}
 	}
 
 	bool HasRemoteRSSI()

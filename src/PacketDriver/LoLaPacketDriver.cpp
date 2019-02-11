@@ -160,7 +160,7 @@ bool LoLaPacketDriver::IsInSendSlot()
 #ifdef USE_LATENCY_COMPENSATION
 	SendSlotElapsed = (GetMillisSync() - (uint32_t)ETTM) % DuplexPeriodMillis;
 #else
-	SendSlotElapsed = (GetMillisSync() % DuplexPeriodMillis;
+	SendSlotElapsed = GetMillisSync() % DuplexPeriodMillis;
 #endif	
 
 	//Even spread of true and false across the DuplexPeriod
