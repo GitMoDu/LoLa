@@ -85,6 +85,12 @@ protected:
 	UniqueIdProvider IdProvider;
 	///
 
+	///For use of estimated latency features
+#ifdef USE_LATENCY_COMPENSATION
+	int8_t ETTM = 0;//Estimated transmission time in millis.
+#endif
+	///
+
 public:
 	ILoLa() : PacketMap(), IdProvider(), SyncedClock()
 	{
@@ -114,6 +120,23 @@ public:
 	{
 		return IdProvider.GetUUIDPointer();
 	}
+
+#ifdef USE_LATENCY_COMPENSATION
+	int8_t GetETTM()
+	{
+		return ETTM;
+	}
+
+	void SetETTM(const int8_t ettm)
+	{
+		ETTM = ettm;
+	}
+
+	void ResetETTM()
+	{
+		ETTM = 0;
+	}
+#endif
 
 	void Enable()
 	{

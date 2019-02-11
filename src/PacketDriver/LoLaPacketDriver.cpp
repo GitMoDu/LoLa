@@ -125,8 +125,6 @@ bool LoLaPacketDriver::Setup()
 		//TODO: Get comms entropy source, abstracted.
 		//randomSeed(...);
 		IncomingInfo.Clear();
-		LinkInfo = Services.GetLinkInfo();
-		LinkInfo->Reset();
 
 		SetupOk = true;
 	}
@@ -160,7 +158,7 @@ bool LoLaPacketDriver::HotAfterReceive()
 bool LoLaPacketDriver::IsInSendSlot()
 {
 #ifdef USE_LATENCY_COMPENSATION
-	SendSlotElapsed = (GetMillisSync() - (uint32_t)LinkInfo->GetETTM()) % DuplexPeriodMillis;
+	SendSlotElapsed = (GetMillisSync() - (uint32_t)ETTM) % DuplexPeriodMillis;
 #else
 	SendSlotElapsed = (GetMillisSync() % DuplexPeriodMillis;
 #endif	

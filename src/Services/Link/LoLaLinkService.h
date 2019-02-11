@@ -475,7 +475,7 @@ protected:
 				Serial.println((float)LinkInfo->GetRTT() / (float)2000, 2);
 #ifdef USE_LATENCY_COMPENSATION
 				Serial.print(F("Latency compensation: "));
-				Serial.print(LinkInfo->GetETTM());
+				Serial.print(GetLoLa()->GetETTM());
 				Serial.println(F(" ms"));
 #endif
 				Serial.print(F("Remote RSSI: "));

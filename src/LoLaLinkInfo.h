@@ -26,7 +26,6 @@ private:
 	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
 
 	uint16_t RTT = ILOLA_INVALID_LATENCY;
-	uint8_t ETTM = 0; //Estimated Travel Time in Millis.
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
 	uint8_t RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
@@ -50,9 +49,12 @@ public:
 	void Reset()
 	{
 		RTT = ILOLA_INVALID_LATENCY;
-		ETTM = 0;
 		RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 		LinkStarted = ILOLA_INVALID_MILLIS;
+		if (Driver != nullptr)
+		{
+			Driver->ResetETTM();
+		}
 	}
 
 	void UpdateState(LinkStateEnum newState)
@@ -84,12 +86,10 @@ public:
 	void SetRTT(const uint16_t rtt)
 	{
 		RTT = rtt;
-		ETTM = (uint8_t)round((float)RTT / (float)2000);
-	}
-
-	uint8_t GetETTM()
-	{
-		return ETTM;
+		if (Driver != nullptr)
+		{
+			Driver->SetETTM((uint8_t)round((float)RTT / (float)2000));
+		}
 	}
 
 	uint16_t GetRTT()

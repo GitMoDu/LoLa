@@ -56,10 +56,6 @@ private:
 	//Helper for IsInSendSlot().
 	uint32_t SendSlotElapsed;
 
-	///Link Info for use of estimated latency.
-	LoLaLinkInfo* LinkInfo = nullptr;
-	///
-
 protected:
 	///Services that are served receiving packets.
 	LoLaServicesManager Services;
