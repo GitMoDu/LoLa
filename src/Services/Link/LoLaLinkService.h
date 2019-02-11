@@ -75,7 +75,7 @@ protected:
 	InfoSyncTransaction* InfoTransaction = nullptr;
 
 	//Optimized memory usage grunt packet.
-	TemplateLoLaPacket<LOLA_PACKET_SLIM_SIZE> PacketHolder;
+	TemplateLoLaPacket<(LOLA_PACKET_MIN_SIZE + 5)> PacketHolder;
 
 #ifdef DEBUG_LOLA
 	uint32_t ConnectionProcessStart = 0;
