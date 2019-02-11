@@ -38,6 +38,12 @@ protected:
 	ISeedSource* CryptoSeed = nullptr;
 	///
 
+	///For use of estimated latency features
+#ifdef USE_LATENCY_COMPENSATION
+	uint8_t ETTM = 0;//Estimated transmission time in millis.
+#endif
+	///
+
 	uint8_t BufferSize = 0;
 	ILoLaPacket* BufferPacket = nullptr;
 
@@ -63,6 +69,13 @@ public:
 
 		return PacketMap != nullptr;
 	}
+
+#ifdef USE_LATENCY_COMPENSATION
+	void SetETTM(const int8_t ettm)
+	{
+		ETTM = ettm;
+	}
+#endif
 	
 public:
 	uint8_t * GetBuffer()

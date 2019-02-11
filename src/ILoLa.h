@@ -130,11 +130,13 @@ public:
 	void SetETTM(const uint8_t ettm)
 	{
 		ETTM = ettm;
+		OnETTMUpdated();
 	}
 
 	void ResetETTM()
 	{
 		ETTM = 0;
+		OnETTMUpdated();
 	}
 #endif
 
@@ -255,6 +257,9 @@ public:
 	{
 		return &PacketMap;
 	}
+
+protected:
+	virtual void OnETTMUpdated() {}
 
 public:
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
