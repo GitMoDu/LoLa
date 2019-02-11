@@ -97,7 +97,6 @@ protected:
 	virtual bool CanTransmit() { return true; }
 
 protected:
-	virtual void OnStart() {}
 
 private:
 	inline bool HotAfterSend();
