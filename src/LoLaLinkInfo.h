@@ -51,10 +51,13 @@ public:
 		RTT = ILOLA_INVALID_LATENCY;
 		RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 		LinkStarted = ILOLA_INVALID_MILLIS;
+
+#ifdef USE_LATENCY_COMPENSATION
 		if (Driver != nullptr)
 		{
 			Driver->ResetETTM();
 		}
+#endif
 	}
 
 	void UpdateState(LinkStateEnum newState)
@@ -86,10 +89,12 @@ public:
 	void SetRTT(const uint16_t rtt)
 	{
 		RTT = rtt;
+#ifdef USE_LATENCY_COMPENSATION
 		if (Driver != nullptr)
 		{
 			Driver->SetETTM((uint8_t)round((float)RTT / (float)2000));
 		}
+#endif
 	}
 
 	uint16_t GetRTT()
