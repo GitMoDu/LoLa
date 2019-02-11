@@ -121,11 +121,6 @@ public:
 		}
 	}
 
-	void ResetLinkStarted()
-	{
-		LinkStarted = ILOLA_INVALID_MILLIS;
-	}
-
 	void StampLinkStarted()
 	{
 		LinkStarted = Driver->GetMillis();

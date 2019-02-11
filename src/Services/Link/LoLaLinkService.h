@@ -343,6 +343,11 @@ protected:
 			InfoTransaction->Clear();
 		}
 
+		if (LinkInfo != nullptr)
+		{
+			LinkInfo->Reset();
+		}
+
 		OnClearSession();
 	}
 
@@ -417,7 +422,7 @@ protected:
 #endif
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
-				LinkInfo->ResetLinkStarted();
+				LinkInfo->Reset();
 				PowerBalancer.Reset();
 			}
 
