@@ -455,7 +455,7 @@ protected:
 				Serial.print(" Session code: ");
 				Serial.println(SessionId);
 				Serial.print("Connecting Seed: ");
-				Serial.println(CryptoSeed.GetToken());
+				Serial.println(CryptoSeed.GetToken(0));
 				Serial.print("Last RSSI: ");
 				Serial.println(GetLoLa()->GetLastValidRSSI());
 #endif

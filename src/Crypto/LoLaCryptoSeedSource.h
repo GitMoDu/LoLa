@@ -29,9 +29,9 @@ private:
 	uint32_t TOTPIndex = 0;
 
 private:
-	uint32_t GetTOTP()
+	uint32_t GetTOTP(const int8_t offsetMillis)
 	{
-		TOTPIndex = SyncedClock->GetMillis();
+		TOTPIndex = SyncedClock->GetMillis() + offsetMillis;
 		TOTPIndex ^= TOTPSeed;
 
 		TOTPIndex /= TOTPPeriod;
@@ -80,13 +80,13 @@ public:
 		}
 	}
 
-	uint8_t GetToken()
+	uint8_t GetToken(const int8_t offsetMillis)
 	{
 		if (TOTPEnabled)
 		{
 			CalculatorCRC.Reset(CachedToken);
 
-			CalculatorCRC.Update32(GetTOTP());
+			CalculatorCRC.Update32(GetTOTP(offsetMillis));
 
 			return CalculatorCRC.GetCurrent();
 		}
