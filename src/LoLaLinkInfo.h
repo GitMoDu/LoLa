@@ -34,7 +34,7 @@ private:
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
 
-	LinkStateEnum LinkState;
+	LinkStateEnum LinkState = LinkStateEnum::Disabled;
 
 public:
 	LinkStateEnum GetLinkState()
@@ -49,7 +49,6 @@ public:
 
 	void Reset()
 	{
-		LinkState = LinkStateEnum::Disabled;
 		RTT = ILOLA_INVALID_LATENCY;
 		ETTM = 0;
 		RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
