@@ -92,7 +92,7 @@ public:
 	}
 };
 
-template <size_t DataSize>
+template <const uint8_t DataSize>
 class TemplateLoLaPacket : public ILoLaPacket
 {
 private:
@@ -100,7 +100,7 @@ private:
 public:
 	uint8_t * GetRaw()
 	{
-		return &Data[LOLA_PACKET_HEADER_INDEX];
+		return Data;
 	}
 };
 #endif
