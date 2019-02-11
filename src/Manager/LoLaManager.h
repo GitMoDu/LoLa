@@ -55,7 +55,7 @@ public:
 
 	LoLaLinkInfo* GetLinkInfo()
 	{
-		return GetLinkService()->GetLinkInfo();
+		return LoLa->GetServices()->GetLinkInfo();
 	}
 
 	bool Start()
