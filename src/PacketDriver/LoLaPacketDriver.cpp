@@ -119,7 +119,6 @@ void LoLaPacketDriver::OnReceived()
 #ifdef USE_LATENCY_COMPENSATION
 void LoLaPacketDriver::OnETTMUpdated()
 {
-	Receiver.SetETTM(ETTM);
 	Sender.SetETTM(ETTM);
 }
 #endif

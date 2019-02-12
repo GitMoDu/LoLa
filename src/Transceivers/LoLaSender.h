@@ -13,6 +13,12 @@ private:
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_WITH_ID_SIZE> AckPacket;
 
+	///For use of estimated latency features
+#ifdef USE_LATENCY_COMPENSATION
+	uint8_t ETTM = 0;//Estimated transmission time in millis.
+#endif
+	///
+
 public:
 	//Fast Ack, Nack, Ack with Id and Nack with Id packet sender, writes directly to output.
 	bool SendPacket(ILoLaPacket* transmitPacket)
@@ -22,7 +28,11 @@ public:
 			CalculatorCRC.Reset();
 
 			//Crypto starts at the start of the hash.
-			CalculatorCRC.Update(GetCryptoSeed());
+#ifdef USE_LATENCY_COMPENSATION
+			CalculatorCRC.Update(GetCryptoSeed(ETTM));
+#else
+			CalculatorCRC.Update(GetCryptoSeed(0));
+#endif
 
 			//
 			CalculatorCRC.Update(transmitPacket->GetDefinition()->GetHeader());
@@ -54,7 +64,11 @@ public:
 		CalculatorCRC.Reset();
 
 		//Crypto starts at the start of the hash.
-		CalculatorCRC.Update(GetCryptoSeed());
+#ifdef USE_LATENCY_COMPENSATION
+		CalculatorCRC.Update(GetCryptoSeed(ETTM));
+#else
+		CalculatorCRC.Update(GetCryptoSeed(0));
+#endif
 		
 		//
 		BufferPacket = &AckPacket;
@@ -97,6 +111,13 @@ public:
 
 		return false;
 	}
+
+#ifdef USE_LATENCY_COMPENSATION
+	void SetETTM(const int8_t ettm)
+	{
+		ETTM = ettm/2;
+	}
+#endif
 };
 
 #endif
