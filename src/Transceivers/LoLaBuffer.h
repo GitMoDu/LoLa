@@ -16,7 +16,7 @@ class LoLaBuffer
 {
 protected:
 	///Packet Mapper reuses the same object.
-	LoLaPacketMap * PacketMap;
+	LoLaPacketMap * PacketMap = nullptr;
 	///
 
 	///Link health.
