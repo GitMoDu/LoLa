@@ -47,13 +47,13 @@ Driver for Si4463 [WORKING]: The radio IC this project is based around, but not 
 
 Simple Acknowledged Packets with Id [WORKING]: carrying only the original packet's header and optional id. Currently only used for establishing a link, as the Ack packets ignore the collision-avoidance setup. This way we can accuratelly measure total system latency before the link is ready.
 
-Synchronized clock [WORKING]: when establishing a link, the Remote's clock is synced to the Host's clock. The host clock is randomized for each new link session. The clock is tuned during link time (TODO: Improve).
+Synchronized clock [WORKING]: when establishing a link, the Remote's clock is synced to the Host's clock. The host clock is randomized for each new link session. The clock is tuned during link time.
 
 Packet collision avoidance [WORKING]: with the Synchronized clock, we split a fixed period in half where the Host can only transmit during the first half and the Remote during the second half (half-duplex). Default duplex period is 10 milliseconds.
 
 Unbuffered Output [WORKING]: Each LoLa service can handle a packet send being delayed or even failed, so we don't need to buffer outputs. IPacketSendService extends the base ILoLaService and provides overloads for extension.
 
-Link Handshake Handling [WORKING] – Broadcast, send challenge response and start session. Clock is synced and Crypto tokens are exchanged.
+Link Handshake Handling [WORKING] – Broadcast, send challenge response and start session. Clock is synced, Crypto tokens are exchanged and basic link info is exchanged.
 
 Link management [WORKING]: Link service establishes a link and fires events when the link is gained or lost. Keeps sending pings (with replies) to make sure the partner is still there, avoiding stealing bandwidth from user services.
 
@@ -65,6 +65,12 @@ SyncSurface Service [WORKING]: The star feature and whole reason I started this 
 
 Link diagnostics [WORKING BARE]: Measures link properties: Latency, TODO: add more.
 
+Piggyback Latency Measurement[WORKING]: There's a lot of Ack'ed packets being exchanged when linking. We track those and measure the system latency before the link is even up.
+
+Latency Compensation for Link[WORKING]: Using the measured latency, we use the estimated transmission time to optimize time dependent values. This feature is optional and not thoroughly validated.
+
+Simulated Packet Loss for Testing[WORKING]: This feature allows us to test the system in a bad conditions.
+
 
 Why not Radiohead or similar radio libraries? 
 
@@ -72,9 +78,9 @@ I'd like to build a real time system, biasing the implementation for low latency
 
  
 
-Gist of the inner working: 
+Gist of the Packet Driver: 
 
-The packet driver is a specialized packet handler: when receiving, it tries to throw the incoming packet to one of the registered LoLa Services. There is no callback for when no registered service wants the packet. 
+When receiving, it tries to throw the incoming packet to one of the registered LoLa Services. There is no callback for when no registered service wants the packet. 
 
 The packets definitions and payload are defined in a very minimalistic way with only some configurability.
   
@@ -88,19 +94,18 @@ It's quite a memory hog (around 1.5 kB for the example projects with only 2 sync
 
 Future : 
 
-Improved Time Source: current version is working but should be considered a fallback. GPS based time sources or an external time keeping device should be preferred.
+Improved Time Source: current version is working but should be considered a fallback. GPS based time sources or an external time keeping device should be preferred. RTC is also an option on STM32F1.
 
-Piggyback Latency Measurement: There's a lot of Ack'ed packets being exchanged when linking. We can track those and measure the system latency before the link is even up.
+Transmit Power Balancer[IN PROGRESS]: with the link up, the end-points are continuosly updated on the RSSI of the partner, and adjusts the output power conservatively.
 
-Channel hoping: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. During link time, we can use the same time-base mechanism of the TOTP to generate a pseudo-random channel hopping. Maybe include a white-list of usable channels, which could itself be self-updating.
-
-Some bugs with:
-
-ATmega328p @ 8 MHz 
-
-ATmega328p @ 16 MHz
+Channel Hopping[IN PROGRESS]: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. During link time, we can use the same time-base mechanism of the TOTP to generate a pseudo-random channel hopping. Maybe include a white-list of usable channels, which could itself be self-updating.
 
 
-Tested OK with: 
 
-Maple Mini clone 
+
+
+Tested with: 
+
+Maple Mini clone
+
+ATmega328p
