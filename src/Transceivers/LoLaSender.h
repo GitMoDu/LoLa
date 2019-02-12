@@ -9,7 +9,7 @@
 class LoLaSender : public LoLaBuffer
 {
 private:
-	PacketDefinition* AckDefinition;
+	PacketDefinition* AckDefinition = nullptr;
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_WITH_ID_SIZE> AckPacket;
 
