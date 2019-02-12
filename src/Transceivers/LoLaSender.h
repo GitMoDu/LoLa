@@ -19,12 +19,16 @@ private:
 #endif
 	///
 
+	//Optimization helper.
+	PacketDefinition* OutgoingDefinition = nullptr;
+
 public:
 	//Fast Ack, Nack, Ack with Id and Nack with Id packet sender, writes directly to output.
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
-		if (transmitPacket != nullptr && transmitPacket->GetDefinition() != nullptr)
+		if (transmitPacket != nullptr)
 		{
+			OutgoingDefinition = transmitPacket->GetDefinition();
 			CalculatorCRC.Reset();
 
 			//Crypto starts at the start of the hash.
@@ -33,9 +37,9 @@ public:
 #else
 			CalculatorCRC.Update(GetCryptoSeed(0));
 #endif
-
 			//
-			CalculatorCRC.Update(transmitPacket->GetDefinition()->GetHeader());
+
+			CalculatorCRC.Update(OutgoingDefinition->GetHeader());
 
 			BufferIndex = LOLA_PACKET_SUB_HEADER_START;
 			if (transmitPacket->GetDefinition()->HasId())
@@ -44,12 +48,12 @@ public:
 				CalculatorCRC.Update(transmitPacket->GetId());
 			}
 
-			for (uint8_t i = 0; i < transmitPacket->GetDefinition()->GetPayloadSize(); i++)
+			for (uint8_t i = 0; i < OutgoingDefinition->GetPayloadSize(); i++)
 			{
 				CalculatorCRC.Update(transmitPacket->GetPayload()[i]);
 			}
 			transmitPacket->GetRaw()[LOLA_PACKET_MACCRC_INDEX] = CalculatorCRC.GetCurrent();
-			BufferSize = transmitPacket->GetDefinition()->GetTotalSize();
+			BufferSize = OutgoingDefinition->GetTotalSize();
 			BufferPacket = transmitPacket;
 			PacketsProcessed++;
 
@@ -68,14 +72,14 @@ public:
 		CalculatorCRC.Update(GetCryptoSeed(ETTM));
 #else
 		CalculatorCRC.Update(GetCryptoSeed(0));
-#endif
-		
+#endif		
 		//
+
 		BufferPacket = &AckPacket;
 		BufferPacket->SetDefinition(AckDefinition);
 		CalculatorCRC.Update(PACKET_DEFINITION_ACK_HEADER);
 
-		//Payload, header and ID
+		//Payload, header and ID.
 		BufferPacket->GetPayload()[0] = payloadDefinition->GetHeader();
 		CalculatorCRC.Update(payloadDefinition->GetHeader());
 
