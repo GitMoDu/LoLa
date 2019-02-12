@@ -16,10 +16,12 @@
 class SyncAbstractPacketDefinition : public PacketDefinition
 {
 private:
-	uint8_t BaseHeader;
+	uint8_t BaseHeader = 0;
+
 public:
 	SyncAbstractPacketDefinition() {}
-	SyncAbstractPacketDefinition(uint8_t baseHeader)
+
+	SyncAbstractPacketDefinition(const uint8_t baseHeader)
 	{
 		BaseHeader = baseHeader;
 	}
@@ -48,14 +50,16 @@ public:
 class SyncDataPacketDefinition : public SyncAbstractPacketDefinition
 {
 public:
-	SyncDataPacketDefinition() {}
+	SyncDataPacketDefinition() : SyncAbstractPacketDefinition() {}
 
 public:
 	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+
 	void SetBaseHeader(const uint8_t baseHeader)
 	{
 		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET);
 	}
+
 	uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA
@@ -73,13 +77,16 @@ public:
 class SyncMetaPacketDefinition : public SyncAbstractPacketDefinition
 {
 public:
-	SyncMetaPacketDefinition() {}
+	SyncMetaPacketDefinition() :SyncAbstractPacketDefinition() {}
+
 public:
-	virtual uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID;}
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID;}
+
 	void SetBaseHeader(const uint8_t baseHeader)
 	{
 		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_META_HEADER_OFFSET);
 	}
+
 	uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_META_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA
