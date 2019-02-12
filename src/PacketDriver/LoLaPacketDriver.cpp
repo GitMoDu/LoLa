@@ -4,7 +4,7 @@
 
 #include <PacketDriver\LoLaPacketDriver.h>
 
-LoLaPacketDriver::LoLaPacketDriver() : ILoLa()
+LoLaPacketDriver::LoLaPacketDriver() : ILoLa() , Services()
 {
 }
 
