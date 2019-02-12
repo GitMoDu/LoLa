@@ -30,7 +30,7 @@ protected:
 	StageEnum Stage = StageEnum::StageStart;
 
 public:
-	virtual bool OnUpdateReceived(const uint8_t contentId) {}
+	virtual bool OnUpdateReceived(const uint8_t contentId) { return false; }
 	virtual void OnRequestAckReceived(const uint8_t contentId) {}
 	virtual void OnAdvanceRequestReceived(const uint8_t contentId) {}
 
