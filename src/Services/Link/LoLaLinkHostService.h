@@ -360,7 +360,7 @@ protected:
 			}
 			break;
 		case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
-			if (LinkInfo->HasRemoteRSSI() && GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			if (LinkInfo->HasPartnerRSSI() && GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareLinkInfoSyncAdvanceRequest(InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI);
 				RequestSendPacket(true);
@@ -388,7 +388,7 @@ protected:
 			case InfoSyncTransaction::StageEnum::StageRemoteRSSI:
 				if (contentId == InfoSyncTransaction::ContentIdEnum::ContentRemoteRSSI)
 				{
-					LinkInfo->SetRemoteRSSINormalized((uint8_t)content);
+					LinkInfo->SetPartnerRSSINormalized((uint8_t)content);
 					SetNextRunASAP();
 				}
 				break;
