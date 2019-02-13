@@ -27,7 +27,7 @@ private:
 	uint16_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
-	uint8_t RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
+	uint8_t PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
@@ -133,19 +133,19 @@ public:
 		}
 	}
 
-	bool HasRemoteRSSI()
+	bool HasPartnerRSSI()
 	{
-		return RemoteRSSINormalized != ILOLA_INVALID_RSSI_NORMALIZED;
+		return PartnerRSSINormalized != ILOLA_INVALID_RSSI_NORMALIZED;
 	}
 
-	uint8_t GetRemoteRSSINormalized()
+	uint8_t GetPartnerRSSINormalized()
 	{
-		return RemoteRSSINormalized;
+		return PartnerRSSINormalized;
 	}
 
-	void SetRemoteRSSINormalized(const uint8_t rssiNormalized)
+	void SetPartnerRSSINormalized(const uint8_t rssiNormalized)
 	{
-		RemoteRSSINormalized = rssiNormalized;
+		PartnerRSSINormalized = rssiNormalized;
 	}
 
 	int16_t GetRSSI()

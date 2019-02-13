@@ -479,7 +479,7 @@ protected:
 				Serial.println(F(" ms"));
 #endif
 				Serial.print(F("Remote RSSI: "));
-				Serial.print(LinkInfo->GetRemoteRSSINormalized());
+				Serial.print(LinkInfo->GetPartnerRSSINormalized());
 				Serial.println();
 				Serial.print(F("Sync TimeStamp: "));
 				Serial.println(ClockSyncerPointer->GetMillisSync());

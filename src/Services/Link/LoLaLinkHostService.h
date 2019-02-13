@@ -55,7 +55,7 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	//Host version, RemotePMAC is the Remote's PMAC.
+	//Host version, PartnerMAC is the Remote's MAC.
 	void SetBaseSeed()
 	{
 		CryptoSeed.SetBaseSeed(PMACGenerator.GetPMAC(), RemotePMAC, SessionId);

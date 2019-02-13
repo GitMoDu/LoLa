@@ -42,7 +42,7 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	//Remote version, RemotePMAC is the Host's PMAC.
+	//Remote version, ParnerMAC is the Host's MAC.
 	void SetBaseSeed()
 	{
 		CryptoSeed.SetBaseSeed(RemotePMAC, PMACGenerator.GetPMAC(), SessionId);
@@ -361,7 +361,7 @@ protected:
 			}
 			break;
 		case InfoSyncTransaction::StageEnum::StageHostRSSI:
-			if (LinkInfo->HasRemoteRSSI())
+			if (LinkInfo->HasPartnerRSSI())
 			{
 				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 				{
@@ -409,7 +409,7 @@ protected:
 				LinkInfo->SetRTT((uint16_t)content);
 				break;
 			case InfoSyncTransaction::ContentIdEnum::ContentHostRSSI:
-				LinkInfo->SetRemoteRSSINormalized((uint8_t)content);
+				LinkInfo->SetPartnerRSSINormalized((uint8_t)content);
 				break;
 			default:
 				break;
