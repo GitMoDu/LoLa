@@ -90,22 +90,15 @@ public:
 	{
 		for (uint8_t i = 0; i < size; i++)
 		{
-			Update(data[i]);
+			Seed = pgm_read_byte(&crc_table_smbus[Seed ^ data[i]]);
 		}
 
 		return Seed;
 	}
 
-	uint8_t Reset(const uint8_t seed)
+	uint8_t Reset(const uint8_t seed = 0)
 	{
 		Seed = seed;
-
-		return Seed;
-	}
-
-	uint8_t Reset()
-	{
-		Seed = 0;
 
 		return Seed;
 	}
