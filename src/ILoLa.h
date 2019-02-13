@@ -92,7 +92,7 @@ protected:
 	///
 
 public:
-	ILoLa() : PacketMap(), IdProvider(), SyncedClock()
+	ILoLa() : PacketMap(), SyncedClock()
 	{
 	}
 

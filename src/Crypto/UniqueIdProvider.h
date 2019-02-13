@@ -24,16 +24,15 @@ class UniqueIdProvider
 {
 private:
 	uint8_t UUID[UNIQUE_ID_MAX_LENGTH];
+	bool HasUUID = false;
 
 #if defined(ARDUINO_ARCH_AVR)
 	TinyCrcModbus8 CalculatorCRC;
 #endif
 
-public:
-	UniqueIdProvider()
+private:
+	void UpdateId()
 	{
-		ClearUUID();
-
 #if defined(ARDUINO_ARCH_STM32F1)
 		uint16 *idBase0 = (uint16 *)ID_ADDRESS_POINTER;
 		byte* bytes = (byte*)idBase0;
@@ -55,21 +54,21 @@ public:
 #endif
 	}
 
-	void ClearUUID()
-	{
-		for (int i = 0; i < UNIQUE_ID_MAX_LENGTH; i++) {
-			UUID[i] = 0;
-		}
-	}
-
+public:
 	uint8_t GetUUIDLength() const
 	{
-
 		return UNIQUE_ID_MAX_LENGTH;
 	}
 
-	uint8_t * GetUUIDPointer()
+	uint8_t* GetUUIDPointer()
 	{
+		//Lazy loaded Id.
+		if (!HasUUID)
+		{
+			UpdateId();
+			HasUUID = true;
+		}
+
 		return UUID;
 	}
 	
