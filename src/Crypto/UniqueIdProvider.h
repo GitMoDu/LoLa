@@ -25,7 +25,9 @@ class UniqueIdProvider
 private:
 	uint8_t UUID[UNIQUE_ID_MAX_LENGTH];
 
+#if defined(ARDUINO_ARCH_AVR)
 	TinyCrcModbus8 CalculatorCRC;
+#endif
 
 public:
 	UniqueIdProvider()
