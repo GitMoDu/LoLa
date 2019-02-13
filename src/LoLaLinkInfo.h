@@ -6,7 +6,6 @@
 #include <ILoLa.h>
 #include <Callback.h>
 
-#define LOLA_LINK_INFO_MAX_STALENESS	3000
 
 class LoLaLinkInfo : public ILinkActiveIndicator
 {
@@ -170,19 +169,6 @@ public:
 		return 0;//Unknown.
 	}
 
-	//Output normalized to uint8_t range.
-	uint8_t GetLinkFreshnesss()
-	{
-		ActivityElapsedHelper = GetLastReceivedElapsed();
-		if (ActivityElapsedHelper != UINT32_MAX)
-		{
-			return map(min(LOLA_LINK_INFO_MAX_STALENESS, ActivityElapsedHelper), 0, LOLA_LINK_INFO_MAX_STALENESS, UINT8_MAX, 0);
-		}
-
-		return 0;//Not fresh at all.
-	}
-
-	//Output normalized to uint8_t range.
 	uint32_t GetLastActivityElapsed()
 	{
 		if (Driver != nullptr)
