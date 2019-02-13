@@ -22,6 +22,9 @@ public:
 
 private:
 	ILoLa * Driver = nullptr;
+
+	LinkStateEnum LinkState = LinkStateEnum::Disabled;
+
 	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
 
 	uint16_t RTT = ILOLA_INVALID_LATENCY;
@@ -31,8 +34,6 @@ private:
 
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
-
-	LinkStateEnum LinkState = LinkStateEnum::Disabled;
 
 public:
 	LinkStateEnum GetLinkState()
