@@ -21,6 +21,8 @@ public:
 	};
 
 private:
+	const uint8_t LOLA_LINK_INFO_INVALID_SESSION = 0;
+
 	ILoLa * Driver = nullptr;
 
 	LinkStateEnum LinkState = LinkStateEnum::Disabled;
@@ -32,6 +34,10 @@ private:
 
 	uint8_t PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 
+
+	//Link session information.
+	uint8_t SessionId = LOLA_LINK_INFO_INVALID_SESSION;
+
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
 
@@ -41,6 +47,24 @@ public:
 		return LinkState;
 	}
 
+
+	bool SetSessionId(const uint8_t sessionId)
+	{
+		SessionId = sessionId;
+
+		return SessionId != LOLA_LINK_INFO_INVALID_SESSION;
+	}
+
+	bool HasSessionId()
+	{
+		return SessionId != LOLA_LINK_INFO_INVALID_SESSION;
+	}
+
+	uint8_t GetSessionId()
+	{
+		return SessionId;
+	}
+
 	void SetDriver(ILoLa* driver)
 	{
 		Driver = driver;
@@ -48,9 +72,12 @@ public:
 
 	void Reset()
 	{
-		RTT = ILOLA_INVALID_LATENCY;
-		RemoteRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
+		SessionId = LOLA_LINK_INFO_INVALID_SESSION;
+		
 		LinkStarted = ILOLA_INVALID_MILLIS;
+		
+		RTT = ILOLA_INVALID_LATENCY;
+		PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 
 #ifdef USE_LATENCY_COMPENSATION
 		if (Driver != nullptr)

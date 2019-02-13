@@ -67,13 +67,14 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (LinkingState == AwaitingLinkEnum::SearchingForHost &&
 				remotePMAC != LOLA_INVALID_PMAC &&
-				sessionId != LOLA_LINK_SERVICE_INVALID_SESSION)
+				LinkInfo->HasSessionId() &&
 			{
 				//Here is where we have the choice to connect or not to this host.
 				//TODO: PMAC Filtering?
 				//TODO: User UI choice?
 				RemotePMAC = remotePMAC;
 				SessionId = sessionId;
+				LinkInfo->SetSessionId(sessionId);
 				SetLinkingState(AwaitingLinkEnum::GotHost);
 			}
 			break;
@@ -145,7 +146,7 @@ protected:
 				break;
 			case LinkingStagesEnum::LinkProtocolSwitchOver:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER &&
-					requestId == SessionId)
+					LinkInfo->GetSessionId() == requestId)
 				{
 					SetLinkingState(LinkingStagesEnum::AllConnectingStagesDone);
 				}

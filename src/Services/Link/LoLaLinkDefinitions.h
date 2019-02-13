@@ -57,8 +57,6 @@
 
 
 
-#define LOLA_LINK_SERVICE_INVALID_SESSION					0
-
 
 enum LinkingStagesEnum : uint8_t
 {

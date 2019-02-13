@@ -60,7 +60,6 @@ protected:
 
 	//Link session variables
 	uint32_t RemotePMAC = LOLA_INVALID_PMAC;
-	uint8_t SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 
 	LoLaLinkInfo* LinkInfo = nullptr;
 
@@ -320,7 +319,6 @@ protected:
 
 	void ClearSession()
 	{
-		SessionId = LOLA_LINK_SERVICE_INVALID_SESSION;
 		RemotePMAC = LOLA_INVALID_PMAC;
 
 		if (ClockSyncerPointer != nullptr)
@@ -520,7 +518,7 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
-			if (SessionId == LOLA_LINK_SERVICE_INVALID_SESSION ||
+			if (!LinkInfo->HasSessionId() ||
 				RemotePMAC == LOLA_INVALID_PMAC ||
 				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
 			{
@@ -692,7 +690,7 @@ protected:
 
 	void PrepareLinkDiscovery()
 	{
-		PrepareLinkPacket(SessionId, LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
+		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
 		ATUI_S.uint = 0;
 		ArrayToPayload();
 	}
@@ -713,35 +711,35 @@ protected:
 
 	void PreparePacketBroadcast()							//Host.
 	{
-		PrepareLinkPacket(SessionId, LOLA_LINK_SUBHEADER_HOST_BROADCAST);
+		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_BROADCAST);
 		ATUI_S.uint = PMACGenerator.GetPMAC();
 		ArrayToPayload();
 	}
 
 	void PrepareLinkRequest()								//Remote.
 	{
-		PrepareLinkPacket(SessionId, LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST);
+		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST);
 		ATUI_S.uint = PMACGenerator.GetPMAC();
 		ArrayToPayload();
 	}
 
 	void PrepareLinkRequestAccepted()						//Host.
 	{
-		PrepareLinkPacket(SessionId, LOLA_LINK_SUBHEADER_HOST_LINK_ACCEPTED);
+		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_LINK_ACCEPTED);
 		ATUI_S.uint = RemotePMAC;
 		ArrayToPayload();
 	}
 
 	void PrepareLinkRequestReady()							//Remote.
 	{
-		PrepareLinkPacket(SessionId, LOLA_LINK_SUBHEADER_REMOTE_LINK_READY);
+		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_LINK_READY);
 		ATUI_S.uint = PMACGenerator.GetPMAC();
 		ArrayToPayload();
 	}
 
 	void PrepareLinkConnectingSwitchOver()					//Host.
 	{
-		PrepareLinkPacketWithAck(SessionId, LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER);
+		PrepareLinkPacketWithAck(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER);
 	}
 
 	void PrepareClockSyncRequest(const uint8_t requestId)	//Remote
@@ -812,7 +810,7 @@ protected:
 
 	void PrepareLinkProtocolSwitchOver()					//Host.
 	{
-		PrepareLinkPacketWithAck(SessionId, LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER);
+		PrepareLinkPacketWithAck(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER);
 	}
 
 	void PrepareLinkInfoSyncUpdate(const uint8_t contentId, const uint32_t content) //Host

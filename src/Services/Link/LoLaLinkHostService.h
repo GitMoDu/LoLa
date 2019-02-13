@@ -33,7 +33,7 @@ private:
 	void NewSession()
 	{
 		ClearSession();
-		SessionId = (uint8_t)random((int32_t)1, (int32_t)(UINT8_MAX - 1));
+		LinkInfo->SetSessionId((uint8_t)random(1, (UINT8_MAX - 1)));
 	}
 
 public:
@@ -97,9 +97,9 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::LinkRequested &&
-			SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
-			SessionId == sessionId &&
 			RemotePMAC == remotePMAC)
+			LinkInfo->HasSessionId() &&
+			LinkInfo->GetSessionId() == sessionId &&
 		{
 			SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
 		}
@@ -112,7 +112,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (LinkingState == AwaitingLinkEnum::LinkingSwitchOver &&
 				RemotePMAC != LOLA_INVALID_PMAC &&
-				SessionId == requestId)
+				LinkInfo->GetSessionId() == requestId)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
 			}
@@ -137,7 +137,7 @@ protected:
 				SetNextRunASAP();
 				break;
 			case LinkingStagesEnum::LinkProtocolSwitchOver:
-				if (requestId == SessionId)
+				if (LinkInfo->GetSessionId() == requestId)
 				{
 					SetLinkingState(LinkingStagesEnum::AllConnectingStagesDone);
 				}
