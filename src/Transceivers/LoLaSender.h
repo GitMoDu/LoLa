@@ -55,7 +55,6 @@ public:
 			transmitPacket->GetRaw()[LOLA_PACKET_MACCRC_INDEX] = CalculatorCRC.GetCurrent();
 			BufferSize = OutgoingDefinition->GetTotalSize();
 			BufferPacket = transmitPacket;
-			PacketsProcessed++;
 
 			return true;
 		}
@@ -96,8 +95,6 @@ public:
 
 		BufferPacket->GetRaw()[LOLA_PACKET_MACCRC_INDEX] = CalculatorCRC.GetCurrent();
 		BufferSize = AckDefinition->GetTotalSize();
-
-		PacketsProcessed++;
 
 		return true;
 	}

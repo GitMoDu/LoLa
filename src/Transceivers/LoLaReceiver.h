@@ -40,7 +40,6 @@ public:
 	{
 		if (BufferSize > 0 && BufferSize < PACKET_DEFINITION_MAX_PACKET_SIZE && ValidateMACCRC())
 		{
-			PacketsProcessed++;
 			return true;
 		}
 		else
@@ -79,10 +78,6 @@ public:
 			if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
 			{
 				return true;
-			}
-			else
-			{
-				PacketsFailed++;
 			}
 		}
 		return false;

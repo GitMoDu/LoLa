@@ -50,6 +50,10 @@ protected:
 
 	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
 	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
+
+	uint32_t TransmitCount = 0;
+	uint32_t ReceivedCount = 0;
+	uint32_t RejectCount = 0;
 	///
 
 	///Configurations
@@ -176,6 +180,9 @@ public:
 		LastValidReceived = ILOLA_INVALID_MILLIS;
 		LastValidReceivedRssi = ILOLA_INVALID_RSSI;
 
+		TransmitCount = 0;
+		ReceivedCount = 0;
+		RejectCount = 0;
 	}
 
 	ClockSource* GetClockSource()

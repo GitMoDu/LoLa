@@ -20,12 +20,6 @@ protected:
 	LoLaPacketMap * PacketMap = nullptr;
 	///
 
-	///Link health.
-	//uint64_t BytesProcessed = 0;
-	uint32_t PacketsProcessed = 0;
-	uint32_t PacketsFailed = 0;
-	///
-
 	///Buffer use to store input/output packet raw data.
 	uint8_t BufferIndex = 0;
 	///

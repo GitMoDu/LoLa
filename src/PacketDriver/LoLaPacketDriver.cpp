@@ -53,12 +53,15 @@ void LoLaPacketDriver::OnReceived()
 
 	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
 	{
+		RejectCount++;
 	}
 	else
 	{	//Packet received Ok, let's commit that info really quick.
 		LastValidReceived = IncomingInfo.GetPacketTime();
 		LastValidReceivedRssi = IncomingInfo.GetPacketRSSI();
 		IncomingInfo.Clear();
+		ReceivedCount++;
+
 		//Is Ack
 		if (Receiver.GetIncomingDefinition()->GetHeader() == PACKET_DEFINITION_ACK_HEADER)
 		{
@@ -92,6 +95,7 @@ void LoLaPacketDriver::OnReceived()
 					if (Transmit())
 					{
 						LastSent = GetMillis();
+						TransmitCount++;
 					}
 					else
 					{
@@ -224,12 +228,16 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 			else if(Transmit())
 			{
 				LastSent = GetMillis();
+				TransmitCount++;
+
 				return true;
 			}
 #else
 			if (Transmit())
 			{
 				LastSent = GetMillis();
+				TransmitCount++;
+
 				return true;
 			}
 #endif			
