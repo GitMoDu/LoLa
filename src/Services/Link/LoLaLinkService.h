@@ -68,7 +68,7 @@ protected:
 	//Crypto Challenge.
 	IChallengeTransaction* ChallengeTransaction = nullptr;
 
-	//Link Info Sync
+	//Link Info Sync.
 	InfoSyncTransaction* InfoTransaction = nullptr;
 
 	//Optimized memory usage grunt packet.
@@ -169,7 +169,7 @@ private:
 			else
 			{
 				OnInfoSync();
-			}	
+			}
 			break;
 		case LinkingStagesEnum::LinkProtocolSwitchOver:
 			OnLinkProtocolSwitchOver();
@@ -279,7 +279,7 @@ protected:
 			//The last step of establishing a Link is to exchange a packet with TOTP enabled.
 			SetTOTPEnabled();
 		}
-			
+
 		SetNextRunASAP();
 	}
 
@@ -382,7 +382,7 @@ protected:
 				SetNextRunASAP();
 
 				return true;
-			}			
+			}
 
 		}
 
@@ -400,7 +400,7 @@ protected:
 			if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
 			{
 #ifdef DEBUG_LOLA
-				Serial.print("Lost connection after ");
+				Serial.print(F("Lost connection after "));
 				Serial.print(LinkInfo->GetLinkDuration() / (uint32_t)1000);
 				Serial.println(F(" seconds."));
 #endif
@@ -433,14 +433,12 @@ protected:
 				SetBaseSeed();
 				SetLinkingState(0);
 #ifdef DEBUG_LOLA
-				Serial.print("Connecting to: 0x");
-				PrintPMAC(RemotePMAC);
+				Serial.print(F("Linking to: "));
+				MacManager.Print(&Serial, LinkInfo->GetPartnerMAC());
 				Serial.println();
-				Serial.print(" Session code: ");
-				Serial.println(SessionId);
-				Serial.print("Connecting Seed: ");
-				Serial.println(CryptoSeed.GetToken(0));
-				Serial.print("Last RSSI: ");
+				Serial.print(F(" Session id: "));
+				Serial.println(LinkInfo->GetSessionId());
+				Serial.print(F("Last RSSI: "));
 				Serial.println(GetLoLa()->GetLastValidRSSI());
 #endif
 				SetNextRunASAP();
@@ -814,7 +812,7 @@ protected:
 	void PrepareChallengeSwitchOver()						//Host.
 	{
 		PrepareLinkPacketWithAck(ChallengeTransaction->GetTransactionId(), LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER);
-	}	
+	}
 
 	void PrepareLinkProtocolSwitchOver()					//Host.
 	{
@@ -830,7 +828,7 @@ protected:
 		ATUI_S.uint = content;
 		ArrayToPayload();
 	}
-	
+
 	void PrepareLinkInfoSyncAdvanceRequest(const uint8_t contentId)						//Both.
 	{
 		PrepareLinkPacketWithAck(contentId, LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE);

@@ -229,7 +229,7 @@ protected:
 #ifdef DEBUG_LOLA
 			else
 			{
-				Serial.print("Clock Sync error: ");
+				Serial.print(F("Clock Sync error: "));
 				Serial.println(HostClockSyncTransaction.GetResult());
 			}
 #endif
