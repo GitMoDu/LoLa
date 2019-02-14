@@ -53,7 +53,7 @@ public:
 
 	void Update()
 	{
-		if (!LoLa->IsLinkActive())
+		if (!LoLa->HasLink())
 		{
 			//When we're not connected, ramp up power.
 			SetMaxPower();
