@@ -475,6 +475,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linked:
 				LinkInfo->StampLinkStarted();
+				GetLoLa()->ResetStatistics();
 				SetTOTPEnabled();
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
