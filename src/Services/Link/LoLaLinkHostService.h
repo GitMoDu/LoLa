@@ -226,8 +226,7 @@ protected:
 #ifdef DEBUG_LOLA
 			else
 			{
-				Serial.print(F("Clock Sync error: "));
-				Serial.println(HostClockSyncTransaction.GetResult());
+				LinkInfo->StampClockSyncAdjustment();
 			}
 #endif
 
