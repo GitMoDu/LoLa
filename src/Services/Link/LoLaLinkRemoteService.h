@@ -226,7 +226,10 @@ protected:
 	{
 		if (RemoteClockSyncTransaction.IsResultWaiting())
 		{
-			ClockSyncer.OnTuneErrorReceived(RemoteClockSyncTransaction.GetResult());
+			if (!ClockSyncer.OnTuneErrorReceived(RemoteClockSyncTransaction.GetResult()))
+			{
+				LinkInfo->StampClockSyncAdjustment();
+			}
 
 			RemoteClockSyncTransaction.Reset();
 			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
