@@ -75,7 +75,7 @@ protected:
 	TemplateLoLaPacket<(LOLA_PACKET_MIN_SIZE + 5)> PacketHolder;
 
 #ifdef DEBUG_LOLA
-	uint32_t ConnectionProcessStart = 0;
+	uint32_t LinkingStart = 0;
 #endif
 
 	//Subservices.
@@ -176,7 +176,7 @@ private:
 			break;
 		case LinkingStagesEnum::AllConnectingStagesDone:
 			//All connecting stages complete, we have a link.
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connected);
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linked);
 			break;
 		default:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
@@ -397,7 +397,7 @@ protected:
 			ResetLastSentTimeStamp();
 
 			//Previous state.
-			if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
+			if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
 #ifdef DEBUG_LOLA
 				Serial.print(F("Lost connection after "));
@@ -429,21 +429,20 @@ protected:
 				CryptoSeed.Reset();
 				SetNextRunDelay(LOLA_LINK_SERVICE_SLEEP_PERIOD);
 				break;
-			case LoLaLinkInfo::LinkStateEnum::Connecting:
+			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetBaseSeed();
 				SetLinkingState(0);
 #ifdef DEBUG_LOLA
+				LinkingStart = millis();
 				Serial.print(F("Linking to: "));
 				MacManager.Print(&Serial, LinkInfo->GetPartnerMAC());
 				Serial.println();
 				Serial.print(F(" Session id: "));
 				Serial.println(LinkInfo->GetSessionId());
-				Serial.print(F("Last RSSI: "));
-				Serial.println(GetLoLa()->GetLastValidRSSI());
 #endif
 				SetNextRunASAP();
 				break;
-			case LoLaLinkInfo::LinkStateEnum::Connected:
+			case LoLaLinkInfo::LinkStateEnum::Linked:
 				LinkInfo->StampLinkStarted();
 				SetTOTPEnabled();
 				SetNextRunASAP();
@@ -451,7 +450,7 @@ protected:
 
 #ifdef DEBUG_LOLA
 				Serial.print(F("Link took "));
-				Serial.print(millis() - ConnectionProcessStart);
+				Serial.print(millis() - LinkingStart);
 				Serial.println(F(" ms to establish."));
 				Serial.print(F("Average latency: "));
 				Serial.println((float)LinkInfo->GetRTT() / (float)2000, 2);
@@ -501,7 +500,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connecting:
+		case LoLaLinkInfo::LinkStateEnum::Linking:
 			if (!LinkInfo->HasSessionId() ||
 				!LinkInfo->HasPartnerMAC() ||
 				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
@@ -514,7 +513,7 @@ protected:
 				OnLinking();
 			}
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connected:
+		case LoLaLinkInfo::LinkStateEnum::Linked:
 			OnKeepingConnectedInternal();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Disabled:

@@ -95,10 +95,10 @@ protected:
 			if (subHeader == LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER &&
 				LinkingState == AwaitingLinkEnum::AcknowledgingHost)
 			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
 			}
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connecting:
+		case LoLaLinkInfo::LinkStateEnum::Linking:
 			switch (LinkingState)
 			{
 			case LinkingStagesEnum::ClockSyncStage:
@@ -216,7 +216,7 @@ protected:
 
 	void OnChallengeRequestReceived(const uint8_t requestId, const uint32_t token)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ChallengeStage)
 		{
 			RemoteChallengeTransaction.Clear();
@@ -282,7 +282,7 @@ protected:
 
 	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
@@ -294,7 +294,7 @@ protected:
 
 	void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.GetId() == requestId)
 		{
@@ -312,7 +312,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			ClearSession();
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connected:
+		case LoLaLinkInfo::LinkStateEnum::Linked:
 			RemoteClockSyncTransaction.Reset();
 			break;
 		default:
@@ -413,7 +413,7 @@ protected:
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
 		if (header == LinkWithAckDefinition.GetHeader() && 
-			LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+			LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage)
 		{
 			RemoteInfoTransaction.OnRequestAckReceived(id);

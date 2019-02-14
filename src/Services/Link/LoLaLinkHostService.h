@@ -114,10 +114,10 @@ protected:
 				LinkInfo->GetSessionId() == requestId &&
 				LinkInfo->HasPartnerMAC())
 			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
 			}
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connecting:
+		case LoLaLinkInfo::LinkStateEnum::Linking:
 			switch (LinkingState)
 			{
 			case LinkingStagesEnum::ClockSyncSwitchOver:
@@ -199,7 +199,7 @@ protected:
 	///Clock Sync.
 	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
@@ -210,7 +210,7 @@ protected:
 
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connected)
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
 				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
@@ -305,7 +305,7 @@ protected:
 
 	void OnChallengeResponseReceived(const uint8_t requestId, const uint32_t token)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ChallengeStage)
 		{
 			HostChallengeTransaction.OnReply(requestId, token);
@@ -400,7 +400,7 @@ protected:
 
 	void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Connecting &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage &&
 			subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE)
 		{
@@ -433,10 +433,10 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			NewSession();
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connecting:
+		case LoLaLinkInfo::LinkStateEnum::Linking:
 			HostChallengeTransaction.NewRequest();
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Connected:
+		case LoLaLinkInfo::LinkStateEnum::Linked:
 			HostClockSyncTransaction.Reset();
 			break;
 		default:

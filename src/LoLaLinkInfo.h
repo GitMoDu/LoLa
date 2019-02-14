@@ -17,8 +17,8 @@ public:
 		Setup = 1,
 		AwaitingLink = 2,
 		AwaitingSleeping = 3,
-		Connecting = 4,
-		Connected = 5
+		Linking = 4,
+		Linked = 5
 	};
 
 private:
@@ -146,7 +146,7 @@ public:
 
 	bool HasLink()
 	{
-		return LinkState == LinkStateEnum::Connected;
+		return LinkState == LinkStateEnum::Linked;
 	}
 
 	bool HasLatency()
