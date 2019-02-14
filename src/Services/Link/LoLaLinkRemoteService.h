@@ -76,6 +76,8 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::GotHost &&
+			LinkInfo->HasSessionId() &&
+			LinkInfo->HasPartnerMAC() && 
 			MacManager.Match(localMAC))
 		{
 #ifdef DEBUG_LOLA
