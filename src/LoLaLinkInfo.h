@@ -28,8 +28,6 @@ private:
 
 	LinkStateEnum LinkState = LinkStateEnum::Disabled;
 
-	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
-
 	uint16_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
@@ -44,6 +42,8 @@ private:
 	bool PartnerMACPresent = false;
 	uint8_t PartnerMAC[LOLA_LINK_INFO_MAC_LENGTH];
 
+	//Helper.
+	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
 
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
