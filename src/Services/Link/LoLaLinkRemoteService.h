@@ -45,10 +45,10 @@ protected:
 	//Remote version, ParnerMAC is the Host's MAC.
 	void SetBaseSeed()
 	{
-		CryptoSeed.SetBaseSeed(RemotePMAC, PMACGenerator.GetPMAC(), SessionId);
+		CryptoSeed.SetBaseSeed(LinkInfo->GetPartnerMAC(), LinkInfo->GetLocalMAC(), LOLA_LINK_INFO_MAC_LENGTH,  LinkInfo->GetSessionId());
 	}
 
-	void OnBroadcastReceived(const uint8_t sessionId, const uint32_t remotePMAC)
+	void OnBroadcastReceived(const uint8_t sessionId, uint8_t * hostMAC)
 	{
 		switch (LinkInfo->GetLinkState())
 		{
@@ -66,14 +66,13 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (LinkingState == AwaitingLinkEnum::SearchingForHost &&
-				remotePMAC != LOLA_INVALID_PMAC &&
 				LinkInfo->HasSessionId() &&
+				LinkInfo->HasPartnerMAC())
 			{
 				//Here is where we have the choice to connect or not to this host.
-				//TODO: PMAC Filtering?
+				//TODO: MAC Filtering?
 				//TODO: User UI choice?
-				RemotePMAC = remotePMAC;
-				SessionId = sessionId;
+				LinkInfo->SetPartnerMAC(hostMAC);
 				LinkInfo->SetSessionId(sessionId);
 				SetLinkingState(AwaitingLinkEnum::GotHost);
 			}
@@ -87,7 +86,7 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::GotHost &&
-			PMACGenerator.GetPMAC() == localPMAC)
+			MacManager.Match(localMAC))
 		{
 #ifdef DEBUG_LOLA
 			ConnectionProcessStart = millis();

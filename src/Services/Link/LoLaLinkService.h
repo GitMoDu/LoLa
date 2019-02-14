@@ -55,11 +55,9 @@ protected:
 	//Sub state.
 	uint8_t LinkingState = 0;
 
-	//MAC Helper
-	PseudoMacGenerator PMACGenerator;
-
-	//Link session variables
-	uint32_t RemotePMAC = LOLA_INVALID_PMAC;
+	///MAC generated from UUID.
+	LoLaMAC<LOLA_LINK_INFO_MAC_LENGTH> MacManager;
+	///
 
 	LoLaLinkInfo* LinkInfo = nullptr;
 
@@ -88,10 +86,11 @@ protected:
 protected:
 	///Common packet handling.
 	virtual void OnLinkInfoSyncUpdateReceived(const uint8_t contentId, const uint32_t content) {}
+
 	///Host packet handling.
 	virtual void OnLinkDiscoveryReceived() {}
-	virtual void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
-	virtual void OnLinkRequestReadyReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
+	virtual void OnLinkRequestReceived(const uint8_t sessionId, uint8_t* remoteMAC) {}
+	virtual void OnLinkRequestReadyReceived(const uint8_t sessionId, uint8_t* remoteMAC) {}
 	virtual void OnLinkPacketAckReceived(const uint8_t requestId) {}
 	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	virtual void OnChallengeResponseReceived(const uint8_t requestId, const uint32_t token) {}
@@ -99,8 +98,8 @@ protected:
 	///
 
 	///Remote packet handling.
-	virtual void OnBroadcastReceived(const uint8_t sessionId, const uint32_t remotePMAC) {}
-	virtual void OnLinkRequestAcceptedReceived(const uint8_t requestId, const uint32_t localPMAC) {}
+	virtual void OnBroadcastReceived(const uint8_t sessionId, uint8_t* hostMAC) {}
+	virtual void OnLinkRequestAcceptedReceived(const uint8_t requestId, uint8_t* localMAC) {}
 	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	virtual void OnChallengeRequestReceived(const uint8_t requestId, const uint32_t token) {}
@@ -319,8 +318,6 @@ protected:
 
 	void ClearSession()
 	{
-		RemotePMAC = LOLA_INVALID_PMAC;
-
 		if (ClockSyncerPointer != nullptr)
 		{
 			ClockSyncerPointer->Reset();
@@ -349,19 +346,6 @@ protected:
 		OnClearSession();
 	}
 
-#ifdef DEBUG_LOLA
-	ArrayToUint32 PmacAtui;
-	void PrintPMAC(const uint32_t pmac)
-	{
-		Serial.print(F("0x"));
-		PmacAtui.uint = pmac;
-		for (uint8_t i = 0; i < 4; i++)
-		{
-			Serial.print(PmacAtui.array[i], HEX);
-		}
-	}
-#endif
-
 	bool OnSetup()
 	{
 		if (IPacketSendService::OnSetup() &&
@@ -369,8 +353,8 @@ protected:
 			ClockSyncerPointer != nullptr &&
 			ChallengeTransaction != nullptr &&
 			ServicesManager != nullptr &&
+			MacManager.GetMACPointer() != nullptr &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
-			PMACGenerator.SetId(GetLoLa()->GetIdPointer(), GetLoLa()->GetIdLength()) &&
 			PowerBalancer.Setup(GetLoLa()))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
@@ -380,14 +364,16 @@ protected:
 				LinkInfo->SetDriver(GetLoLa());
 				LinkInfo->Reset();
 
+				LinkInfo->SetLocalMAC(MacManager.GetMACPointer());
+
 				GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
 				GetLoLa()->SetLinkIndicator(LinkInfo);
 
 				ClearSession();
 
 #ifdef DEBUG_LOLA
-				Serial.print(F("Link PMAC: "));
-				PrintPMAC(PMACGenerator.GetPMAC());
+				Serial.print(F("Local MAC: "));
+				MacManager.Print(&Serial);
 				Serial.println();
 #endif
 
@@ -519,7 +505,7 @@ protected:
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Connecting:
 			if (!LinkInfo->HasSessionId() ||
-				RemotePMAC == LOLA_INVALID_PMAC ||
+				!LinkInfo->HasPartnerMAC() ||
 				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
@@ -609,11 +595,6 @@ protected:
 		switch (header)
 		{
 		case PACKET_DEFINITION_LINK_HEADER:
-			ATUI_R.array[0] = incomingPacket->GetPayload()[1];
-			ATUI_R.array[1] = incomingPacket->GetPayload()[2];
-			ATUI_R.array[2] = incomingPacket->GetPayload()[3];
-			ATUI_R.array[3] = incomingPacket->GetPayload()[4];
-
 			switch (incomingPacket->GetPayload()[0])
 			{
 				//To both.
@@ -625,6 +606,7 @@ protected:
 				SetNextRunASAP();
 				break;
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_UPDATE:
+				PayloadTo32bitArray(incomingPacket);
 				OnLinkInfoSyncUpdateReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
 
@@ -633,35 +615,41 @@ protected:
 				OnLinkDiscoveryReceived();
 				break;
 			case LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST:
-				OnLinkRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
+				OnLinkRequestReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 				break;
 			case LOLA_LINK_SUBHEADER_REMOTE_LINK_READY:
-				OnLinkRequestReadyReceived(incomingPacket->GetId(), ATUI_R.uint);
+				OnLinkRequestReadyReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 				break;
 			case LOLA_LINK_SUBHEADER_CHALLENGE_REPLY:
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnChallengeResponseReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
 			case LOLA_LINK_SUBHEADER_NTP_REQUEST:
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnClockSyncRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
 			case LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST:
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnClockSyncTuneRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
 
 				//To remote.
 			case LOLA_LINK_SUBHEADER_HOST_BROADCAST:
-				OnBroadcastReceived(incomingPacket->GetId(), ATUI_R.uint);
+				OnBroadcastReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 				break;
 			case LOLA_LINK_SUBHEADER_HOST_LINK_ACCEPTED:
-				OnLinkRequestAcceptedReceived(incomingPacket->GetId(), ATUI_R.uint);
+				OnLinkRequestAcceptedReceived(incomingPacket->GetId(), &incomingPacket->GetPayload()[1]);
 				break;
 			case LOLA_LINK_SUBHEADER_NTP_REPLY:
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnClockSyncResponseReceived(incomingPacket->GetId(), ATUI_R.iint);
 				break;
 			case LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY:
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnClockSyncTuneResponseReceived(incomingPacket->GetId(), ATUI_R.iint);
 				break;
 			case LOLA_LINK_SUBHEADER_CHALLENGE_REQUEST:
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnChallengeRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
 			default:
@@ -688,6 +676,30 @@ protected:
 		PacketHolder.GetPayload()[4] = ATUI_S.array[3];
 	}
 
+	void ArrayTo32BitArray(uint8_t* incomingPayload)
+	{
+		ATUI_R.array[0] = incomingPayload[0];
+		ATUI_R.array[1] = incomingPayload[1];
+		ATUI_R.array[2] = incomingPayload[2];
+		ATUI_R.array[3] = incomingPayload[3];
+	}
+
+	void LocalMACToPayload()
+	{
+		for (uint8_t i = 0; i < LOLA_LINK_INFO_MAC_LENGTH; i++)
+		{
+			PacketHolder.GetPayload()[1 + i] = LinkInfo->GetLocalMAC()[i];
+		}
+	}
+
+	inline void PartnerMACToPayload()
+	{
+		for (uint8_t i = 0; i < LOLA_LINK_INFO_MAC_LENGTH; i++)
+		{
+			PacketHolder.GetPayload()[1 + i] = LinkInfo->GetPartnerMAC()[i];
+		}
+	}
+
 	void PrepareLinkDiscovery()
 	{
 		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
@@ -712,29 +724,25 @@ protected:
 	void PreparePacketBroadcast()							//Host.
 	{
 		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_BROADCAST);
-		ATUI_S.uint = PMACGenerator.GetPMAC();
-		ArrayToPayload();
+		LocalMACToPayload();
 	}
 
 	void PrepareLinkRequest()								//Remote.
 	{
 		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST);
-		ATUI_S.uint = PMACGenerator.GetPMAC();
-		ArrayToPayload();
+		LocalMACToPayload();
 	}
 
 	void PrepareLinkRequestAccepted()						//Host.
 	{
 		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_LINK_ACCEPTED);
-		ATUI_S.uint = RemotePMAC;
-		ArrayToPayload();
+		PartnerMACToPayload();
 	}
 
 	void PrepareLinkRequestReady()							//Remote.
 	{
 		PrepareLinkPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_LINK_READY);
-		ATUI_S.uint = PMACGenerator.GetPMAC();
-		ArrayToPayload();
+		LocalMACToPayload();
 	}
 
 	void PrepareLinkConnectingSwitchOver()					//Host.

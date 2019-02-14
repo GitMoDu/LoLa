@@ -6,6 +6,7 @@
 #include <ILoLa.h>
 #include <Callback.h>
 
+#define LOLA_LINK_INFO_MAC_LENGTH		6 //Following MAC-48
 
 class LoLaLinkInfo : public ILinkActiveIndicator
 {
@@ -34,9 +35,15 @@ private:
 
 	uint8_t PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 
+	//Stored outside, only referenced.
+	uint8_t* LocalMAC = nullptr;
 
 	//Link session information.
 	uint8_t SessionId = LOLA_LINK_INFO_INVALID_SESSION;
+
+	bool PartnerMACPresent = false;
+	uint8_t PartnerMAC[LOLA_LINK_INFO_MAC_LENGTH];
+
 
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
@@ -47,6 +54,39 @@ public:
 		return LinkState;
 	}
 
+	uint8_t* GetPartnerMAC()
+	{
+		return PartnerMAC;
+	}
+
+	uint8_t* GetLocalMAC()
+	{
+		return LocalMAC;
+	}
+
+	void SetLocalMAC(uint8_t * macArray)
+	{
+		LocalMAC = macArray;
+	}
+
+	void SetPartnerMAC(uint8_t * macArray)
+	{
+		for (uint8_t i = 0; i < LOLA_LINK_INFO_MAC_LENGTH; i++)
+		{
+			PartnerMAC[i] = macArray[i];
+		}
+		PartnerMACPresent = true;
+	}
+
+	bool HasPartnerMAC()
+	{
+		return PartnerMACPresent;
+	}	
+	
+	bool HasLocalMAC()
+	{
+		return LocalMAC != nullptr;
+	}
 
 	bool SetSessionId(const uint8_t sessionId)
 	{
@@ -73,6 +113,7 @@ public:
 	void Reset()
 	{
 		SessionId = LOLA_LINK_INFO_INVALID_SESSION;
+		PartnerMACPresent = false;
 		
 		LinkStarted = ILOLA_INVALID_MILLIS;
 		

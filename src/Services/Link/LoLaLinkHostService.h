@@ -58,7 +58,7 @@ protected:
 	//Host version, PartnerMAC is the Remote's MAC.
 	void SetBaseSeed()
 	{
-		CryptoSeed.SetBaseSeed(PMACGenerator.GetPMAC(), RemotePMAC, SessionId);
+		CryptoSeed.SetBaseSeed(LinkInfo->GetLocalMAC(), LinkInfo->GetPartnerMAC(), LOLA_LINK_INFO_MAC_LENGTH, LinkInfo->GetSessionId());
 	}
 
 	void OnLinkDiscoveryReceived()
@@ -69,19 +69,19 @@ protected:
 		}
 	}
 
-	void OnLinkRequestReceived(const uint8_t sessionId, const uint32_t remotePMAC)
+	void OnLinkRequestReceived(const uint8_t sessionId, uint8_t* remoteMAC)
 	{
 		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (SessionId != LOLA_LINK_SERVICE_INVALID_SESSION &&
-				SessionId == sessionId &&
-				remotePMAC != LOLA_INVALID_PMAC &&
-				LinkingState == AwaitingLinkEnum::BroadcastingOpenSession)
+			if (LinkingState == AwaitingLinkEnum::BroadcastingOpenSession &&
+				LinkInfo->HasSessionId() &&
+				LinkInfo->GetSessionId() == sessionId &&
+				!LinkInfo->HasPartnerMAC())
 			{
 				//Here is where we have the first choice to reject this remote.
-				//TODO: PMAC Filtering?
-				RemotePMAC = remotePMAC;
+				//TODO: MAC Filtering?
+				LinkInfo->SetPartnerMAC(remoteMAC);
 #ifdef DEBUG_LOLA
 				ConnectionProcessStart = millis();
 #endif
@@ -93,13 +93,13 @@ protected:
 		}
 	}
 
-	void OnLinkRequestReadyReceived(const uint8_t sessionId, const uint32_t remotePMAC)
+	void OnLinkRequestReadyReceived(const uint8_t sessionId, uint8_t* remoteMAC)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::LinkRequested &&
-			RemotePMAC == remotePMAC)
 			LinkInfo->HasSessionId() &&
 			LinkInfo->GetSessionId() == sessionId &&
+			MacManager.Match(LinkInfo->GetPartnerMAC(), remoteMAC))
 		{
 			SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
 		}
@@ -111,8 +111,8 @@ protected:
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (LinkingState == AwaitingLinkEnum::LinkingSwitchOver &&
-				RemotePMAC != LOLA_INVALID_PMAC &&
-				LinkInfo->GetSessionId() == requestId)
+				LinkInfo->GetSessionId() == requestId &&
+				LinkInfo->HasPartnerMAC())
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Connecting);
 			}

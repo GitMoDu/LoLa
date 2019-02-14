@@ -64,12 +64,12 @@ public:
 		TOTPSeed = seed;
 	}
 
-	void SetBaseSeed(const uint32_t hostPMAC, const uint32_t remotePMAC, const uint8_t sessionId)
+	void SetBaseSeed(uint8_t * hostPMAC, uint8_t* remotePMAC, const uint8_t macLength, const uint8_t sessionId)
 	{
 		CalculatorCRC.Reset();
 
-		CalculatorCRC.Update32(hostPMAC);
-		CalculatorCRC.Update32(remotePMAC);
+		CalculatorCRC.Update(hostPMAC, macLength);
+		CalculatorCRC.Update(remotePMAC, macLength);
 		CalculatorCRC.Update(sessionId);
 
 		CachedToken = CalculatorCRC.GetCurrent();

@@ -36,7 +36,6 @@
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
-#include <Crypto\UniqueIdProvider.h>
 #include <Crypto\ISeedSource.h>
 
 #include <ClockSource.h>
@@ -81,9 +80,7 @@ protected:
 	ClockSource SyncedClock;
 	///
 
-	///Unique Id
-	UniqueIdProvider IdProvider;
-	///
+
 
 	///For use of estimated latency features
 #ifdef USE_LATENCY_COMPENSATION
@@ -110,16 +107,6 @@ public:
 		}
 	}
 #endif
-
-	uint8_t GetIdLength()
-	{
-		return IdProvider.GetUUIDLength();
-	}
-
-	uint8_t* GetIdPointer()
-	{
-		return IdProvider.GetUUIDPointer();
-	}
 
 #ifdef USE_LATENCY_COMPENSATION
 	uint8_t GetETTM()
