@@ -558,11 +558,6 @@ protected:
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
 		{
 			//Link time out check.
-#ifdef DEBUG_LOLA
-			Serial.print(F("Bi directional commms lost over "));
-			Serial.print(LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT / 1000);
-			Serial.println(F(" seconds."));
-#endif
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			SetNextRunASAP();
 		}
