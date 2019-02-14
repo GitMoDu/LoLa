@@ -151,13 +151,7 @@ public:
 	void SetETTM(const uint8_t ettm)
 	{
 		ETTM = ettm;
-		OnETTMUpdated();
-	}
-
-	void ResetETTM()
-	{
-		ETTM = 0;
-		OnETTMUpdated();
+		Sender.SetETTM(ETTM);
 	}
 #endif
 
@@ -167,6 +161,22 @@ public:
 		EvenSlot = evenSlot;
 	}
 #endif
+
+	void ResetStatistics()
+	{
+#ifdef USE_LATENCY_COMPENSATION
+		ETTM = 0;
+		Sender.SetETTM(ETTM);
+#endif
+
+		LastSent = ILOLA_INVALID_MILLIS;
+		LastReceived = ILOLA_INVALID_MILLIS;
+		LastReceivedRssi = ILOLA_INVALID_RSSI;
+
+		LastValidReceived = ILOLA_INVALID_MILLIS;
+		LastValidReceivedRssi = ILOLA_INVALID_RSSI;
+
+	}
 
 	ClockSource* GetClockSource()
 	{
@@ -193,6 +203,21 @@ public:
 	uint32_t GetMillisSync()
 	{
 		return SyncedClock.GetMillis();
+	}
+
+	uint32_t GetReceivedCount()
+	{
+		return ReceivedCount;
+	}
+
+	uint32_t GetRejectedCount()
+	{
+		return RejectCount;
+	}
+
+	uint32_t GetSentCount()
+	{
+		return TransmitCount;
 	}
 
 	uint32_t GetLastSentMillis()
@@ -252,11 +277,6 @@ public:
 	{
 		return &PacketMap;
 	}
-
-protected:
-#ifdef USE_LATENCY_COMPENSATION
-	virtual void OnETTMUpdated() {}
-#endif
 
 public:
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }

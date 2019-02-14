@@ -123,8 +123,8 @@ public:
 #ifdef USE_LATENCY_COMPENSATION
 		if (Driver != nullptr)
 		{
-			Driver->ResetETTM();
 			Driver->SetLinkStatus(false);
+			Driver->ResetStatistics();
 		}
 #endif
 	}

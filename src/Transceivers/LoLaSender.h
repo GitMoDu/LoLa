@@ -121,6 +121,11 @@ public:
 	{
 		ETTM = ettm/2;
 	}
+
+	uint8_t GetETTM()
+	{
+		return ETTM;
+	}
 #endif
 };
 

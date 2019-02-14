@@ -88,11 +88,6 @@ protected:
 	virtual bool Transmit() { return false; }
 	virtual bool CanTransmit() { return true; }
 
-protected:
-#ifdef USE_LATENCY_COMPENSATION
-	void OnETTMUpdated();
-#endif
-
 private:
 	inline bool HotAfterSend();
 	inline bool HotAfterReceive();
