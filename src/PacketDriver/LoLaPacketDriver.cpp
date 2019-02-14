@@ -197,7 +197,7 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 	}
 
 #ifdef USE_TIME_SLOT
-	if (IsLinkActive())
+	if (HasLink)
 	{
 		return CanTransmit() &&
 			(overridePermission || IsInSendSlot());
@@ -211,7 +211,7 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 	return Enabled &&
 		!HotAfterSend() && !HotAfterReceive() &&
 		CanTransmit() &&
-		(overridePermission || IsLinkActive());
+		(overridePermission || HasLink);
 #endif
 }
 

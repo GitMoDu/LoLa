@@ -53,9 +53,6 @@ private:
 		}
 	} IncomingInfo;
 
-	//Helper for IsInSendSlot().
-	uint32_t SendSlotElapsed;
-
 protected:
 	///Services that are served receiving packets.
 	LoLaServicesManager Services;

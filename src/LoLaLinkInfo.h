@@ -8,7 +8,7 @@
 
 #define LOLA_LINK_INFO_MAC_LENGTH		6 //Following MAC-48
 
-class LoLaLinkInfo : public ILinkActiveIndicator
+class LoLaLinkInfo
 {
 public:
 	enum LinkStateEnum : uint8_t
@@ -124,6 +124,7 @@ public:
 		if (Driver != nullptr)
 		{
 			Driver->ResetETTM();
+			Driver->SetLinkStatus(false);
 		}
 #endif
 	}
@@ -199,6 +200,7 @@ public:
 		if (Driver != nullptr)
 		{
 			LinkStarted = Driver->GetMillis();
+			Driver->SetLinkStatus(true);
 		}
 	}
 

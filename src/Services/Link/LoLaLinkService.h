@@ -365,9 +365,7 @@ protected:
 				LinkInfo->Reset();
 
 				LinkInfo->SetLocalMAC(MacManager.GetMACPointer());
-
 				GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
-				GetLoLa()->SetLinkIndicator(LinkInfo);
 
 				ClearSession();
 

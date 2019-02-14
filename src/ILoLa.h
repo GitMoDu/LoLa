@@ -40,13 +40,6 @@
 
 #include <ClockSource.h>
 
-
-class ILinkActiveIndicator
-{
-public:
-	virtual bool HasLink() { return false; }
-};
-
 class ILoLa
 {
 protected:
@@ -68,8 +61,11 @@ protected:
 	///
 
 	///Status
-	ILinkActiveIndicator* LinkIndicator = nullptr;
+#ifdef USE_TIME_SLOT
+	bool HasLink = false;
 	bool EvenSlot = false;
+	uint32_t SendSlotElapsed;
+#endif
 	///
 
 	///Packet Mapper for known definitions.
@@ -145,27 +141,17 @@ public:
 		Enabled = false;
 	}
 
-	void SetLinkIndicator(ILinkActiveIndicator * indicator)
+#ifdef USE_TIME_SLOT
+	void SetLinkStatus(const bool linked)
 	{
-		LinkIndicator = indicator;
+		HasLink = linked;
 	}
 
 	void SetDuplexSlot(const bool evenSlot)
 	{
 		EvenSlot = evenSlot;
 	}
-
-	bool IsLinkActive()
-	{
-		if (LinkIndicator != nullptr)
-		{
-			return LinkIndicator->HasLink();
-		}
-		else
-		{
-			return false;
-		}
-	}
+#endif
 
 	ClockSource* GetClockSource()
 	{
@@ -246,7 +232,9 @@ public:
 	}
 
 protected:
+#ifdef USE_LATENCY_COMPENSATION
 	virtual void OnETTMUpdated() {}
+#endif
 
 public:
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
