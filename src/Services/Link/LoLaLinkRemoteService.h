@@ -80,9 +80,6 @@ protected:
 			LinkInfo->HasPartnerMAC() && 
 			MacManager.Match(localMAC))
 		{
-#ifdef DEBUG_LOLA
-			ConnectionProcessStart = millis();
-#endif
 			SetLinkingState(AwaitingLinkEnum::AcknowledgingHost);
 		}
 	}

@@ -82,9 +82,6 @@ protected:
 				//Here is where we have the first choice to reject this remote.
 				//TODO: MAC Filtering?
 				LinkInfo->SetPartnerMAC(remoteMAC);
-#ifdef DEBUG_LOLA
-				ConnectionProcessStart = millis();
-#endif
 				SetLinkingState(AwaitingLinkEnum::LinkRequested);
 			}
 			break;
