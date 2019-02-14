@@ -129,8 +129,6 @@ bool LoLaPacketDriver::Setup()
 	if (Receiver.Setup(&PacketMap) &&
 		Sender.Setup(&PacketMap))
 	{
-		//TODO: Get comms entropy source, abstracted.
-		//randomSeed(...);
 		IncomingInfo.Clear();
 
 		SetupOk = true;
