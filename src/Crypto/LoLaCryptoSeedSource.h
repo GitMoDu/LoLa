@@ -14,7 +14,7 @@
 class LoLaCryptoSeedSource : public ISeedSource
 {
 private:
-	uint8_t CachedToken = 0;
+	uint8_t CachedSeed = 0;
 	TinyCrcModbus8 CalculatorCRC;
 	boolean TOTPEnabled = false;
 
@@ -25,11 +25,16 @@ private:
 
 	ClockSource* SyncedClock = nullptr;
 
-	//Helper.
+	//Helpers.
 	uint32_t TOTPIndex = 0;
 
+	union ArrayToUint32 {
+		byte array[4];
+		uint32_t uint;
+	} TOTPCachedValue;
+
 private:
-	uint32_t GetTOTP(const int8_t offsetMillis)
+	inline uint32_t GetTOTP(const int8_t offsetMillis)
 	{
 		TOTPIndex = SyncedClock->GetMillis() + offsetMillis;
 		TOTPIndex ^= TOTPSeed;
@@ -53,7 +58,7 @@ public:
 	void Reset()
 	{
 		CalculatorCRC.Reset();
-		CachedToken = 0;
+		CachedSeed = 0;
 		TOTPEnabled = false;
 	}
 
@@ -72,11 +77,11 @@ public:
 		CalculatorCRC.Update(remotePMAC, macLength);
 		CalculatorCRC.Update(sessionId);
 
-		CachedToken = CalculatorCRC.GetCurrent();
+		CachedSeed = CalculatorCRC.GetCurrent();
 
-		if (CachedToken == 0)
+		if (CachedSeed == 0)
 		{
-			CachedToken++;
+			CachedSeed++;
 		}
 	}
 
@@ -84,15 +89,16 @@ public:
 	{
 		if (TOTPEnabled)
 		{
-			CalculatorCRC.Reset(CachedToken);
+			TOTPCachedValue.uint = GetTOTP(offsetMillis);
+			CalculatorCRC.Reset(CachedSeed);
 
-			CalculatorCRC.Update32(GetTOTP(offsetMillis));
+			CalculatorCRC.Update(TOTPCachedValue.array, 4);
 
 			return CalculatorCRC.GetCurrent();
 		}
 		else
 		{
-			return CachedToken;
+			return CachedSeed;
 		}
 	}
 };
