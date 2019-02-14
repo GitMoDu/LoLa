@@ -412,7 +412,7 @@ protected:
 		serial->print(F("Rejected: "));
 		serial->print(GetLoLa()->GetRejectedCount());
 		serial->print(F(" ("));
-		serial->print((GetLoLa()->GetRejectedCount() * 100) / GetLoLa()->GetReceivedCount());
+		serial->print((float)(GetLoLa()->GetRejectedCount() * 100) / (float)GetLoLa()->GetReceivedCount(), 2);
 		serial->println(F(" %)"));
 		serial->print(F("Sent: "));
 		serial->println(GetLoLa()->GetSentCount());
