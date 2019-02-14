@@ -35,7 +35,7 @@ public:
 #ifdef USE_LATENCY_COMPENSATION
 			CalculatorCRC.Update(GetCryptoToken(ETTM));
 #else
-			CalculatorCRC.Update(GetCryptoSeed(0));
+			CalculatorCRC.Update(GetCryptoToken(0));
 #endif
 			//
 
