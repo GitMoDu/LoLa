@@ -66,8 +66,8 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (LinkingState == AwaitingLinkEnum::SearchingForHost &&
-				LinkInfo->HasSessionId() &&
-				LinkInfo->HasPartnerMAC())
+				!LinkInfo->HasSessionId() &&
+				!LinkInfo->HasPartnerMAC())
 			{
 				//Here is where we have the choice to connect or not to this host.
 				//TODO: MAC Filtering?
