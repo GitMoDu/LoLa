@@ -25,6 +25,10 @@
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 #endif
 
+#ifdef DEBUG_LOLA
+#define LOLA_LINK_DEBUG_UPDATE_SECONDS 60
+#endif
+
 class LoLaLinkService : public IPacketSendService
 {
 private:
@@ -36,6 +40,10 @@ private:
 	LoLaServicesManager * ServicesManager = nullptr;
 
 	LoLaLinkPowerBalancer PowerBalancer;
+
+#ifdef DEBUG_LOLA
+	uint32_t LastDebugged = ILOLA_INVALID_MILLIS;
+#endif
 
 protected:
 	union ArrayToUint32 {
@@ -344,6 +352,10 @@ protected:
 		}
 
 		OnClearSession();
+
+#ifdef DEBUG_LOLA
+		LastDebugged = ILOLA_INVALID_MILLIS;
+#endif
 	}
 
 	bool OnSetup()
@@ -387,6 +399,29 @@ protected:
 		return false;
 	}
 
+#ifdef DEBUG_LOLA
+	void DebugLinkStatistics(Stream* serial)
+	{
+		serial->println();
+		serial->println(F("Link Info"));
+		Serial.print(F("UpTime: "));
+		Serial.print(LinkInfo->GetLinkDuration() / (uint32_t)1000);
+		Serial.println(F(" seconds."));
+		serial->print(F("Received: "));
+		serial->println(GetLoLa()->GetReceivedCount());
+		serial->print(F("Rejected: "));
+		serial->print(GetLoLa()->GetRejectedCount());
+		serial->print(F(" ("));
+		serial->print((GetLoLa()->GetRejectedCount() * 100) / GetLoLa()->GetReceivedCount());
+		serial->println(F(" %)"));
+		serial->print(F("Sent: "));
+		serial->println(GetLoLa()->GetSentCount());
+		serial->print(F("ClockSync adjustments: "));
+		serial->println(LinkInfo->GetClockSyncAdjustments());
+		serial->println();
+#endif
+	}
+
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
 	{
 		if (LinkInfo->GetLinkState() != newState)
@@ -398,9 +433,7 @@ protected:
 			if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
 #ifdef DEBUG_LOLA
-				Serial.print(F("Lost connection after "));
-				Serial.print(LinkInfo->GetLinkDuration() / (uint32_t)1000);
-				Serial.println(F(" seconds."));
+				DebugLinkStatistics(&Serial);
 #endif
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
@@ -577,6 +610,15 @@ protected:
 		{
 			OnKeepingConnected();
 		}
+
+#ifdef DEBUG_LOLA
+		if(LinkInfo->HasLink() && LastDebugged == ILOLA_INVALID_MILLIS ||
+			millis() - LastDebugged > (LOLA_LINK_DEBUG_UPDATE_SECONDS * 1000))
+		{
+			DebugLinkStatistics(&Serial);
+			LastDebugged = millis();
+		}
+#endif
 	}
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
