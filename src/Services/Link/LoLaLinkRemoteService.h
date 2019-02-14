@@ -82,7 +82,7 @@ protected:
 		}
 	}
 
-	void OnLinkRequestAcceptedReceived(const uint8_t requestId, const uint32_t localPMAC)
+	void OnLinkRequestAcceptedReceived(const uint8_t requestId, uint8_t* localMAC)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::GotHost &&
