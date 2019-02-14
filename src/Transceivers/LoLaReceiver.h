@@ -58,7 +58,7 @@ public:
 			CalculatorCRC.Reset();
 
 			//Crypto starts at the start of the hash.
-			CalculatorCRC.Update(GetCryptoSeed(0));//No latency compensation on receiver.
+			CalculatorCRC.Update(GetCryptoToken(0));//No latency compensation on receiver.
 
 			CalculatorCRC.Update(BufferPacket->GetDataHeader());
 

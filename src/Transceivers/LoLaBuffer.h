@@ -86,7 +86,7 @@ public:
 		CryptoSeed = cryptoSeedSource;
 	}
 
-	uint8_t GetCryptoSeed(const int8_t offsetMillis)
+	uint8_t GetCryptoToken(const int8_t offsetMillis)
 	{
 		if (CryptoSeed != nullptr)
 		{

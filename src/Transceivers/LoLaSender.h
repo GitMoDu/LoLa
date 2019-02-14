@@ -33,7 +33,7 @@ public:
 
 			//Crypto starts at the start of the hash.
 #ifdef USE_LATENCY_COMPENSATION
-			CalculatorCRC.Update(GetCryptoSeed(ETTM));
+			CalculatorCRC.Update(GetCryptoToken(ETTM));
 #else
 			CalculatorCRC.Update(GetCryptoSeed(0));
 #endif
@@ -69,9 +69,9 @@ public:
 
 		//Crypto starts at the start of the hash.
 #ifdef USE_LATENCY_COMPENSATION
-		CalculatorCRC.Update(GetCryptoSeed(ETTM));
+		CalculatorCRC.Update(GetCryptoToken(ETTM));
 #else
-		CalculatorCRC.Update(GetCryptoSeed(0));
+		CalculatorCRC.Update(GetCryptoToken(0));
 #endif		
 		//
 
