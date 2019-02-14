@@ -52,6 +52,40 @@ void Halt()
 	while (1);;
 }
 
+
+void OnLinkStatusUpdated(const LoLaLinkInfo::LinkStateEnum state)
+{
+#ifdef DEBUG_LOG
+	switch (state)
+	{
+	case LoLaLinkInfo::LinkStateEnum::Setup:
+		Serial.println(F("Link Setup"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		Serial.println(F("Searching for Host..."));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+		Serial.println(F("Sleeping"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::Linking:
+		//Serial.println(F("Linking"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::Linked:
+		Serial.println(F("Linked"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::Disabled:
+		Serial.println(F("Disabled"));
+		break;
+	default:
+		Serial.print(F("Conn what? "));
+		Serial.println(state);
+		break;
+	}
+#endif
+}
+
+
+
 void setup()
 {
 #ifdef DEBUG_LOG
@@ -71,16 +105,19 @@ void setup()
 		Halt();
 	}
 
+	FunctionSlot<const LoLaLinkInfo::LinkStateEnum> funcSlot(OnLinkStatusUpdated);
+	LoLa.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
+
 	if (LoLa.GetControllerSurface() == nullptr)
 	{
 		Halt();
 	}
 	ControllerOutput = LoLa.GetControllerSurface();
 
-	ControllerOutput->SetDirection(31000);
-	ControllerOutput->SetDirectionTrim(+100);
-	ControllerOutput->SetPropulsion(32001);
-	ControllerOutput->SetPropulsionTrim(-100);
+	ControllerOutput->SetDirection(30000);
+	ControllerOutput->SetDirectionTrim(+120);
+	ControllerOutput->SetPropulsion(31999);
+	ControllerOutput->SetPropulsionTrim(-99);
 	FunctionSlot<uint8_t> ptrSlot(OnSurfaceUpdated);
 	ControllerOutput->AttachOnSurfaceUpdated(ptrSlot);
 

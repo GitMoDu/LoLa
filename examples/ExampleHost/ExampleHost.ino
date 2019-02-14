@@ -51,6 +51,38 @@ void Halt()
 	while (1);;
 }
 
+
+void OnLinkStatusUpdated(const LoLaLinkInfo::LinkStateEnum state)
+{
+#ifdef DEBUG_LOG
+	switch (state)
+	{
+	case LoLaLinkInfo::LinkStateEnum::Setup:
+		Serial.println(F("Link Setup"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		Serial.println(F("Broadcasting"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+		Serial.println(F("Sleeping"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::Linking:
+		//Serial.println(F("Linking"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::Linked:
+		Serial.println(F("Linking"));
+		break;
+	case LoLaLinkInfo::LinkStateEnum::Disabled:
+		Serial.println(F("Disabled"));
+		break;
+	default:
+		Serial.print(F("Conn what? "));
+		Serial.println(state);
+		break;
+	}
+#endif
+}
+
 void setup()
 {
 #ifdef DEBUG_LOG
@@ -66,6 +98,9 @@ void setup()
 	{
 		Halt();
 	}
+
+	FunctionSlot<const LoLaLinkInfo::LinkStateEnum> funcSlot(OnLinkStatusUpdated);
+	LoLa.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
 
 	if (LoLa.GetControllerSurface() == nullptr)
 	{
