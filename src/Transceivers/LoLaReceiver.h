@@ -11,6 +11,9 @@ class LoLaReceiver : public LoLaBuffer
 private:
 	TemplateLoLaPacket<PACKET_DEFINITION_MAX_PACKET_SIZE> ReceiverPacket;
 
+	//Helper.
+	uint8_t PayloadSize;
+
 public:
 	PacketDefinition * GetIncomingDefinition()
 	{
@@ -67,7 +70,7 @@ public:
 				CalculatorCRC.Update(BufferPacket->GetId());
 			}
 
-			uint8_t PayloadSize = BufferPacket->GetDefinition()->GetPayloadSize();
+			PayloadSize = BufferPacket->GetDefinition()->GetPayloadSize();
 			for (uint8_t i = 0; i < PayloadSize; i++)
 			{
 				CalculatorCRC.Update(BufferPacket->GetPayload()[i]);//Payload byte
