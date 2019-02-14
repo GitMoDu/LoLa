@@ -11,7 +11,7 @@
 
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
-#include <Crypto\LoLaCryptoSeedSource.h>
+#include <Crypto\LoLaCryptoTokenSource.h>
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 #include <Crypto\PseudoMacGenerator.h>
@@ -47,7 +47,7 @@ protected:
 	ArrayToUint32 ATUI_R;
 	ArrayToUint32 ATUI_S;
 
-	LoLaCryptoSeedSource CryptoSeed;
+	LoLaCryptoTokenSource CryptoSeed;
 
 	LinkPacketDefinition		LinkDefinition;
 	LinkPacketWithAckDefinition	LinkWithAckDefinition;

@@ -1,7 +1,7 @@
-// LoLaCryptoSeedSource.h
+// LoLaCryptoTokenSource.h
 
-#ifndef _LOLACRYPTOSEEDSOURCE_h
-#define _LOLACRYPTOSEEDSOURCE_h
+#ifndef _LOLACRYPTOTOKENSOURCE_h
+#define _LOLACRYPTOTOKENSOURCE_h
 
 #include <Crypto\TinyCRC.h>
 
@@ -10,8 +10,7 @@
 // 10 Agressive crypto denial.
 #define LOLA_CRYPTO_TOTP_PERIOD_MILLIS	(uint32_t)(100*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
 
-
-class LoLaCryptoSeedSource : public ISeedSource
+class LoLaCryptoTokenSource : public ISeedSource
 {
 private:
 	uint8_t CachedSeed = 0;
