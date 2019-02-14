@@ -66,7 +66,7 @@ void LoLaPacketDriver::OnReceived()
 			if (!GetLossChance())
 			{
 #ifdef DEBUG_LOLA
-				Serial.println("Packet Lost, Oh noes!");
+				Serial.println(F("Packet Lost, Oh noes!"));
 #endif
 				return;
 			}
@@ -84,7 +84,7 @@ void LoLaPacketDriver::OnReceived()
 					if (!GetLossChance())
 					{
 #ifdef DEBUG_LOLA
-						Serial.println("Packet Lost, Oh noes!");
+						Serial.println(F("Packet Lost, Oh noes!"));
 #endif
 						return;
 					}
