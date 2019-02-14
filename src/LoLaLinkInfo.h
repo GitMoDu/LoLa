@@ -42,6 +42,8 @@ private:
 	bool PartnerMACPresent = false;
 	uint8_t PartnerMAC[LOLA_LINK_INFO_MAC_LENGTH];
 
+	uint32_t ClockSyncAdjustments = 0;
+
 	//Helper.
 	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
 
@@ -110,6 +112,16 @@ public:
 		Driver = driver;
 	}
 
+	uint32_t GetClockSyncAdjustments()
+	{
+		return ClockSyncAdjustments;
+	}
+
+	void StampClockSyncAdjustment()
+	{
+		ClockSyncAdjustments++;
+	}
+
 	void Reset()
 	{
 		SessionId = LOLA_LINK_INFO_INVALID_SESSION;
@@ -119,6 +131,8 @@ public:
 		
 		RTT = ILOLA_INVALID_LATENCY;
 		PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
+
+		ClockSyncAdjustments = 0;
 
 #ifdef USE_LATENCY_COMPENSATION
 		if (Driver != nullptr)

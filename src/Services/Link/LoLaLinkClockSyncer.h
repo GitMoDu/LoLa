@@ -151,44 +151,53 @@ public:
 		}
 	}
 
-	void OnTuneErrorReceived(const int32_t estimationError)
+	/*
+	Returns false if tune was needed.
+	*/
+	bool OnTuneErrorReceived(const int32_t estimationError)
 	{
+		uint8_t Result = false;
 		if (abs(estimationError) > CLOCK_SYNC_MAX_TUNE_ERROR)
 		{
-			//TODO: Count sequential high error tune results, break connection on threshold value.
-			return;
-		}
-		else if (estimationError == 0)
-		{
-			ClockTuneAccumulator = 0;
-			StampSynced();
-		}
-		else if (estimationError > 0)
-		{
-			if (ClockTuneAccumulator < LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX)
-			{
-				ClockTuneAccumulator += LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
-			}
-			else
-			{
-				AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
-				ClockTuneAccumulator = 0;
-			}
+			//TODO: Break connection on threshold value.
 		}
 		else
 		{
-			if (ClockTuneAccumulator > LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN)
+			if (estimationError == 0)
 			{
-				ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
+				ClockTuneAccumulator = 0;
+				StampSynced();
+				Result = true;
+			}
+			else if (estimationError > 0)
+			{
+				if (ClockTuneAccumulator < LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX)
+				{
+					ClockTuneAccumulator += LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
+				}
+				else
+				{
+					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+					ClockTuneAccumulator = 0;
+				}
 			}
 			else
 			{
-				AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
-				ClockTuneAccumulator = 0;
+				if (ClockTuneAccumulator > LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN)
+				{
+					ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
+				}
+				else
+				{
+					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+					ClockTuneAccumulator = 0;
+				}
 			}
+
+			AddOffset(ClockTuneAccumulator / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
 		}
 
-		AddOffset(ClockTuneAccumulator / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+		return Result;
 	}
 };
 
