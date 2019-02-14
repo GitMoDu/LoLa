@@ -6,7 +6,10 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 
-#define LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE			5  //1 byte Sub-header + 4 byte Pseudo-MAC or other uint32_t
+#include <LoLaLinkInfo.h>
+
+
+#define LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE			(1 + max(sizeof(uint32_t), LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.
 #define LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE	1  //1 byte Sub-header
 
 #define LOLA_LINK_SERVICE_CHECK_PERIOD						(uint32_t)5
