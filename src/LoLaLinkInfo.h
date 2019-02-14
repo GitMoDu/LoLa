@@ -6,7 +6,7 @@
 #include <ILoLa.h>
 #include <Callback.h>
 
-#define LOLA_LINK_INFO_MAC_LENGTH		6 //Following MAC-48
+#define LOLA_LINK_INFO_MAC_LENGTH		8 //Following MAC-64, because why not?
 
 class LoLaLinkInfo
 {
@@ -233,9 +233,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			return (int8_t)map(constrain(Driver->GetLastValidRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax()),
-				Driver->GetRSSIMin(), Driver->GetRSSIMax(),
-				0, UINT8_MAX);
+			return Driver->GetRSSINormalized();
 		}
 		return 0;//Unknown.
 	}

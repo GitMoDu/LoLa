@@ -162,6 +162,13 @@ public:
 		return &SyncedClock;
 	}
 
+	uint8_t GetRSSINormalized()
+	{
+		return (uint8_t)map(constrain(GetLastValidRSSI(), GetRSSIMin(), GetRSSIMax()),
+			GetRSSIMin(), GetRSSIMax(),
+			0, UINT8_MAX);
+	}
+
 	uint32_t GetTimeStamp()
 	{
 		return SyncedClock.GetMicros();
