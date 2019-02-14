@@ -52,16 +52,6 @@ protected:
 	{
 		switch (LinkInfo->GetLinkState())
 		{
-		case LoLaLinkInfo::LinkStateEnum::Connected:
-			if (remotePMAC != LOLA_INVALID_PMAC && RemotePMAC == remotePMAC)
-			{
-				//We received a broadcats but we thought we were connected.
-				//Oh well, better restart the link.
-				//Note: This is a source of easy denial of service attack.
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
-				SetNextRunASAP();
-			}
-			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
