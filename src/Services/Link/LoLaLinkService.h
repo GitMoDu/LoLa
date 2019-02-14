@@ -606,7 +606,7 @@ protected:
 				SetNextRunASAP();
 				break;
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_UPDATE:
-				PayloadTo32bitArray(incomingPacket);
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnLinkInfoSyncUpdateReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
 
