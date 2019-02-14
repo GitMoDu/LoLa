@@ -62,7 +62,7 @@ protected:
 
 	///Status
 #ifdef USE_TIME_SLOT
-	bool HasLink = false;
+	bool LinkActive = false;
 	bool EvenSlot = false;
 	uint32_t SendSlotElapsed;
 #endif
@@ -77,7 +77,6 @@ protected:
 	///
 
 
-
 	///For use of estimated latency features
 #ifdef USE_LATENCY_COMPENSATION
 	uint8_t ETTM = 0;//Estimated transmission time in millis.
@@ -87,6 +86,34 @@ protected:
 public:
 	ILoLa() : PacketMap(), SyncedClock()
 	{
+	}
+
+	void Enable()
+	{
+		if (!Enabled)
+		{
+			OnStart();
+		}
+		Enabled = true;
+	}
+
+	void Disable()
+	{
+		if (Enabled)
+		{
+			OnStop();
+		}
+		Enabled = false;
+	}
+
+	void SetLinkStatus(const bool linked)
+	{
+		LinkActive = linked;
+	}
+
+	bool HasLink()
+	{
+		return LinkActive;
 	}
 
 #ifdef USE_MOCK_PACKET_LOSS
@@ -123,30 +150,7 @@ public:
 	}
 #endif
 
-	void Enable()
-	{
-		if (!Enabled)
-		{
-			OnStart();
-		}
-		Enabled = true;
-	}
-
-	void Disable()
-	{
-		if (Enabled)
-		{
-			OnStop();
-		}
-		Enabled = false;
-	}
-
 #ifdef USE_TIME_SLOT
-	void SetLinkStatus(const bool linked)
-	{
-		HasLink = linked;
-	}
-
 	void SetDuplexSlot(const bool evenSlot)
 	{
 		EvenSlot = evenSlot;

@@ -4,7 +4,7 @@
 
 #include <PacketDriver\LoLaPacketDriver.h>
 
-LoLaPacketDriver::LoLaPacketDriver() : ILoLa() , Services()
+LoLaPacketDriver::LoLaPacketDriver() : ILoLa(), Services()
 {
 }
 
@@ -197,7 +197,7 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 	}
 
 #ifdef USE_TIME_SLOT
-	if (HasLink)
+	if (LinkActive)
 	{
 		return CanTransmit() &&
 			(overridePermission || IsInSendSlot());
@@ -211,7 +211,7 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 	return Enabled &&
 		!HotAfterSend() && !HotAfterReceive() &&
 		CanTransmit() &&
-		(overridePermission || HasLink);
+		(overridePermission || LinkActive);
 #endif
 }
 

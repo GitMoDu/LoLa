@@ -160,7 +160,7 @@ public:
 protected:
 	virtual bool ShouldProcessReceived() 
 	{
-		return IsSetupOk() && LoLa->IsLinkActive();
+		return IsSetupOk() && LoLa->HasLink();
 	}
 
 	virtual bool OnAddPacketMap(LoLaPacketMap* packetMap) { return true; }
