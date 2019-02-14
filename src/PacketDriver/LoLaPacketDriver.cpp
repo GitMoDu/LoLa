@@ -215,12 +215,6 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 #endif
 }
 
-void LoLaPacketDriver::SetCryptoSeedSource(ISeedSource* cryptoSeedSource)
-{
-	Sender.SetCryptoSeedSource(cryptoSeedSource);
-	Receiver.SetCryptoSeedSource(cryptoSeedSource);
-}
-
 //TODO:Store statistics metadata
 bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 {

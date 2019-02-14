@@ -5,8 +5,6 @@
 
 #include <ILoLa.h>
 #include <Packet\LoLaPacketMap.h>
-#include <Transceivers\LoLaReceiver.h>
-#include <Transceivers\LoLaSender.h>
 
 #include <Services\LoLaServicesManager.h>
 
@@ -59,13 +57,10 @@ protected:
 	///
 
 	bool SetupOk = false;
-	LoLaReceiver Receiver;
-	LoLaSender Sender;
 
 public:
 	LoLaPacketDriver();
 	LoLaServicesManager* GetServices();
-	void SetCryptoSeedSource(ISeedSource* cryptoSeedSource);
 
 public:
 	virtual bool SendPacket(ILoLaPacket* packet);

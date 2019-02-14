@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include <Crypto\TinyCRC.h>
+#include <Crypto\ISeedSource.h>
 
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacket.h>

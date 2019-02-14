@@ -12,6 +12,8 @@
 #if !defined(UINT16_MAX) || !defined(INT16_MIN) || !defined(UINT32_MAX) || defined(UINT8_MAX)
 #include <stdint.h>
 #endif
+#include <Transceivers\LoLaReceiver.h>
+#include <Transceivers\LoLaSender.h>
 
 #define ILOLA_DEFAULT_CHANNEL				0
 #define ILOLA_DEFAULT_TRANSMIT_POWER		10
@@ -60,6 +62,11 @@ protected:
 	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
 	///
 
+	///Transceivers.
+	LoLaReceiver Receiver;
+	LoLaSender Sender;
+	///
+
 	///Status
 #ifdef USE_TIME_SLOT
 	bool LinkActive = false;
@@ -86,6 +93,12 @@ protected:
 public:
 	ILoLa() : PacketMap(), SyncedClock()
 	{
+	}
+
+	void SetCryptoSeedSource(ISeedSource* cryptoSeedSource)
+	{
+		Sender.SetCryptoSeedSource(cryptoSeedSource);
+		Receiver.SetCryptoSeedSource(cryptoSeedSource);
 	}
 
 	void Enable()
@@ -260,8 +273,6 @@ public:
 	virtual uint8_t GetChannelMin() const { return 0; }
 	virtual uint8_t GetTransmitPowerMax() const { return 0; }
 	virtual uint8_t GetTransmitPowerMin() const { return 0; }
-
-	virtual void SetCryptoSeedSource(ISeedSource* cryptoSeedSource) {}
 
 	virtual void OnWakeUpTimer() {}
 	virtual void OnReceiveBegin(const uint8_t length, const  int16_t rssi) {}
