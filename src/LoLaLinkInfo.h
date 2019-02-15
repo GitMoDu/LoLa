@@ -138,7 +138,7 @@ public:
 		if (Driver != nullptr)
 		{
 			Driver->SetLinkStatus(false);
-			Driver->ResetStatistics();
+			Driver->ResetLiveData();
 		}
 #endif
 	}

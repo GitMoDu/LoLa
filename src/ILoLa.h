@@ -55,9 +55,9 @@ protected:
 	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
 	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
 
-	uint32_t TransmitCount = 0;
+	uint32_t TransmitedCount = 0;
 	uint32_t ReceivedCount = 0;
-	uint32_t RejectCount = 0;
+	uint32_t RejectedCount = 0;
 	///
 
 	///Configurations
@@ -172,11 +172,17 @@ public:
 
 	void ResetStatistics()
 	{
+		TransmitedCount = 0;
+		ReceivedCount = 0;
+		RejectedCount = 0;
+	}
+
+	void ResetLiveData()
+	{
 #ifdef USE_LATENCY_COMPENSATION
 		ETTM = 0;
 		Sender.SetETTM(ETTM);
 #endif
-
 		LastSent = ILOLA_INVALID_MILLIS;
 		LastReceived = ILOLA_INVALID_MILLIS;
 		LastReceivedRssi = ILOLA_INVALID_RSSI;
@@ -184,9 +190,7 @@ public:
 		LastValidReceived = ILOLA_INVALID_MILLIS;
 		LastValidReceivedRssi = ILOLA_INVALID_RSSI;
 
-		TransmitCount = 0;
-		ReceivedCount = 0;
-		RejectCount = 0;
+		ResetStatistics();
 	}
 
 	ClockSource* GetClockSource()
@@ -223,12 +227,12 @@ public:
 
 	uint32_t GetRejectedCount()
 	{
-		return RejectCount;
+		return RejectedCount;
 	}
 
 	uint32_t GetSentCount()
 	{
-		return TransmitCount;
+		return TransmitedCount;
 	}
 
 	uint32_t GetLastSentMillis()

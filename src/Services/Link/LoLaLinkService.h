@@ -25,10 +25,6 @@
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 #endif
 
-#ifdef DEBUG_LOLA
-#define LOLA_LINK_DEBUG_UPDATE_SECONDS 60
-#endif
-
 class LoLaLinkService : public IPacketSendService
 {
 private:

@@ -53,7 +53,7 @@ void LoLaPacketDriver::OnReceived()
 
 	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
 	{
-		RejectCount++;
+		RejectedCount++;
 	}
 	else
 	{	//Packet received Ok, let's commit that info really quick.
@@ -95,7 +95,7 @@ void LoLaPacketDriver::OnReceived()
 					if (Transmit())
 					{
 						LastSent = GetMillis();
-						TransmitCount++;
+						TransmitedCount++;
 					}
 					else
 					{
@@ -228,7 +228,7 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 			else if(Transmit())
 			{
 				LastSent = GetMillis();
-				TransmitCount++;
+				TransmitedCount++;
 
 				return true;
 			}
@@ -236,7 +236,7 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 			if (Transmit())
 			{
 				LastSent = GetMillis();
-				TransmitCount++;
+				TransmitedCount++;
 
 				return true;
 			}
