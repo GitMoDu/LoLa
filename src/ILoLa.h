@@ -87,6 +87,7 @@ protected:
 #ifdef USE_TIME_SLOT
 	bool LinkActive = false;
 	bool EvenSlot = false;
+	//Helper.
 	uint32_t SendSlotElapsed;
 #endif
 	///
@@ -99,12 +100,11 @@ protected:
 	ClockSource SyncedClock;
 	///
 
-
-	///For use of estimated latency features
 #ifdef USE_LATENCY_COMPENSATION
+	///For use of estimated latency features
 	uint8_t ETTM = 0;//Estimated transmission time in millis.
-#endif
 	///
+#endif
 
 public:
 	ILoLa() : PacketMap(), SyncedClock()
