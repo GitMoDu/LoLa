@@ -13,7 +13,7 @@ private:
 	TinyCrcModbus8 CalculatorCRC;
 	boolean TOTPEnabled = false;
 
-	const uint32_t TOTPPeriod = ILOLA_CRYPTO_TOTP_PERIOD_MILLIS;
+	uint32_t TOTPPeriod = ILOLA_CRYPTO_TOTP_PERIOD_MILLIS;
 	uint32_t TOTPSeed = 0;
 
 	uint8_t Offset = 0;
@@ -45,6 +45,11 @@ public:
 		CalculatorCRC.Reset();
 		CachedSeed = 0;
 		TOTPEnabled = false;
+	}
+
+	void SetTOTPPeriod(const uint32_t totpPeriodMillis)
+	{
+		TOTPPeriod = totpPeriodMillis;
 	}
 
 	void SetTOTPEnabled(const bool enabled, ClockSource* syncedClock, const uint32_t seed = 0)
