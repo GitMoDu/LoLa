@@ -289,7 +289,7 @@ public:
 		return CurrentChannel;
 	}
 
-	bool SetChannel(const int16_t channel)
+	bool SetChannel(const uint8_t channel)
 	{
 		CurrentChannel = channel;
 
