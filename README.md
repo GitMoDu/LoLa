@@ -58,18 +58,19 @@ Link Handshake Handling [WORKING] – Broadcast, send challenge response and sta
 Link management [WORKING]: Link service establishes a link and fires events when the link is gained or lost. Keeps sending pings (with replies) to make sure the partner is still there, avoiding stealing bandwidth from user services.
 
 Message Authentication Code [WORKING]: The base seed of the MAC defaults at 0 and is set to a deterministic value at linking time (based on the host and remote's id and link session id). During link time however, it is generated on a Time-based One-time Password (TOTP).
-A TOTP seed is exchanged on link, which is then used to generate a token for each message. The decoding side uses the same TOTP token. The output space is only 8 bits, to optimize bandwidth. To compensate for this, the time base is around 100 milliseconds, which is much shorter than the time it takes to try all 256 possibilities. A typical transation takes around ~4 milliseconds, end-to-end, so an attacker would have at best ~25 attempts before the token switched, which would yeld a low success rate.
+A TOTP seed is exchanged on link, which is then used to generate a token for each message. The decoding side uses the same TOTP token. The output space is only 8 bits, to optimize bandwidth. To compensate for this, the hop time is 1 second.
 This project makes no claims of cryptographic security and provides the cryptographic features only for functionality purposes, such as rejecting unauthorized access and implicit addressing. Transmitted data quality is already "assured" by the Radio IC's 16 bit CRC.
+Man-In-Middle attacks are very easy as data is not encrypted. There was an easy vector for denial of service, but that has been fixed. 
 
 SyncSurface Service [WORKING]: The star feature and whole reason I started this project. Synchronises an array of N blocks (32bits wide) in a differential fashion, i.e., only send over radio the changing blocks, not the whole data array. There's a 2-way protocol to ensure data integrity without compromising data update latency.
 
-Link diagnostics [WORKING BARE]: Measures link properties: Latency, TODO: add more.
+Link diagnostics [WORKING]: Measures link properties: Latency, RSSI, Remote RSSI.
 
 Piggyback Latency Measurement[WORKING]: There's a lot of Ack'ed packets being exchanged when linking. We track those and measure the system latency before the link is even up.
 
-Latency Compensation for Link[WORKING]: Using the measured latency, we use the estimated transmission time to optimize time dependent values. This feature is optional and not thoroughly validated.
+Latency Compensation for Link[WORKING]: Using the measured latency, we use the estimated transmission time to optimize time dependent values. This feature is awesome, it decreased packet collision from 1.5% to 0.6% .
 
-Simulated Packet Loss for Testing[WORKING]: This feature allows us to test the system in a bad conditions.
+Simulated Packet Loss for Testing[WORKING]: This feature allows us to test the system in simulated bad conditions.
 
 
 Why not Radiohead or similar radio libraries? 
