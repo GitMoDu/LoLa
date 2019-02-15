@@ -39,16 +39,6 @@ private:
 		return TOTPIndex;
 	}
 
-	uint8_t GetSeed()
-	{
-		if (TOTPSeed == 0)
-		{
-			return TOTPSeed + 1;
-		}
-
-		return TOTPSeed;
-	}
-
 public:
 	void Reset()
 	{
