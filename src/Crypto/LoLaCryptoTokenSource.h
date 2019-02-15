@@ -4,11 +4,7 @@
 #define _LOLACRYPTOTOKENSOURCE_h
 
 #include <Crypto\TinyCRC.h>
-
-// Hop period should be a multiple of Send Slot Period.
-// 100 Change TOTP every second, low chance of sync error.
-// 10 Agressive crypto denial.
-#define LOLA_CRYPTO_TOTP_PERIOD_MILLIS	(uint32_t)(100*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
+#include <ILoLa.h>
 
 class LoLaCryptoTokenSource : public ISeedSource
 {
@@ -17,7 +13,7 @@ private:
 	TinyCrcModbus8 CalculatorCRC;
 	boolean TOTPEnabled = false;
 
-	const uint32_t TOTPPeriod = LOLA_CRYPTO_TOTP_PERIOD_MILLIS;
+	const uint32_t TOTPPeriod = ILOLA_CRYPTO_TOTP_PERIOD_MILLIS;
 	uint32_t TOTPSeed = 0;
 
 	uint8_t Offset = 0;

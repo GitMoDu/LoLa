@@ -17,9 +17,18 @@
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS 60
 #endif
 
+// 1000 Change TOTP every second, low chance of sync error.
+// 100 Agressive crypto denial.
+#define ILOLA_CRYPTO_TOTP_PERIOD_MILLIS		(uint32_t)(1000)
+
+// 100 High latency, high bandwitdh.
+// 10 Low latency, lower bandwidth.
+#define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
+
+
+///Driver constants.
 #define ILOLA_DEFAULT_CHANNEL				0
 #define ILOLA_DEFAULT_TRANSMIT_POWER		10
-#define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
 
 #define ILOLA_DEFAULT_MIN_RSSI				(int16_t(-100))
 
