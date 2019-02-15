@@ -201,7 +201,7 @@ public:
 	{
 		if (HasLink() && LinkStarted != ILOLA_INVALID_MILLIS)
 		{
-			return Driver->GetMillis() - LinkStarted;
+			return Driver->GetMillisSync() - LinkStarted;
 		}
 		else
 		{
@@ -213,7 +213,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			LinkStarted = Driver->GetMillis();
+			LinkStarted = Driver->GetMillisSync();
 			Driver->SetLinkStatus(true);
 		}
 	}
