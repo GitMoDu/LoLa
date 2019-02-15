@@ -45,6 +45,7 @@
 #define MOCK_PACKET_LOSS_LINKING			MOCK_PACKET_LOSS_HARD
 #define MOCK_PACKET_LOSS_LINKED				MOCK_PACKET_LOSS_SMOKE_SIGNALS
 #endif
+///
 
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
