@@ -13,6 +13,10 @@
 #include <Transceivers\LoLaReceiver.h>
 #include <Transceivers\LoLaSender.h>
 
+#ifdef DEBUG_LOLA
+#define LOLA_LINK_DEBUG_UPDATE_SECONDS 60
+#endif
+
 #define ILOLA_DEFAULT_CHANNEL				0
 #define ILOLA_DEFAULT_TRANSMIT_POWER		10
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
