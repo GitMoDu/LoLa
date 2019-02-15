@@ -300,7 +300,7 @@ protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Connection service"));
+		serial->print(F("Link service"));
 	}
 #endif // DEBUG_LOLA
 
@@ -400,9 +400,25 @@ protected:
 	{
 		serial->println();
 		serial->println(F("Link Info"));
-		Serial.print(F("UpTime: "));
-		Serial.print(LinkInfo->GetLinkDuration() / (uint32_t)1000);
-		Serial.println(F(" seconds."));
+
+		serial->print(F("UpTime: "));
+
+		uint32_t AliveSeconds = (LinkInfo->GetLinkDuration() / 1000L);
+
+		if (AliveSeconds / 3600 < 10)
+			serial->print('0');
+		serial->print(AliveSeconds / 3600);
+		serial->print(':');
+		if ((AliveSeconds % 3600) / 60 < 10)
+			serial->print('0');
+		serial->print((AliveSeconds % 3600) / 60);
+		serial->print(':');
+		if ((AliveSeconds % 3600) % 60 < 10)
+			serial->print('0');
+		serial->println((AliveSeconds % 3600) % 60);
+
+		serial->print(F("Sent: "));
+		serial->println(GetLoLa()->GetSentCount());
 		serial->print(F("Received: "));
 		serial->println(GetLoLa()->GetReceivedCount());
 		serial->print(F("Rejected: "));
@@ -410,8 +426,6 @@ protected:
 		serial->print(F(" ("));
 		serial->print((float)(GetLoLa()->GetRejectedCount() * 100) / (float)GetLoLa()->GetReceivedCount(), 2);
 		serial->println(F(" %)"));
-		serial->print(F("Sent: "));
-		serial->println(GetLoLa()->GetSentCount());
 		serial->print(F("ClockSync adjustments: "));
 		serial->println(LinkInfo->GetClockSyncAdjustments());
 		serial->println();
@@ -461,11 +475,11 @@ protected:
 				SetLinkingState(0);
 #ifdef DEBUG_LOLA
 				LinkingStart = millis();
-				Serial.print(F("Linking to: "));
+				Serial.print(F("Linking Session "));
+				Serial.println(LinkInfo->GetSessionId());
+				Serial.print(F("To: "));
 				MacManager.Print(&Serial, LinkInfo->GetPartnerMAC());
 				Serial.println();
-				Serial.print(F(" Session id: "));
-				Serial.println(LinkInfo->GetSessionId());
 #endif
 				SetNextRunASAP();
 				break;
@@ -477,21 +491,23 @@ protected:
 				ClockSyncerPointer->StampSynced();
 
 #ifdef DEBUG_LOLA
-				Serial.print(F("Link took "));
+				Serial.print(F("Linking took "));
 				Serial.print(millis() - LinkingStart);
-				Serial.println(F(" ms to establish."));
-				Serial.print(F("Average latency: "));
-				Serial.println((float)LinkInfo->GetRTT() / (float)2000, 2);
+				Serial.println(F(" ms."));
+				Serial.print(F("Round Trip Time: "));
+				Serial.print(LinkInfo->GetRTT());
+				Serial.println(F(" us"));
+				Serial.print(F("Estimated Latency: "));
+				Serial.print((float)LinkInfo->GetRTT() / (float)2000, 2);
+				Serial.println(F(" ms"));
 #ifdef USE_LATENCY_COMPENSATION
 				Serial.print(F("Latency compensation: "));
 				Serial.print(GetLoLa()->GetETTM());
 				Serial.println(F(" ms"));
 #endif
-				Serial.print(F("Remote RSSI: "));
-				Serial.print(LinkInfo->GetPartnerRSSINormalized());
-				Serial.println();
 				Serial.print(F("Sync TimeStamp: "));
 				Serial.println(ClockSyncerPointer->GetMillisSync());
+				Serial.println();
 #endif
 
 				//Notify all link dependent services they can start.
@@ -609,11 +625,17 @@ protected:
 		}
 
 #ifdef DEBUG_LOLA
-		if(LinkInfo->HasLink() && LastDebugged == ILOLA_INVALID_MILLIS ||
-			millis() - LastDebugged > (LOLA_LINK_DEBUG_UPDATE_SECONDS * 1000))
+		if (LinkInfo->HasLink())
 		{
-			DebugLinkStatistics(&Serial);
-			LastDebugged = millis();
+			if (LastDebugged == ILOLA_INVALID_MILLIS)
+			{
+				LastDebugged = millis();
+			}
+			else if (millis() - LastDebugged > (LOLA_LINK_DEBUG_UPDATE_SECONDS * 1000))
+			{
+				DebugLinkStatistics(&Serial);
+				LastDebugged = millis();
+			}
 		}
 #endif
 	}
