@@ -45,7 +45,7 @@ private:
 #ifdef USE_FREQUENCY_HOP
 	LoLaLinkFrequencyHopper FrequencyHopper;
 #endif
-	
+
 #ifdef DEBUG_LOLA
 	uint32_t LastDebugged = ILOLA_INVALID_MILLIS;
 #endif
@@ -99,6 +99,7 @@ protected:
 protected:
 	///Common packet handling.
 	virtual void OnLinkInfoSyncUpdateReceived(const uint8_t contentId, const uint32_t content) {}
+	virtual bool OnOpportunisticSend() { return false; }
 
 	///Host packet handling.
 	virtual void OnLinkDiscoveryReceived() {}
@@ -643,10 +644,19 @@ protected:
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION &&
 			GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_SLOW_PERIOD)
 		{
-			PreparePing();
-			RequestSendPacket();
-			//Sent Intervention Ping!
-			//Serial.println(F("Sent Intervention Ping!"));
+			if (OnOpportunisticSend())
+			{
+				//Sent Intervention Custom!
+				//Serial.println(F("Sent Intervention Custom!"));
+				RequestSendPacket();
+			}
+			else
+			{
+				PreparePing();
+				RequestSendPacket();
+				//Sent Intervention Ping!
+				//Serial.println(F("Sent Intervention Ping!"));
+			}
 		}
 		else
 		{
