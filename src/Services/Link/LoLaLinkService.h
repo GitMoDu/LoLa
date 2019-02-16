@@ -625,7 +625,6 @@ protected:
 		{
 			PreparePong();
 			RequestSendPacket();
-			//Serial.println(F("Responded with Pong!"));
 		} 
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
@@ -634,7 +633,6 @@ protected:
 				PreparePing();
 				RequestSendPacket();
 				//Sent Panic Ping!
-				//Serial.println(F("Sent Panic Ping!"));
 			}
 			else
 			{
@@ -647,7 +645,6 @@ protected:
 			if (OnOpportunisticSend())
 			{
 				//Sent Intervention Custom!
-				//Serial.println(F("Sent Intervention Custom!"));
 				RequestSendPacket();
 			}
 			else
@@ -655,7 +652,6 @@ protected:
 				PreparePing();
 				RequestSendPacket();
 				//Sent Intervention Ping!
-				//Serial.println(F("Sent Intervention Ping!"));
 			}
 		}
 		else
