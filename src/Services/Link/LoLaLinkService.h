@@ -115,13 +115,13 @@ protected:
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 	virtual void OnAwaitingConnection() {}
 	virtual void OnChallenging() {}
-	virtual void OnChallengeSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
+	virtual void OnChallengeSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 	virtual void OnClockSync() {}
 	virtual void OnInfoSync() {}
-	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
-	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
+	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
+	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 	virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
-	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
+	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 
 private:
 	inline void TrySendPing(const uint32_t resendPeriod)

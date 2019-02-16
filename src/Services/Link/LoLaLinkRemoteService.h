@@ -190,7 +190,7 @@ protected:
 			}
 			break;
 		case AwaitingLinkEnum::WaitingForSwitchOver:
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 			break;
 		default:
 			break;
@@ -232,7 +232,7 @@ protected:
 			}
 
 			RemoteClockSyncTransaction.Reset();
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 		}
 		else if (ClockSyncer.IsTimeToTune())
 		{
@@ -245,7 +245,7 @@ protected:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 			}
 		}
 		//else if (false)
@@ -254,7 +254,7 @@ protected:
 		//}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 		}
 	}
 
@@ -276,7 +276,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 		}
 	}
 

@@ -242,7 +242,7 @@ protected:
 		//}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 		}
 	}
 
@@ -262,7 +262,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 		}
 	}
 
@@ -275,7 +275,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 		}
 	}
 	///
