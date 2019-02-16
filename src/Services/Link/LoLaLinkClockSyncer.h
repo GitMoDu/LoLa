@@ -8,7 +8,7 @@
 #define CLOCK_SYNC_REQUEST_TRANSACTION_MAX_DURATION_MILLIS	(uint32_t)300
 #define CLOCK_SYNC_GOOD_ENOUGH_COUNT						2
 
-#define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)10000
+#define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)5000
 #define CLOCK_SYNC_MAX_TUNE_ERROR							(int32_t)100
 #define CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS		(uint32_t)1000
 
@@ -113,6 +113,11 @@ public:
 	}
 
 	bool IsTimeToTune()
+	{
+		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS));
+	}	
+	
+	bool IsTimeToPreTune()
 	{
 		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS - CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS));
 	}
