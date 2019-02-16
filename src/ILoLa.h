@@ -8,6 +8,7 @@
 //#define USE_MOCK_PACKET_LOSS
 #define USE_TIME_SLOT
 #define USE_LATENCY_COMPENSATION
+#define USE_FREQUENCY_HOP
 
 #include <stdint.h>
 #include <Transceivers\LoLaReceiver.h>
@@ -16,6 +17,12 @@
 #ifdef DEBUG_LOLA
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS 10
 #endif
+
+//1000 Relaxed period.
+//100 Recommended period.
+//50 Minimum recommended period.
+#define LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS 100
+
 
 // 1000 Change TOTP every second, low chance of sync error.
 // 100 Agressive crypto denial.

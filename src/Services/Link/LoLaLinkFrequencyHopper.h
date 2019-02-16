@@ -1,30 +1,33 @@
-// LoLaFrequencyHopper.h
+// LoLaLinkFrequencyHopper.h
 
 #ifndef _LOLAFREQUENCYHOPPER_h
 #define _LOLAFREQUENCYHOPPER_h
 
 #include <Crypto\TinyCRC.h>
 #include <Services\ILoLaService.h>
+#include <ILoLa.h>
+#include <Crypto\ISeedSource.h>
 
-//Hop period should be a multiple of Send Slot Period.
-#define LOLA_FREQUENCY_HOPPER_HOP_PERIOD_MILLIS	(10*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS) //Max 256 ms of hop period.
+#define LOLA_LINK_FREQUENCY_HOPPER_WARMUP_MILLIS 10
 
-//#define LOLA_FREQUENCY_HOPPER_HOP_COUNT			200 //Max 256 hop count.
-
-class LoLaFrequencyHopper : public ILoLaService
+class LoLaLinkFrequencyHopper : public ILoLaService
 {
 private:
-	bool LinkCallbackSet = false;
-
-	//Compile time constants.
+	///Setup time constants.
 	uint8_t ChannelDefault = 0;
 	uint8_t ChannelMin = 0;
 	uint8_t ChannelMax = 0;
+	///
 
-	uint8_t HopPeriod = LOLA_FREQUENCY_HOPPER_HOP_PERIOD_MILLIS;
-
-	//Session constants.
+	///Session constants.
+	uint32_t HopPeriod = LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS;
 	uint8_t TokenCachedHash = 0;
+	bool IsWarmUpTime = false;
+	///
+
+	///Crypto Token generator.
+	ISeedSource* CryptoSeed = nullptr;
+	///
 
 	//Helpers
 	//uint8_t HopIndex = 0;
@@ -35,104 +38,120 @@ private:
 		uint32_t uint;
 	} HopSeed;
 
+	uint32_t HopIterator;
 
 public:
-	LoLaFrequencyHopper(Scheduler* scheduler, ILoLa* loLa)
+	LoLaLinkFrequencyHopper(Scheduler* scheduler, ILoLa* loLa)
 		: ILoLaService(scheduler, 0, loLa)
 	{
-		ChannelMin = lola->GetChannelMin();
-		ChannelMax = lola->GetChannelMax();
 
-		ChannelDefault = (ChannelMin + ChannelMax) / 2;
 	}
 
-	void OnLinkStatusUpdated(const uint8_t state)
+	bool SetCryptoSeedSource(ISeedSource* cryptoSeedSource)
 	{
-		if (!IsSetupOk())
-		{
-			return;
-		}
+		CryptoSeed = cryptoSeedSource;
 
-		if (state == LoLaLinkInfo::LinkStateEnum::Connected)
+		return CryptoSeed != nullptr;
+	}
+
+	void ResetChannel()
+	{
+		GetLoLa()->SetChannel(ChannelDefault);
+	}
+
+protected:
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("LoLaLinkFrequencyHopper"));
+	}
+#endif // DEBUG_LOLA
+
+	void OnLinkEstablished()
+	{
+		if (IsSetupOk())
 		{
+			TokenCachedHash = CryptoSeed->GetCurrentSeed();
 			Enable();
 		}
-		else
-		{
-			ResetChannel();
-			Disable();
-		}
 	}
+
+	void OnLinkLost()
+	{
+		ResetChannel();
+		TokenCachedHash = CryptoSeed->GetCurrentSeed();
+		Disable();
+	}
+
 
 	bool OnEnable()
 	{
-		SetNextRunASAP();
+		IsWarmUpTime = true;
+
 
 		return true;
 	}
 
-	bool SetLink(LoLaLinkService * linkService)
-	{
-		if (linkService != null)
-		{
-			FunctionSlot<uint8_t> funcSlot(OnLinkStatusUpdated);
-			linkService->AttachOnLinkStatusUpdated(funcSlot);
-		}
-		return LinkCallbackSet;
-	}
-
 	bool Callback()
 	{
-		GetLoLa()->SetChannel(GetHopChannel(MillisSync()));
+		if (IsWarmUpTime)
+		{
+			SetNextRunDelay(LOLA_LINK_FREQUENCY_HOPPER_WARMUP_MILLIS);
+			IsWarmUpTime = false;
+			return true;
+		}
+		else
+		{
+			GetLoLa()->SetChannel(GetHopChannel());
 
-		//Instead of relying purely on the scheduler, we adapt to any timming mis-sync on every hop.
-		SetNextRunDelay(GetNextSwitchOverDelay(MillisSync()));
+			//Try to sync the next run based on the synced clock.
+			SetNextRunDelay(GetNextSwitchOverDelay());
+		}
 
 		return true;
 	}
 
 	bool OnSetup()
 	{
+		ChannelMin = GetLoLa()->GetChannelMin();
+		ChannelMax = GetLoLa()->GetChannelMax();
+
+		ChannelDefault = (ChannelMin + ChannelMax) / 2;
+
 		return true;
 	}
 
 private:
-	void ResetChannel()
+	uint32_t GetNextSwitchOverDelay()
 	{
-		GetLoLa()->SetChannel(ChannelDefault);
-	}
-
-	uint8_t GetNextSwitchOverDelay(const uint32_t millisSync)
-	{
-		for (uint8_t i = 0; i < HopPeriod; i++)
+		HopIterator = 0;
+		while (HopIterator <= HopPeriod)
 		{
 			//We search backwards because for most of the time, the first iteration will return a result.
-			if ((millisSync + HopPeriod - i) % HopPeriod == 0)
+			if ((MillisSync() + HopPeriod - HopIterator) % HopPeriod == 0)
 			{
-				return HopPeriod - i;
+				return HopPeriod - HopIterator;
 			}
+			HopIterator++;
 		}
 
-		Serial.println("Error GetNextSwitchOverDelay");
-		ResetChannel();
-		Disable();
-
-		return 0;
+		//This should never happen.
+		return LOLA_LINK_FREQUENCY_HOPPER_WARMUP_MILLIS;
 	}
 
-	uint8_t GetHopChannel(const uint32_t millisSync)
+	uint8_t GetHopChannel()
 	{
-		HopSeed.uint = (millisSync / HopPeriod);
+		HopSeed.uint = (MillisSync() / HopPeriod);
 
-		//We can get the channel from a table, since we have an index.
+		//We could get the channel from a table, since we have an index.
 		//HopIndex = HopSeed.uint % HopCount;
 
-		//Ooooooor, we can use the synced seed as a common source for a pseudo-random distribution.
+		//But better yet, we can use the synced clock and crypto seed
+		// to generate a pseudo-random channel distribution.
 		Hasher.Reset(TokenCachedHash);
+		Hasher.Update(HopSeed.array, 4);
 
-		Hasher.Update32(HopSeed);
-
-		return map(Hasher.GetCurrent(), 0, UINT8_MAX, ChannelMin, ChannelMax);
+		return (Hasher.GetCurrent() % (ChannelMax + 1 - ChannelMin)) + ChannelMin;
 	}
 };
 #endif
