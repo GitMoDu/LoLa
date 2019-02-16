@@ -608,7 +608,7 @@ protected:
 		}
 		else
 		{
-			return 0;
+			return UINT32_MAX;
 		}
 	}
 
