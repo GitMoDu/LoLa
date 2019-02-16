@@ -121,30 +121,17 @@ protected:
 	virtual void SetBaseSeed() {}
 	virtual void OnClearSession() {};
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
-	virtual void OnAwaitingConnection() {}
-	virtual void OnChallenging() {}
+	virtual void OnAwaitingConnection() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
+	virtual void OnChallenging() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 	virtual void OnChallengeSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
-	virtual void OnClockSync() {}
-	virtual void OnInfoSync() {}
+	virtual void OnClockSync() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
+	virtual void OnInfoSync() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 	virtual void OnClockSyncSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 	virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 	virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
 	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 
 private:
-	inline bool TrySendPing(const uint32_t resendPeriod)
-	{
-		if (GetElapsedSinceLastSent() > resendPeriod)
-		{
-			PreparePing();
-			RequestSendPacket();
-
-			return true;
-		}
-
-		return false;
-	}
-
 	void OnLinking()
 	{
 		switch (LinkingState)
@@ -505,7 +492,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 				CryptoSeed.Reset();
-				SetNextRunDelay(LOLA_LINK_SERVICE_SLEEP_PERIOD);
+				//Sleep time is set on Host/Remote
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetBaseSeed();
@@ -568,10 +555,9 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
+			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_SLEEP)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-				SetNextRunASAP();
 			}
 			else
 			{
@@ -584,7 +570,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			if (!LinkInfo->HasSessionId() ||
 				!LinkInfo->HasPartnerMAC() ||
-				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_BEFORE_CONNECTING_CANCEL)
+				GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				SetNextRunASAP();
@@ -630,32 +616,39 @@ protected:
 
 	inline void OnKeepingConnectedInternal()
 	{
-		if (PingedPending)
+		if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT)
+		{
+			//Link timed out.
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
+		}
+		else if (PingedPending)
 		{
 			PreparePong();
 			RequestSendPacket();
-			SetNextRunASAP();
-		}
-		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_MAX_BEFORE_DISCONNECT)
+			//Serial.println(F("Responded with Pong!"));
+		} 
+		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
-			//Link time out check.
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
-			SetNextRunASAP();
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD)
+			{
+				PreparePing();
+				RequestSendPacket();
+				//Sent Panic Ping!
+				//Serial.println(F("Sent Panic Ping!"));
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			}
 		}
-		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PANIC)
+		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION &&
+			GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_SLOW_PERIOD)
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			TrySendPing(LOLA_LINK_SERVICE_PANIC);
+			PreparePing();
+			RequestSendPacket();
+			//Sent Intervention Ping!
+			//Serial.println(F("Sent Intervention Ping!"));
 		}
-		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION)
-		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			TrySendPing(LOLA_LINK_SERVICE_PERIOD_INTERVENTION);
-		}
-		//else if ()
-		//{
-		//TODO: Handle power balancer.
-		//}
 		else
 		{
 			OnKeepingConnected();

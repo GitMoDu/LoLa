@@ -152,11 +152,7 @@ protected:
 		switch (LinkingState)
 		{
 		case AwaitingLinkEnum::SearchingForHost:
-			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_MAX_ELAPSED_BEFORE_SLEEP)
-			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_REMOTE_SEARCH_PERIOD)
 			{
 				//Send an Hello to wake up potential hosts.
 				PrepareLinkDiscovery();
@@ -248,10 +244,6 @@ protected:
 				SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
 			}
 		}
-		//else if (false)
-		//{
-		//	//TODO: Link info update.
-		//}
 		else
 		{
 			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
@@ -276,7 +268,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 		}
 	}
 
@@ -309,8 +301,10 @@ protected:
 		switch (newState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			ClearSession();
+			break;
+		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
 			RemoteClockSyncTransaction.Reset();

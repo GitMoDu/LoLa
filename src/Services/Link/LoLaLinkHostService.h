@@ -153,7 +153,7 @@ protected:
 		switch (LinkingState)
 		{
 		case AwaitingLinkEnum::BroadcastingOpenSession:
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_BROADCAST_PERIOD)
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD)
 			{
 				PreparePacketBroadcast();
 				RequestSendPacket(true);
@@ -262,7 +262,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 		}
 	}
 
@@ -275,7 +275,7 @@ protected:
 		}
 		else
 		{
-			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
+			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 		}
 	}
 	///
@@ -426,8 +426,10 @@ protected:
 		switch (newState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			NewSession();
+			break;
+		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			HostChallengeTransaction.NewRequest();
