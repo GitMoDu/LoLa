@@ -311,12 +311,15 @@ public:
 	}
 
 public:
+	//Packet driver implementation.
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
 	virtual bool Setup() { return true; }
 	virtual bool AllowedSend(const bool overridePermission = false) { return true; }
 	virtual void OnStart() {}
 	virtual void OnStop() {}
 
+
+	//Device driver implementation.
 	virtual int16_t GetRSSIMax() const { return 0; }
 	virtual int16_t GetRSSIMin() const { return ILOLA_DEFAULT_MIN_RSSI; }
 	virtual uint8_t GetChannelMax() const { return 0; }
@@ -324,19 +327,19 @@ public:
 	virtual uint8_t GetTransmitPowerMax() const { return 0; }
 	virtual uint8_t GetTransmitPowerMin() const { return 0; }
 
+	//Device driver events.
 	virtual void OnWakeUpTimer() {}
+	virtual void OnBatteryAlarm() {}
 	virtual void OnReceiveBegin(const uint8_t length, const  int16_t rssi) {}
 	virtual void OnReceivedFail(const int16_t rssi) {}
 	virtual void OnReceived() {}
 	virtual void OnSentOk() {}
 	virtual void OnIncoming(const int16_t rssi) {}
 
-
+	//Device driver overloads.
 	virtual void OnChannelUpdated() {}
 	virtual void OnTransmitPowerUpdated() {}
-
-	virtual void OnBatteryAlarm() {}
-
+	
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
 	{
