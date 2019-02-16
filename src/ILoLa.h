@@ -222,19 +222,9 @@ public:
 			0, UINT8_MAX);
 	}
 
-	uint32_t GetTimeStamp()
+	uint32_t GetSyncMillis()
 	{
-		return SyncedClock.GetMicros();
-	}
-
-	uint32_t GetMillis()
-	{
-		return millis();
-	}
-
-	uint32_t GetMillisSync()
-	{
-		return SyncedClock.GetMillis();
+		return SyncedClock.GetSyncMillis();
 	}
 
 	uint32_t GetReceivedCount()

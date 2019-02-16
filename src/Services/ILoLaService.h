@@ -207,19 +207,9 @@ protected:
 		return LoLa->SendPacket(outgoingPacket);
 	}
 
-	uint32_t Millis()
-	{
-		return LoLa->GetMillis();
-	}
-
 	uint32_t MillisSync()
 	{
-		return LoLa->GetMillisSync();
-	}
-
-	uint32_t Micros()
-	{
-		return LoLa->GetTimeStamp();
+		return LoLa->GetSyncMillis();
 	}
 };
 #endif

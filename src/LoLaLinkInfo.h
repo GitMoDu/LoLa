@@ -201,7 +201,7 @@ public:
 	{
 		if (HasLink() && LinkStarted != ILOLA_INVALID_MILLIS)
 		{
-			return Driver->GetMillisSync() - LinkStarted;
+			return Driver->GetSyncMillis() - LinkStarted;
 		}
 		else
 		{
@@ -213,7 +213,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			LinkStarted = Driver->GetMillisSync();
+			LinkStarted = Driver->GetSyncMillis();
 			Driver->SetLinkStatus(true);
 		}
 	}
@@ -258,11 +258,11 @@ public:
 		{
 			if (Driver->GetLastSentMillis() >= Driver->GetLastValidReceivedMillis())
 			{
-				return Driver->GetMillis() - Driver->GetLastSentMillis();
+				return millis() - Driver->GetLastSentMillis();
 			}
 			else
 			{
-				return Driver->GetMillis() - Driver->GetLastValidReceivedMillis();
+				return millis() - Driver->GetLastValidReceivedMillis();
 			}
 		}
 		return ILOLA_INVALID_MILLIS;
@@ -272,7 +272,7 @@ public:
 	{
 		if (Driver != nullptr && Driver->GetLastSentMillis() != ILOLA_INVALID_MILLIS)
 		{
-			return Driver->GetMillis() - Driver->GetLastSentMillis();
+			return millis() - Driver->GetLastSentMillis();
 		}
 		return ILOLA_INVALID_MILLIS;
 	}
@@ -281,7 +281,7 @@ public:
 	{
 		if (Driver != nullptr && Driver->GetLastValidReceivedMillis() != ILOLA_INVALID_MILLIS)
 		{
-			return Driver->GetMillis() - Driver->GetLastValidReceivedMillis();
+			return millis() - Driver->GetLastValidReceivedMillis();
 		}
 		return ILOLA_INVALID_MILLIS;
 	}

@@ -74,7 +74,7 @@ public:
 	{
 		if (SyncedClock != nullptr)
 		{
-			return SyncedClock->GetMillisSynced(sourceMillis);
+			return SyncedClock->GetSyncMillis(sourceMillis);
 		}
 
 		return 0;

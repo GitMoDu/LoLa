@@ -31,7 +31,7 @@ private:
 private:
 	inline uint32_t GetTOTP(const int8_t offsetMillis)
 	{
-		TOTPIndex = SyncedClock->GetMillis() + offsetMillis;
+		TOTPIndex = SyncedClock->GetSyncMillis() + offsetMillis;
 		TOTPIndex ^= TOTPSeed;
 
 		TOTPIndex /= TOTPPeriod;

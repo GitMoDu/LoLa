@@ -39,19 +39,14 @@ public:
 		Offset = Offset + offset;
 	}
 
-	uint32_t GetMillisSynced(const uint32_t sourceMillis)
+	uint32_t GetSyncMillis(const uint32_t sourceMillis)
 	{
 		return sourceMillis + Offset;
 	}
 
-	uint32_t GetMillis()
+	uint32_t GetSyncMillis()
 	{
 		return millis() + Offset;
-	}
-
-	uint32_t GetMicros()
-	{
-		return GetMillis()*1000L + micros();
 	}
 
 	uint32_t GetLastSyncElapsedMillis()

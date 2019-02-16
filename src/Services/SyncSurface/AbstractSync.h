@@ -166,7 +166,7 @@ protected:
 	{
 		if (StateStartTime != ILOLA_INVALID_MILLIS)
 		{
-			return Millis() - StateStartTime;
+			return millis() - StateStartTime;
 		}
 		else
 		{
@@ -187,7 +187,7 @@ protected:
 		}
 		else
 		{
-			return Millis() - LastSent;
+			return millis() - LastSent;
 		}
 	}
 
@@ -195,7 +195,7 @@ protected:
 	{
 		if (SyncState != newState)
 		{
-			StateStartTime = Millis();
+			StateStartTime = millis();
 			ResetLastSentTimeStamp();
 			SetNextRunASAP();
 

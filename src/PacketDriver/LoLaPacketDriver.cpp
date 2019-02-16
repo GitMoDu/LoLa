@@ -23,7 +23,7 @@ void LoLaPacketDriver::OnWakeUpTimer()
 //When RF detects incoming packet.
 void LoLaPacketDriver::OnIncoming(const int16_t rssi)
 {
-	LastReceived = GetMillis();
+	LastReceived = millis();
 	LastReceivedRssi = rssi;
 	IncomingInfo.SetInfo(LastReceived, LastReceivedRssi);
 }
@@ -33,7 +33,7 @@ void LoLaPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t rssi)
 {
 	if (!IncomingInfo.HasInfo())
 	{
-		IncomingInfo.SetInfo(GetMillis(), rssi);
+		IncomingInfo.SetInfo(millis(), rssi);
 	}
 	Receiver.SetBufferSize(length);
 }
@@ -48,7 +48,7 @@ void LoLaPacketDriver::OnReceived()
 {
 	if (!IncomingInfo.HasInfo())
 	{
-		IncomingInfo.SetInfo(GetMillis(), LastReceivedRssi);
+		IncomingInfo.SetInfo(millis(), LastReceivedRssi);
 	}
 
 	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
@@ -103,7 +103,7 @@ void LoLaPacketDriver::OnReceived()
 #endif
 					if (Transmit())
 					{
-						LastSent = GetMillis();
+						LastSent = millis();
 						TransmitedCount++;
 					}
 					else
@@ -143,7 +143,7 @@ bool LoLaPacketDriver::HotAfterSend()
 {
 	if (LastSent != ILOLA_INVALID_MILLIS)
 	{
-		return GetMillis() - LastSent < LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS;
+		return millis() - LastSent < LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS;
 	}
 	return false;
 }
@@ -152,7 +152,7 @@ bool LoLaPacketDriver::HotAfterReceive()
 {
 	if (LastValidReceived != ILOLA_INVALID_MILLIS)
 	{
-		return GetMillis() - LastValidReceived < LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS;
+		return millis() - LastValidReceived < LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS;
 	}
 	return false;
 }
@@ -160,9 +160,9 @@ bool LoLaPacketDriver::HotAfterReceive()
 bool LoLaPacketDriver::IsInSendSlot()
 {
 #ifdef USE_LATENCY_COMPENSATION
-	SendSlotElapsed = (GetMillisSync() - (uint32_t)ETTM) % DuplexPeriodMillis;
+	SendSlotElapsed = (GetSyncMillis() - (uint32_t)ETTM) % DuplexPeriodMillis;
 #else
-	SendSlotElapsed = GetMillisSync() % DuplexPeriodMillis;
+	SendSlotElapsed = GetSyncMillis() % DuplexPeriodMillis;
 #endif	
 
 	//Even spread of true and false across the DuplexPeriod
@@ -227,7 +227,7 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 			}
 			else if(Transmit())
 			{
-				LastSent = GetMillis();
+				LastSent = millis();
 				TransmitedCount++;
 
 				return true;
@@ -235,7 +235,7 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 #else
 			if (Transmit())
 			{
-				LastSent = GetMillis();
+				LastSent = millis();
 				TransmitedCount++;
 
 				return true;

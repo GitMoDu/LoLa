@@ -58,7 +58,7 @@ public:
 			//When we're not connected, ramp up power.
 			SetMaxPower();
 		}
-		else if (LoLa->GetMillis() - LoLa->GetLastValidReceivedMillis() > RADIO_POWER_BALANCER_MAX_ELAPSED_BEFORE_BOOST)
+		else if (millis() - LoLa->GetLastValidReceivedMillis() > RADIO_POWER_BALANCER_MAX_ELAPSED_BEFORE_BOOST)
 		{
 			//In case of possibly failing communications, ramp up power.
 			SetMaxPower();

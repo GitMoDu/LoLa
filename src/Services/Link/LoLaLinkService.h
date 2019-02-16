@@ -231,7 +231,7 @@ public:
 protected:
 	void OnSendOk(const uint8_t header, const uint32_t sendDuration)
 	{
-		LastSent = Millis();
+		LastSent = millis();
 
 		if (PingedPending && header == LinkDefinition.GetHeader() &&
 			PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_PONG)
@@ -248,7 +248,7 @@ protected:
 
 	void ResetStateStartTime()
 	{
-		StateStartTime = Millis();
+		StateStartTime = millis();
 	}
 
 	uint32_t GetElapsedSinceStateStart()
@@ -259,7 +259,7 @@ protected:
 		}
 		else
 		{
-			return Millis() - StateStartTime;
+			return millis() - StateStartTime;
 		}
 	}
 
@@ -271,7 +271,7 @@ protected:
 		}
 		else
 		{
-			return Millis() - LastSent;
+			return millis() - LastSent;
 		}
 	}
 
@@ -301,7 +301,7 @@ protected:
 
 	void TimeStampLastSent()
 	{
-		LastSent = Millis();
+		LastSent = millis();
 	}
 
 #ifdef DEBUG_LOLA
@@ -596,7 +596,7 @@ protected:
 	{
 		if (GetLoLa()->GetLastValidReceivedMillis() != ILOLA_INVALID_MILLIS)
 		{
-			return Millis() - GetLoLa()->GetLastValidReceivedMillis();
+			return millis() - GetLoLa()->GetLastValidReceivedMillis();
 		}
 		else
 		{
@@ -608,7 +608,7 @@ protected:
 	{
 		if (GetLoLa()->GetLastSentMillis() != ILOLA_INVALID_MILLIS)
 		{
-			return Millis() - GetLoLa()->GetLastSentMillis();
+			return millis() - GetLoLa()->GetLastSentMillis();
 		}
 		else
 		{

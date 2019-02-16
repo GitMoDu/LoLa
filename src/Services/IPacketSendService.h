@@ -94,7 +94,7 @@ public:
 			break;
 		case SendStatusEnum::SendingPacket:
 			if (SendStartMillis == ILOLA_INVALID_MILLIS ||
-				((Millis() - SendStartMillis) > SendTimeOutDuration))
+				((millis() - SendStartMillis) > SendTimeOutDuration))
 			{				
 				OnSendTimedOut();
 #ifdef DEBUG_PACKET_SERVICE
@@ -141,7 +141,7 @@ public:
 			}
 			break;
 		case SendStatusEnum::SentOk:
-			OnSendOk(Packet->GetDataHeader(), Millis() - SendStartMillis);
+			OnSendOk(Packet->GetDataHeader(), millis() - SendStartMillis);
 #ifdef DEBUG_PACKET_SERVICE
 			Serial.print(F("OnSendOk:"));
 			if (Packet != nullptr && Packet->GetDefinition() != nullptr)
@@ -211,7 +211,7 @@ protected:
 	{
 		if (HasSendPendingInternal())
 		{
-			SendStartMillis = Millis();
+			SendStartMillis = millis();
 			SendTimeOutDuration = sendTimeOutDurationMillis;
 			AckTimeOutDuration = ackReplyTimeOutDurationMillis;
 			OverrideSendPermission = overrideSendPermission;
