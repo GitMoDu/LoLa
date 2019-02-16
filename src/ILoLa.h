@@ -269,7 +269,7 @@ public:
 
 	uint32_t GetLastValidReceivedMillis()
 	{
-		return  LastValidReceived;
+		return LastValidReceived;
 	}
 
 	int16_t GetLastValidRSSI()
