@@ -447,11 +447,11 @@ protected:
 			serial->print((float)(GetLoLa()->GetRejectedCount() * 100) / (float)GetLoLa()->GetReceivedCount(), 2);
 			serial->println(F(" %)"));
 		}
-		else if(GetLoLa()->GetRejectedCount()> 0)
+		else if (GetLoLa()->GetRejectedCount() > 0)
 		{
 			serial->println(F("100 %)"));
 		}
-		else 
+		else
 		{
 			serial->println(F("0 %)"));
 		}
@@ -539,7 +539,7 @@ protected:
 				Serial.println(F(" ms"));
 #endif
 				Serial.print(F("Sync TimeStamp: "));
-				Serial.println(ClockSyncerPointer->GetMillisSync());
+				Serial.println(MillisSync());
 				Serial.println();
 #endif
 
