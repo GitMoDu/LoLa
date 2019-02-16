@@ -35,6 +35,7 @@ private:
 
 	LoLaServicesManager * ServicesManager = nullptr;
 
+	//Sub-services.
 	LoLaLinkPowerBalancer PowerBalancer;
 
 #ifdef DEBUG_LOLA
@@ -424,8 +425,20 @@ protected:
 		serial->print(F("Rejected: "));
 		serial->print(GetLoLa()->GetRejectedCount());
 		serial->print(F(" ("));
-		serial->print((float)(GetLoLa()->GetRejectedCount() * 100) / (float)GetLoLa()->GetReceivedCount(), 2);
-		serial->println(F(" %)"));
+		if (GetLoLa()->GetReceivedCount() > 0)
+		{
+			serial->print((float)(GetLoLa()->GetRejectedCount() * 100) / (float)GetLoLa()->GetReceivedCount(), 2);
+			serial->println(F(" %)"));
+		}
+		else if(GetLoLa()->GetRejectedCount()> 0)
+		{
+			serial->println(F("100 %)"));
+		}
+		else 
+		{
+			serial->println(F("0 %)"));
+		}
+
 		serial->print(F("ClockSync adjustments: "));
 		serial->println(LinkInfo->GetClockSyncAdjustments());
 		serial->println();
@@ -629,12 +642,12 @@ protected:
 		{
 			if (LastDebugged == ILOLA_INVALID_MILLIS)
 			{
-				LastDebugged = millis();
+				LastDebugged = MillisSync();
 			}
-			else if (millis() - LastDebugged > (LOLA_LINK_DEBUG_UPDATE_SECONDS * 1000))
+			else if (MillisSync() - LastDebugged > (LOLA_LINK_DEBUG_UPDATE_SECONDS * 1000))
 			{
 				DebugLinkStatistics(&Serial);
-				LastDebugged = millis();
+				LastDebugged = MillisSync();
 			}
 		}
 #endif

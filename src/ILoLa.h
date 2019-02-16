@@ -14,7 +14,7 @@
 #include <Transceivers\LoLaSender.h>
 
 #ifdef DEBUG_LOLA
-#define LOLA_LINK_DEBUG_UPDATE_SECONDS 60
+#define LOLA_LINK_DEBUG_UPDATE_SECONDS 10
 #endif
 
 // 1000 Change TOTP every second, low chance of sync error.
