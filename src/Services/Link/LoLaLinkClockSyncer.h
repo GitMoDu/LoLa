@@ -195,13 +195,13 @@ public:
 class LinkHostClockSyncer : public LoLaLinkClockSyncer
 {
 private:
-	uint32_t LastEstimation = 0;
+	uint32_t LastEstimation = ILOLA_INVALID_MILLIS;
 	int32_t LastError = INT32_MAX;
 
 protected:
 	void OnReset()
 	{
-		LastEstimation = 0;
+		LastEstimation = ILOLA_INVALID_MILLIS;
 		LastError = UINT32_MAX;
 
 		SetRandom();
@@ -221,7 +221,7 @@ public:
 	bool IsTimeToTune()
 	{
 		return IsSynced() && LastSynced != ILOLA_INVALID_MILLIS &&
-			(LastEstimation == 0 ||
+			(LastEstimation == ILOLA_INVALID_MILLIS ||
 			(millis() - LastEstimation) > CLOCK_SYNC_TUNE_ELAPSED_MILLIS);
 	}
 
