@@ -481,6 +481,8 @@ protected:
 				SetNextRunDefault();
 #ifdef USE_FREQUENCY_HOP
 				FrequencyHopper.ResetChannel();
+#else
+				GetLoLa()->SetChannel(0);
 #endif
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
