@@ -214,7 +214,7 @@ protected:
 
 	uint32_t MillisSync()
 	{
-		return LoLa->GetMillis();
+		return LoLa->GetMillisSync();
 	}
 
 	uint32_t Micros()
