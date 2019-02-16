@@ -29,11 +29,15 @@ private:
 	//Latency measurement.
 	LoLaLinkLatencyMeter LatencyMeter;
 
+	//Session timing.
+	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
+
 private:
 	void NewSession()
 	{
 		ClearSession();
 		LinkInfo->SetSessionId((uint8_t)random(1, (UINT8_MAX - 1)));
+		SessionLastStarted = millis();
 	}
 
 public:
@@ -153,6 +157,11 @@ protected:
 		switch (LinkingState)
 		{
 		case AwaitingLinkEnum::BroadcastingOpenSession:
+			if (SessionLastStarted == ILOLA_INVALID_MILLIS || millis() - SessionLastStarted > LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME)
+			{
+				NewSession();
+			}
+
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD)
 			{
 				PreparePacketBroadcast();
@@ -283,7 +292,7 @@ protected:
 	///Challenge. Possibly CPU intensive task.
 	void OnChallenging()
 	{
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINK_RESEND_PERIOD)
+		if (HostChallengeTransaction.IsStale())
 		{
 			HostChallengeTransaction.NewRequest();
 		}
@@ -445,6 +454,7 @@ protected:
 	void OnClearSession()
 	{
 		LatencyMeter.Reset();
+		SessionLastStarted = ILOLA_INVALID_MILLIS;
 	}
 
 	void OnPreSend()

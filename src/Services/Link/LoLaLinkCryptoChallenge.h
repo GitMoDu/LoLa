@@ -43,6 +43,8 @@ private:
 		Complete = 2
 	};
 
+	uint32_t RequestCreatedMillis = ILOLA_INVALID_MILLIS;
+
 private:
 	bool IsCryptoTokenReplyAccepted(const uint32_t tokenReply)
 	{
@@ -54,6 +56,13 @@ public:
 	bool IsComplete()
 	{
 		return TransactionState == TransactionStage::Complete;
+	}
+
+	bool IsStale()
+	{
+		return TransactionState == TransactionStage::WaitingForReply &&
+			RequestCreatedMillis != ILOLA_INVALID_MILLIS &&
+			millis() - RequestCreatedMillis > LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME;
 	}
 
 	void NewRequest()
