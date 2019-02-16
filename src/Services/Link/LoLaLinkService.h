@@ -689,11 +689,17 @@ protected:
 			{
 				//To both.
 			case LOLA_LINK_SUBHEADER_PING:
-				PingedPending = true;
-				SetNextRunASAP();
+				if (LinkInfo->HasLink())
+				{
+					PingedPending = true;
+					SetNextRunASAP();
+				}			
 				break;
 			case LOLA_LINK_SUBHEADER_PONG:
-				SetNextRunASAP();
+				if (LinkInfo->HasLink())
+				{
+					SetNextRunASAP();
+				}
 				break;
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_UPDATE:
 				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
