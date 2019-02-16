@@ -131,20 +131,22 @@ void LoLaSi446xPacketDriver::OnReceivedFail(const int16_t rssi)
 
 void LoLaSi446xPacketDriver::OnChannelUpdated()
 {
-	//TODO: Replace with FIFO preserving channel change.
+#ifndef MOCK_RADIO
 	Si446x_RX(CurrentChannel);
+#endif
 }
 
 void LoLaSi446xPacketDriver::OnTransmitPowerUpdated()
 {
+#ifndef MOCK_RADIO
 	Si446x_setTxPower(CurrentTransmitPower);
+#endif
 }
 
 void LoLaSi446xPacketDriver::OnStart()
 {
-#ifndef MOCK_RADIO
 	InterruptStatus = UNINITIALIZED_INTERRUPT;
-	Si446x_SERVICE();
+#ifndef MOCK_RADIO
 	Si446x_RX(CurrentChannel);
 #endif
 }
