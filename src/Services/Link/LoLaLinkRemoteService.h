@@ -218,6 +218,19 @@ protected:
 		}
 	}
 
+	bool OnOpportunisticSend()
+	{
+		if (!RemoteClockSyncTransaction.IsRequested() && ClockSyncer.IsTimeToTune())
+		{
+			RemoteClockSyncTransaction.Reset();
+			RemoteClockSyncTransaction.SetRequested();
+			PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
+			return true;
+		}
+
+		return false;
+	}
+
 	void OnKeepingConnected()
 	{
 		if (RemoteClockSyncTransaction.IsResultWaiting())
