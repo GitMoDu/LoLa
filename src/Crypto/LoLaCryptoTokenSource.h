@@ -91,5 +91,7 @@ public:
 			return CachedSeed;
 		}
 	}
+
+	uint32_t GetCurrentSeed() { return CachedSeed; }
 };
 #endif
