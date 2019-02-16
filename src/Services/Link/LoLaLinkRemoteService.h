@@ -239,8 +239,8 @@ protected:
 			if (!RemoteClockSyncTransaction.IsRequested())
 			{
 				RemoteClockSyncTransaction.Reset();
-				PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
 				RemoteClockSyncTransaction.SetRequested();
+				PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
 				RequestSendPacket();
 			}
 			else
