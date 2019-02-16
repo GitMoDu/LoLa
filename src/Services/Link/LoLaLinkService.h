@@ -132,13 +132,17 @@ protected:
 	virtual void OnKeepingConnected() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 
 private:
-	inline void TrySendPing(const uint32_t resendPeriod)
+	inline bool TrySendPing(const uint32_t resendPeriod)
 	{
 		if (GetElapsedSinceLastSent() > resendPeriod)
 		{
 			PreparePing();
 			RequestSendPacket();
+
+			return true;
 		}
+
+		return false;
 	}
 
 	void OnLinking()
