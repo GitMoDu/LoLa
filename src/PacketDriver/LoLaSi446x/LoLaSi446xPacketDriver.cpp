@@ -87,14 +87,9 @@ bool LoLaSi446xPacketDriver::Transmit()
 	delayMicroseconds(500);
 	return true;
 #else
-	bool Result = false;
-	if (Sender.GetBufferSize() > 0)
-	{
+	return Sender.GetBufferSize() > 0 && 
 		//On success(has begun transmitting).
-		Result = Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX);
-	}
-
-	return Result;
+		Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX);
 #endif
 }
 
