@@ -70,15 +70,6 @@ public:
 		LastSynced = millis();
 	}
 
-	uint32_t GetMillisSync()
-	{
-		if (SyncedClock != nullptr)
-		{
-			return SyncedClock->GetMillis();
-		}
-		return 0;
-	}
-
 	uint32_t GetMillisSynced(const uint32_t sourceMillis)
 	{
 		if (SyncedClock != nullptr)

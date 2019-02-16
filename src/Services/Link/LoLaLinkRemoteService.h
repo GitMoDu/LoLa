@@ -327,7 +327,7 @@ protected:
 				PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST))
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
-			ATUI_S.uint = ClockSyncer.GetMillisSync();
+			ATUI_S.uint = MillisSync();
 			ArrayToPayload();
 		}
 	}
