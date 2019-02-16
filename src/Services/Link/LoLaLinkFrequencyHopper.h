@@ -63,7 +63,7 @@ protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("LoLaLinkFrequencyHopper"));
+		serial->print(F("LinkFrequencyHopper"));
 	}
 #endif // DEBUG_LOLA
 
