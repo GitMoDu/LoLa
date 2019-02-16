@@ -21,6 +21,10 @@
 
 #include <Services\Link\LoLaLinkPowerBalancer.h>
 
+#ifdef USE_FREQUENCY_HOP
+#include <Services\Link\LoLaLinkFrequencyHopper.h>
+#endif
+
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
 #endif
@@ -38,6 +42,10 @@ private:
 	//Sub-services.
 	LoLaLinkPowerBalancer PowerBalancer;
 
+#ifdef USE_FREQUENCY_HOP
+	LoLaLinkFrequencyHopper FrequencyHopper;
+#endif
+	
 #ifdef DEBUG_LOLA
 	uint32_t LastDebugged = ILOLA_INVALID_MILLIS;
 #endif
@@ -193,6 +201,9 @@ private:
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, loLa, &PacketHolder)
+#ifdef USE_FREQUENCY_HOP
+		, FrequencyHopper(scheduler, loLa)
+#endif
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
@@ -203,12 +214,15 @@ public:
 	{
 		ServicesManager = servicesManager;
 
-		if (ServicesManager == nullptr)
+#ifdef USE_FREQUENCY_HOP
+		if (ServicesManager != nullptr)
 		{
-			return false;
+			return ServicesManager->Add(&FrequencyHopper);
 		}
-
+		return false;
+#else
 		return true;
+#endif
 	}
 
 	bool OnEnable()
@@ -375,6 +389,9 @@ protected:
 
 				LinkInfo->SetLocalMAC(MacManager.GetMACPointer());
 				GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
+#ifdef USE_FREQUENCY_HOP
+				FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
+#endif
 
 				ClearSession();
 
@@ -472,6 +489,9 @@ protected:
 				ClearSession();
 				CryptoSeed.Reset();
 				SetNextRunDefault();
+#ifdef USE_FREQUENCY_HOP
+				FrequencyHopper.ResetChannel();
+#endif
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				CryptoSeed.Reset();
