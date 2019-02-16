@@ -79,6 +79,15 @@ void LoLaPacketDriver::OnReceived()
 		//Is packet
 		else
 		{
+#ifdef USE_MOCK_PACKET_LOSS
+			if (!GetLossChance())
+			{
+#ifdef DEBUG_LOLA
+				Serial.println("Packet Lost, Oh noes!");
+#endif
+				return;
+			}
+#endif
 			if (Receiver.GetIncomingDefinition()->HasACK())
 			{
 				if (Sender.SendAck(Receiver.GetIncomingDefinition(), Receiver.GetIncomingPacket()->GetId()))
@@ -105,15 +114,6 @@ void LoLaPacketDriver::OnReceived()
 				}
 			}
 
-#ifdef USE_MOCK_PACKET_LOSS
-			if (!GetLossChance())
-			{
-#ifdef DEBUG_LOLA
-				Serial.println("Packet Lost, Oh noes!");
-#endif
-				return;
-			}
-#endif
 			//Handle packet.
 			Services.ProcessPacket(Receiver.GetIncomingPacket());
 		}
