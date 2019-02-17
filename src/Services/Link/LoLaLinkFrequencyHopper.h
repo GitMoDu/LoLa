@@ -57,6 +57,7 @@ public:
 	void ResetChannel()
 	{
 		GetLoLa()->SetChannel(ChannelDefault);
+		GetLoLa()->OnStart();
 	}
 
 protected:
