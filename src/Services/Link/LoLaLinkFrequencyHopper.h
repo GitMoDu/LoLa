@@ -83,12 +83,9 @@ protected:
 		Disable();
 	}
 
-
 	bool OnEnable()
 	{
 		IsWarmUpTime = true;
-
-
 		return true;
 	}
 
@@ -136,7 +133,7 @@ private:
 		}
 
 		//This should never happen.
-		return LOLA_LINK_FREQUENCY_HOPPER_WARMUP_MILLIS;
+		return HopIterator;
 	}
 
 	uint8_t GetHopChannel()
