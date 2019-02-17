@@ -172,6 +172,7 @@ bool LoLaPacketDriver::HotAfterReceive()
 	return false;
 }
 
+#ifdef USE_TIME_SLOT
 bool LoLaPacketDriver::IsInSendSlot()
 {
 #ifdef USE_LATENCY_COMPENSATION
@@ -198,6 +199,7 @@ bool LoLaPacketDriver::IsInSendSlot()
 
 	return false;
 }
+#endif
 
 bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 {

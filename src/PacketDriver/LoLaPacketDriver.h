@@ -90,7 +90,9 @@ private:
 	inline bool HotAfterSend();
 	inline bool HotAfterReceive();
 
+#ifdef USE_TIME_SLOT
 	inline bool IsInSendSlot();
+#endif
 
 };
 #endif
