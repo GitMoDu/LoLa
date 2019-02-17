@@ -48,7 +48,9 @@ public:
 		ClockSyncTransaction = &HostClockSyncTransaction;
 		ChallengeTransaction = &HostChallengeTransaction;
 		InfoTransaction = &HostInfoTransaction;
+#ifdef USE_TIME_SLOT
 		loLa->SetDuplexSlot(false);
+#endif
 	}
 protected:
 
@@ -216,7 +218,7 @@ protected:
 
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked)
+		if (LinkInfo->HasLink())
 		{
 			HostClockSyncTransaction.SetResult(requestId,
 				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));

@@ -31,7 +31,9 @@ public:
 		ClockSyncTransaction = &RemoteClockSyncTransaction;
 		ChallengeTransaction = &RemoteChallengeTransaction;
 		InfoTransaction = &RemoteInfoTransaction;
+#ifdef USE_TIME_SLOT
 		loLa->SetDuplexSlot(true);
+#endif
 	}
 
 protected:
@@ -45,7 +47,7 @@ protected:
 	//Remote version, ParnerMAC is the Host's MAC.
 	void SetBaseSeed()
 	{
-		CryptoSeed.SetBaseSeed(LinkInfo->GetPartnerMAC(), LinkInfo->GetLocalMAC(), LOLA_LINK_INFO_MAC_LENGTH,  LinkInfo->GetSessionId());
+		CryptoSeed.SetBaseSeed(LinkInfo->GetPartnerMAC(), LinkInfo->GetLocalMAC(), LOLA_LINK_INFO_MAC_LENGTH, LinkInfo->GetSessionId());
 	}
 
 	void OnBroadcastReceived(const uint8_t sessionId, uint8_t * hostMAC)
@@ -77,7 +79,7 @@ protected:
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::GotHost &&
 			LinkInfo->HasSessionId() &&
-			LinkInfo->HasPartnerMAC() && 
+			LinkInfo->HasPartnerMAC() &&
 			MacManager.Match(localMAC))
 		{
 			SetLinkingState(AwaitingLinkEnum::AcknowledgingHost);
@@ -125,7 +127,7 @@ protected:
 					SetLinkingState(LinkingStagesEnum::InfoSyncStage);
 				}
 				break;
-			case LinkingStagesEnum::InfoSyncStage:				
+			case LinkingStagesEnum::InfoSyncStage:
 				if (subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE)
 				{
 					RemoteInfoTransaction.OnAdvanceRequestReceived(requestId);
