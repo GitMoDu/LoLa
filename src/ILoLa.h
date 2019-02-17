@@ -18,10 +18,10 @@
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS 10
 #endif
 
-//1000 Relaxed period.
-//100 Recommended period.
-//50 Minimum recommended period.
-#define LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS 100
+// 1000 Relaxed period.
+// 500 Recommended period.
+// 50 Minimum recommended period.
+#define LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS 500
 
 
 // 1000 Change TOTP every second, low chance of sync error.
@@ -91,8 +91,9 @@ protected:
 	///
 
 	///Status
-#ifdef USE_TIME_SLOT
 	bool LinkActive = false;
+
+#ifdef USE_TIME_SLOT
 	bool EvenSlot = false;
 	//Helper.
 	uint32_t SendSlotElapsed;
@@ -155,7 +156,7 @@ public:
 #ifdef USE_MOCK_PACKET_LOSS
 	bool GetLossChance()
 	{
-		if (LinkIndicator->HasLink())
+		if (LinkActive)
 		{
 			return random(100) + 1 >= MOCK_PACKET_LOSS_LINKED;
 		}
