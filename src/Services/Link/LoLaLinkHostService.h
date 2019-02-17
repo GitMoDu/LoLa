@@ -247,10 +247,6 @@ protected:
 			HostClockSyncTransaction.Reset();
 			RequestSendPacket();
 		}
-		//else if (false)
-		//{
-		//	//TODO: Link info update.
-		//}
 		else
 		{
 			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
