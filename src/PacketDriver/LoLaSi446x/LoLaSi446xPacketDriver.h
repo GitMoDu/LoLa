@@ -47,9 +47,6 @@ private:
 public:
 	LoLaSi446xPacketDriver(Scheduler* scheduler);
 	bool Setup();
-	bool DisableInterrupts();
-
-	void EnableInterrupts();
 
 	void OnReceiveBegin(const uint8_t length, const int16_t rssi);
 

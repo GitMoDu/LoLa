@@ -3,11 +3,9 @@
 
 #include <PacketDriver\LoLaSi446x\LoLaSi446xPacketDriver.h>
 
-#define UNINITIALIZED_INTERRUPT 0XFF
 
 //Static handlers for interrupts.
 LoLaSi446xPacketDriver* StaticSi446LoLa = nullptr;
-volatile uint8_t InterruptStatus = UNINITIALIZED_INTERRUPT;
 volatile bool Receiving = false;
 
 void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
@@ -50,37 +48,6 @@ LoLaSi446xPacketDriver::LoLaSi446xPacketDriver(Scheduler* scheduler)
 	StaticSi446LoLa = this;
 }
 
-bool LoLaSi446xPacketDriver::DisableInterrupts()
-{
-	if (!Receiving)
-	{
-#ifndef MOCK_RADIO
-		InterruptStatus = Si446x_irq_off();
-#endif
-		return true;
-	}
-
-	return false;
-}
-
-void LoLaSi446xPacketDriver::DisableInterruptsInternal()
-{
-#ifndef MOCK_RADIO
-	InterruptStatus = Si446x_irq_off();
-#endif
-}
-
-void LoLaSi446xPacketDriver::EnableInterrupts()
-{
-#ifndef MOCK_RADIO
-	if (InterruptStatus != UNINITIALIZED_INTERRUPT)
-	{
-		Si446x_irq_on(InterruptStatus);
-	}
-	InterruptStatus = UNINITIALIZED_INTERRUPT;
-#endif
-}
-
 bool LoLaSi446xPacketDriver::Transmit()
 {
 #ifdef MOCK_RADIO
@@ -106,9 +73,6 @@ void LoLaSi446xPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t 
 {
 	LoLaPacketDriver::OnReceiveBegin(length, rssi);
 
-	//Disable Si interrupts until we have processed the received packet.
-	DisableInterruptsInternal();
-
 	OnReceived();
 }
 
@@ -120,13 +84,6 @@ void LoLaSi446xPacketDriver::OnReceived()
 #endif
 
 	LoLaPacketDriver::OnReceived();
-	EnableInterrupts();
-}
-
-void LoLaSi446xPacketDriver::OnReceivedFail(const int16_t rssi)
-{
-	LoLaPacketDriver::OnReceivedFail(rssi);
-	EnableInterrupts();
 }
 
 void LoLaSi446xPacketDriver::OnChannelUpdated()
@@ -145,7 +102,6 @@ void LoLaSi446xPacketDriver::OnTransmitPowerUpdated()
 
 void LoLaSi446xPacketDriver::OnStart()
 {
-	InterruptStatus = UNINITIALIZED_INTERRUPT;
 #ifndef MOCK_RADIO
 	Si446x_RX(CurrentChannel);
 #endif
