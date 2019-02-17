@@ -184,14 +184,16 @@ bool LoLaPacketDriver::IsInSendSlot()
 	//Even spread of true and false across the DuplexPeriod
 	if (EvenSlot)
 	{
-		if (SendSlotElapsed < DuplexPeriodMillis / 2)
+		if ((SendSlotElapsed < (DuplexPeriodMillis / 2)) &&
+			SendSlotElapsed > 0)
 		{
 			return true;
 		}
 	}
 	else
 	{
-		if (SendSlotElapsed >= DuplexPeriodMillis / 2)
+		if ((SendSlotElapsed > (DuplexPeriodMillis / 2)) &&
+			SendSlotElapsed < DuplexPeriodMillis)
 		{
 			return true;
 		}
