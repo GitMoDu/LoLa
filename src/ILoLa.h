@@ -8,7 +8,7 @@
 //#define USE_MOCK_PACKET_LOSS
 #define USE_TIME_SLOT
 #define USE_LATENCY_COMPENSATION
-#define USE_FREQUENCY_HOP
+//#define USE_FREQUENCY_HOP
 
 #include <stdint.h>
 #include <Transceivers\LoLaReceiver.h>
