@@ -15,30 +15,30 @@
 #include <Transceivers\LoLaSender.h>
 
 #ifdef DEBUG_LOLA
-#define LOLA_LINK_DEBUG_UPDATE_SECONDS 10
+#define LOLA_LINK_DEBUG_UPDATE_SECONDS						10
 #endif
 
 // 1000 Relaxed period.
 // 500 Recommended period.
 // 50 Minimum recommended period.
-#define LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS 500
+#define LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS				500
 
 
 // 1000 Change TOTP every second, low chance of sync error.
 // 100 Agressive crypto denial.
-#define ILOLA_CRYPTO_TOTP_PERIOD_MILLIS		(uint32_t)(1000)
+#define ILOLA_CRYPTO_TOTP_PERIOD_MILLIS						1000
 
 // 100 High latency, high bandwitdh.
 // 10 Low latency, lower bandwidth.
-#define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
+#define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS					10
 
 // Packet collision avoidance before link.
-#define LOLA_LINK_UNLINK_SEND_BACK_OFF_DURATION_MILLIS 8
-#define LOLA_LINK_UNLINK_RECEIVE_BACK_OFF_DURATION_MILLIS 4
+#define LOLA_LINK_UNLINK_SEND_BACK_OFF_DURATION_MILLIS		3
+#define LOLA_LINK_UNLINK_RECEIVE_BACK_OFF_DURATION_MILLIS	2
 
-// Packet collision avoidance with link.
-#define LOLA_LINK_LINKED_SEND_BACK_OFF_DURATION_MILLIS 4
-#define LOLA_LINK_LINKED_RECEIVE_BACK_OFF_DURATION_MILLIS 2
+// Channel udpdate collision avoidance with link.
+#define LOLA_LINK_LINKED_SEND_BACK_OFF_DURATION_MILLIS		1
+#define LOLA_LINK_LINKED_RECEIVE_BACK_OFF_DURATION_MILLIS	2
 
 
 ///Driver constants.
