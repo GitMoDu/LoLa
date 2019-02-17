@@ -143,7 +143,14 @@ bool LoLaPacketDriver::HotAfterSend()
 {
 	if (LastSent != ILOLA_INVALID_MILLIS)
 	{
-		return millis() - LastSent < LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS;
+		if (LinkActive)
+		{
+			return millis() - LastSent < LOLA_LINK_LINKED_SEND_BACK_OFF_DURATION_MILLIS;
+		}
+		else
+		{
+			return millis() - LastSent < LOLA_LINK_UNLINK_SEND_BACK_OFF_DURATION_MILLIS;
+		}		
 	}
 	return false;
 }
@@ -152,7 +159,15 @@ bool LoLaPacketDriver::HotAfterReceive()
 {
 	if (LastValidReceived != ILOLA_INVALID_MILLIS)
 	{
-		return millis() - LastValidReceived < LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS;
+		if (LinkActive)
+		{
+			return millis() - LastReceived < LOLA_LINK_LINKED_RECEIVE_BACK_OFF_DURATION_MILLIS;
+		}
+		else
+		{
+			return millis() - LastReceived < LOLA_LINK_UNLINK_RECEIVE_BACK_OFF_DURATION_MILLIS;
+		}
+		
 	}
 	return false;
 }

@@ -32,6 +32,14 @@
 // 10 Low latency, lower bandwidth.
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS	10
 
+// Packet collision avoidance before link.
+#define LOLA_LINK_UNLINK_SEND_BACK_OFF_DURATION_MILLIS 8
+#define LOLA_LINK_UNLINK_RECEIVE_BACK_OFF_DURATION_MILLIS 4
+
+// Packet collision avoidance with link.
+#define LOLA_LINK_LINKED_SEND_BACK_OFF_DURATION_MILLIS 4
+#define LOLA_LINK_LINKED_RECEIVE_BACK_OFF_DURATION_MILLIS 2
+
 
 ///Driver constants.
 #define ILOLA_DEFAULT_CHANNEL				0

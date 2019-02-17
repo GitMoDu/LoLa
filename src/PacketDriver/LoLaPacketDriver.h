@@ -8,8 +8,6 @@
 
 #include <Services\LoLaServicesManager.h>
 
-#define LOLA_PACKET_MANAGER_SEND_MIN_BACK_OFF_DURATION_MILLIS 3
-#define LOLA_PACKET_MANAGER_SEND_AFTER_RECEIVE_MIN_BACK_OFF_DURATION_MILLIS 5
 
 class LoLaPacketDriver : public ILoLa
 {
