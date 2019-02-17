@@ -222,11 +222,18 @@ protected:
 
 	bool OnOpportunisticSend()
 	{
-		if (!RemoteClockSyncTransaction.IsRequested() && ClockSyncer.IsTimeToTune())
+		if (!RemoteClockSyncTransaction.IsRequested() && ClockSyncer.IsTimeToPreTune())
 		{
 			RemoteClockSyncTransaction.Reset();
-			RemoteClockSyncTransaction.SetRequested();
 			PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
+			RemoteClockSyncTransaction.SetRequested();
+			//Sent Intervention Custom!
+			return true;
+		}
+		else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_SLOW_PERIOD)
+		{
+			PreparePing();
+			//Sent Intervention Ping!
 			return true;
 		}
 
@@ -243,20 +250,20 @@ protected:
 			}
 
 			RemoteClockSyncTransaction.Reset();
-			SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
+			SetNextRunASAP();
 		}
 		else if (ClockSyncer.IsTimeToTune())
 		{
 			if (!RemoteClockSyncTransaction.IsRequested())
 			{
 				RemoteClockSyncTransaction.Reset();
-				RemoteClockSyncTransaction.SetRequested();
 				PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
+				RemoteClockSyncTransaction.SetRequested();
 				RequestSendPacket();
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD);
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 		}
 		else

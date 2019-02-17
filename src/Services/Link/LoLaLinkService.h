@@ -641,19 +641,16 @@ protected:
 				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 		}
-		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION &&
-			GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_SLOW_PERIOD)
+		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION)
 		{
 			if (OnOpportunisticSend())
 			{
-				//Sent Intervention Custom!
 				RequestSendPacket();
+				//Sent Intervention Packet!
 			}
 			else
 			{
-				PreparePing();
-				RequestSendPacket();
-				//Sent Intervention Ping!
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 		}
 		else
