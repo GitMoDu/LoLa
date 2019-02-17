@@ -56,7 +56,7 @@ public:
 
 		PacketMap = packetMap;
 
-		return PacketMap != nullptr;
+		return PacketMap != nullptr && CryptoSeed != nullptr;
 	}
 	
 public:
@@ -80,16 +80,9 @@ public:
 		CryptoSeed = cryptoSeedSource;
 	}
 
-	uint8_t GetCryptoToken(const int8_t offsetMillis)
+	inline uint8_t GetCryptoToken(const int8_t offsetMillis)
 	{
-		if (CryptoSeed != nullptr)
-		{
-			return CryptoSeed->GetToken(offsetMillis);
-		}
-		else
-		{
-			return 0;
-		}
+		return CryptoSeed->GetToken(offsetMillis);
 	}
 
 #ifdef DEBUG_LOLA
