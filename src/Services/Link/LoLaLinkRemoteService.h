@@ -423,12 +423,12 @@ protected:
 				break;
 			}
 			SetNextRunASAP();
-		}		
+		}
 	}
 
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
-		if (header == LinkWithAckDefinition.GetHeader() && 
+		if (header == LinkWithAckDefinition.GetHeader() &&
 			LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage)
 		{

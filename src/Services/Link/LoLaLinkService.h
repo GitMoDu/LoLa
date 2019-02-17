@@ -627,7 +627,7 @@ protected:
 		{
 			PreparePong();
 			RequestSendPacket();
-		} 
+		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD)
@@ -688,7 +688,7 @@ protected:
 				{
 					PingedPending = true;
 					SetNextRunASAP();
-				}			
+				}
 				break;
 			case LOLA_LINK_SUBHEADER_PONG:
 				if (LinkInfo->HasLink())
