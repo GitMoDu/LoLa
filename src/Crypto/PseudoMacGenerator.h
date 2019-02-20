@@ -57,7 +57,6 @@ public:
 		{
 			if (mac1[i] != mac2[i])
 			{
-				Serial.println("No match");
 				return false;
 			}
 		}		
