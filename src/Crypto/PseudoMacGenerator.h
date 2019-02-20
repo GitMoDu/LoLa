@@ -31,7 +31,7 @@ private:
 			MAC[i] = CRC.GetCurrent();
 		}
 
-		//Add extra entropy to MAC by hashing the last unused bytes
+		//Use remaining entropy of ID by hashing the last unused bytes
 		// into the last byte of the MAC.
 		if (MACLength < IdProvider.GetUUIDLength())
 		{
@@ -70,7 +70,7 @@ public:
 		//Lazy loaded MAC.
 		if (!Cached)
 		{
-			//It is no the MAC generator's job to get enough entropy.
+			//It is not the MAC generator's job to get enough entropy.
 			if (MACLength > IdProvider.GetUUIDLength())
 			{
 				return nullptr;

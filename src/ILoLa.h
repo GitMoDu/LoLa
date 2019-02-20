@@ -36,7 +36,7 @@
 #define LOLA_LINK_UNLINK_SEND_BACK_OFF_DURATION_MILLIS		3
 #define LOLA_LINK_UNLINK_RECEIVE_BACK_OFF_DURATION_MILLIS	2
 
-// Channel udpdate collision avoidance with link.
+// Channel collision avoidance with link.
 #define LOLA_LINK_LINKED_SEND_BACK_OFF_DURATION_MILLIS		1
 #define LOLA_LINK_LINKED_RECEIVE_BACK_OFF_DURATION_MILLIS	2
 
