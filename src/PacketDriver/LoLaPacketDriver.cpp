@@ -228,14 +228,14 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 #ifdef USE_TIME_SLOT
 	if (LinkActive)
 	{
-		return CanTransmit() && 
-			!HotAfterSend() && !HotAfterReceive() &&
+		return !OutgoingInfo.HasPending() && CanTransmit() &&
+			!HotAfterSend() &&
 			(overridePermission || IsInSendSlot());
 	}
 	else
 	{
-		return CanTransmit() && overridePermission &&
-			!HotAfterSend() && !HotAfterReceive();
+		return overridePermission && !OutgoingInfo.HasPending() && 
+			CanTransmit() && !HotAfterSend() && !HotAfterReceive();
 	}
 #else
 	return Enabled &&
