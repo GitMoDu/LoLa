@@ -4,6 +4,7 @@
 #define _LINKCRYPTOCHALLENGE_h
 
 #include <stdint.h>
+#include <Services\Link\LoLaLinkDefinitions.h>
 
 class IChallengeTransaction
 {
