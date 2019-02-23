@@ -73,17 +73,12 @@ void LoLaSi446xPacketDriver::OnReceiveBegin(const uint8_t length, const int16_t 
 {
 	LoLaPacketDriver::OnReceiveBegin(length, rssi);
 
-	OnReceived();
-}
-
-void LoLaSi446xPacketDriver::OnReceived()
-{
 #ifndef MOCK_RADIO
 	Si446x_read(Receiver.GetBuffer(), Receiver.GetBufferSize());
+	//TODO: Process before resetting to RX. Needs separated task for Ack send.
 	Si446x_RX(CurrentChannel);
 #endif
-
-	LoLaPacketDriver::OnReceived();
+	OnReceived();
 }
 
 void LoLaSi446xPacketDriver::OnChannelUpdated()

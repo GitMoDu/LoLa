@@ -97,18 +97,19 @@ public:
 	LoLaServicesManager* GetServices();
 
 public:
-	virtual bool SendPacket(ILoLaPacket* packet);
+	bool SendPacket(ILoLaPacket* packet);
 
 public:
 	virtual bool Setup();
-	virtual void OnIncoming(const int16_t rssi);
 	virtual void OnReceiveBegin(const uint8_t length, const int16_t rssi);
-	virtual void OnReceivedFail(const int16_t rssi);
-	virtual void OnSentOk();
-	virtual void OnReceived();
-	virtual void OnBatteryAlarm();
-	virtual void OnWakeUpTimer();
-	virtual bool AllowedSend(const bool overridePermission = false);
+
+	void OnIncoming(const int16_t rssi);
+	void OnReceivedFail(const int16_t rssi);
+	void OnSentOk();
+	void OnReceived();
+	void OnBatteryAlarm();
+	void OnWakeUpTimer();
+	bool AllowedSend(const bool overridePermission = false);
 
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
