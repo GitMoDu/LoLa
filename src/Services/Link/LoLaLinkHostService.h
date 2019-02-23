@@ -27,7 +27,7 @@ private:
 
 
 	//Latency measurement.
-	LoLaLinkLatencyMeter LatencyMeter;
+	LoLaLinkLatencyMeter<LOLA_LINK_SERVICE_UNLINK_MAX_LATENCY_SAMPLES> LatencyMeter;
 
 	//Session timing.
 	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
@@ -336,9 +336,24 @@ protected:
 		switch (HostInfoTransaction.GetStage())
 		{
 		case InfoSyncTransaction::StageEnum::StageStart:
-			LinkInfo->SetRTT(LatencyMeter.GetAverageLatency());
-			HostInfoTransaction.Advance();//First move is done by host.
-			SetNextRunASAP();
+			//First move is done by host.
+			//If we don't have enough latency samples, we make more.
+			if (LatencyMeter.GetSampleCount() >= LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES)
+			{
+				LinkInfo->SetRTT(LatencyMeter.GetAverageLatency());
+				HostInfoTransaction.Advance();
+				SetNextRunASAP();
+			}
+			else if (GetElapsedLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareChallengeSwitchOver();
+				RequestSendPacket(true);
+				//Repeat last update packet.
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			}
 			break;
 		case InfoSyncTransaction::StageEnum::StageHostRTT:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)

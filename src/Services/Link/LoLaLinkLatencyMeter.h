@@ -3,12 +3,12 @@
 #ifndef _LOLA_LINK_LATENCY_METER_h
 #define _LOLA_LINK_LATENCY_METER_h
 
-#define LOLA_LATENCY_METER_DATA_POINT_STACK_SIZE		5
 #define LOLA_LATENCYMETER_PING_TIMEOUT_MILLIS			(uint32_t)ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS
 #define LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS		(LOLA_LATENCYMETER_PING_TIMEOUT_MILLIS*(uint32_t)1000)
 
 #include <RingBufCPP.h>
 
+template<const uint8_t Size>
 class LoLaLinkLatencyMeter
 {
 private:
@@ -17,7 +17,7 @@ private:
 
 	uint32_t Grunt;
 	uint32_t DurationSum;
-	RingBufCPP<uint16_t, LOLA_LATENCY_METER_DATA_POINT_STACK_SIZE> DurationStack;
+	RingBufCPP<uint16_t, Size> DurationStack;
 
 public:
 	LoLaLinkLatencyMeter()

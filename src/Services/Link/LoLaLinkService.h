@@ -606,9 +606,9 @@ protected:
 
 	uint32_t GetElapsedLastSent()
 	{
-		if (GetLoLa()->GetLastSentMillis() != ILOLA_INVALID_MILLIS)
+		if (GetLoLa()->GetLastValidSentMillis() != ILOLA_INVALID_MILLIS)
 		{
-			return millis() - GetLoLa()->GetLastSentMillis();
+			return millis() - GetLoLa()->GetLastValidSentMillis();
 		}
 		else
 		{
