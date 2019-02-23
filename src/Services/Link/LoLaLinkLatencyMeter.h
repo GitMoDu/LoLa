@@ -55,7 +55,7 @@ public:
 			}
 
 			//Value is always smaller than uint16, because samples with higher value are filtered out on acquisition.
-			return (uint16_t)DurationSum / DurationStack.numElements();
+			return (uint16_t)(DurationSum / DurationStack.numElements());
 		}
 	}
 
