@@ -457,6 +457,7 @@ protected:
 			HostChallengeTransaction.NewRequest();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
+			ClockSyncer.SetReadyForEstimation();
 			HostClockSyncTransaction.Reset();
 			break;
 		default:

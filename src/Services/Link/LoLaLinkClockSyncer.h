@@ -223,6 +223,11 @@ public:
 		return SyncGoodCount >= CLOCK_SYNC_GOOD_ENOUGH_COUNT;
 	}
 
+	void SetReadyForEstimation()
+	{
+		LastEstimation = ILOLA_INVALID_MILLIS;
+	}
+
 	bool IsTimeToTune()
 	{
 		return IsSynced() && LastSynced != ILOLA_INVALID_MILLIS &&
