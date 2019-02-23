@@ -49,6 +49,42 @@ private:
 		}
 	} IncomingInfo;
 
+	class OutgoingInfoStruct
+	{
+	private:
+		uint8_t TransmitedHeader = 0;
+		uint32_t LastTransmitted = ILOLA_INVALID_MILLIS;
+	public:
+		bool HasPending()
+		{
+			return (LastTransmitted != ILOLA_INVALID_MILLIS) && 
+				(millis() - LastTransmitted < ILOLA_TRANSMIT_EXPIRY_PERIOD_MILLIS);
+		}
+
+		void SetPending(const uint8_t transmitHeader)
+		{
+			TransmitedHeader = transmitHeader;
+			LastTransmitted = millis();
+		}
+
+		void SetPending(const uint8_t transmitHeader, const uint32_t timeStampMillis)
+		{
+			TransmitedHeader = transmitHeader;
+			LastTransmitted = timeStampMillis;
+		}
+
+		void Clear()
+		{
+			LastTransmitted = ILOLA_INVALID_MILLIS;
+		}
+
+		uint8_t GetSentHeader()
+		{
+			return TransmitedHeader;
+		}
+	} OutgoingInfo;
+
+
 protected:
 	///Services that are served receiving packets.
 	LoLaServicesManager Services;

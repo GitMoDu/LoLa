@@ -14,6 +14,23 @@ void LoLaPacketDriver::OnBatteryAlarm()
 
 void LoLaPacketDriver::OnSentOk()
 {
+	if (OutgoingInfo.HasPending())
+	{
+		LastValidSent = millis();
+		if (OutgoingInfo.GetSentHeader() != PACKET_DEFINITION_ACK_HEADER)
+		{
+			Services.ProcessSent(OutgoingInfo.GetSentHeader());
+		}
+		OutgoingInfo.Clear();
+	}
+#ifdef DEBUG_LOLA
+	else
+	{
+		Serial.println(F("Unexpected OnSent event!"));
+	}
+#endif
+
+	TransmitedCount++;
 }
 
 void LoLaPacketDriver::OnWakeUpTimer()
@@ -46,11 +63,6 @@ void LoLaPacketDriver::OnReceivedFail(const int16_t rssi)
 
 void LoLaPacketDriver::OnReceived()
 {
-	if (!IncomingInfo.HasInfo())
-	{
-		IncomingInfo.SetInfo(millis(), LastReceivedRssi);
-	}
-
 	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
 	{
 		RejectedCount++;
@@ -104,7 +116,7 @@ void LoLaPacketDriver::OnReceived()
 					if (Transmit())
 					{
 						LastSent = millis();
-						TransmitedCount++;
+						OutgoingInfo.SetPending(PACKET_DEFINITION_ACK_HEADER, LastSent);
 					}
 					else
 					{
@@ -127,6 +139,7 @@ bool LoLaPacketDriver::Setup()
 		Sender.Setup(&PacketMap))
 	{
 		IncomingInfo.Clear();
+		OutgoingInfo.Clear();
 
 		SetupOk = true;
 	}
@@ -141,17 +154,26 @@ LoLaServicesManager* LoLaPacketDriver::GetServices()
 
 bool LoLaPacketDriver::HotAfterSend()
 {
-	if (LastSent != ILOLA_INVALID_MILLIS)
+	if (LastSent != ILOLA_INVALID_MILLIS && LastValidSent != ILOLA_INVALID_MILLIS)
 	{
-		if (LinkActive)
+		if (LastSent - LastValidSent > 0)
 		{
-			return millis() - LastSent < LOLA_LINK_LINKED_SEND_BACK_OFF_DURATION_MILLIS;
+			return millis() - LastSent <= LOLA_LINK_SEND_BACK_OFF_DURATION_MILLIS;
 		}
 		else
 		{
-			return millis() - LastSent < LOLA_LINK_UNLINK_SEND_BACK_OFF_DURATION_MILLIS;
-		}		
+			return millis() - LastValidSent <= LOLA_LINK_RE_SEND_BACK_OFF_DURATION_MILLIS;
+		}
 	}
+	else if (LastValidSent != ILOLA_INVALID_MILLIS)
+	{
+		return millis() - LastValidSent <= LOLA_LINK_RE_SEND_BACK_OFF_DURATION_MILLIS;
+	} 
+	else if(LastSent != ILOLA_INVALID_MILLIS)
+	{
+		return millis() - LastSent <= LOLA_LINK_SEND_BACK_OFF_DURATION_MILLIS;
+	}
+
 	return false;
 }
 
@@ -159,15 +181,8 @@ bool LoLaPacketDriver::HotAfterReceive()
 {
 	if (LastValidReceived != ILOLA_INVALID_MILLIS)
 	{
-		if (LinkActive)
-		{
-			return millis() - LastReceived < LOLA_LINK_LINKED_RECEIVE_BACK_OFF_DURATION_MILLIS;
-		}
-		else
-		{
-			return millis() - LastReceived < LOLA_LINK_UNLINK_RECEIVE_BACK_OFF_DURATION_MILLIS;
-		}
-		
+		return millis() - LastReceived <= LOLA_LINK_RECEIVE_BACK_OFF_DURATION_MILLIS;
+
 	}
 	return false;
 }
@@ -230,7 +245,6 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 #endif
 }
 
-//TODO:Store statistics metadata
 bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 {
 	if (SetupOk)
@@ -245,24 +259,18 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 				return true;
 #endif
 			}
-			else if(Transmit())
-			{
-				LastSent = millis();
-				TransmitedCount++;
-
-				return true;
-			}
-#else
+#endif	
 			if (Transmit())
 			{
 				LastSent = millis();
-				TransmitedCount++;
-
+				OutgoingInfo.SetPending(packet->GetDataHeader(), LastSent);
 				return true;
 			}
-#endif			
+		
 		}
 	}
 
 	return false;
 }
+
+

@@ -77,6 +77,7 @@ protected:
 	volatile uint32_t LastReceived = ILOLA_INVALID_MILLIS;
 	volatile int16_t LastReceivedRssi = ILOLA_INVALID_RSSI;
 
+	volatile uint32_t LastValidSent = ILOLA_INVALID_MILLIS;
 	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
 	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
 
@@ -215,6 +216,7 @@ public:
 
 		LastValidReceived = ILOLA_INVALID_MILLIS;
 		LastValidReceivedRssi = ILOLA_INVALID_RSSI;
+		LastValidSent = ILOLA_INVALID_MILLIS;
 
 		ResetStatistics();
 	}
@@ -251,16 +253,6 @@ public:
 		return TransmitedCount;
 	}
 
-	uint32_t GetLastSentMillis()
-	{
-		return LastSent;
-	}
-
-	uint32_t GetLastReceivedMillis()
-	{
-		return LastReceived;
-	}
-
 	int16_t GetLastRSSI()
 	{
 		return LastReceivedRssi;
@@ -269,6 +261,11 @@ public:
 	uint32_t GetLastValidReceivedMillis()
 	{
 		return LastValidReceived;
+	}
+	
+	uint32_t GetLastValidSentMillis()
+	{
+		return LastValidSent;
 	}
 
 	int16_t GetLastValidRSSI()
