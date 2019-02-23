@@ -48,10 +48,8 @@ public:
 				CalculatorCRC.Update(transmitPacket->GetId());
 			}
 
-			for (uint8_t i = 0; i < OutgoingDefinition->GetPayloadSize(); i++)
-			{
-				CalculatorCRC.Update(transmitPacket->GetPayload()[i]);
-			}
+			CalculatorCRC.Update(transmitPacket->GetPayload(), OutgoingDefinition->GetPayloadSize());
+
 			transmitPacket->GetRaw()[LOLA_PACKET_MACCRC_INDEX] = CalculatorCRC.GetCurrent();
 			BufferSize = OutgoingDefinition->GetTotalSize();
 			BufferPacket = transmitPacket;
@@ -116,7 +114,7 @@ public:
 #ifdef USE_LATENCY_COMPENSATION
 	void SetETTM(const int8_t ettm)
 	{
-		ETTM = ettm/2;
+		ETTM = ettm / 2;
 	}
 
 	uint8_t GetETTM()

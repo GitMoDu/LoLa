@@ -11,9 +11,6 @@ class LoLaReceiver : public LoLaBuffer
 private:
 	TemplateLoLaPacket<PACKET_DEFINITION_MAX_PACKET_SIZE> ReceiverPacket;
 
-	//Helper.
-	uint8_t PayloadSize;
-
 public:
 	PacketDefinition * GetIncomingDefinition()
 	{
@@ -38,48 +35,36 @@ public:
 
 	bool ReceivePacket()
 	{
-		if (BufferSize > 0 && BufferSize < PACKET_DEFINITION_MAX_PACKET_SIZE && ValidateMACCRC())
+		if (BufferSize > 0 && BufferSize < PACKET_DEFINITION_MAX_PACKET_SIZE)
 		{
-			return true;
-		}
-		else
-		{
-			BufferSize = 0;
-			BufferPacket->SetDefinition(nullptr);
-			return false;
-		}
-	}
+			BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader()));
 
-	bool ValidateMACCRC()
-	{
-		BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader()));
-
-		if (BufferPacket->GetDefinition() != nullptr)
-		{
-			CRCIndex = 0;
-			CalculatorCRC.Reset();
-
-			//Crypto starts at the start of the hash.
-			CalculatorCRC.Update(GetCryptoToken(0));//No latency compensation on receiver.
-
-			CalculatorCRC.Update(BufferPacket->GetDataHeader());
-
-			if (BufferPacket->GetDefinition()->HasId())
+			if (BufferPacket->GetDefinition() != nullptr)
 			{
-				CalculatorCRC.Update(BufferPacket->GetId());
-			}
+				CRCIndex = 0;
+				CalculatorCRC.Reset();
 
-			PayloadSize = BufferPacket->GetDefinition()->GetPayloadSize();
-			for (uint8_t i = 0; i < PayloadSize; i++)
-			{
-				CalculatorCRC.Update(BufferPacket->GetPayload()[i]);//Payload byte
-			}
+				//Crypto starts at the start of the hash.
+				CalculatorCRC.Update(GetCryptoToken(0));//No latency compensation on receiver.
 
-			if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
-			{
-				return true;
+				CalculatorCRC.Update(BufferPacket->GetDataHeader());
+
+				if (BufferPacket->GetDefinition()->HasId())
+				{
+					CalculatorCRC.Update(BufferPacket->GetId());
+				}
+
+				CalculatorCRC.Update(BufferPacket->GetPayload(), BufferPacket->GetDefinition()->GetPayloadSize());
+
+				if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
+				{
+					return true;
+				}
 			}
 		}
+
+		BufferSize = 0;
+		BufferPacket->SetDefinition(nullptr);
 		return false;
 	}
 };
