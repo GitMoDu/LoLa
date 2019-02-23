@@ -451,8 +451,8 @@ protected:
 		serial->print(F("ClockSync adjustments: "));
 		serial->println(LinkInfo->GetClockSyncAdjustments());
 		serial->println();
-#endif
 	}
+#endif
 
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
 	{
