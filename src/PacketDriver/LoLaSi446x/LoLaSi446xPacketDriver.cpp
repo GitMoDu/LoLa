@@ -10,14 +10,14 @@ volatile bool Receiving = false;
 
 void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
 {
-	Receiving = false;
 	StaticSi446LoLa->OnReceiveBegin(length, rssi);
+	Receiving = false;
 }
 
 void SI446X_CB_RXINVALID(int16_t rssi)
 {
-	Receiving = false;
 	StaticSi446LoLa->OnReceivedFail(rssi);
+	Receiving = false;
 }
 
 void SI446X_CB_RXBEGIN(int16_t rssi)
@@ -29,6 +29,7 @@ void SI446X_CB_RXBEGIN(int16_t rssi)
 void SI446X_CB_SENT(void)
 {
 	StaticSi446LoLa->OnSentOk();
+	Receiving = false;
 }
 
 void SI446X_CB_WUT(void)
