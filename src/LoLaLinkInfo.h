@@ -256,9 +256,9 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			if (Driver->GetLastSentMillis() >= Driver->GetLastValidReceivedMillis())
+			if (Driver->GetLastValidSentMillis() >= Driver->GetLastValidReceivedMillis())
 			{
-				return millis() - Driver->GetLastSentMillis();
+				return millis() - Driver->GetLastValidSentMillis();
 			}
 			else
 			{
@@ -270,9 +270,9 @@ public:
 
 	uint32_t GetLastSentElapsed()
 	{
-		if (Driver != nullptr && Driver->GetLastSentMillis() != ILOLA_INVALID_MILLIS)
+		if (Driver != nullptr && Driver->GetLastValidSentMillis() != ILOLA_INVALID_MILLIS)
 		{
-			return millis() - Driver->GetLastSentMillis();
+			return millis() - Driver->GetLastValidSentMillis();
 		}
 		return ILOLA_INVALID_MILLIS;
 	}
