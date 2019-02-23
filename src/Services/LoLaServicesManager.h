@@ -46,6 +46,17 @@ public:
 		}
 	}
 
+	void ProcessSent(uint8_t packetHeader)
+	{
+		for (uint8_t i = 0; i < ServicesCount; i++)
+		{
+			if (Services[i] != nullptr && Services[i]->ProcessSent(packetHeader))
+			{
+				return;
+			}
+		}
+	}
+
 	void NotifyServicesLinkUpdated(const bool connected)
 	{
 		for (uint8_t i = 0; i < ServicesCount; i++)
