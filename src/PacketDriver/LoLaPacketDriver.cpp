@@ -129,6 +129,8 @@ void LoLaPacketDriver::OnReceived()
 			//Handle packet.
 			Services.ProcessPacket(Receiver.GetIncomingPacket());
 		}
+
+		Receiver.SetBufferSize(0);
 	}
 }
 
