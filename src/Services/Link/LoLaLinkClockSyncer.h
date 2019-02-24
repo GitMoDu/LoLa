@@ -10,7 +10,6 @@
 
 #define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)5000
 #define CLOCK_SYNC_MAX_TUNE_ERROR							(int32_t)100
-#define CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS		(uint32_t)1000
 
 #define LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR				(int8_t)4
 #define LOLA_CLOCK_SYNC_TUNE_RATIO							(int8_t)3
@@ -116,11 +115,7 @@ public:
 	{
 		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS));
 	}	
-	
-	bool IsTimeToPreTune()
-	{
-		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS - CLOCK_SYNC_TUNE_REMOTE_PREENTIVE_PERIOD_MILLIS));
-	}
+
 
 	void SetSynced()
 	{

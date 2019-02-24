@@ -220,26 +220,6 @@ protected:
 		}
 	}
 
-	bool OnOpportunisticSend()
-	{
-		if (!RemoteClockSyncTransaction.IsRequested() && ClockSyncer.IsTimeToPreTune())
-		{
-			RemoteClockSyncTransaction.Reset();
-			PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
-			RemoteClockSyncTransaction.SetRequested();
-			//Sent Intervention Custom!
-			return true;
-		}
-		else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_SLOW_PERIOD)
-		{
-			PreparePing();
-			//Sent Intervention Ping!
-			return true;
-		}
-
-		return false;
-	}
-
 	void OnKeepingConnected()
 	{
 		if (RemoteClockSyncTransaction.IsResultWaiting())

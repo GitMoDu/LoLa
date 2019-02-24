@@ -31,6 +31,10 @@ private:
 	uint16_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
+	//Real time update tracking.
+	uint32_t PartnerInfoLastUpdated = ILOLA_INVALID_MILLIS;
+	uint32_t PartnerInfoLastUpdatedRemotely = ILOLA_INVALID_MILLIS;
+
 	uint8_t PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
 
 	//Stored outside, only referenced.
@@ -120,6 +124,36 @@ public:
 	void StampClockSyncAdjustment()
 	{
 		ClockSyncAdjustments++;
+	}
+
+	void StampPartnerInfoUpdated()
+	{
+		PartnerInfoLastUpdated = millis();
+	}	
+	
+	void StampLocalInfoLastUpdatedRemotely()
+	{
+		PartnerInfoLastUpdatedRemotely = millis();
+	}
+
+	uint32_t GetLocalInfoUpdateRemotelyElapsed()
+	{
+		if (PartnerInfoLastUpdatedRemotely != ILOLA_INVALID_MILLIS)
+		{
+			return millis() - PartnerInfoLastUpdatedRemotely;
+		}
+
+		return ILOLA_INVALID_MILLIS;
+	}
+
+	uint32_t GetPartnerInfoUpdateElapsed()
+	{
+		if (PartnerInfoLastUpdated != ILOLA_INVALID_MILLIS)
+		{
+			return millis() - PartnerInfoLastUpdated;
+		}
+
+		return ILOLA_INVALID_MILLIS;
 	}
 
 	void Reset()

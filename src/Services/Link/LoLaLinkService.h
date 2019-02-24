@@ -33,9 +33,12 @@ class LoLaLinkService : public IPacketSendService
 {
 private:
 	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
-	uint32_t LastSent = ILOLA_INVALID_MILLIS;
 
-	bool PingedPending = false;
+	volatile uint32_t LastSent = ILOLA_INVALID_MILLIS;
+
+	volatile bool PingedPending = false;
+	volatile bool ReportPending = false;
+
 
 	LoLaServicesManager * ServicesManager = nullptr;
 
@@ -99,7 +102,6 @@ protected:
 protected:
 	///Common packet handling.
 	virtual void OnLinkInfoSyncUpdateReceived(const uint8_t contentId, const uint32_t content) {}
-	virtual bool OnOpportunisticSend() { return false; }
 
 	///Host packet handling.
 	virtual void OnLinkDiscoveryReceived() {}
@@ -168,6 +170,8 @@ private:
 		case LinkingStagesEnum::InfoSyncStage:
 			if (InfoTransaction->IsComplete())
 			{
+				LinkInfo->StampPartnerInfoUpdated();
+				LinkInfo->StampLocalInfoLastUpdatedRemotely();
 				SetLinkingState(LinkingStagesEnum::LinkProtocolSwitchOver);
 				SetNextRunASAP();
 			}
@@ -233,17 +237,39 @@ protected:
 	{
 		LastSent = millis();
 
-		if (PingedPending && header == LinkDefinition.GetHeader() &&
-			PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_PONG)
+		if (header == LinkDefinition.GetHeader())
 		{
-			PingedPending = false;
+			if (PingedPending)
+			{
+				PingedPending = false;
+			}
+			
+			if (ReportPending)
+			{
+				ReportPending = false;
+				LinkInfo->StampLocalInfoLastUpdatedRemotely();
+			}
 		}
+
+		SetNextRunASAP();
 	}
 
 	void OnSendFailed()
 	{
 		//In case the send fails, this prevents from immediate resending.
 		SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+	}
+
+	void OnLinkInfoReportReceived(const bool requestUpdate, const uint8_t rssi)
+	{
+		if (LinkInfo->HasLink())
+		{
+			LinkInfo->SetPartnerRSSINormalized(rssi);
+			LinkInfo->StampPartnerInfoUpdated();
+
+			ReportPending = requestUpdate;
+			SetNextRunASAP();
+		}
 	}
 
 	void ResetStateStartTime()
@@ -329,6 +355,11 @@ protected:
 
 	void ClearSession()
 	{
+		PingedPending = false;
+		ReportPending = false;
+
+		LastSent = ILOLA_INVALID_MILLIS;
+
 		if (ClockSyncerPointer != nullptr)
 		{
 			ClockSyncerPointer->Reset();
@@ -623,35 +654,25 @@ protected:
 			//Link timed out.
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 		}
-		else if (PingedPending)
+		else if (PingedPending) //Priority response, to keep link alive.
 		{
 			PreparePong();
 			RequestSendPacket();
 		}
+		else if (ReportPending) //Priority update, to keep link info up to date.
+		{
+			PrepareLinkInfoReport();
+			RequestSendPacket();
+		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD)
-			{
-				PreparePing();
-				RequestSendPacket();
-				//Sent Panic Ping!
-			}
-			else
-			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			}
+			PreparePing(); 		//Send Panic Ping!
+			RequestSendPacket();
 		}
-		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_PERIOD_INTERVENTION)
+		else if (LinkInfo->GetLocalInfoUpdateRemotelyElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD)
 		{
-			if (OnOpportunisticSend())
-			{
-				RequestSendPacket();
-				//Sent Intervention Packet!
-			}
-			else
-			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			}
+			ReportPending = true; //Send link info update.
+			SetNextRunASAP();
 		}
 		else
 		{
@@ -699,6 +720,17 @@ protected:
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_UPDATE:
 				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnLinkInfoSyncUpdateReceived(incomingPacket->GetId(), ATUI_R.uint);
+				break;
+
+			case LOLA_LINK_SUBHEADER_LINK_INFO_REPORT:
+				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
+				Serial.print(F("Report received: "));
+				Serial.print(incomingPacket->GetPayload()[2]);
+				Serial.print(F(" ; "));
+				Serial.print(LinkInfo->GetPartnerInfoUpdateElapsed());
+				Serial.print(F(" ; "));
+				Serial.println(LinkInfo->GetLocalInfoUpdateRemotelyElapsed());
+				OnLinkInfoReportReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[2]);
 				break;
 
 				//To Host.
@@ -926,6 +958,15 @@ protected:
 	{
 		PrepareLinkPacketWithAck(contentId, LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE);
 	}
+
+	void PrepareLinkInfoReport()
+	{
+		PacketHolder.SetDefinition(&LinkDefinition);
+		PacketHolder.SetId(LinkInfo->GetPartnerInfoUpdateElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD);
+		PacketHolder.GetPayload()[0] = LOLA_LINK_SUBHEADER_LINK_INFO_REPORT;
+		PacketHolder.GetPayload()[2] = LinkInfo->GetRSSINormalized();
+	}
+
 private:
 	inline void PrepareLinkPacketWithAck(const uint8_t requestId, const uint8_t subHeader)
 	{
