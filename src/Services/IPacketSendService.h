@@ -24,16 +24,17 @@
 class IPacketSendService : public ILoLaService
 {
 private:
-	enum SendStatusEnum
+	enum SendStatusEnum : uint8_t
 	{
-		Requested,
-		SendingPacket,
-		SentOk,
-		SendFailed,
-		WaitingForAck,
-		AckOk,
-		AckFailed,
-		Done
+		Requested = 0,
+		SendingPacket = 1,
+		WaitingForSentOk = 2,
+		SentOk = 3,
+		SendFailed = 4,
+		WaitingForAck = 5,
+		AckOk = 6,
+		AckFailed = 7,
+		Done = 8
 	} SendStatus = SendStatusEnum::Done;
 
 	uint8_t SendFailures = 0;
