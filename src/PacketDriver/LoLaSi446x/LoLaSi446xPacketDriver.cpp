@@ -55,9 +55,19 @@ bool LoLaSi446xPacketDriver::Transmit()
 	delayMicroseconds(500);
 	return true;
 #else
-	return Sender.GetBufferSize() > 0 && 
-		//On success(has begun transmitting).
-		Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX);
+
+	if (Sender.GetBufferSize() > 0)
+	{
+		if (CurrentTransmitPower != LastTransmitPower)
+		{
+			LastTransmitPower = CurrentTransmitPower;
+			Si446x_setTxPower(LastTransmitPower);
+		}
+
+		return 	Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX);
+	}
+
+	return false;
 #endif
 }
 
@@ -89,13 +99,6 @@ void LoLaSi446xPacketDriver::OnChannelUpdated()
 #endif
 }
 
-void LoLaSi446xPacketDriver::OnTransmitPowerUpdated()
-{
-#ifndef MOCK_RADIO
-	Si446x_setTxPower(CurrentTransmitPower);
-#endif
-}
-
 void LoLaSi446xPacketDriver::OnStart()
 {
 #ifndef MOCK_RADIO
@@ -119,6 +122,8 @@ bool LoLaSi446xPacketDriver::Setup()
 		Si446x_init();
 		si446x_info_t info;
 		Si446x_getInfo(&info);
+
+		LastTransmitPower = 0;
 
 		if (info.part == PART_NUMBER_SI4463X)
 		{

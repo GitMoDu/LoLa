@@ -36,6 +36,9 @@
 
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
+private:
+	uint8_t LastTransmitPower = 0;
+
 protected:
 	bool Transmit();
 	bool CanTransmit();
@@ -51,7 +54,6 @@ public:
 	void OnReceiveBegin(const uint8_t length, const int16_t rssi);
 
 	void OnChannelUpdated();
-	void OnTransmitPowerUpdated();
 
 	///Driver constants.
 	uint8_t GetTransmitPowerMax() const

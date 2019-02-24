@@ -5,8 +5,12 @@
 
 #include <ILoLa.h>
 #include <Callback.h>
+#include <RingBufCPP.h>
 
 #define LOLA_LINK_INFO_MAC_LENGTH		8 //Following MAC-64, because why not?
+
+#define RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT			3
+
 
 class LoLaLinkInfo
 {
@@ -35,7 +39,8 @@ private:
 	uint32_t PartnerInfoLastUpdated = ILOLA_INVALID_MILLIS;
 	uint32_t PartnerInfoLastUpdatedRemotely = ILOLA_INVALID_MILLIS;
 
-	uint8_t PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
+	RingBufCPP<uint8_t, RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT> PartnerRSSISamples;
+	uint32_t PartnerAverageRSSI;
 
 	//Stored outside, only referenced.
 	uint8_t* LocalMAC = nullptr;
@@ -164,7 +169,10 @@ public:
 		LinkStarted = ILOLA_INVALID_MILLIS;
 		
 		RTT = ILOLA_INVALID_LATENCY;
-		PartnerRSSINormalized = ILOLA_INVALID_RSSI_NORMALIZED;
+		while (!PartnerRSSISamples.isEmpty())
+		{
+			PartnerRSSISamples.pull();
+		}
 
 		ClockSyncAdjustments = 0;
 
@@ -254,26 +262,32 @@ public:
 
 	bool HasPartnerRSSI()
 	{
-		return PartnerRSSINormalized != ILOLA_INVALID_RSSI_NORMALIZED;
+		return !PartnerRSSISamples.isEmpty();
 	}
 
 	uint8_t GetPartnerRSSINormalized()
 	{
-		return PartnerRSSINormalized;
+		if (PartnerRSSISamples.isEmpty())
+		{
+			return 0;
+		}
+		else
+		{
+			PartnerAverageRSSI = 0;
+
+			for (uint8_t i = 0; i < PartnerRSSISamples.numElements(); i++)
+			{
+				PartnerAverageRSSI += *PartnerRSSISamples.peek(i);
+			}
+
+			return PartnerAverageRSSI / PartnerRSSISamples.numElements();
+		}
+		return PartnerAverageRSSI;
 	}
 
 	void SetPartnerRSSINormalized(const uint8_t rssiNormalized)
 	{
-		PartnerRSSINormalized = rssiNormalized;
-	}
-
-	int16_t GetRSSI()
-	{
-		if (Driver != nullptr)
-		{
-			return constrain(Driver->GetLastValidRSSI(), Driver->GetRSSIMin(), Driver->GetRSSIMax());
-		}
-		return 0;//Unknown.		
+		PartnerRSSISamples.addForce(rssiNormalized);
 	}
 
 	//Output normalized to uint8_t range.
@@ -324,7 +338,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			return map(Driver->GetTransmitPower(), Driver->GetTransmitPowerMin(), Driver->GetTransmitPowerMax(), 0, UINT8_MAX);
+			return Driver->GetTransmitPowerNormalized();
 		}
 		return 0;//Unknown.
 	}

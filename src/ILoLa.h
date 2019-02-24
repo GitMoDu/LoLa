@@ -262,7 +262,7 @@ public:
 	{
 		return LastValidReceived;
 	}
-	
+
 	uint32_t GetLastValidSentMillis()
 	{
 		return LastValidSent;
@@ -273,18 +273,16 @@ public:
 		return LastValidReceivedRssi;
 	}
 
-	uint8_t GetTransmitPower()
+	uint8_t GetTransmitPowerNormalized()
 	{
-		return CurrentTransmitPower;
+		return map(CurrentTransmitPower, GetTransmitPowerMin(), GetTransmitPowerMax(), 0, UINT8_MAX);
 	}
 
-	bool SetTransmitPower(const uint8_t transmitPower)
+	void SetTransmitPower(const uint8_t transmitPowerNormalized)
 	{
-		CurrentTransmitPower = transmitPower;
+		CurrentTransmitPower = map(transmitPowerNormalized, 0, UINT8_MAX, GetTransmitPowerMin(), GetTransmitPowerMax());
 
 		OnTransmitPowerUpdated();
-
-		return true;
 	}
 
 	uint8_t GetChannel()
@@ -306,6 +304,13 @@ public:
 		return &PacketMap;
 	}
 
+protected:
+	virtual uint8_t GetTransmitPowerMax() const { return 1; }
+	virtual uint8_t GetTransmitPowerMin() const { return 0; }
+
+	virtual int16_t GetRSSIMax() const { return 0; }
+	virtual int16_t GetRSSIMin() const { return ILOLA_DEFAULT_MIN_RSSI; }
+
 public:
 	//Packet driver implementation.
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
@@ -316,12 +321,9 @@ public:
 
 
 	//Device driver implementation.
-	virtual int16_t GetRSSIMax() const { return 0; }
-	virtual int16_t GetRSSIMin() const { return ILOLA_DEFAULT_MIN_RSSI; }
+
 	virtual uint8_t GetChannelMax() const { return 0; }
 	virtual uint8_t GetChannelMin() const { return 0; }
-	virtual uint8_t GetTransmitPowerMax() const { return 0; }
-	virtual uint8_t GetTransmitPowerMin() const { return 0; }
 
 	//Device driver events.
 	virtual void OnWakeUpTimer() {}
@@ -335,7 +337,7 @@ public:
 	//Device driver overloads.
 	virtual void OnChannelUpdated() {}
 	virtual void OnTransmitPowerUpdated() {}
-	
+
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
 	{
