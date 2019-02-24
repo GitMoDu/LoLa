@@ -9,14 +9,11 @@
 #include <Packet\LoLaPacket.h>
 
 //Takes around the same time as a full time out.
-#define LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS	(uint32_t)2
-#define LOLA_SEND_SERVICE_CHECK_SENT_PERIOD_MILLIS			(uint32_t)1
+#define LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS				(uint32_t)1
 #define LOLA_SEND_SERVICE_DENIED_MAX_FAILS					3
 
-#define LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS		(uint8_t)250
-#define LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS		(uint8_t)250
-
-#define LOLA_SEND_SERVICE_REPLY_DEFAULT_TIMEOUT_MILLIS		(uint32_t)(LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS+LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS)
+#define LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(10*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
+#define LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(2*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
 
 #define LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS	(uint32_t)200
 
@@ -117,7 +114,7 @@ public:
 			else if (!AllowedSend(OverrideSendPermission))
 			{
 				//Give an opportunity for the service to update the packet, if needed.
-				SetNextRunDelay(LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS);
+				SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
 				OnSendDelayed();
 			}
 			else
@@ -142,7 +139,7 @@ public:
 					}
 					else
 					{
-						SetNextRunDelay(LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS);
+						SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
 						OnSendRetrying();
 					}
 				}
@@ -156,7 +153,7 @@ public:
 			}
 			else
 			{
-				SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_SENT_PERIOD_MILLIS);
+				SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
 			}
 			break;
 		case SendStatusEnum::SentOk:
