@@ -181,7 +181,7 @@ bool LoLaPacketDriver::HotAfterSend()
 
 bool LoLaPacketDriver::HotAfterReceive()
 {
-	if (LastValidReceived != ILOLA_INVALID_MILLIS)
+	if (LastReceived != ILOLA_INVALID_MILLIS)
 	{
 		return millis() - LastReceived <= LOLA_LINK_RECEIVE_BACK_OFF_DURATION_MILLIS;
 
