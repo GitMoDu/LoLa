@@ -127,40 +127,6 @@ public:
 		return true;
 	}
 
-	bool StartAll()
-	{
-		for (uint8_t i = 0; i < ServicesCount; i++)
-		{
-			if (Services[i] != nullptr)
-			{
-				Services[i]->Enable();
-			}
-			else
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	bool StopAll()
-	{
-		for (uint8_t i = 0; i < ServicesCount; i++)
-		{
-			if (Services[i] != nullptr)
-			{
-				Services[i]->Disable();
-			}
-			else
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 #ifdef DEBUG_LOLA
 	void Debug(Stream* serial)
 	{

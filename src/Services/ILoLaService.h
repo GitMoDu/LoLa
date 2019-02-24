@@ -68,15 +68,6 @@ public:
 		return LoLa;
 	}
 
-	virtual bool OnEnable()
-	{
-		return true;
-	}
-
-	virtual void OnDisable()
-	{
-	}
-
 	void Enable()
 	{
 		enableIfNot();
@@ -84,6 +75,7 @@ public:
 
 	void Disable()
 	{
+		OnDisable();
 		disable();
 	}
 
@@ -135,15 +127,15 @@ public:
 #endif // DEBUG_LOLA
 
 public:
-	bool ReceivedPacket(ILoLaPacket* incomingPacket, const uint8_t header) 
+	bool ReceivedPacket(ILoLaPacket* incomingPacket, const uint8_t header)
 	{
 		if (ShouldProcessReceived()) {
 			return ProcessPacket(incomingPacket, header);
 		}
-		return false; 
+		return false;
 	}
 
-	bool ReceivedAck(const uint8_t header, const uint8_t id) 
+	bool ReceivedAck(const uint8_t header, const uint8_t id)
 	{
 		if (ShouldProcessReceived()) {
 			return ProcessAck(header, id);
@@ -157,9 +149,11 @@ public:
 	virtual bool ProcessSent(const uint8_t header) { return false; }
 	virtual void OnLinkEstablished() {}
 	virtual void OnLinkLost() {}
+	virtual bool OnEnable() { return true; }
+	virtual void OnDisable() {}
 
 protected:
-	virtual bool ShouldProcessReceived() 
+	virtual bool ShouldProcessReceived()
 	{
 		return IsSetupOk() && LoLa->HasLink();
 	}

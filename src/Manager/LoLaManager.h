@@ -58,17 +58,16 @@ public:
 		return LoLa->GetServices()->GetLinkInfo();
 	}
 
-	bool Start()
+	void Start()
 	{		
 		LoLa->Enable();
 		GetLinkService()->Enable();
-		return true;
 	}
 
-	bool Stop()
+	void Stop()
 	{
 		LoLa->Disable();
-		return LoLa->GetServices()->StopAll();
+		GetLinkService()->Disable();
 	}
 
 	bool Setup()
