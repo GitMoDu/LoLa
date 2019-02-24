@@ -736,7 +736,6 @@ protected:
 				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnLinkInfoSyncUpdateReceived(incomingPacket->GetId(), ATUI_R.uint);
 				break;
-
 			case LOLA_LINK_SUBHEADER_LINK_INFO_REPORT:
 				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
 				OnLinkInfoReportReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[2]);

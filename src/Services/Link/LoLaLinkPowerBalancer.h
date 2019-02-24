@@ -6,13 +6,13 @@
 #include <ILoLa.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
-#define RADIO_POWER_BALANCER_UPDATE_PERIOD				(uint32_t)500
-#define RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN			(uint8_t)20
-#define RADIO_POWER_BALANCER_ADJUST_UP_LONG				(uint8_t)(12)
-#define RADIO_POWER_BALANCER_ADJUST_DOWN_LONG			(uint8_t)(8)
+#define RADIO_POWER_BALANCER_UPDATE_PERIOD				(uint32_t)(500)
+#define RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN			(uint8_t)(15)
+#define RADIO_POWER_BALANCER_ADJUST_UP_LONG				(uint8_t)(20)
+#define RADIO_POWER_BALANCER_ADJUST_DOWN_LONG			(uint8_t)(10)
 #define RADIO_POWER_BALANCER_POWER_MIN					(uint8_t)(35)
 #define RADIO_POWER_BALANCER_POWER_MAX					(uint8_t)(UINT8_MAX)
-#define RADIO_POWER_BALANCER_RSSI_TARGET				(uint8_t)(140)
+#define RADIO_POWER_BALANCER_RSSI_TARGET				(uint8_t)(130)
 
 
 
@@ -25,6 +25,7 @@ private:
 	uint8_t CurrentPartnerRSSI = 0;
 
 	uint8_t TransmitPowerNormalized = 0;
+	uint8_t NextTransmitPower = 0;
 
 	uint32_t LastUpdated = ILOLA_INVALID_MILLIS;
 
@@ -51,38 +52,39 @@ public:
 
 			LastUpdated = millis();
 
-			uint8_t PreviousTransmitPower = TransmitPowerNormalized;
+			NextTransmitPower = TransmitPowerNormalized;
 
 			if ((CurrentPartnerRSSI > RADIO_POWER_BALANCER_RSSI_TARGET) &&
-				(TransmitPowerNormalized > RADIO_POWER_BALANCER_POWER_MIN))
+				(NextTransmitPower > RADIO_POWER_BALANCER_POWER_MIN))
 			{
 				//Down
 				if (CurrentPartnerRSSI > (RADIO_POWER_BALANCER_RSSI_TARGET + RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN))
 				{
-					TransmitPowerNormalized = max(RADIO_POWER_BALANCER_POWER_MIN, TransmitPowerNormalized - RADIO_POWER_BALANCER_ADJUST_DOWN_LONG);
+					NextTransmitPower = max(RADIO_POWER_BALANCER_POWER_MIN, NextTransmitPower - RADIO_POWER_BALANCER_ADJUST_DOWN_LONG);
 				}
-				else if (TransmitPowerNormalized > RADIO_POWER_BALANCER_POWER_MIN)
+				else if (NextTransmitPower > RADIO_POWER_BALANCER_POWER_MIN)
 				{
-					TransmitPowerNormalized--;
+					NextTransmitPower--;
 				}
 			}
 			else if ((CurrentPartnerRSSI < RADIO_POWER_BALANCER_RSSI_TARGET) &&
-				(TransmitPowerNormalized < RADIO_POWER_BALANCER_POWER_MAX))
+				(NextTransmitPower < RADIO_POWER_BALANCER_POWER_MAX))
 			{
 				//Up.
 				if (CurrentPartnerRSSI < (RADIO_POWER_BALANCER_RSSI_TARGET - RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN))
 				{
-					TransmitPowerNormalized = min(RADIO_POWER_BALANCER_POWER_MAX, TransmitPowerNormalized + RADIO_POWER_BALANCER_ADJUST_UP_LONG);
+					NextTransmitPower = min(RADIO_POWER_BALANCER_POWER_MAX, NextTransmitPower + RADIO_POWER_BALANCER_ADJUST_UP_LONG);
 
 				}
-				else if (TransmitPowerNormalized < RADIO_POWER_BALANCER_POWER_MAX)
+				else if (NextTransmitPower < RADIO_POWER_BALANCER_POWER_MAX)
 				{
-					TransmitPowerNormalized++;
+					NextTransmitPower++;
 				}
 			}
 
-			if (PreviousTransmitPower != TransmitPowerNormalized)
+			if (NextTransmitPower != TransmitPowerNormalized)
 			{
+				TransmitPowerNormalized = NextTransmitPower;
 				LoLa->SetTransmitPower(TransmitPowerNormalized);
 
 				return true;
@@ -101,21 +103,6 @@ public:
 
 			return true;
 		}
-
-		return false;
-	}
-
-private:
-	bool Up()
-	{
-
-
-		return false;
-	}
-
-	bool Down()
-	{
-
 
 		return false;
 	}
