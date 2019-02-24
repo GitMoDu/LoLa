@@ -46,11 +46,11 @@ public:
 		}
 	}
 
-	void ProcessSent(uint8_t packetHeader)
+	void ProcessSent(uint8_t header)
 	{
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
-			if (Services[i] != nullptr && Services[i]->ProcessSent(packetHeader))
+			if (Services[i] != nullptr && Services[i]->ProcessSent(header))
 			{
 				return;
 			}
