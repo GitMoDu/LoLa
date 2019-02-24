@@ -10,6 +10,7 @@
 
 //Takes around the same time as a full time out.
 #define LOLA_SEND_SERVICE_DENIED_BACK_OFF_DURATION_MILLIS	(uint32_t)2
+#define LOLA_SEND_SERVICE_CHECK_SENT_PERIOD_MILLIS			(uint32_t)1
 #define LOLA_SEND_SERVICE_DENIED_MAX_FAILS					3
 
 #define LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS		(uint8_t)250
@@ -76,6 +77,21 @@ public:
 		Packet->ClearDefinition();
 	}
 
+	bool ProcessSent(const uint8_t header)
+	{
+		if (HasSendPendingInternal() && 
+			Packet->GetDataHeader() == header &&
+			SendStatus == SendStatusEnum::WaitingForSentOk)
+		{
+				//Notify sent Ok will be fired, as soon as the service runs.
+				SendStatus = SendStatusEnum::SentOk;
+				SetNextRunASAP();
+				return true;
+		}
+
+		return false;
+	}
+
 	bool Callback()
 	{
 		//Ensure we only deal with sending if there's request pending, otherwise yeald back to main service.
@@ -113,7 +129,7 @@ public:
 				//Because SendPacket() is already quite time consuming.
 				if (SendPacket(Packet))
 				{
-					SendStatus = SendStatusEnum::SentOk;
+					SendStatus = SendStatusEnum::WaitingForSentOk;
 					SetNextRunASAP();
 				}
 				else
@@ -130,6 +146,17 @@ public:
 						OnSendRetrying();
 					}
 				}
+			}
+			break;
+		case SendStatusEnum::WaitingForSentOk:
+			if ((millis() - SendStartMillis) > SendTimeOutDuration)
+			{
+				OnSendTimedOut();
+				ClearSendRequest();
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_SENT_PERIOD_MILLIS);
 			}
 			break;
 		case SendStatusEnum::SentOk:
