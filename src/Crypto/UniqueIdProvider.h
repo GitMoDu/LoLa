@@ -86,7 +86,7 @@ public:
 			return true;
 		}
 
-		ClearUUID();
+		HasUUID = false;
 
 		return false;
 	}
@@ -103,7 +103,7 @@ public:
 			if (UUID[i] != EEPROM.read(i))//Make sure the data is there.
 			{
 				//ERROR, ERROR, unable to save id.
-				ClearUUID();
+				HasUUID = false;
 				return;
 			}
 			CalculatorCRC.Update(UUID[i]);
@@ -114,7 +114,7 @@ public:
 		if (CalculatorCRC.GetCurrent() != EEPROM.read(UNIQUE_ID_MAX_LENGTH))//Make sure the data is there.
 		{
 			//ERROR, ERROR, unable to save id.
-			ClearUUID();
+			HasUUID = false;
 			return;
 		}
 	}
