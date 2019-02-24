@@ -125,13 +125,7 @@ void setup()
 	LoLaDriver.Debug(&Serial);
 #endif
 
-	if (!LoLa.Start())
-	{
-#ifdef DEBUG_LOG
-		Serial.println(F("LoLa Startup failed."));
-#endif
-		Halt();
-	}
+	LoLa.Start();
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
 	ControllerOutput->NotifyDataChanged();
