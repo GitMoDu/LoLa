@@ -9,11 +9,13 @@
 #include <Packet\LoLaPacket.h>
 
 //Takes around the same time as a full time out.
-#define LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS				(uint32_t)1
+#define LOLA_SEND_SERVICE_DELAYED_MAX_DUPLEX				10 //Take care, as to SEND_TIMEOUT_DEFAULT not exceed UINT8_MAX.
 #define LOLA_SEND_SERVICE_DENIED_MAX_FAILS					3
 
-#define LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(10*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
-#define LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(2*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
+
+#define LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS				(uint32_t)1
+#define LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(LOLA_SEND_SERVICE_DELAYED_MAX_DUPLEX*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
+#define LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
 
 #define LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS	(uint32_t)200
 
@@ -22,15 +24,14 @@ class IPacketSendService : public ILoLaService
 private:
 	enum SendStatusEnum : uint8_t
 	{
-		Requested = 0,
+		Done = 0,
 		SendingPacket = 1,
 		WaitingForSentOk = 2,
 		SentOk = 3,
 		SendFailed = 4,
 		WaitingForAck = 5,
 		AckOk = 6,
-		AckFailed = 7,
-		Done = 8
+		AckFailed = 7	
 	} SendStatus = SendStatusEnum::Done;
 
 	uint8_t SendFailures = 0;
@@ -100,10 +101,6 @@ public:
 		//Finish sending any pending packet.
 		switch (SendStatus)
 		{
-		case SendStatusEnum::Requested:
-			SendFailures = 0;
-			SendStatus = SendStatusEnum::SendingPacket;
-			break;
 		case SendStatusEnum::SendingPacket:
 			if (SendStartMillis == ILOLA_INVALID_MILLIS ||
 				((millis() - SendStartMillis) > SendTimeOutDuration))
@@ -177,11 +174,11 @@ public:
 			SetNextRunASAP();
 			break;
 		case SendStatusEnum::AckOk:
-			OnAckReceived(Packet->GetDefinition()->GetHeader(), Packet->GetId());
+			OnAckReceived(Packet->GetDataHeader(), Packet->GetId());
 			ClearSendRequest();
 			break;
 		case SendStatusEnum::AckFailed:
-			OnAckFailed(Packet->GetDefinition()->GetHeader(), Packet->GetId());
+			OnAckFailed(Packet->GetDataHeader(), Packet->GetId());
 			ClearSendRequest();
 			break;
 		case SendStatusEnum::Done:
@@ -203,7 +200,8 @@ protected:
 			SendTimeOutDuration = sendTimeOutDurationMillis;
 			AckTimeOutDuration = ackReplyTimeOutDurationMillis;
 			OverrideSendPermission = overrideSendPermission;
-			SendStatus = SendStatusEnum::Requested;
+			SendFailures = 0;
+			SendStatus = SendStatusEnum::SendingPacket;
 		}
 
 		SetNextRunASAP();
@@ -226,7 +224,7 @@ public:
 	bool ProcessAck(const uint8_t header, const uint8_t id)
 	{
 		//Make sure we eat out own packets.
-		if (Packet->GetDefinition()->GetHeader() == header)
+		if (Packet->GetDataHeader() == header)
 		{
 			if (HasSendPendingInternal() && Packet->GetId() == id)
 			{
