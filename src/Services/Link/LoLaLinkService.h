@@ -400,8 +400,7 @@ protected:
 			ChallengeTransaction != nullptr &&
 			ServicesManager != nullptr &&
 			MacManager.GetMACPointer() != nullptr &&
-			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
-			PowerBalancer.Setup(GetLoLa()))
+			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 
@@ -411,24 +410,28 @@ protected:
 				LinkInfo->Reset();
 
 				LinkInfo->SetLocalMAC(MacManager.GetMACPointer());
-				GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
+
+				if (PowerBalancer.Setup(GetLoLa(), LinkInfo))
+				{
+					GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
 #ifdef USE_FREQUENCY_HOP
-				FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
+					FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
 #endif
 
-				ClearSession();
+					ClearSession();
 
 #ifdef DEBUG_LOLA
-				Serial.print(F("Local MAC: "));
-				MacManager.Print(&Serial);
-				Serial.println();
+					Serial.print(F("Local MAC: "));
+					MacManager.Print(&Serial);
+					Serial.println();
 #endif
 
-				CryptoSeed.Reset();
-				ResetStateStartTime();
-				SetNextRunASAP();
+					CryptoSeed.Reset();
+					ResetStateStartTime();
+					SetNextRunASAP();
 
-				return true;
+					return true;
+				}
 			}
 
 		}
@@ -441,6 +444,7 @@ protected:
 	{
 		serial->println();
 		serial->println(F("Link Info"));
+
 
 		serial->print(F("UpTime: "));
 
@@ -457,6 +461,11 @@ protected:
 		if ((AliveSeconds % 3600) % 60 < 10)
 			serial->print('0');
 		serial->println((AliveSeconds % 3600) % 60);
+
+		serial->print(F("RSSI :"));
+		serial->println(LinkInfo->GetRSSINormalized());
+		serial->print(F("RSSI Partner:"));
+		serial->println(LinkInfo->GetPartnerRSSINormalized());
 
 		serial->print(F("Sent: "));
 		serial->println(GetLoLa()->GetSentCount());
@@ -501,7 +510,7 @@ protected:
 				//Notify all link dependent services to stop.
 				ServicesManager->NotifyServicesLinkUpdated(false);
 				LinkInfo->Reset();
-				PowerBalancer.Reset();
+				PowerBalancer.SetMaxPower();
 			}
 
 			switch (newState)
@@ -519,7 +528,7 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				CryptoSeed.Reset();
 				SetLinkingState(0);
-				PowerBalancer.Reset();
+				PowerBalancer.SetMaxPower();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
@@ -545,6 +554,7 @@ protected:
 				SetTOTPEnabled();
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
+				PowerBalancer.SetMaxPower();
 
 #ifdef DEBUG_LOLA
 				Serial.print(F("Linking took "));
@@ -654,6 +664,10 @@ protected:
 			//Link timed out.
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 		}
+		else if (PowerBalancer.Update())
+		{
+			SetNextRunASAP();
+		}
 		else if (PingedPending) //Priority response, to keep link alive.
 		{
 			PreparePong();
@@ -666,6 +680,7 @@ protected:
 		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
+			PowerBalancer.SetMaxPower();
 			PreparePing(); 		//Send Panic Ping!
 			RequestSendPacket();
 		}
@@ -724,12 +739,6 @@ protected:
 
 			case LOLA_LINK_SUBHEADER_LINK_INFO_REPORT:
 				ArrayTo32BitArray(&incomingPacket->GetPayload()[1]);
-				Serial.print(F("Report received: "));
-				Serial.print(incomingPacket->GetPayload()[2]);
-				Serial.print(F(" ; "));
-				Serial.print(LinkInfo->GetPartnerInfoUpdateElapsed());
-				Serial.print(F(" ; "));
-				Serial.println(LinkInfo->GetLocalInfoUpdateRemotelyElapsed());
 				OnLinkInfoReportReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[2]);
 				break;
 

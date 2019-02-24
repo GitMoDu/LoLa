@@ -4,126 +4,120 @@
 #define _LOLA_LINK_POWER_BALANCER_h
 
 #include <ILoLa.h>
-#include <RingBufCPP.h>
+#include <Services\Link\LoLaLinkDefinitions.h>
 
 #define RADIO_POWER_BALANCER_UPDATE_PERIOD				(uint32_t)500
-#define RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN			(int16_t) 5 //20
+#define RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN			(uint8_t)20
+#define RADIO_POWER_BALANCER_ADJUST_UP_LONG				(uint8_t)(12)
+#define RADIO_POWER_BALANCER_ADJUST_DOWN_LONG			(uint8_t)(8)
+#define RADIO_POWER_BALANCER_POWER_MIN					(uint8_t)(35)
+#define RADIO_POWER_BALANCER_POWER_MAX					(uint8_t)(UINT8_MAX)
+#define RADIO_POWER_BALANCER_RSSI_TARGET				(uint8_t)(140)
 
-#define RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT			5
 
-#define RADIO_POWER_BALANCER_MAX_ELAPSED_BEFORE_BOOST	(uint32_t)2000
 
 class LoLaLinkPowerBalancer
 {
 private:
-	RingBufCPP<int16_t, RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT> RSSISamples;
-
-	int32_t AverageRSSI;
-
+	LoLaLinkInfo* LinkInfo = nullptr;
 	ILoLa* LoLa = nullptr;
+
+	uint8_t CurrentPartnerRSSI = 0;
+
+	uint8_t TransmitPowerNormalized = 0;
+
+	uint32_t LastUpdated = ILOLA_INVALID_MILLIS;
 
 public:
 	LoLaLinkPowerBalancer() {}
 
-	bool Setup(ILoLa* loLa)
+	bool Setup(ILoLa* loLa, LoLaLinkInfo* linkInfo)
 	{
 		LoLa = loLa;
+		LinkInfo = linkInfo;
+		TransmitPowerNormalized = 0;
 
-		ClearSamples();
+		LastUpdated = ILOLA_INVALID_MILLIS;
 
-		return LoLa != nullptr;
+		return LoLa != nullptr && LinkInfo != nullptr;
 	}
 
-	void Reset()
-	{	
-		SetMaxPower();
-		ClearSamples();
-	}
-
-	void AddRemoteRssiSample(const int16_t rssi)
+	bool Update()
 	{
-		RSSISamples.addForce(rssi);
-	}
+		if (LastUpdated == ILOLA_INVALID_MILLIS ||
+			(millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD))
+		{
+			CurrentPartnerRSSI = LinkInfo->GetPartnerRSSINormalized();
 
-	void OnLinkWarningHigh()
-	{
-		//In case of possibly failing communications, ramp up power.
-		SetMaxPower();
-	}
+			LastUpdated = millis();
 
-	void Update()
-	{
-		if (!LoLa->HasLink())
-		{
-			//When we're not connected, ramp up power.
-			SetMaxPower();
-		}
-		else if (millis() - LoLa->GetLastValidReceivedMillis() > RADIO_POWER_BALANCER_MAX_ELAPSED_BEFORE_BOOST)
-		{
-			//In case of possibly failing communications, ramp up power.
-			SetMaxPower();
-		}
-		else
-		{
-			if (GetRSSIAverage() > LoLa->GetRSSIMin() + RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN)
+			uint8_t PreviousTransmitPower = TransmitPowerNormalized;
+
+			if ((CurrentPartnerRSSI > RADIO_POWER_BALANCER_RSSI_TARGET) &&
+				(TransmitPowerNormalized > RADIO_POWER_BALANCER_POWER_MIN))
 			{
-				Down();
+				//Down
+				if (CurrentPartnerRSSI > (RADIO_POWER_BALANCER_RSSI_TARGET + RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN))
+				{
+					TransmitPowerNormalized = max(RADIO_POWER_BALANCER_POWER_MIN, TransmitPowerNormalized - RADIO_POWER_BALANCER_ADJUST_DOWN_LONG);
+				}
+				else if (TransmitPowerNormalized > RADIO_POWER_BALANCER_POWER_MIN)
+				{
+					TransmitPowerNormalized--;
+				}
 			}
-			else if (GetRSSIAverage() < LoLa->GetRSSIMin() + RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN)
+			else if ((CurrentPartnerRSSI < RADIO_POWER_BALANCER_RSSI_TARGET) &&
+				(TransmitPowerNormalized < RADIO_POWER_BALANCER_POWER_MAX))
 			{
-				Up();
+				//Up.
+				if (CurrentPartnerRSSI < (RADIO_POWER_BALANCER_RSSI_TARGET - RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN))
+				{
+					TransmitPowerNormalized = min(RADIO_POWER_BALANCER_POWER_MAX, TransmitPowerNormalized + RADIO_POWER_BALANCER_ADJUST_UP_LONG);
+
+				}
+				else if (TransmitPowerNormalized < RADIO_POWER_BALANCER_POWER_MAX)
+				{
+					TransmitPowerNormalized++;
+				}
+			}
+
+			if (PreviousTransmitPower != TransmitPowerNormalized)
+			{
+				LoLa->SetTransmitPower(TransmitPowerNormalized);
+
+				return true;
 			}
 		}
+
+		return false;
+	}
+
+	bool SetMaxPower()
+	{
+		if (LoLa != nullptr)
+		{
+			TransmitPowerNormalized = RADIO_POWER_BALANCER_POWER_MAX;
+			LoLa->SetTransmitPower(TransmitPowerNormalized);
+
+			return true;
+		}
+
+		return false;
 	}
 
 private:
-	void ClearSamples()
+	bool Up()
 	{
-		while (!RSSISamples.isEmpty())
-		{
-			RSSISamples.pull();
-		}
-	}
-	
-	void SetMaxPower()
-	{
-		/*LoLa->SetTransmitPower(LoLa->GetTransmitPowerMax());*/
-		//TODO: Remove: only for test boards.
-		LoLa->SetTransmitPower((LoLa->GetTransmitPowerMax() + LoLa->GetTransmitPowerMin() )/2);
+
+
+		return false;
 	}
 
-	void Up()
+	bool Down()
 	{
-		if (LoLa->GetTransmitPower() < LoLa->GetTransmitPowerMax())
-		{
-			LoLa->SetTransmitPower(LoLa->GetTransmitPower() + 1);
-		}
-	}
 
-	void Down()
-	{
-		if (LoLa->GetTransmitPower() > LoLa->GetTransmitPowerMin())
-		{
-			LoLa->SetTransmitPower(LoLa->GetTransmitPower() - 1);
-		}
-	}
 
-	int16_t GetRSSIAverage()
-	{
-		if (RSSISamples.isEmpty())
-		{
-			return ILOLA_INVALID_RSSI;
-		}
-		else
-		{
-			AverageRSSI = 0;
-
-			for (uint8_t i = 0; i < RSSISamples.numElements(); i++)
-			{
-				AverageRSSI += *RSSISamples.peek(i);
-			}
-			return AverageRSSI / RSSISamples.numElements();
-		}
+		return false;
 	}
 };
 #endif
