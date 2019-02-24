@@ -31,7 +31,7 @@ private:
 		SendFailed = 4,
 		WaitingForAck = 5,
 		AckOk = 6,
-		AckFailed = 7	
+		AckFailed = 7
 	} SendStatus = SendStatusEnum::Done;
 
 	uint8_t SendFailures = 0;
@@ -77,14 +77,14 @@ public:
 
 	bool ProcessSent(const uint8_t header)
 	{
-		if (HasSendPendingInternal() && 
+		if (HasSendPendingInternal() &&
 			Packet->GetDataHeader() == header &&
 			SendStatus == SendStatusEnum::WaitingForSentOk)
 		{
-				//Notify sent Ok will be fired, as soon as the service runs.
-				SendStatus = SendStatusEnum::SentOk;
-				SetNextRunASAP();
-				return true;
+			//Notify sent Ok will be fired, as soon as the service runs.
+			SendStatus = SendStatusEnum::SentOk;
+			SetNextRunASAP();
+			return true;
 		}
 
 		return false;
@@ -107,51 +107,44 @@ public:
 			{
 				OnSendTimedOut();
 				ClearSendRequest();
+				break;
 			}
-			else if (!AllowedSend(OverrideSendPermission))
+
+			if (!AllowedSend(OverrideSendPermission))
 			{
 				//Give an opportunity for the service to update the packet, if needed.
 				SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
 				OnSendDelayed();
+				break;
+			}
+
+			//Last minute fast stuff.
+			OnPreSend();
+
+			//SendPacket is quite time consuming.
+			if (SendPacket(Packet))
+			{
+				SendStatus = SendStatusEnum::WaitingForSentOk;
+				SetNextRunDelay(SendTimeOutDuration - constrain(millis() - SendStartMillis, 0, SendTimeOutDuration));
 			}
 			else
 			{
-				//Last minute fast stuff.
-				OnPreSend();
-
-				//We only fire the OnSend and OnSendFailed events in the next cycle.
-				//Because SendPacket() is already quite time consuming.
-				if (SendPacket(Packet))
+				SendFailures++;
+				if (SendFailures > LOLA_SEND_SERVICE_DENIED_MAX_FAILS)
 				{
-					SendStatus = SendStatusEnum::WaitingForSentOk;
+					SendStatus = SendStatusEnum::SendFailed;
 					SetNextRunASAP();
 				}
 				else
 				{
-					SendFailures++;
-					if (SendFailures > LOLA_SEND_SERVICE_DENIED_MAX_FAILS)
-					{
-						SendStatus = SendStatusEnum::SendFailed;
-						SetNextRunASAP();
-					}
-					else
-					{
-						SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
-						OnSendRetrying();
-					}
+					SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
+					OnSendRetrying();
 				}
 			}
 			break;
 		case SendStatusEnum::WaitingForSentOk:
-			if ((millis() - SendStartMillis) > SendTimeOutDuration)
-			{
-				OnSendTimedOut();
-				ClearSendRequest();
-			}
-			else
-			{
-				SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
-			}
+			SendStatus = SendStatusEnum::SendFailed;
+			SetNextRunASAP();
 			break;
 		case SendStatusEnum::SentOk:
 			OnSendOk(Packet->GetDataHeader(), millis() - SendStartMillis);
