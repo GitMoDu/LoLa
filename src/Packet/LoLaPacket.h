@@ -20,6 +20,7 @@ protected:
 
 public:
 	virtual uint8_t * GetRaw() { return nullptr; }
+	virtual uint8_t GetMaxSize() { return 0; }
 
 public:
 	PacketDefinition * GetDefinition()
@@ -97,6 +98,11 @@ public:
 	uint8_t * GetRaw()
 	{
 		return Data;
+	}
+
+	uint8_t GetMaxSize()
+	{
+		return DataSize;
 	}
 };
 #endif
