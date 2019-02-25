@@ -350,6 +350,12 @@ protected:
 			return false;
 		}
 
+		if (Packet->GetMaxSize() < LinkDefinition.GetTotalSize() ||
+			Packet->GetMaxSize() < LinkWithAckDefinition.GetTotalSize())
+		{
+			return false;
+		}
+
 		return true;
 	}
 
