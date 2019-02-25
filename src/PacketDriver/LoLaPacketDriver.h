@@ -54,11 +54,15 @@ private:
 	private:
 		uint8_t TransmitedHeader = 0;
 		uint32_t LastTransmitted = ILOLA_INVALID_MILLIS;
+		uint8_t TransmittedSize = 0;
+
 	public:
 		bool HasPending()
 		{
-			return (LastTransmitted != ILOLA_INVALID_MILLIS) && 
-				(millis() - LastTransmitted < ILOLA_TRANSMIT_EXPIRY_PERIOD_MILLIS);
+			return (LastTransmitted != ILOLA_INVALID_MILLIS) &&
+				(millis() - LastTransmitted <
+					(max(ILOLA_TRANSMIT_EXPIRY_PERIOD_MIN_MILLIS,
+					(TransmittedSize*ILOLA_TRANSMIT_EXPIRY_PERIOD_MILLIS_100_BYTE) / 100)));
 		}
 
 		void SetPending(const uint8_t transmitHeader)
@@ -67,10 +71,11 @@ private:
 			LastTransmitted = millis();
 		}
 
-		void SetPending(const uint8_t transmitHeader, const uint32_t timeStampMillis)
+		void SetPending(const uint8_t transmitHeader, const uint8_t transmittedSize, const uint32_t timeStampMillis)
 		{
 			TransmitedHeader = transmitHeader;
 			LastTransmitted = timeStampMillis;
+			TransmittedSize = transmittedSize;
 		}
 
 		void Clear()

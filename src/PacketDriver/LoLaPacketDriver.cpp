@@ -116,7 +116,7 @@ void LoLaPacketDriver::OnReceived()
 					if (Transmit())
 					{
 						LastSent = millis();
-						OutgoingInfo.SetPending(PACKET_DEFINITION_ACK_HEADER, LastSent);
+						OutgoingInfo.SetPending(PACKET_DEFINITION_ACK_HEADER, Sender.GetBufferSize(), LastSent);
 					}
 					else
 					{
@@ -265,7 +265,7 @@ bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 			if (Transmit())
 			{
 				LastSent = millis();
-				OutgoingInfo.SetPending(packet->GetDataHeader(), LastSent);
+				OutgoingInfo.SetPending(packet->GetDataHeader(), Sender.GetBufferSize(), LastSent);
 				return true;
 			}
 		
