@@ -9,7 +9,7 @@
 #include <LoLaLinkInfo.h>
 
 
-#define LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE			(1 + max(sizeof(uint32_t), LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.
+#define LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE			(1 + max(24,max(sizeof(uint32_t), LOLA_LINK_INFO_MAC_LENGTH)))  //1 byte Sub-header + biggest payload size.
 #define LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE	1  //1 byte Sub-header
 
 

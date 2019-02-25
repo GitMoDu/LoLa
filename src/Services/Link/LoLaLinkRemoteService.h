@@ -303,6 +303,7 @@ protected:
 		switch (newState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+			KeyExchanger.GenerateNewKeyPair();
 			ClearSession();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:

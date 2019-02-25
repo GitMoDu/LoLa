@@ -12,6 +12,7 @@
 #include <Callback.h>
 #include <Crypto\TinyCRC.h>
 #include <Crypto\LoLaCryptoTokenSource.h>
+#include <Crypto\LoLaCryptoKeyExchange.h>
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 #include <Crypto\PseudoMacGenerator.h>
@@ -64,6 +65,8 @@ protected:
 	ArrayToUint32 ATUI_S;
 
 	LoLaCryptoTokenSource CryptoSeed;
+
+	LoLaCryptoKeyExchange KeyExchanger;
 
 	LinkPacketDefinition		LinkDefinition;
 	LinkPacketWithAckDefinition	LinkWithAckDefinition;
@@ -243,7 +246,7 @@ protected:
 			{
 				PingedPending = false;
 			}
-			
+
 			if (ReportPending)
 			{
 				ReportPending = false;
@@ -400,7 +403,8 @@ protected:
 			ChallengeTransaction != nullptr &&
 			ServicesManager != nullptr &&
 			MacManager.GetMACPointer() != nullptr &&
-			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()))
+			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
+			KeyExchanger.Setup())
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 

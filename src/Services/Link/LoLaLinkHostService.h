@@ -25,7 +25,6 @@ private:
 
 	HostInfoSyncTransaction HostInfoTransaction;
 
-
 	//Latency measurement.
 	LoLaLinkLatencyMeter<LOLA_LINK_SERVICE_UNLINK_MAX_LATENCY_SAMPLES> LatencyMeter;
 
@@ -36,6 +35,7 @@ private:
 	void NewSession()
 	{
 		ClearSession();
+		KeyExchanger.GenerateNewKeyPair();
 		LinkInfo->SetSessionId((uint8_t)random(1, (UINT8_MAX - 1)));
 		SessionLastStarted = millis();
 	}
