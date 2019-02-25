@@ -7,6 +7,8 @@
 
 #define CRYPTO_ENTROPY_SOURCE_ANALOG_PIN	PB0
 
+#define LOLA_LINK_CRYPTO_KEY_LENGTH			24 //Derived from selected curve.
+
 
 class LoLaCryptoKeyExchange
 {
@@ -20,8 +22,8 @@ private:
 	} PairingStage = PairingStageEnum::Clear;
 
 
-	const struct uECC_Curve_t * ECC_CURVE = uECC_secp160r1();
-	static const uint8_t KEY_SIZE = 20; //160 bits take 20 bytes.
+	const struct uECC_Curve_t * ECC_CURVE = uECC_secp192r1();
+	static const uint8_t KEY_SIZE = LOLA_LINK_CRYPTO_KEY_LENGTH; //192 bits take 24 bytes.
 	//uECC_Curve_t* ECCCurve = nullptr;
 
 	uint8_t PublicKey[KEY_SIZE];
