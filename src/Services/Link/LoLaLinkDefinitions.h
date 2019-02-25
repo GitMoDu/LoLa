@@ -8,9 +8,9 @@
 
 #include <LoLaLinkInfo.h>
 
-
-#define LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE			(1 + max(24,max(sizeof(uint32_t), LOLA_LINK_INFO_MAC_LENGTH)))  //1 byte Sub-header + biggest payload size.
-#define LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE	1  //1 byte Sub-header
+#define LOLA_LINK_SERVICE_PACKET_LINK_LONG_PAYLOAD_SIZE			(1 + max(LOLA_LINK_CRYPTO_KEY_LENGTH, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.
+#define LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE				(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
+#define LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE		(1)  //1 byte Sub-header
 
 
 ///Timings.
@@ -71,8 +71,6 @@
 #define LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER			0xFF
 
 
-
-
 enum LinkingStagesEnum : uint8_t
 {
 	ClockSyncStage = 0,
@@ -110,6 +108,21 @@ public:
 	void PrintName(Stream* serial)
 	{
 		serial->print(F("Link"));
+	}
+#endif
+};
+
+class LinkPacketLongDefinition : public PacketDefinition
+{
+public:
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_LONG_HEADER; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_LONG_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("LinkLong"));
 	}
 #endif
 };
