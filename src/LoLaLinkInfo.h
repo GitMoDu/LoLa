@@ -8,6 +8,7 @@
 #include <RingBufCPP.h>
 
 #define LOLA_LINK_INFO_MAC_LENGTH		8 //Following MAC-64, because why not?
+#define LOLA_LINK_CRYPTO_KEY_LENGTH		24 //Derived from selected curve.
 
 #define RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT			3
 

@@ -23,7 +23,7 @@ private:
 
 
 	const struct uECC_Curve_t * ECC_CURVE = uECC_secp192r1();
-	static const uint8_t KEY_SIZE = LOLA_LINK_CRYPTO_KEY_LENGTH; //192 bits take 24 bytes.
+	static const uint8_t KEY_SIZE = 24; //192 bits take 24 bytes.
 	//uECC_Curve_t* ECCCurve = nullptr;
 
 	uint8_t PublicKey[KEY_SIZE];
