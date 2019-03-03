@@ -6,22 +6,13 @@
 #include <Arduino.h>
 #include <Packet\PacketDefinition.h>
 
-#define LOLA_PACKET_MACCRC_INDEX			(0)
-#define LOLA_PACKET_HEADER_INDEX			(LOLA_PACKET_MACCRC_INDEX + 1)
-#define LOLA_PACKET_PAYLOAD_INDEX			(LOLA_PACKET_HEADER_INDEX + 1)
-
-#define LOLA_PACKET_MIN_SIZE			(LOLA_PACKET_HEADER_INDEX + 1)
-#define LOLA_PACKET_MIN_SIZE_WITH_ID	(LOLA_PACKET_MIN_SIZE + 1)
-
 class ILoLaPacket
 {
 private:
 	PacketDefinition * Definition = nullptr;
 
-protected:
-	virtual uint8_t * GetRaw() { return nullptr; }
-
 public:
+	virtual uint8_t * GetRaw() { return nullptr; }
 	virtual uint8_t GetMaxSize() { return 0; }
 
 private:
