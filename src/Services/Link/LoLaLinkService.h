@@ -779,7 +779,7 @@ protected:
 				OnEncodedSharedKeyReceived(receivedPacket->GetId(), &receivedPacket->GetPayload()[1]);
 				break;
 			}
-			break;		
+			break;
 		default:
 			return false;
 		}
