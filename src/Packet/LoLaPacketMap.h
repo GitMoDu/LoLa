@@ -52,7 +52,7 @@ public:
 			Mapping[packetDefinition->GetHeader()] = packetDefinition;
 			MappingSize++;
 			return true;
-		}		
+		}
 	}
 
 	void ClearMapping()
@@ -79,14 +79,7 @@ public:
 			return nullptr;
 		}
 
-		if (Mapping[header] != nullptr)
-		{
-			return Mapping[header];
-		}
-		else
-		{
-			return nullptr;
-		}		
+		return Mapping[header];
 	}
 
 	uint8_t GetSize()
@@ -100,8 +93,8 @@ public:
 		serial->print(F("Packet map memory space: "));
 		serial->print(LOLA_PACKET_MAP_TOTAL_SIZE * sizeof(PacketDefinition*));
 		serial->println(F(" bytes."));
-		
-		
+
+
 		serial->print(F("Packet map memory actual usage: "));
 		serial->print(GetSize() * sizeof(PacketDefinition*));
 		serial->println(F(" bytes."));
