@@ -87,7 +87,7 @@ enum LinkingStagesEnum : uint8_t
 class LinkPacketWithAckDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_WITH_ACK_HEADER; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE; }
 
@@ -102,14 +102,14 @@ public:
 class LinkPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ID; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_HEADER; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Link"));
+		serial->print(F("Link\t"));
 	}
 #endif
 };

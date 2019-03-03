@@ -26,11 +26,6 @@ public:
 		BaseHeader = baseHeader;
 	}
 
-	uint8_t GetConfiguration() 
-	{
-		return PACKET_DEFINITION_MASK_BASE; 
-	}
-
 	uint8_t GetHeader() { return BaseHeader; }
 
 	virtual void SetBaseHeader(const uint8_t baseHeader)
@@ -53,8 +48,9 @@ public:
 	SyncDataPacketDefinition() : SyncAbstractPacketDefinition() {}
 
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ID; }
 
+	//TODO: Refactor as template.
 	void SetBaseHeader(const uint8_t baseHeader)
 	{
 		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET);
@@ -80,7 +76,7 @@ public:
 	SyncMetaPacketDefinition() :SyncAbstractPacketDefinition() {}
 
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID;}
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ID;}
 
 	void SetBaseHeader(const uint8_t baseHeader)
 	{
