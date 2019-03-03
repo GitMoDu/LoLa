@@ -27,7 +27,7 @@ public:
 	};
 
 private:
-	const uint8_t LOLA_LINK_INFO_INVALID_SESSION = 0;
+	const uint8_t INVALID_SESSION = 0;
 
 	ILoLa * Driver = nullptr;
 
@@ -47,7 +47,7 @@ private:
 	uint8_t* LocalMAC = nullptr;
 
 	//Link session information.
-	uint8_t SessionId = LOLA_LINK_INFO_INVALID_SESSION;
+	uint8_t SessionId = INVALID_SESSION;
 
 	bool PartnerMACPresent = false;
 	uint8_t PartnerMAC[LOLA_LINK_INFO_MAC_LENGTH];
@@ -104,12 +104,12 @@ public:
 	{
 		SessionId = sessionId;
 
-		return SessionId != LOLA_LINK_INFO_INVALID_SESSION;
+		return SessionId != INVALID_SESSION;
 	}
 
 	bool HasSessionId()
 	{
-		return SessionId != LOLA_LINK_INFO_INVALID_SESSION;
+		return SessionId != INVALID_SESSION;
 	}
 
 	uint8_t GetSessionId()
@@ -164,7 +164,7 @@ public:
 
 	void Reset()
 	{
-		SessionId = LOLA_LINK_INFO_INVALID_SESSION;
+		SessionId = INVALID_SESSION;
 		PartnerMACPresent = false;
 		
 		LinkStarted = ILOLA_INVALID_MILLIS;

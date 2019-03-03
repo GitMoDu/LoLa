@@ -219,14 +219,19 @@ public:
 		//Make sure we eat out own packets.
 		if (Packet->GetDataHeader() == header)
 		{
-			if (HasSendPendingInternal() && Packet->GetId() == id)
+			if (SendStatus == SendStatusEnum::WaitingForAck &&
+				HasSendPendingInternal())
 			{
-				if (SendStatus == SendStatusEnum::WaitingForAck)
+				if (Packet->GetDefinition()->HasId() &&
+					Packet->GetId() != id)
 				{
-					//Notify Ack received will be fired, as soon as the service runs.
-					SendStatus = SendStatusEnum::AckOk;
-					SetNextRunASAP();
+					return false;
 				}
+
+
+				//Notify Ack received will be fired, as soon as the service runs.
+				SendStatus = SendStatusEnum::AckOk;
+				SetNextRunASAP();
 			}
 
 			return true;

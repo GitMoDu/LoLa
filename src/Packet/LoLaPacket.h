@@ -6,21 +6,20 @@
 #include <Arduino.h>
 #include <Packet\PacketDefinition.h>
 
-#define LOLA_PACKET_HEADER_INDEX		0
-#define LOLA_PACKET_MACCRC_INDEX		1
-#define LOLA_PACKET_SUB_HEADER_START	(LOLA_PACKET_MACCRC_INDEX+1)
-
-#define LOLA_PACKET_MIN_SIZE			(LOLA_PACKET_SUB_HEADER_START + 1)
-#define LOLA_PACKET_MIN_WITH_ID_SIZE	(LOLA_PACKET_MIN_SIZE + 1)
-
 class ILoLaPacket
 {
-protected:
+private:
 	PacketDefinition * Definition = nullptr;
 
 public:
 	virtual uint8_t * GetRaw() { return nullptr; }
 	virtual uint8_t GetMaxSize() { return 0; }
+
+private:
+	inline uint8_t GetIdIndex()
+	{
+		return LOLA_PACKET_PAYLOAD_INDEX + Definition->GetPayloadSize();
+	}
 
 public:
 	PacketDefinition * GetDefinition()
@@ -37,30 +36,27 @@ public:
 	{
 		if (Definition != nullptr && Definition->HasId())
 		{
-			return GetRaw()[LOLA_PACKET_SUB_HEADER_START];
+			return GetRaw()[GetIdIndex()];
 		}
-		else
-		{
-			return 0;
-		}
+		return 0;
 	}
 
-	bool SetId(const uint8_t id)
+	void SetId(const uint8_t id)
 	{
 		if (Definition != nullptr && Definition->HasId())
 		{
-			GetRaw()[LOLA_PACKET_SUB_HEADER_START] = id;
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+			GetRaw()[GetIdIndex()] = id;
+		}	
 	}
 
 	uint8_t GetMACCRC()
 	{
 		return GetRaw()[LOLA_PACKET_MACCRC_INDEX];
+	}
+
+	void SetMACCRC(const uint8_t crcValue)
+	{
+		GetRaw()[LOLA_PACKET_MACCRC_INDEX] = crcValue;
 	}
 
 	uint8_t GetDataHeader()
@@ -77,15 +73,14 @@ public:
 		Definition = definition;
 	}
 
-	uint8_t * GetPayload()
+	uint8_t* GetPayload()
 	{
-		uint8_t Offset = LOLA_PACKET_SUB_HEADER_START;
-		if (Definition != nullptr && Definition->HasId())
-		{
-			Offset++;
-		}
+		return &GetRaw()[LOLA_PACKET_PAYLOAD_INDEX];
+	}
 
-		return &GetRaw()[Offset];
+	uint8_t* GetRawContent()
+	{
+		return &GetRaw()[LOLA_PACKET_HEADER_INDEX];
 	}
 };
 
@@ -94,6 +89,7 @@ class TemplateLoLaPacket : public ILoLaPacket
 {
 private:
 	uint8_t Data[DataSize];
+
 public:
 	uint8_t * GetRaw()
 	{

@@ -75,7 +75,7 @@ void LoLaPacketDriver::OnReceived()
 		ReceivedCount++;
 
 		//Is Ack
-		if (Receiver.GetIncomingDefinition()->GetHeader() == PACKET_DEFINITION_ACK_HEADER)
+		if (Receiver.GetIncomingDefinition()->IsAck())
 		{
 #ifdef USE_MOCK_PACKET_LOSS
 			if (!GetLossChance())
