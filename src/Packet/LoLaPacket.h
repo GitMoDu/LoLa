@@ -34,12 +34,19 @@ public:
 
 	uint8_t GetId()
 	{
-		return GetRaw()[GetIdIndex()];
+		if (Definition != nullptr && Definition->HasId())
+		{
+			return GetRaw()[GetIdIndex()];
+		}
+		return 0;
 	}
 
 	void SetId(const uint8_t id)
 	{
-		GetRaw()[GetIdIndex()] = id;
+		if (Definition != nullptr && Definition->HasId())
+		{
+			GetRaw()[GetIdIndex()] = id;
+		}	
 	}
 
 	uint8_t GetMACCRC()
@@ -65,8 +72,6 @@ public:
 		}
 		Definition = definition;
 	}
-
-
 
 	uint8_t* GetPayload()
 	{
