@@ -41,19 +41,9 @@ public:
 			TotalSize += 1;//1 Byte for Id.
 		}
 
-		//if (HasAddress())
-		//{
-		//	TotalSize += 1;//1 Byte for Id.
-		//}
-
 		TotalSize += GetPayloadSize();//N Bytes for payload.
 
 		return TotalSize;
-	}
-
-	bool HasPriority()
-	{
-		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_PRIORITY;
 	}
 
 	bool HasACK()
@@ -65,11 +55,6 @@ public:
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ID;
 	}
-
-	//bool HasAddress()
-	//{
-	//	return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ADDRESS;
-	//}
 
 #ifdef DEBUG_LOLA
 	void Debug(Stream* serial)
@@ -84,25 +69,10 @@ public:
 			serial->print(F("ACK|"));
 		}
 
-		//if (HasAddress())
-		//{
-		//	serial->print(F("Address|"));
-		//}
-
 		if (HasId())
 		{
 			serial->print(F("Id|"));
 		}
-
-		if (HasPriority())
-		{
-			serial->print(F("Priority"));
-		}
-
-		//if (HasTopple())
-		//{
-		//	serial->print(F("Topple"));
-		//}
 	}
 #endif
 };
