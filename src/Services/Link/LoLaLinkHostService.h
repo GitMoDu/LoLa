@@ -143,9 +143,6 @@ protected:
 			{
 				PreparePKCBroadcast();
 				RequestSendPacket(true);
-				Serial.print(F("Sending PKCBroadcast ("));
-				Serial.print(LinkInfo->GetSessionId());
-				Serial.println(')');
 			}
 			else
 			{
@@ -186,9 +183,6 @@ protected:
 			{
 				PrepareSharedKey();
 				RequestSendPacket(true);
-				Serial.print(F("Sending SharedKey ("));
-				Serial.print(LinkInfo->GetSessionId());
-				Serial.println(')');
 			}
 			else
 			{
