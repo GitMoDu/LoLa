@@ -26,9 +26,9 @@ public:
 		BaseHeader = baseHeader;
 	}
 
-	virtual uint8_t GetConfiguration() 
+	uint8_t GetConfiguration() 
 	{
-		return PACKET_DEFINITION_MASK_BASIC; 
+		return PACKET_DEFINITION_MASK_BASE; 
 	}
 
 	uint8_t GetHeader() { return BaseHeader; }
