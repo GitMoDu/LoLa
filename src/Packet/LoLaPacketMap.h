@@ -7,12 +7,13 @@
 
 #define LOLA_PACKET_MAP_TOTAL_SIZE					20 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
 
-//Reserved 0 for Ack
+//Reserved [0;1] for AckS
 #define PACKET_DEFINITION_ACK_HEADER				0x00
+#define PACKET_DEFINITION_ACK_ENCRYPTED_HEADER		0x01
 
-//Reserved [1;2] for Link service.
-#define PACKET_DEFINITION_LINK_HEADER            (PACKET_DEFINITION_ACK_HEADER + 1)
-#define PACKET_DEFINITION_LINK_WITH_ACK_HEADER    (PACKET_DEFINITION_LINK_HEADER + 1)
+//Reserved [2;3] for Link service.
+#define PACKET_DEFINITION_LINK_HEADER				(PACKET_DEFINITION_ACK_ENCRYPTED_HEADER + 1)
+#define PACKET_DEFINITION_LINK_WITH_ACK_HEADER		(PACKET_DEFINITION_LINK_HEADER + 1)
 
 //User service range start
 #define PACKET_DEFINITION_USER_HEADERS_START		(PACKET_DEFINITION_LINK_WITH_ACK_HEADER + 1)
@@ -20,7 +21,7 @@
 class AckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO | PACKET_DEFINITION_MASK_IS_ACK; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
 	uint8_t GetPayloadSize() {
 		return 2;//Payload is original Header. Id is optional.
@@ -28,7 +29,23 @@ public:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Ack"));
+		serial->print(F("Ack\t"));
+	}
+#endif
+};
+
+class AckEncryptedPacketDefinition : public PacketDefinition
+{
+public:
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_IS_ACK; }
+	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_ENCRYPTED_HEADER; }
+	uint8_t GetPayloadSize() {
+		return 2;//Payload is original Header. Id is optional.
+	}
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("AckEnc"));
 	}
 #endif
 };
@@ -37,6 +54,7 @@ class LoLaPacketMap
 {
 private:
 	AckPacketDefinition DefinitionACK;
+	AckEncryptedPacketDefinition DefinitionACKEncrypted;
 protected:
 	uint8_t MappingSize = 0;
 	PacketDefinition* Mapping[LOLA_PACKET_MAP_TOTAL_SIZE];
@@ -68,6 +86,7 @@ public:
 
 		//Add base mappings
 		AddMapping(&DefinitionACK);
+		AddMapping(&DefinitionACKEncrypted);
 	}
 
 	LoLaPacketMap()

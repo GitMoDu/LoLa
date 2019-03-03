@@ -10,7 +10,7 @@
 #define PACKET_DEFINITION_MASK_CUSTOM_4			B00000010
 #define PACKET_DEFINITION_MASK_CUSTOM_3			B00000100
 #define PACKET_DEFINITION_MASK_CUSTOM_2			B00001000
-#define PACKET_DEFINITION_MASK_CUSTOM_1			B00010000
+#define PACKET_DEFINITION_MASK_IS_ACK			B00010000
 #define PACKET_DEFINITION_MASK_HAS_CRYPTO		B00100000	//TODO: Implement in Transceivers.
 #define PACKET_DEFINITION_MASK_HAS_ID			B01000000 
 #define PACKET_DEFINITION_MASK_HAS_ACK			B10000000
@@ -54,6 +54,11 @@ public:
 		}
 	}
 
+	bool IsAck()
+	{
+		return GetConfiguration() & PACKET_DEFINITION_MASK_IS_ACK;
+	}	
+	
 	bool HasACK()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ACK;
@@ -77,7 +82,10 @@ public:
 		serial->print(GetTotalSize());
 		serial->print(F(" |"));
 
-		if (HasACK())
+		if (IsAck())
+		{
+			serial->print(F("IsACK|"));
+		}else if (HasACK())
 		{
 			serial->print(F("ACK|"));
 		}
