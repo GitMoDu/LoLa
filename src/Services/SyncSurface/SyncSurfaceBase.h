@@ -66,16 +66,16 @@ protected:
 		return true;
 	}
 
-	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
+	bool ProcessPacket(ILoLaPacket* incomingPacket)
 	{
-		if (header == DataPacketDefinition.GetHeader())
+		if (incomingPacket->GetDataHeader() == DataPacketDefinition.GetHeader())
 		{
 			//To Reader.
 			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
 
 			return true;
 		}
-		else if (header == SyncMetaDefinition.GetHeader())
+		else if (incomingPacket->GetDataHeader() == SyncMetaDefinition.GetHeader())
 		{
 			SetRemoteHash(incomingPacket->GetPayload()[0]);
 

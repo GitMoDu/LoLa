@@ -209,7 +209,7 @@ protected:
 		SetNextRunDelay(range / 2 + random(range / 2));
 	}
 
-	bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header)
+	bool ProcessPacket(ILoLaPacket* incomingPacket)
 	{
 		if (header == PACKET_DEFINITION_PING_HEADER)
 		{
