@@ -39,11 +39,24 @@ public:
 	{
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
-			if (Services[i] != nullptr && Services[i]->ReceivedPacket(receivedPacket, receivedPacket->GetDataHeader()))
+			if (Services[i] != nullptr && Services[i]->ReceivedPacket(receivedPacket))
 			{
 				return;
 			}
 		}
+	}
+
+	bool ProcessAckedPacket(ILoLaPacket* receivedPacket)
+	{
+		for (uint8_t i = 0; i < ServicesCount; i++)
+		{
+			if (Services[i] != nullptr && Services[i]->ReceivedAckedPacket(receivedPacket))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	void ProcessSent(uint8_t header)

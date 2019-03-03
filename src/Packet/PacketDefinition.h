@@ -80,7 +80,7 @@ public:
 		PrintName(serial);
 		serial->print(F("\tSize: "));
 		serial->print(GetTotalSize());
-		serial->print(F(" |"));
+		serial->print(F(" \t|"));
 
 		if (IsAck())
 		{

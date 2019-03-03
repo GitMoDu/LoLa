@@ -127,10 +127,18 @@ public:
 #endif // DEBUG_LOLA
 
 public:
-	bool ReceivedPacket(ILoLaPacket* incomingPacket, const uint8_t header)
+	bool ReceivedPacket(ILoLaPacket* incomingPacket)
 	{
 		if (ShouldProcessReceived()) {
-			return ProcessPacket(incomingPacket, header);
+			return ProcessPacket(incomingPacket);
+		}
+		return false;
+	}	
+	
+	bool ReceivedAckedPacket(ILoLaPacket* incomingPacket)
+	{
+		if (ShouldProcessReceived()) {
+			return ProcessAckedPacket(incomingPacket);
 		}
 		return false;
 	}
@@ -144,7 +152,8 @@ public:
 	}
 
 public:
-	virtual bool ProcessPacket(ILoLaPacket* incomingPacket, const uint8_t header) { return false; }
+	virtual bool ProcessPacket(ILoLaPacket* incomingPacket) { return false; }
+	virtual bool ProcessAckedPacket(ILoLaPacket* incomingPacket) { return false; }
 	virtual bool ProcessAck(const uint8_t header, const uint8_t id) { return false; }
 	virtual bool ProcessSent(const uint8_t header) { return false; }
 	virtual void OnLinkEstablished() {}

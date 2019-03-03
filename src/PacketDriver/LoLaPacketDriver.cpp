@@ -100,34 +100,43 @@ void LoLaPacketDriver::OnReceived()
 				return;
 			}
 #endif
+			//If packet has ack, do serice validation before sending Ack.
 			if (Receiver.GetIncomingDefinition()->HasACK())
 			{
-				if (Sender.SendAck(Receiver.GetIncomingDefinition(), Receiver.GetIncomingPacket()->GetId()))
+				if (Services.ProcessAckedPacket(Receiver.GetIncomingPacket()))
 				{
+					if (Sender.SendAck(Receiver.GetIncomingDefinition(), Receiver.GetIncomingPacket()->GetId()))
+					{
 #ifdef USE_MOCK_PACKET_LOSS
-					if (!GetLossChance())
-					{
+						if (!GetLossChance())
+						{
 #ifdef DEBUG_LOLA
-						Serial.println(F("Packet Lost, Oh noes!"));
+							Serial.println(F("Packet Lost, Oh noes!"));
 #endif
-						return;
-					}
+							return;
+						}
 #endif
-					if (Transmit())
-					{
-						LastSent = millis();
-						OutgoingInfo.SetPending(PACKET_DEFINITION_ACK_HEADER, Sender.GetBufferSize(), LastSent);
-					}
-					else
-					{
-						//Transmit failed.
-						//TODO: Store statistics.
+						if (Transmit())
+						{
+							LastSent = millis();
+							OutgoingInfo.SetPending(PACKET_DEFINITION_ACK_HEADER, Sender.GetBufferSize(), LastSent);
+
+							//Process packets after sending validated Ack.
+							Services.ProcessPacket(Receiver.GetIncomingPacket());
+						}
+						else
+						{
+							//Transmit failed.
+							//TODO: Store statistics.
+						}
 					}
 				}
 			}
-
-			//Handle packet.
-			Services.ProcessPacket(Receiver.GetIncomingPacket());
+			else
+			{
+				//Process packet directly, no Ack.
+				Services.ProcessPacket(Receiver.GetIncomingPacket());
+			}			
 		}
 
 		Receiver.SetBufferSize(0);
