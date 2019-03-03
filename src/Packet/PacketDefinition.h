@@ -6,22 +6,23 @@
 #include <Arduino.h>
 
 ///Configurations for packets.
-#define PACKET_DEFINITION_MASK_CUSTOM_1		 B00000001
-#define PACKET_DEFINITION_MASK_CUSTOM_2		 B00000010
-#define PACKET_DEFINITION_MASK_CUSTOM_3		 B00000100
-#define PACKET_DEFINITION_MASK_CUSTOM_4		 B00001000
-#define PACKET_DEFINITION_MASK_HAS_PRIORITY  B00010000	//TODO: Implement in PacketManager.
-#define PACKET_DEFINITION_MASK_HAS_ADDRESS   B00100000	//TODO: Implement in PacketManager.
-#define PACKET_DEFINITION_MASK_HAS_ID		 B01000000 
-#define PACKET_DEFINITION_MASK_HAS_ACK		 B10000000
-#define PACKET_DEFINITION_MASK_BASIC		 B00000000
+#define PACKET_DEFINITION_MASK_CUSTOM_1			B00000001
+#define PACKET_DEFINITION_MASK_CUSTOM_2			B00000010
+#define PACKET_DEFINITION_MASK_CUSTOM_3			B00000100
+#define PACKET_DEFINITION_MASK_CUSTOM_4			B00001000
+#define PACKET_DEFINITION_MASK_CUSTOM_5			B00010000
+#define PACKET_DEFINITION_MASK_HAS_CRYPTO		B00100000	//TODO: Implement in Transceivers.
+#define PACKET_DEFINITION_MASK_HAS_ID			B01000000 
+#define PACKET_DEFINITION_MASK_HAS_ACK			B10000000
+#define PACKET_DEFINITION_MASK_BASE				PACKET_DEFINITION_MASK_HAS_CRYPTO //Default is crypto on.
+#define PACKET_DEFINITION_MASK_BASE_NO_CRYPTO	B00000000
 
 #define PACKET_DEFINITION_MAX_PACKET_SIZE 32
 
 class PacketDefinition
 {
 public:
-	virtual uint8_t GetConfiguration() { return 0; }
+	virtual uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE; }
 	virtual uint8_t GetHeader() { return 0; }
 	virtual uint8_t GetPayloadSize() { return 0; }
 
@@ -56,6 +57,11 @@ public:
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ID;
 	}
 
+	bool HasCrypto()
+	{
+		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_CRYPTO;
+	}
+
 #ifdef DEBUG_LOLA
 	void Debug(Stream* serial)
 	{
@@ -72,6 +78,11 @@ public:
 		if (HasId())
 		{
 			serial->print(F("Id|"));
+		}
+
+		if (HasCrypto())
+		{
+			serial->print(F("Crypto"));
 		}
 	}
 #endif
