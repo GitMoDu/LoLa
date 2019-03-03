@@ -70,8 +70,8 @@
 #define LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE			0xF4
 #define LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER			0xFF
 
-
-
+#define LOLA_LINK_HEADER_LINKED								(PACKET_DEFINITION_LINK_START_HEADER)
+#define LOLA_LINK_HEADER_LINKED_WITH_ACK					(LOLA_LINK_HEADER_LINKED + 1)
 
 enum LinkingStagesEnum : uint8_t
 {
@@ -88,7 +88,7 @@ class LinkPacketWithAckDefinition : public PacketDefinition
 {
 public:
 	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
-	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_WITH_ACK_HEADER; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_LINKED_WITH_ACK; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA
@@ -103,7 +103,7 @@ class LinkPacketDefinition : public PacketDefinition
 {
 public:
 	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ID; }
-	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_HEADER; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_LINKED; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA

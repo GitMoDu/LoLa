@@ -721,7 +721,7 @@ protected:
 		//Switch the packet to the appropriate method.
 		switch (header)
 		{
-		case PACKET_DEFINITION_LINK_HEADER:
+		case LOLA_LINK_HEADER_LINKED:
 			switch (incomingPacket->GetPayload()[0])
 			{
 				//To both.
@@ -793,7 +793,7 @@ protected:
 				break;
 			}
 			break;
-		case PACKET_DEFINITION_LINK_WITH_ACK_HEADER:
+		case LOLA_LINK_HEADER_LINKED_WITH_ACK:
 			//To both.
 			OnLinkingSwitchOverReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[0]);
 			break;
