@@ -5,23 +5,26 @@
 
 #include <Packet\PacketDefinition.h>
 
-#define LOLA_PACKET_MAP_TOTAL_SIZE 20 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
-#define PACKET_DEFINITION_ACK_HEADER 0x00
+#define LOLA_PACKET_MAP_TOTAL_SIZE					20 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
 
-#define PACKET_DEFINITION_LINK_HEADER			(PACKET_DEFINITION_ACK_HEADER + 1)
-#define PACKET_DEFINITION_LINK_WITH_ACK_HEADER	(PACKET_DEFINITION_LINK_HEADER + 1)
+//Reserved 0 for Ack
+#define PACKET_DEFINITION_ACK_HEADER				0x00
 
-#define PACKET_DEFINITION_USER_HEADERS_START	(PACKET_DEFINITION_LINK_WITH_ACK_HEADER + 1)
+//Reserved [1;2] for Link service.
+#define PACKET_DEFINITION_LINK_HEADER            (PACKET_DEFINITION_ACK_HEADER + 1)
+#define PACKET_DEFINITION_LINK_WITH_ACK_HEADER    (PACKET_DEFINITION_LINK_HEADER + 1)
 
-#define PACKET_DEFINITION_ACK_PAYLOAD_SIZE 2	//Payload is original Header. Id is optional.
+//User service range start
+#define PACKET_DEFINITION_USER_HEADERS_START		(PACKET_DEFINITION_LINK_WITH_ACK_HEADER + 1)
 
 class AckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
-	uint8_t GetPayloadSize() { return PACKET_DEFINITION_ACK_PAYLOAD_SIZE; }
-
+	uint8_t GetPayloadSize() {
+		return LOLA_PACKET_MIN_SIZE_WITH_ID;//Payload is original Header. Id is optional.
+	}
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
