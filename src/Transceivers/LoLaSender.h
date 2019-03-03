@@ -10,6 +10,7 @@ class LoLaSender : public LoLaBuffer
 {
 private:
 	PacketDefinition* AckDefinition = nullptr;
+	PacketDefinition* AckEncryptedDefinition = nullptr;
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE_WITH_ID> AckPacket;
 
@@ -26,29 +27,30 @@ public:
 	//Fast Ack, Nack, Ack with Id and Nack with Id packet sender, writes directly to output.
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
-		if (transmitPacket != nullptr)
+		BufferPacket = transmitPacket;
+
+		if (BufferPacket != nullptr)
 		{
-			BufferPacket = transmitPacket;
 			OutgoingDefinition = BufferPacket->GetDefinition();
 			CalculatorCRC.Reset();
 
-			//Crypto starts at the start of the hash.
-#ifdef USE_LATENCY_COMPENSATION
-			CalculatorCRC.Update(GetCryptoToken(ETTM));
-#else
-			CalculatorCRC.Update(GetCryptoToken(0));
-#endif
-			//Hash everything but the CRC at the start.
-			CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetTotalSize() - LOLA_PACKET_HEADER_INDEX);
-
-			BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());
-
+			//Encrypt, then MAC.
 			if (OutgoingDefinition->HasCrypto())
 			{
 				//TODO: Encode content.
 			}
 
-			BufferSize = OutgoingDefinition->GetTotalSize();			
+			//Hash everything but the CRC at the start.
+			CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetContentSize());
+
+			//Crypto starts at the start of the hash.
+#ifdef USE_LATENCY_COMPENSATION
+			BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
+#else
+			BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(0)));
+#endif			
+
+			BufferSize = OutgoingDefinition->GetTotalSize();
 
 			return true;
 		}
@@ -59,35 +61,38 @@ public:
 	bool SendAck(PacketDefinition* payloadDefinition, const uint8_t id)
 	{
 		CalculatorCRC.Reset();
-
-		//Crypto starts at the start of the hash.
-#ifdef USE_LATENCY_COMPENSATION
-		CalculatorCRC.Update(GetCryptoToken(ETTM));
-#else
-		CalculatorCRC.Update(GetCryptoToken(0));
-#endif		
-		//
-
 		BufferPacket = &AckPacket;
-		BufferPacket->SetDefinition(AckDefinition);
-		CalculatorCRC.Update(PACKET_DEFINITION_ACK_HEADER);
 
-		//Payload, header and ID.
-		BufferPacket->GetPayload()[0] = payloadDefinition->GetHeader();
-		CalculatorCRC.Update(payloadDefinition->GetHeader());
-
-		if (payloadDefinition->HasId())
+		if (payloadDefinition->HasCrypto())
 		{
-			BufferPacket->GetPayload()[1] = id;
-			CalculatorCRC.Update(id);
+			OutgoingDefinition = AckEncryptedDefinition;
 		}
 		else
 		{
-			BufferPacket->GetPayload()[1] = 0;
-			CalculatorCRC.Update(0);
+			OutgoingDefinition = AckDefinition;
 		}
 
-		BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());
+		BufferPacket->SetDefinition(OutgoingDefinition);
+		BufferPacket->GetPayload()[0] = payloadDefinition->GetHeader();
+		BufferPacket->GetPayload()[1] = id;
+
+		//Encrypt, then MAC.
+		if (OutgoingDefinition->HasCrypto())
+		{
+			//TODO: Encrypt content.
+		}
+
+		//Hash everything but the CRC at the start.
+		CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetContentSize());
+
+		//Hash with time token as late as possible.
+#ifdef USE_LATENCY_COMPENSATION
+		BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
+#else
+		BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(0)));
+#endif		
+		//
+
 		BufferSize = AckDefinition->GetTotalSize();
 
 		return true;
@@ -98,7 +103,8 @@ public:
 		if (LoLaBuffer::Setup(packetMap))
 		{
 			AckDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_HEADER);
-			if (AckDefinition != nullptr)
+			AckEncryptedDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_ENCRYPTED_HEADER);
+			if (AckDefinition != nullptr && AckEncryptedDefinition != nullptr)
 			{
 				return true;
 			}

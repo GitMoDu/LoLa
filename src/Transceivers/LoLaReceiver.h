@@ -33,8 +33,12 @@ public:
 		return false;
 	}
 
+	uint8_t IncomingToken = 0;
 	bool ReceivePacket()
 	{
+		//Get token as early as possible.
+		IncomingToken = GetCryptoToken(0);//No latency compensation on receiver.
+
 		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
 		{
 			BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader()));
@@ -44,19 +48,16 @@ public:
 				CRCIndex = 0;
 				CalculatorCRC.Reset();
 
-				//Crypto starts at the beginning.
-				CalculatorCRC.Update(GetCryptoToken(0));//No latency compensation on receiver.
-
-				if (BufferPacket->GetDefinition()->HasCrypto())
-				{
-					//TODO: Decode content.
-				}
-
 				//Hash everything but the CRC at the start.
 				CalculatorCRC.Update(BufferPacket->GetRawContent(), BufferPacket->GetDefinition()->GetContentSize());
 
-				if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
+				if (CalculatorCRC.Update(IncomingToken) == BufferPacket->GetMACCRC())
 				{
+					//MAC, then decrypt.
+					if (BufferPacket->GetDefinition()->HasCrypto())
+					{
+						//TODO: Decrypt content.
+					}
 					return true;
 				}
 			}
@@ -64,6 +65,7 @@ public:
 
 		BufferSize = 0;
 		BufferPacket->SetDefinition(nullptr);
+
 		return false;
 	}
 };
