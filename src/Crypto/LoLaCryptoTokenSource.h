@@ -59,12 +59,36 @@ public:
 		TOTPSeed = seed;
 	}
 
-	void SetBaseSeed(uint8_t * hostPMAC, uint8_t* remotePMAC, const uint8_t macLength, const uint8_t sessionId)
+	void SetBaseSeed(const uint32_t hostMACHash, const uint32_t remoteMACHash, const uint8_t sessionId)
 	{
 		CalculatorCRC.Reset();
 
-		CalculatorCRC.Update(hostPMAC, macLength);
-		CalculatorCRC.Update(remotePMAC, macLength);
+		CalculatorCRC.Update((hostMACHash & 0x000000FF));
+		CalculatorCRC.Update((hostMACHash & 0x0000FF00) >> 8);
+		CalculatorCRC.Update((hostMACHash & 0x00FF0000) >> 16);
+		CalculatorCRC.Update((hostMACHash & 0xFF000000) >> 24);
+
+		CalculatorCRC.Update((remoteMACHash & 0x000000FF));
+		CalculatorCRC.Update((remoteMACHash & 0x0000FF00) >> 8);
+		CalculatorCRC.Update((remoteMACHash & 0x00FF0000) >> 16);
+		CalculatorCRC.Update((remoteMACHash & 0xFF000000) >> 24);
+
+		CalculatorCRC.Update(sessionId);
+
+		CachedSeed = CalculatorCRC.GetCurrent();
+
+		if (CachedSeed == 0)
+		{
+			CachedSeed++;
+		}
+
+	}
+	void SetBaseSeed(uint8_t * hostMAC, uint8_t* remoteMAC, const uint8_t macLength, const uint8_t sessionId)
+	{
+		CalculatorCRC.Reset();
+
+		CalculatorCRC.Update(hostMAC, macLength);
+		CalculatorCRC.Update(remoteMAC, macLength);
 		CalculatorCRC.Update(sessionId);
 
 		CachedSeed = CalculatorCRC.GetCurrent();

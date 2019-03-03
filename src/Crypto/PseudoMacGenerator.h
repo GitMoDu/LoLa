@@ -12,6 +12,7 @@ class LoLaMAC
 {
 private:
 	uint8_t MAC[MACLength];
+	uint32_t MACHash = 0;
 	bool Cached = false;
 
 	TinyCrcModbus8 CRC;
@@ -43,6 +44,36 @@ private:
 		{
 			MAC[MACLength - 1] = IdProvider.GetUUIDPointer()[MACLength - 1];
 		}
+
+		UpdateMACHash();
+	}
+
+	inline void UpdateMACHash()
+	{
+		//TODO: Upgrade to real 32 bit hash
+		CRC.Reset();
+		CRC.Update(MAC, 0);
+		MACHash = CRC.GetCurrent();
+		CRC.Update(MAC, 1);
+		MACHash += CRC.GetCurrent() << 8;
+		CRC.Update(MAC, 2);
+		MACHash += CRC.GetCurrent() << 16;
+		CRC.Update(MAC, 3);
+		MACHash += CRC.GetCurrent() << 24;		
+	}
+
+	inline void LazyLoad()
+	{
+		//Lazy loaded MAC.
+		if (!Cached)
+		{
+			//It is not the MAC generator's job to get enough entropy.
+			if (MACLength <= IdProvider.GetUUIDLength())
+			{
+				UpdateMAC();
+				Cached = true;
+			}			
+		}
 	}
 
 public:
@@ -64,42 +95,18 @@ public:
 		return true;
 	}
 
+	uint32_t GetMACHash()
+	{
+		LazyLoad();
+
+		return MACHash;
+	}
+
 	uint8_t* GetMACPointer()
 	{
-		//Lazy loaded MAC.
-		if (!Cached)
-		{
-			//It is not the MAC generator's job to get enough entropy.
-			if (MACLength > IdProvider.GetUUIDLength())
-			{
-				return nullptr;
-			}
-
-			UpdateMAC();
-			Cached = true;
-		}
+		LazyLoad();
 
 		return MAC;
 	}
-
-#ifdef DEBUG_LOLA
-	void Print(Stream* serial)
-	{
-		Print(serial, GetMACPointer());
-	}
-
-	void Print(Stream* serial, uint8_t* mac)
-	{
-		for (uint8_t i = 0; i < MACLength; i++)
-		{
-			serial->print(mac[i], HEX);
-			if (i < MACLength - 1)
-			{
-				serial->print(':');
-			}
-		}
-	}
-#endif // DEBUG_LOLA
-
 };
 #endif

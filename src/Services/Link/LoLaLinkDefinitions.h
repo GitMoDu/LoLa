@@ -7,16 +7,17 @@
 #include <Packet\LoLaPacketMap.h>
 
 #include <LoLaLinkInfo.h>
+#include <Crypto\LoLaCryptoKeyExchange.h>
 
-#define LOLA_LINK_SERVICE_PACKET_LINK_LONG_PAYLOAD_SIZE			(1 + max(LOLA_LINK_CRYPTO_KEY_LENGTH, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.
-#define LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE				(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
-#define LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE		(1)  //1 byte Sub-header
+#define LOLA_LINK_PROTOCOL_VERSION							0 //N < 20
+#define LOLA_LINK_SERVICE_LINK_PAYLOAD_SIZE					(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
+#define LOLA_LINK_SERVICE_LINK_WITH_ACK_PAYLOAD_SIZE		(0)
+#define LOLA_LINK_SERVICE_UNLINK_SHORT_PAYLOAD_SIZE			LOLA_LINK_SERVICE_LINK_PAYLOAD_SIZE
+#define LOLA_LINK_SERVICE_UNLINK_LONG_WITH_ACK_PAYLOAD_SIZE	(LOLA_LINK_CRYPTO_KEY_LENGTH) 
+#define LOLA_LINK_SERVICE_UNLINK_LONG_PAYLOAD_SIZE			(1 + max(LOLA_LINK_CRYPTO_KEY_LENGTH, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.
 
-
-///Timings.
-#define LOLA_LINK_SERVICE_CHECK_PERIOD						(uint32_t)(2)
-#define LOLA_LINK_SERVICE_IDLE_PERIOD						(uint32_t)(50)
-
+#define LOLA_LINK_SERVICE_PAYLOAD_MAX_SIZE					(max(LOLA_LINK_SERVICE_UNLINK_LONG_WITH_ACK_PAYLOAD_SIZE, LOLA_LINK_SERVICE_UNLINK_LONG_PAYLOAD_SIZE))
+#define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_SIZE_WITH_ID + LOLA_LINK_SERVICE_PAYLOAD_MAX_SIZE)
 
 //Linked.
 #define LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD				(uint32_t)(15)
@@ -30,79 +31,85 @@
 
 //Not linked.
 #define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL			(uint32_t)(200) //Typical value is < 150 ms
-#define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_SLEEP			(uint32_t)(10000)
+#define LOLA_LINK_SERVICE_UNLINK_HOST_MAX_BEFORE_SLEEP		(uint32_t)(10000)
+#define LOLA_LINK_SERVICE_UNLINK_REMOTE_MAX_BEFORE_SLEEP	(uint32_t)(30000)
 #define LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD			(uint32_t)(UINT32_MAX)
 #define LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD		(uint32_t)(3000)
-#define LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD				(uint32_t)(10)
+#define LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD				(uint32_t)(15)
+#define LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD			(uint32_t)(30)
 #define LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD			(uint32_t)(50)
 #define LOLA_LINK_SERVICE_UNLINK_REMOTE_SEARCH_PERIOD		(uint32_t)(75)
-#define LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME		(uint32_t)(50)
-#define LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES		(uint8_t)(3)  //Max 25. Values below 4 will not required additional packets.
+#define LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME		(uint32_t)(100)
+#define LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES		(uint8_t)(3)  //Max 25.
 #define LOLA_LINK_SERVICE_UNLINK_MAX_LATENCY_SAMPLES		(uint8_t)(LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES+2)
-#define LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME			(uint32_t)(4*LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
+#define LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME			(uint32_t)(LOLA_LINK_SERVICE_UNLINK_HOST_MAX_BEFORE_SLEEP / 2)
+
+///Timings.
+#define LOLA_LINK_SERVICE_CHECK_PERIOD						(uint32_t)(1)
+#define LOLA_LINK_SERVICE_IDLE_PERIOD						(uint32_t)(LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT/10)
 ///
 
 
-//Link packets headers.
-#define LOLA_LINK_SUBHEADER_LINK_DISCOVERY					0x00
-#define LOLA_LINK_SUBHEADER_HOST_BROADCAST					0x01
-#define LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST				0x02
-#define LOLA_LINK_SUBHEADER_HOST_LINK_ACCEPTED				0x03
-#define LOLA_LINK_SUBHEADER_REMOTE_LINK_READY				0x04
-#define LOLA_LINK_SUBHEADER_CHALLENGE_REQUEST				0x05
-#define LOLA_LINK_SUBHEADER_CHALLENGE_REPLY					0x06
-#define LOLA_LINK_SUBHEADER_NTP_REQUEST						0x07
-#define LOLA_LINK_SUBHEADER_NTP_REPLY						0x08
-#define LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST				0x09
-#define LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY					0x10
-#define LOLA_LINK_SUBHEADER_INFO_SYNC_UPDATE				0x0A
+///Link headers.
 
-#define LOLA_LINK_SUBHEADER_LINK_INFO_REPORT				0x0B
+//Pre-Linking headers, with space for protocol versioning.
+#define LOLA_LINK_SUBHEADER_LINK_DISCOVERY					0x00 + LOLA_LINK_PROTOCOL_VERSION
+#define LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST				0x20 + LOLA_LINK_PROTOCOL_VERSION
 
-#define LOLA_LINK_SUBHEADER_PING							0x0F
-#define LOLA_LINK_SUBHEADER_PONG							0x0E
+//Public Key Cryptography (PKC) headers.
+#define LOLA_LINK_SUBHEADER_HOST_PKC_BROADCAST				0x40
+#define LOLA_LINK_SUBHEADER_HOST_SHARED_KEY_PUBLIC_ENCODED	0x41
+
+#define LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST		0x50
+#define LOLA_LINK_SUBHEADER_REMOTE_PKC_PUBLIC_ENCODED		0x51
+//#define LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST_ENCODED		0x52
+
+//Linking packets.
+#define LOLA_LINK_SUBHEADER_CHALLENGE_REQUEST				0x60
+#define LOLA_LINK_SUBHEADER_CHALLENGE_REPLY					0x61
+#define LOLA_LINK_SUBHEADER_NTP_REQUEST						0x62
+#define LOLA_LINK_SUBHEADER_NTP_REPLY						0x63
+
+#define LOLA_LINK_SUBHEADER_INFO_SYNC						0x70
+//#define LOLA_LINK_SUBHEADER_INFO_SYNC_HOST_RSSI				0x71
+//#define LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE_RSSI			0x72
+
+
+#define LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST				0x90
+#define LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY					0x91
+
+#define LOLA_LINK_SUBHEADER_LINK_INFO_REPORT				0x0A
 
 
 //Link Acked switch over status packets.
-#define LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER		0xF1
-#define LOLA_LINK_SUBHEADER_ACK_NTP_SWITCHOVER				0xF2
-#define LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER		0xF3
-#define LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE			0xF4
-#define LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER			0xFF
+//#define LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER		0xF1
+//#define LOLA_LINK_SUBHEADER_ACK_NTP_SWITCHOVER				0xF2
+//#define LOLA_LINK_SUBHEADER_ACK_CHALLENGE_SWITCHOVER		0xF3
+//#define LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE			0xF4
+#define LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER			0xFE
+
+#define LOLA_LINK_HEADER_LINKED								(PACKET_DEFINITION_LINK_START_HEADER)
+#define LOLA_LINK_HEADER_LINKED_WITH_ACK					(LOLA_LINK_HEADER_LINKED + 1)
+#define LOLA_LINK_HEADER_UNLINKED_SHORT_HEADER				(LOLA_LINK_HEADER_LINKED_WITH_ACK + 1)
+#define LOLA_LINK_HEADER_UNLINKED_LONG_HEADER				(LOLA_LINK_HEADER_UNLINKED_SHORT_HEADER + 1)
+#define LOLA_LINK_HEADER_UNLINKED_LONG_WITH_ACK_HEADER		(LOLA_LINK_HEADER_UNLINKED_LONG_HEADER + 1)
 
 
 enum LinkingStagesEnum : uint8_t
 {
-	ClockSyncStage = 0,
-	ClockSyncSwitchOver = 1,
-	ChallengeStage = 2,
-	ChallengeSwitchOver = 3,
-	InfoSyncStage = 4,
+	ChallengeStage = 0,
+	InfoSyncStage = 2,
+	ClockSyncStage = 1,
 	LinkProtocolSwitchOver = 5,
-	AllConnectingStagesDone = 6
+	LinkingDone = 6
 };
 
-class LinkPacketWithAckDefinition : public PacketDefinition
-{
-public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
-	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_WITH_ACK_HEADER; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_WITH_ACK_PAYLOAD_SIZE; }
-
-#ifdef DEBUG_LOLA
-	void PrintName(Stream* serial)
-	{
-		serial->print(F("LinkAck"));
-	}
-#endif
-};
-
-class LinkPacketDefinition : public PacketDefinition
+class LinkedPacketDefinition : public PacketDefinition
 {
 public:
 	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ID; }
-	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_HEADER; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_PAYLOAD_SIZE; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_LINKED; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_LINK_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -112,19 +119,77 @@ public:
 #endif
 };
 
-class LinkPacketLongDefinition : public PacketDefinition
+class PingPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	uint8_t GetHeader() { return PACKET_DEFINITION_LINK_LONG_HEADER; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PACKET_LINK_LONG_PAYLOAD_SIZE; }
+	uint8_t GetConfiguration() {
+		return PACKET_DEFINITION_MASK_BASE |
+			PACKET_DEFINITION_MASK_HAS_ACK |
+			PACKET_DEFINITION_MASK_HAS_ID;
+	}
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_LINKED_WITH_ACK; }
+	uint8_t GetPayloadSize() { return 0; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("LinkLong"));
+		serial->print(F("Ping\t"));
 	}
 #endif
 };
 
+class UnlinkedShortPacketDefinition : public PacketDefinition
+{
+public:
+	uint8_t GetConfiguration() {
+		return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO |
+			PACKET_DEFINITION_MASK_HAS_ID;
+	}
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_UNLINKED_SHORT_HEADER; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_UNLINK_SHORT_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("UShort\t"));
+	}
+#endif
+};
+
+class UnlinkedLongPacketDefinition : public PacketDefinition
+{
+public:
+	uint8_t GetConfiguration() {
+		return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO |
+			PACKET_DEFINITION_MASK_HAS_ID;
+	}
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_UNLINKED_LONG_HEADER; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_UNLINK_LONG_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("ULong\t"));
+	}
+#endif
+};
+
+class UnlinkedLongWithAckPacketDefinition : public PacketDefinition
+{
+public:
+	uint8_t GetConfiguration() {
+		return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO |
+			PACKET_DEFINITION_MASK_HAS_ID |
+			PACKET_DEFINITION_MASK_HAS_ACK;
+	}
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_UNLINKED_LONG_WITH_ACK_HEADER; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_UNLINK_LONG_WITH_ACK_PAYLOAD_SIZE; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("ULongAck"));
+	}
+#endif
+};
 #endif

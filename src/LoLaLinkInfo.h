@@ -6,9 +6,9 @@
 #include <ILoLa.h>
 #include <Callback.h>
 #include <RingBufCPP.h>
+#include <Crypto\PseudoMacGenerator.h>
 
 #define LOLA_LINK_INFO_MAC_LENGTH		8 //Following MAC-64, because why not?
-#define LOLA_LINK_CRYPTO_KEY_LENGTH		24 //Derived from selected curve.
 
 #define RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT			3
 
@@ -43,14 +43,15 @@ private:
 	RingBufCPP<uint8_t, RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT> PartnerRSSISamples;
 	uint32_t PartnerAverageRSSI;
 
-	//Stored outside, only referenced.
-	uint8_t* LocalMAC = nullptr;
-
 	//Link session information.
 	uint8_t SessionId = INVALID_SESSION;
 
+	//MAC generated from UUID.
+	LoLaMAC<LOLA_LINK_INFO_MAC_LENGTH> LocalMacGenerator;
+	//
+
 	bool PartnerMACPresent = false;
-	uint8_t PartnerMAC[LOLA_LINK_INFO_MAC_LENGTH];
+	uint32_t PartnerMACHash = 0;
 
 	uint32_t ClockSyncAdjustments = 0;
 
@@ -60,51 +61,81 @@ private:
 	//Callback handler.
 	Signal<const LinkStateEnum> LinkStatusUpdated;
 
+
 public:
 	LinkStateEnum GetLinkState()
 	{
 		return LinkState;
 	}
 
-	uint8_t* GetPartnerMAC()
+	uint32_t GetPartnerMACHash()
 	{
-		return PartnerMAC;
+		return PartnerMACHash;
 	}
+
+	//TODO: Implement on Link.
+	/*bool LocalMACMatch(uint8_t * mac)
+	{
+		return LocalMacGenerator.Match(mac);
+	}
+
+	bool RemoteMACPartnerMatch(uint8_t * remoteMAC)
+	{
+		if (!PartnerMACPresent)
+		{
+			return false;
+		}
+
+		return LocalMacGenerator.Match(PartnerMAC, remoteMAC);
+	}
+	*/
 
 	uint8_t* GetLocalMAC()
 	{
-		return LocalMAC;
+		return LocalMacGenerator.GetMACPointer();
 	}
 
-	void SetLocalMAC(uint8_t * macArray)
+	uint32_t GetLocalMACHash()
 	{
-		LocalMAC = macArray;
+		return LocalMacGenerator.GetMACHash();
 	}
 
-	void SetPartnerMAC(uint8_t * macArray)
+	void ClearPartnerMAC()
 	{
-		for (uint8_t i = 0; i < LOLA_LINK_INFO_MAC_LENGTH; i++)
-		{
-			PartnerMAC[i] = macArray[i];
-		}
+		PartnerMACPresent = false;
+	}
+
+	void SetPartnerMACHash(const uint32_t macHash)
+	{
+		PartnerMACHash = macHash;
 		PartnerMACPresent = true;
 	}
 
-	bool HasPartnerMAC()
+	bool HasPartnerMACHash()
 	{
 		return PartnerMACPresent;
 	}	
-	
-	bool HasLocalMAC()
-	{
-		return LocalMAC != nullptr;
-	}
 
+	bool PartnerMACHashMatches(uint32_t remoteMACHash)
+	{
+		if (!PartnerMACPresent)
+		{
+			return false;
+		}
+
+		return PartnerMACHash == remoteMACHash;
+	}
+	
 	bool SetSessionId(const uint8_t sessionId)
 	{
 		SessionId = sessionId;
 
 		return SessionId != INVALID_SESSION;
+	}
+
+	bool HasSession()
+	{
+		return HasSessionId() && HasPartnerMACHash();
 	}
 
 	bool HasSessionId()
@@ -343,5 +374,24 @@ public:
 		}
 		return 0;//Unknown.
 	}
+
+#ifdef DEBUG_LOLA
+	void PrintMac(Stream* serial)
+	{
+		PrintMac(serial, GetLocalMAC());
+	}
+
+	void PrintMac(Stream* serial, uint8_t* mac)
+	{
+		for (uint8_t i = 0; i < LOLA_LINK_INFO_MAC_LENGTH; i++)
+		{
+			serial->print(mac[i], HEX);
+			if (i < LOLA_LINK_INFO_MAC_LENGTH - 1)
+			{
+				serial->print(':');
+			}
+		}
+	}
+#endif // DEBUG_LOLA
 };
 #endif
