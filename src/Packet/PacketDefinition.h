@@ -3,7 +3,7 @@
 #ifndef _PACKETDEFINITION_h
 #define _PACKETDEFINITION_h
 
-#include <Arduino.h>
+#include <stdint.h>
 
 ///Configurations for packets.
 #define PACKET_DEFINITION_MASK_CUSTOM_1			B00000001
@@ -17,7 +17,14 @@
 #define PACKET_DEFINITION_MASK_BASE				PACKET_DEFINITION_MASK_HAS_CRYPTO //Default is crypto on.
 #define PACKET_DEFINITION_MASK_BASE_NO_CRYPTO	B00000000
 
-#define PACKET_DEFINITION_MAX_PACKET_SIZE 32
+#define LOLA_PACKET_MACCRC_INDEX				(0)
+#define LOLA_PACKET_HEADER_INDEX				(LOLA_PACKET_MACCRC_INDEX + 1)
+#define LOLA_PACKET_PAYLOAD_INDEX				(LOLA_PACKET_HEADER_INDEX + 1)
+
+#define LOLA_PACKET_MIN_SIZE					(LOLA_PACKET_HEADER_INDEX + 1)
+#define LOLA_PACKET_MIN_SIZE_WITH_ID			(LOLA_PACKET_MIN_SIZE + 1)
+
+#define LOLA_PACKET_MAX_PACKET_SIZE				32
 
 class PacketDefinition
 {
@@ -33,18 +40,21 @@ public:
 	}
 #endif
 
+	uint8_t GetContentSize()
+	{
+		return GetTotalSize() - 1;
+	}
+
 	uint8_t GetTotalSize()
 	{
-		uint8_t TotalSize = 2;//1 Byte for Header, 1 Byte for MAC/CRC.
-
 		if (HasId())
 		{
-			TotalSize += 1;//1 Byte for Id.
+			return 3 + GetPayloadSize(); //CRC + Header + Payload + Id
 		}
-
-		TotalSize += GetPayloadSize();//N Bytes for payload.
-
-		return TotalSize;
+		else
+		{
+			return 2 + GetPayloadSize(); //CRC + Header + Payload
+		}
 	}
 
 	bool HasACK()

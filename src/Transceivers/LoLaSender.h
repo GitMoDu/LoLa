@@ -11,7 +11,7 @@ class LoLaSender : public LoLaBuffer
 private:
 	PacketDefinition* AckDefinition = nullptr;
 
-	TemplateLoLaPacket<LOLA_PACKET_MIN_WITH_ID_SIZE> AckPacket;
+	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE_WITH_ID> AckPacket;
 
 	///For use of estimated latency features
 #ifdef USE_LATENCY_COMPENSATION
@@ -28,7 +28,8 @@ public:
 	{
 		if (transmitPacket != nullptr)
 		{
-			OutgoingDefinition = transmitPacket->GetDefinition();
+			BufferPacket = transmitPacket;
+			OutgoingDefinition = BufferPacket->GetDefinition();
 			CalculatorCRC.Reset();
 
 			//Crypto starts at the start of the hash.
@@ -37,22 +38,17 @@ public:
 #else
 			CalculatorCRC.Update(GetCryptoToken(0));
 #endif
-			//
+			//Hash everything but the CRC at the start.
+			CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetTotalSize() - LOLA_PACKET_HEADER_INDEX);
 
-			CalculatorCRC.Update(OutgoingDefinition->GetHeader());
+			BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());
 
-			BufferIndex = LOLA_PACKET_SUB_HEADER_START;
-			if (transmitPacket->GetDefinition()->HasId())
+			if (OutgoingDefinition->HasCrypto())
 			{
-				BufferIndex++;
-				CalculatorCRC.Update(transmitPacket->GetId());
+				//TODO: Encode content.
 			}
 
-			CalculatorCRC.Update(transmitPacket->GetPayload(), OutgoingDefinition->GetPayloadSize());
-
-			transmitPacket->GetRaw()[LOLA_PACKET_MACCRC_INDEX] = CalculatorCRC.GetCurrent();
-			BufferSize = OutgoingDefinition->GetTotalSize();
-			BufferPacket = transmitPacket;
+			BufferSize = OutgoingDefinition->GetTotalSize();			
 
 			return true;
 		}
@@ -91,7 +87,7 @@ public:
 			CalculatorCRC.Update(0);
 		}
 
-		BufferPacket->GetRaw()[LOLA_PACKET_MACCRC_INDEX] = CalculatorCRC.GetCurrent();
+		BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());
 		BufferSize = AckDefinition->GetTotalSize();
 
 		return true;

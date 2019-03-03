@@ -9,7 +9,7 @@
 class LoLaReceiver : public LoLaBuffer
 {
 private:
-	TemplateLoLaPacket<PACKET_DEFINITION_MAX_PACKET_SIZE> ReceiverPacket;
+	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> ReceiverPacket;
 
 public:
 	PacketDefinition * GetIncomingDefinition()
@@ -35,7 +35,7 @@ public:
 
 	bool ReceivePacket()
 	{
-		if (BufferSize > 0 && BufferSize < PACKET_DEFINITION_MAX_PACKET_SIZE)
+		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
 		{
 			BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader()));
 
@@ -44,17 +44,16 @@ public:
 				CRCIndex = 0;
 				CalculatorCRC.Reset();
 
-				//Crypto starts at the start of the hash.
+				//Crypto starts at the beginning.
 				CalculatorCRC.Update(GetCryptoToken(0));//No latency compensation on receiver.
 
-				CalculatorCRC.Update(BufferPacket->GetDataHeader());
-
-				if (BufferPacket->GetDefinition()->HasId())
+				if (BufferPacket->GetDefinition()->HasCrypto())
 				{
-					CalculatorCRC.Update(BufferPacket->GetId());
+					//TODO: Decode content.
 				}
 
-				CalculatorCRC.Update(BufferPacket->GetPayload(), BufferPacket->GetDefinition()->GetPayloadSize());
+				//Hash everything but the CRC at the start.
+				CalculatorCRC.Update(BufferPacket->GetRawContent(), BufferPacket->GetDefinition()->GetContentSize());
 
 				if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
 				{
