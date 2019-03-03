@@ -23,7 +23,7 @@ public:
 	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
 	uint8_t GetPayloadSize() {
-		return LOLA_PACKET_MIN_SIZE_WITH_ID;//Payload is original Header. Id is optional.
+		return 2;//Payload is original Header. Id is optional.
 	}
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
