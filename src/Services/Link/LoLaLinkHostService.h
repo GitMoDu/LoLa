@@ -86,10 +86,10 @@ protected:
 	}
 
 	//Host version, PartnerMAC is the Remote's MAC.
-	void SetBaseSeed()
-	{
-		CryptoSeed.SetBaseSeed(LinkInfo->GetLocalMACHash(), LinkInfo->GetPartnerMACHash(), LinkInfo->GetSessionId());
-	}
+	//void SetBaseSeed()
+	//{
+	//	GetLoLa()->GetCryptoSeed()->SetBaseSeed(LinkInfo->GetLocalMACHash(), LinkInfo->GetPartnerMACHash(), LinkInfo->GetSessionId());
+	//}
 
 	void OnClearSession()
 	{

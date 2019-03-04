@@ -58,7 +58,7 @@
 #define MOCK_PACKET_LOSS_SOFT				8
 #define MOCK_PACKET_LOSS_HARD				12
 #define MOCK_PACKET_LOSS_SMOKE_SIGNALS		35
-#define MOCK_PACKET_LOSS_LINKING			MOCK_PACKET_LOSS_HARD
+#define MOCK_PACKET_LOSS_LINKING			MOCK_PACKET_LOSS_SMOKE_SIGNALS
 #define MOCK_PACKET_LOSS_LINKED				MOCK_PACKET_LOSS_SMOKE_SIGNALS
 #endif
 ///
@@ -67,6 +67,9 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <LoLaCrypto\ISeedSource.h>
+#include <LoLaCrypto\LoLaCryptoTokenSource.h>
+#include <LoLaCrypto\LoLaCryptoEncoder.h>
+
 
 #include <ClockSource.h>
 
@@ -118,6 +121,10 @@ protected:
 	ClockSource SyncedClock;
 	///
 
+	///Crypto
+	LoLaCryptoTokenSource	CryptoToken;
+	LoLaCryptoEncoder		CryptoEncoder;
+
 #ifdef USE_LATENCY_COMPENSATION
 	///For use of estimated latency features
 	uint8_t ETTM = 0;//Estimated transmission time in millis.
@@ -129,10 +136,14 @@ public:
 	{
 	}
 
-	void SetCryptoSeedSource(ISeedSource* cryptoSeedSource)
+	LoLaCryptoTokenSource* GetCryptoSeed()
 	{
-		Sender.SetCryptoSeedSource(cryptoSeedSource);
-		Receiver.SetCryptoSeedSource(cryptoSeedSource);
+		return &CryptoToken;
+	}
+
+	ISeedSource* GetCryptoTokenSource()
+	{
+		return &CryptoToken;
 	}
 
 	void Enable()

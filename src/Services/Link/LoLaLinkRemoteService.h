@@ -49,10 +49,10 @@ protected:
 #endif // DEBUG_LOLA
 
 	//Remote version, ParnerMAC is the Host's MAC.
-	void SetBaseSeed()
-	{
-		CryptoSeed.SetBaseSeed(LinkInfo->GetPartnerMACHash(), LinkInfo->GetLocalMACHash(), LinkInfo->GetSessionId());
-	}
+	//void SetBaseSeed()
+	//{
+	//	GetLoLa()->GetCryptoSeed()->SetBaseSeed(LinkInfo->GetPartnerMACHash(), LinkInfo->GetLocalMACHash(), LinkInfo->GetSessionId());
+	//}
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
 	{

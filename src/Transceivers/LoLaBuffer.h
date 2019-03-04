@@ -6,6 +6,8 @@
 #include <Arduino.h>
 #include <LoLaCrypto\TinyCRC.h>
 #include <LoLaCrypto\ISeedSource.h>
+#include <LoLaCrypto\LoLaCryptoEncoder.h>
+
 
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacket.h>
@@ -30,7 +32,11 @@ protected:
 	///
 
 	///Crypto validation.
-	ISeedSource* CryptoSeed = nullptr;
+	//ISeedSource* CryptoSeed = nullptr;
+	///
+
+	///Cryptography
+	LoLaCryptoEncoder* Encoder = nullptr;
 	///
 
 	uint8_t BufferSize = 0;
@@ -47,16 +53,12 @@ protected:
 	}
 
 public:
-	virtual bool Setup(LoLaPacketMap* packetMap)
+	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
-		for (uint8_t i = 0; i < GetBufferSize(); i++)
-		{
-			GetBuffer()[i] = 0;
-		}
-
 		PacketMap = packetMap;
+		Encoder = cryptoEncoder;
 
-		return PacketMap != nullptr && CryptoSeed != nullptr;
+		return PacketMap != nullptr && Encoder != nullptr;
 	}
 	
 public:
@@ -75,15 +77,15 @@ public:
 		return BufferSize;
 	}
 
-	void SetCryptoSeedSource(ISeedSource* cryptoSeedSource)
-	{
-		CryptoSeed = cryptoSeedSource;
-	}
+	//void SetCryptoTokenSource(ISeedSource* cryptoSeedSource)
+	//{
+	//	CryptoSeed = cryptoSeedSource;
+	//}
 
-	inline uint8_t GetCryptoToken(const int8_t offsetMillis)
-	{
-		return CryptoSeed->GetToken(offsetMillis);
-	}
+	//inline uint8_t GetCryptoToken(const int8_t offsetMillis)
+	//{
+	//	return CryptoSeed->GetToken(offsetMillis);
+	//}
 
 #ifdef DEBUG_LOLA
 	void Debug(Stream * serial)

@@ -11,7 +11,7 @@
 
 #include <Callback.h>
 #include <LoLaCrypto\TinyCRC.h>
-#include <LoLaCrypto\LoLaCryptoTokenSource.h>
+//#include <LoLaCrypto\LoLaCryptoTokenSource.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
@@ -68,8 +68,6 @@ protected:
 
 	ArrayToUint32 ATUI_R;
 	ArrayToUint32 ATUI_S;
-
-	LoLaCryptoTokenSource			CryptoSeed;
 
 	ICryptoKeyExchanger*		KeyExchanger = nullptr;
 
@@ -129,7 +127,7 @@ protected:
 	///
 
 	//Internal housekeeping.
-	virtual void SetBaseSeed() {}
+	//virtual void SetBaseSeed() {}
 	virtual void OnClearSession() {};
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 
@@ -371,11 +369,11 @@ protected:
 		}
 	}
 
-	void SetTOTPEnabled()
-	{
-		SetBaseSeed();
-		//CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
-	}
+	//void SetTOTPEnabled()
+	//{
+	//	//SetBaseSeed();
+	//	//CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
+	//}
 
 	void SetLinkingState(const uint8_t linkingState)
 	{
@@ -489,7 +487,6 @@ protected:
 
 				if (PowerBalancer.Setup(GetLoLa(), LinkInfo))
 				{
-					GetLoLa()->SetCryptoSeedSource(&CryptoSeed);
 #ifdef USE_FREQUENCY_HOP
 					FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
 #endif
@@ -503,8 +500,7 @@ protected:
 					Serial.print(F(" hash: "));
 					Serial.println(LinkInfo->GetLocalMACHash());
 #endif
-
-					CryptoSeed.Reset();
+					//GetLoLa()->GetCryptoSeed()->Reset();
 					ResetStateStartTime();
 					SetNextRunASAP();
 
@@ -595,7 +591,7 @@ protected:
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 				ClearSession();
-				CryptoSeed.Reset();
+				//GetLoLa()->GetCryptoSeed()->Reset();
 				SetNextRunDefault();
 #ifdef USE_FREQUENCY_HOP
 				FrequencyHopper.ResetChannel();
@@ -604,13 +600,13 @@ protected:
 #endif
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-				CryptoSeed.Reset();
+				//GetLoLa()->GetCryptoSeed();
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-				CryptoSeed.Reset();
+				//GetLoLa()->GetCryptoSeed()->Reset();
 				//Sleep time is set on Host/Remote
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
@@ -632,7 +628,7 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Linked:
 				LinkInfo->StampLinkStarted();
 				GetLoLa()->ResetStatistics();
-				SetTOTPEnabled();
+				//SetTOTPEnabled();
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
 				PowerBalancer.SetMaxPower();

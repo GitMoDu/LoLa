@@ -146,11 +146,15 @@ void LoLaPacketDriver::OnReceived()
 bool LoLaPacketDriver::Setup()
 {
 	SetupOk = false;
-	if (Receiver.Setup(&PacketMap) &&
-		Sender.Setup(&PacketMap))
+	if (Receiver.Setup(&PacketMap, &CryptoEncoder) &&
+		Sender.Setup(&PacketMap, &CryptoEncoder))
 	{
 		IncomingInfo.Clear();
 		OutgoingInfo.Clear();
+
+		//Disabled.
+		//Receiver.SetCryptoTokenSource(GetCryptoTokenSource());
+		//Sender.SetCryptoTokenSource(GetCryptoTokenSource());
 
 		SetupOk = true;
 	}

@@ -15,9 +15,7 @@ private:
 	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE_WITH_ID> AckPacket;
 
 	///For use of estimated latency features
-#ifdef USE_LATENCY_COMPENSATION
 	uint8_t ETTM = 0;//Estimated transmission time in millis.
-#endif
 	///
 
 	//Optimization helper.
@@ -44,11 +42,8 @@ public:
 			CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetContentSize());
 
 			//Crypto starts at the start of the hash.
-#ifdef USE_LATENCY_COMPENSATION
-			BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
-#else
-			BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(0)));
-#endif			
+			//BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
+			BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());//Disabled.
 
 			BufferSize = OutgoingDefinition->GetTotalSize();
 
@@ -86,11 +81,8 @@ public:
 		CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetContentSize());
 
 		//Hash with time token as late as possible.
-#ifdef USE_LATENCY_COMPENSATION
-		BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
-#else
-		BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(0)));
-#endif		
+		//BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
+		BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());//Disabled.
 		//
 
 		BufferSize = AckDefinition->GetTotalSize();
@@ -98,9 +90,9 @@ public:
 		return true;
 	}
 
-	bool Setup(LoLaPacketMap* packetMap)
+	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
-		if (LoLaBuffer::Setup(packetMap))
+		if (LoLaBuffer::Setup(packetMap, cryptoEncoder))
 		{
 			AckDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_HEADER);
 			AckEncryptedDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_ENCRYPTED_HEADER);

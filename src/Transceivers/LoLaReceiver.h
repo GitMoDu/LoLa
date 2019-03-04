@@ -22,22 +22,27 @@ public:
 		return BufferPacket;
 	}
 
-	bool Setup(LoLaPacketMap* packetMap)
+	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
-		BufferPacket = &ReceiverPacket;
-		if (LoLaBuffer::Setup(packetMap))
+		if (LoLaBuffer::Setup(packetMap, cryptoEncoder))
 		{
+			BufferPacket = &ReceiverPacket;
+			for (uint8_t i = 0; i < GetBufferSize(); i++)
+			{
+				GetBuffer()[i] = 0;
+			}
 			BufferPacket->SetDefinition(nullptr);
+
 			return true;
 		}
 		return false;
 	}
 
-	uint8_t IncomingToken = 0;
+	//uint8_t IncomingToken = 0;
 	bool ReceivePacket()
 	{
 		//Get token as early as possible.
-		IncomingToken = GetCryptoToken(0);//No latency compensation on receiver.
+		//IncomingToken = GetCryptoToken(0);//No latency compensation on receiver.
 
 		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
 		{
@@ -51,7 +56,8 @@ public:
 				//Hash everything but the CRC at the start.
 				CalculatorCRC.Update(BufferPacket->GetRawContent(), BufferPacket->GetDefinition()->GetContentSize());
 
-				if (CalculatorCRC.Update(IncomingToken) == BufferPacket->GetMACCRC())
+				//if (CalculatorCRC.Update(IncomingToken) == BufferPacket->GetMACCRC())
+				if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
 				{
 					//MAC, then decrypt.
 					if (BufferPacket->GetDefinition()->HasCrypto())
