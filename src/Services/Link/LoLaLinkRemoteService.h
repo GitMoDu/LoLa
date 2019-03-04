@@ -100,6 +100,7 @@ protected:
 				if (true)
 				{
 					LinkingStart = millis();//Reset local timeout.
+					ResetLastSentTimeStamp();
 					SetLinkingState(AwaitingLinkEnum::AwaitingHostPublicKey);
 				}
 				else
@@ -144,6 +145,7 @@ protected:
 				if (KeyExchanger->Finalize())
 				{
 					LinkingStart = millis();//Reset local timeout.
+					ResetLastSentTimeStamp();
 					SetLinkingState(AwaitingLinkEnum::GotSharedKey);
 				}
 				else

@@ -126,6 +126,7 @@ protected:
 			if (true)
 			{
 				LinkingStart = millis();//Reset local timeout.
+				ResetLastSentTimeStamp();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingPKC);
 			}
 			else
@@ -164,6 +165,7 @@ protected:
 				//				Serial.println(F(" us to generate."));
 				//#endif
 				LinkingStart = millis();//Reset local timeout.
+				ResetLastSentTimeStamp();
 				SetLinkingState(AwaitingLinkEnum::SendingSharedKey);
 			}
 			else
