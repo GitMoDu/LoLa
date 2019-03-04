@@ -158,13 +158,12 @@ protected:
 #endif
 			if (HostKeyExchanger.GenerateSharedKey())
 			{
-				//#ifdef DEBUG_LOLA
-				//				SharedKeyTime = micros() - SharedKeyTime;
-				//				Serial.println(F("Shared key took "));
-				//				Serial.print(SharedKeyTime);
-				//				Serial.println(F(" us to generate."));
-				//#endif
-				LinkingStart = millis();//Reset local timeout.
+#ifdef DEBUG_LOLA
+				SharedKeyTime = micros() - SharedKeyTime;
+				Serial.print(F("Shared key took "));
+				Serial.print(SharedKeyTime);
+				Serial.println(F(" us to generate."));
+#endif
 				ResetLastSentTimeStamp();
 				SetLinkingState(AwaitingLinkEnum::SendingSharedKey);
 			}
