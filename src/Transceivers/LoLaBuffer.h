@@ -49,11 +49,6 @@ protected:
 public:
 	virtual bool Setup(LoLaPacketMap* packetMap)
 	{
-		for (uint8_t i = 0; i < GetBufferSize(); i++)
-		{
-			GetBuffer()[i] = 0;
-		}
-
 		PacketMap = packetMap;
 
 		return PacketMap != nullptr && CryptoSeed != nullptr;

@@ -24,10 +24,15 @@ public:
 
 	bool Setup(LoLaPacketMap* packetMap)
 	{
-		BufferPacket = &ReceiverPacket;
 		if (LoLaBuffer::Setup(packetMap))
 		{
+			BufferPacket = &ReceiverPacket;
+			for (uint8_t i = 0; i < GetBufferSize(); i++)
+			{
+				GetBuffer()[i] = 0;
+			}
 			BufferPacket->SetDefinition(nullptr);
+
 			return true;
 		}
 		return false;
