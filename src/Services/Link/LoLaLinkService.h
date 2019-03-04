@@ -615,6 +615,11 @@ protected:
 				////TODO: Enable global crypto for all packets.
 
 				SetLinkingState(0);
+#ifdef DEBUG_LOLA				
+				Serial.print(F("PKC took unlink: "));
+				Serial.print(millis() - LinkingStart);
+				Serial.println(F(" ms."));
+#endif
 				LinkingStart = millis();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to MAC Hash: "));
