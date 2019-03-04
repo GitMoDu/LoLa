@@ -13,10 +13,10 @@ class LoLaCryptoEncoder
 private: 
 	enum  StageEnum : uint8_t
 	{
-		Clear,
+		AllClear,
 		HasSharedKey,
 		ReadyForUse
-	} EncoderState = StageEnum::Clear;
+	} EncoderState = StageEnum::AllClear;
 private:
 	Ascon128 Cypher;
 
@@ -47,17 +47,17 @@ public:
 
 	void Clear()
 	{
-		EncoderState = StageEnum::Clear;
+		EncoderState = StageEnum::AllClear;
 	}
 
 	inline bool IsReadyForUse()
 	{
-		return EncoderState = StageEnum::ReadyForUse;
+		return EncoderState == StageEnum::ReadyForUse;
 	}
 
 	bool SetSharedKey(const uint8_t * sharedKey, const uint8_t keyLength)	
 	{
-		if (keyLength < Cypher.keySize)
+		if (keyLength < Cypher.keySize())
 		{
 			return false;
 		}
@@ -84,7 +84,7 @@ public:
 			return false; //Wrong state
 		}
 
-		if (ivLength < Cypher.keySize)
+		if (ivLength < Cypher.keySize())
 		{
 			return false;
 		}
