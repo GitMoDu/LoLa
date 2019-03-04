@@ -66,7 +66,7 @@
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
-#include <Crypto\ISeedSource.h>
+#include <LoLaCrypto\ISeedSource.h>
 
 #include <ClockSource.h>
 

@@ -5,7 +5,7 @@
 
 #include <BitTracker.h>
 #include <Callback.h>
-#include <Crypto\TinyCRC.h>
+#include <LoLaCrypto\TinyCRC.h>
 
 #define DEBUG_BIT_TRACKER
 

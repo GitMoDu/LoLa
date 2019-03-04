@@ -3,7 +3,7 @@
 #ifndef _LOLACRYPTOTOKENSOURCE_h
 #define _LOLACRYPTOTOKENSOURCE_h
 
-#include <Crypto\TinyCRC.h>
+#include <LoLaCrypto\TinyCRC.h>
 #include <ILoLa.h>
 
 class LoLaCryptoTokenSource : public ISeedSource

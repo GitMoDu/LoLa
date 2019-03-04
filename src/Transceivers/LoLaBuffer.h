@@ -4,8 +4,8 @@
 #define _LOLABUFFER_h
 
 #include <Arduino.h>
-#include <Crypto\TinyCRC.h>
-#include <Crypto\ISeedSource.h>
+#include <LoLaCrypto\TinyCRC.h>
+#include <LoLaCrypto\ISeedSource.h>
 
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacket.h>

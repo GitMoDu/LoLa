@@ -3,10 +3,10 @@
 #ifndef _LOLAFREQUENCYHOPPER_h
 #define _LOLAFREQUENCYHOPPER_h
 
-#include <Crypto\TinyCRC.h>
+#include <LoLaCrypto\TinyCRC.h>
 #include <Services\ILoLaService.h>
 #include <ILoLa.h>
-#include <Crypto\ISeedSource.h>
+#include <LoLaCrypto\ISeedSource.h>
 
 #define LOLA_LINK_FREQUENCY_HOPPER_WARMUP_MILLIS 10
 

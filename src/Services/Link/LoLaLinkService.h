@@ -10,9 +10,10 @@
 #include <LoLaLinkInfo.h>
 
 #include <Callback.h>
-#include <Crypto\TinyCRC.h>
-#include <Crypto\LoLaCryptoTokenSource.h>
-#include <Crypto\LoLaCryptoKeyExchange.h>
+#include <LoLaCrypto\TinyCRC.h>
+#include <LoLaCrypto\LoLaCryptoTokenSource.h>
+#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
+#include <LoLaCrypto\LoLaCryptoEncoder.h>
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 

@@ -6,7 +6,7 @@
 //#define LOLA_SYNC_FULL_DEBUG
 
 #include <Arduino.h>
-#include <Crypto\TinyCRC.h>
+#include <LoLaCrypto\TinyCRC.h>
 #include <Services\IPacketSendService.h>
 #include <Services\SyncSurface\ITrackedSurface.h>
 

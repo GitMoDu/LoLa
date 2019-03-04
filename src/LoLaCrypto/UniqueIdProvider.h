@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#include <Crypto\TinyCRC.h>
+#include <LoLaCrypto\TinyCRC.h>
 
 #define UNIQUE_ID_MAX_LENGTH	16
 

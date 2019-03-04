@@ -7,7 +7,7 @@
 #include <Packet\LoLaPacketMap.h>
 
 #include <LoLaLinkInfo.h>
-#include <Crypto\LoLaCryptoKeyExchange.h>
+#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 
 #define LOLA_LINK_PROTOCOL_VERSION							0 //N < 20
 #define LOLA_LINK_SERVICE_LINK_PAYLOAD_SIZE					(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.

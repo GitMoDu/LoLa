@@ -4,8 +4,8 @@
 #define _PSEUDOMACGENERATOR_h
 
 #include <stdint.h>
-#include <Crypto\TinyCRC.h>
-#include <Crypto\UniqueIdProvider.h>
+#include <LoLaCrypto\TinyCRC.h>
+#include <LoLaCrypto\UniqueIdProvider.h>
 
 template<const uint8_t MACLength>
 class LoLaMAC
