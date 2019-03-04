@@ -144,7 +144,6 @@ protected:
 			case AwaitingLinkEnum::ProcessingSharedKey:
 				if (KeyExchanger->Finalize())
 				{
-					LinkingStart = millis();//Reset local timeout.
 					ResetLastSentTimeStamp();
 					SetLinkingState(AwaitingLinkEnum::GotSharedKey);
 				}
@@ -233,7 +232,6 @@ protected:
 			//Assumes public key is the correct size.
 			if (KeyExchanger->SetPartnerPublicKey(hostPublicKey))
 			{
-				LinkingStart = millis();//Reset local timeout.
 				SetLinkingState(AwaitingLinkEnum::GotHostPublicKey);
 			}
 		}
