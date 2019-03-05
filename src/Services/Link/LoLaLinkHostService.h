@@ -119,6 +119,9 @@ protected:
 			//TODO: Filter accepted MACHash from known list.
 			if (true)
 			{
+				GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
+					LinkInfo->GetLocalMACHash(), LinkInfo->GetPartnerMACHash());
+
 				LinkingStart = millis();//Reset local timeout.
 				ResetLastSentTimeStamp();
 				SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
@@ -146,10 +149,10 @@ protected:
 			break;
 		case AwaitingLinkEnum::ProcessingPKC:
 			//TODO: Solve key size issue
-			//GetLoLa()->GetCryptoEncoder()->SetIv() //TODO: Set Iv from known entropy + session id.
+			//TODO: Use authorization data?
 			if (KeyExchanger.GenerateSharedKey() &&
 				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16) &&
-				GetLoLa()->GetCryptoEncoder()->SetIv(KeyExchanger.GetSharedKeyPointer(), 16) &&//TODO: use actual IV
+				GetLoLa()->GetCryptoEncoder()->SetAuthData(nullptr, 0) &&
 				GetLoLa()->GetCryptoEncoder()->IsReadyForUse())
 			{
 #ifdef DEBUG_LOLA

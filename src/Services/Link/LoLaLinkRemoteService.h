@@ -94,6 +94,9 @@ protected:
 				//TODO: Filter accepted hosts by MAC hash.
 				if (true)
 				{
+					GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
+						LinkInfo->GetPartnerMACHash(), LinkInfo->GetLocalMACHash());
+
 					LinkingStart = millis();//Reset local timeout.
 					ResetLastSentTimeStamp();
 					SetLinkingState(AwaitingLinkEnum::AwaitingHostPublicKey);
@@ -123,9 +126,8 @@ protected:
 			case AwaitingLinkEnum::ProcessingSharedKey:
 				//TODO: Solve key size issue
 				//GetLoLa()->GetCryptoEncoder()->SetIv() //TODO: Set Iv from known entropy + session id.
-				if (KeyExchanger.GenerateSharedKey() &&
-					GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16) &&
-					GetLoLa()->GetCryptoEncoder()->SetIv(KeyExchanger.GetSharedKeyPointer(), 16) &&//TODO: use actual IV
+				if (GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16) &&
+					GetLoLa()->GetCryptoEncoder()->SetAuthData(nullptr, 0) &&
 					GetLoLa()->GetCryptoEncoder()->IsReadyForUse())
 				{
 #ifdef DEBUG_LOLA
@@ -261,7 +263,7 @@ protected:
 		}
 	}
 
-	bool OnCryptoStartReceived(const uint8_t sessionId, const uint8_t* encodedMACHashArray)
+	bool OnCryptoStartReceived(const uint8_t sessionId, uint8_t* encodedMACHashArray)
 	{
 		switch (LinkInfo->GetLinkState())
 		{
@@ -297,11 +299,11 @@ protected:
 					Serial.print("\n\t ");
 					Serial.print(ATUI_R.uint);
 					Serial.print(" vs ");
-					Serial.println(LinkInfo->GetPartnerMACHash());					
+					Serial.println(LinkInfo->GetPartnerMACHash());
 				}
 			}
 
-			
+
 
 
 			break;
