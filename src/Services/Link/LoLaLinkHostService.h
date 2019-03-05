@@ -105,11 +105,11 @@ protected:
 			}
 			break;
 		case AwaitingLinkEnum::ValidatingPartner:
-			//TODO: Filter accepted MACHash from known list.
+			//TODO: Filter accepted Id from known list.
 			if (true)
 			{
 				GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
-					LinkInfo->GetLocalMACHash(), LinkInfo->GetPartnerMACHash());
+					LinkInfo->GetLocalId(), LinkInfo->GetPartnerId());
 
 				LinkingStart = millis();//Reset local timeout.
 				ResetLastSentTimeStamp();
@@ -117,7 +117,7 @@ protected:
 			}
 			else
 			{
-				LinkInfo->ClearPartnerMAC();
+				LinkInfo->ClearPartnerId();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			break;
@@ -187,7 +187,7 @@ protected:
 		}
 	}
 
-	void OnPKCRequestReceived(const uint8_t sessionId, const uint32_t remoteMACHash)
+	void OnPKCRequestReceived(const uint8_t sessionId, const uint32_t remotePartnerId)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::BroadcastingOpenSession &&
@@ -197,7 +197,7 @@ protected:
 #ifdef DEBUG_LOLA
 			PartnerPKCDuration = millis();
 #endif
-			LinkInfo->SetPartnerMACHash(remoteMACHash);
+			LinkInfo->SetPartnerId(remotePartnerId);
 			SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 		}
 	}
@@ -564,14 +564,14 @@ private:
 	void PrepareIdBroadcast()
 	{
 		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST);
-		ATUI_S.uint = LinkInfo->GetLocalMACHash();
+		ATUI_S.uint = LinkInfo->GetLocalId();
 		S_ArrayToPayload();
 	}
 
 	void PrepareCryptoStartRequest()
 	{
 		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
-		ATUI_S.uint = LinkInfo->GetPartnerMACHash();
+		ATUI_S.uint = LinkInfo->GetPartnerId();
 		PacketHolder.GetPayload()[0] = ATUI_S.array[0];
 		PacketHolder.GetPayload()[1] = ATUI_S.array[1];
 		PacketHolder.GetPayload()[2] = ATUI_S.array[2];

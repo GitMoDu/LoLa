@@ -85,12 +85,12 @@ protected:
 				}
 				break;
 			case AwaitingLinkEnum::ValidatingPartner:
-				//TODO: Filter accepted hosts by MAC hash.
+				//TODO: Filter accepted hosts by Id.
 				if (true)
 				{
 					
 					GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
-						LinkInfo->GetPartnerMACHash(), LinkInfo->GetLocalMACHash());
+						LinkInfo->GetPartnerId(), LinkInfo->GetLocalId());
 
 					LinkingStart = millis();//Reset local timeout.
 					ResetLastSentTimeStamp();
@@ -161,7 +161,7 @@ protected:
 			}
 		}
 	}
-	void OnIdBroadcastReceived(const uint8_t sessionId, const uint32_t hostMACHash)
+	void OnIdBroadcastReceived(const uint8_t sessionId, const uint32_t hostId)
 	{
 		switch (LinkInfo->GetLinkState())
 		{
@@ -173,7 +173,7 @@ protected:
 			case AwaitingLinkEnum::SearchingForHost:
 				if (!LinkInfo->HasSession() && LinkInfo->SetSessionId(sessionId))
 				{
-					LinkInfo->SetPartnerMACHash(hostMACHash);
+					LinkInfo->SetPartnerId(hostId);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
 				break;
@@ -182,10 +182,10 @@ protected:
 				//In case we have a pending link and our target host has a new session.
 				//Note: this is an easy target for denial of service.
 				if (LinkInfo->HasSession() &&
-					LinkInfo->PartnerMACHashMatches(hostMACHash) &&
+					LinkInfo->GetPartnerId() == hostId &&
 					LinkInfo->SetSessionId(sessionId))
 				{
-					LinkInfo->SetPartnerMACHash(hostMACHash);
+					LinkInfo->SetPartnerId(hostId);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
 				break;
@@ -228,7 +228,7 @@ protected:
 				///Quick decode for validation.
 				GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array);
 
-				if (LinkInfo->GetLocalMACHash() == ATUI_R.uint)
+				if (LinkInfo->GetLocalId() == ATUI_R.uint)
 				{
 					SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
 
@@ -581,7 +581,7 @@ private:
 	void PreparePKCStartRequest()
 	{
 		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST);
-		ATUI_S.uint = LinkInfo->GetLocalMACHash();
+		ATUI_S.uint = LinkInfo->GetLocalId();
 		S_ArrayToPayload();
 	}
 

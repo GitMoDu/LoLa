@@ -50,8 +50,8 @@ private:
 	LoLaMAC<LOLA_LINK_INFO_MAC_LENGTH> LocalMacGenerator;
 	//
 
-	bool PartnerMACPresent = false;
-	uint32_t PartnerMACHash = 0;
+	bool PartnerIdPresent = false;
+	uint32_t PartnerId = 0;
 
 	uint32_t ClockSyncAdjustments = 0;
 
@@ -68,9 +68,9 @@ public:
 		return LinkState;
 	}
 
-	uint32_t GetPartnerMACHash()
+	uint32_t GetPartnerId()
 	{
-		return PartnerMACHash;
+		return PartnerId;
 	}
 
 	//TODO: Implement on Link.
@@ -95,36 +95,26 @@ public:
 		return LocalMacGenerator.GetMACPointer();
 	}
 
-	uint32_t GetLocalMACHash()
+	uint32_t GetLocalId()
 	{
 		return LocalMacGenerator.GetMACHash();
 	}
 
-	void ClearPartnerMAC()
+	void ClearPartnerId()
 	{
-		PartnerMACPresent = false;
+		PartnerIdPresent = false;
 	}
 
-	void SetPartnerMACHash(const uint32_t macHash)
+	void SetPartnerId(const uint32_t id)
 	{
-		PartnerMACHash = macHash;
-		PartnerMACPresent = true;
+		PartnerId = id;
+		PartnerIdPresent = true;
 	}
 
-	bool HasPartnerMACHash()
+	bool HasPartnerId()
 	{
-		return PartnerMACPresent;
+		return PartnerId;
 	}	
-
-	bool PartnerMACHashMatches(uint32_t remoteMACHash)
-	{
-		if (!PartnerMACPresent)
-		{
-			return false;
-		}
-
-		return PartnerMACHash == remoteMACHash;
-	}
 	
 	bool SetSessionId(const uint8_t sessionId)
 	{
@@ -135,7 +125,7 @@ public:
 
 	bool HasSession()
 	{
-		return HasSessionId() && HasPartnerMACHash();
+		return HasSessionId() && HasPartnerId();
 	}
 
 	bool HasSessionId()
@@ -196,7 +186,7 @@ public:
 	void Reset()
 	{
 		SessionId = INVALID_SESSION;
-		PartnerMACPresent = false;
+		PartnerIdPresent = false;
 		
 		LinkStarted = ILOLA_INVALID_MILLIS;
 		

@@ -495,7 +495,7 @@ protected:
 				KeysLastGenerated = ILOLA_INVALID_MILLIS;
 
 				//Make sure to lazy load the local MAC on startup.
-				LinkInfo->GetLocalMACHash();
+				LinkInfo->GetLocalId();
 
 				if (PowerBalancer.Setup(GetLoLa(), LinkInfo))
 				{
@@ -511,7 +511,7 @@ protected:
 					LinkInfo->PrintMac(&Serial);
 					Serial.println();
 					Serial.print(F(" hash: "));
-					Serial.println(LinkInfo->GetLocalMACHash());
+					Serial.println(LinkInfo->GetLocalId());
 #endif
 
 					ResetStateStartTime();
@@ -630,8 +630,8 @@ protected:
 				LinkingStart = millis();
 
 #ifdef DEBUG_LOLA				
-				Serial.print(F("Linking to MAC Hash: "));
-				Serial.println(LinkInfo->GetPartnerMACHash());
+				Serial.print(F("Linking to Id: "));
+				Serial.println(LinkInfo->GetPartnerId());
 				Serial.print(F("-Session: "));
 				Serial.println(LinkInfo->GetSessionId());
 				Serial.print(F("PKC took "));
