@@ -146,6 +146,11 @@ public:
 		return &CryptoToken;
 	}
 
+	LoLaCryptoEncoder* GetCryptoEncoder()
+	{
+		return &CryptoEncoder;
+	}
+
 	void Enable()
 	{
 		if (!Enabled)
