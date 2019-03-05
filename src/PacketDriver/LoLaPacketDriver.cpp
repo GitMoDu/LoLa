@@ -120,9 +120,6 @@ void LoLaPacketDriver::OnReceived()
 						{
 							LastSent = millis();
 							OutgoingInfo.SetPending(PACKET_DEFINITION_ACK_HEADER, Sender.GetBufferSize(), LastSent);
-
-							//Process packets after sending validated Ack.
-							Services.ProcessPacket(Receiver.GetIncomingPacket());
 						}
 						else
 						{
