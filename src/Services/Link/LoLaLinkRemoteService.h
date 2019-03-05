@@ -245,6 +245,8 @@ protected:
 		default:
 			break;
 		}
+
+		return false;
 	}
 
 	//void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
