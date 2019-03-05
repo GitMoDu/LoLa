@@ -331,6 +331,7 @@ public:
 	}
 
 protected:
+	//Driver constants' overload.
 	virtual uint8_t GetTransmitPowerMax() const { return 1; }
 	virtual uint8_t GetTransmitPowerMin() const { return 0; }
 
@@ -347,7 +348,6 @@ public:
 
 
 	//Device driver implementation.
-
 	virtual uint8_t GetChannelMax() const { return 0; }
 	virtual uint8_t GetChannelMin() const { return 0; }
 
