@@ -43,7 +43,6 @@ private:
 		return 1;
 	}
 
-protected:
 	enum PairingStageEnum : uint8_t
 	{
 		StageClear,

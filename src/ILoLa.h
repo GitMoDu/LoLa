@@ -10,6 +10,8 @@
 #define USE_LATENCY_COMPENSATION
 //#define USE_FREQUENCY_HOP
 
+#define DEBUG_LOLA_CRYPTO
+
 #include <stdint.h>
 #include <Transceivers\LoLaReceiver.h>
 #include <Transceivers\LoLaSender.h>
@@ -124,6 +126,8 @@ protected:
 	///Crypto
 	LoLaCryptoTokenSource	CryptoToken;
 	LoLaCryptoEncoder		CryptoEncoder;
+	bool CryptoEnabled = false;
+	///
 
 #ifdef USE_LATENCY_COMPENSATION
 	///For use of estimated latency features
@@ -177,6 +181,11 @@ public:
 	bool HasLink()
 	{
 		return LinkActive;
+	}
+
+	void SetCryptoEnabled(const bool cryptoEnabled)
+	{
+		CryptoEnabled = cryptoEnabled;
 	}
 
 #ifdef USE_MOCK_PACKET_LOSS

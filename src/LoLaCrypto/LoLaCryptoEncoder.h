@@ -18,52 +18,49 @@ private:
 	enum  StageEnum : uint8_t
 	{
 		AllClear,
-		HasSecretKey,
-		AllDone
+		AllReady
 	} EncoderState = StageEnum::AllClear;
+
+	uint8_t KeyHolder[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	uint8_t IVHolder[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+	uint8_t PinHolder[4] = { 0, 0, 0, 0 };
+	uint8_t TestData[2] = { 0 , 0 };
+
+
 private:
 	Acorn128 Cypher;
-
 	TinyCrcModbus8 Hasher;
 
-public:
-	bool Encode(uint8_t* message, const uint8_t messageLength)
+private:
+	inline void ResetCypherBlock()
 	{
-		if (EncoderState != StageEnum::AllDone)
-		{
-			return false;
-		}
+		Cypher.setKey(KeyHolder, 16);
+		Cypher.setIV(IVHolder, 16);
+		Cypher.addAuthData(PinHolder, 1);
+	}
 
+public:
+	void Encode(uint8_t* message, const uint8_t messageLength)
+	{
 		Cypher.encrypt(message, message, messageLength);
 
-		return true;
+		ResetCypherBlock();
 	}
 
-	bool Decode(uint8_t * message, const uint8_t messageLength)
+	void Decode(uint8_t * message, const uint8_t messageLength)
 	{
-		if (EncoderState != StageEnum::AllDone)
-		{
-			return false;
-		}
-
 		Cypher.decrypt(message, message, messageLength);
 
-		return true;
+		ResetCypherBlock();
 	}
 
-	bool Decode(uint8_t * inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
+	void Decode(uint8_t * inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
 	{
-		if (EncoderState != StageEnum::AllDone)
-		{
-			return false;
-		}
-
 		Cypher.decrypt(outputMessage, inputMessage, messageLength);
-
-		return true;
 	}
 
 	void Clear()
@@ -73,7 +70,7 @@ public:
 
 	bool IsReadyForUse()
 	{
-		return EncoderState == StageEnum::AllDone;
+		return EncoderState == StageEnum::AllReady;
 	}
 
 	bool SetSecretKey(uint8_t * secretKey, const uint8_t keyLength)
@@ -81,15 +78,51 @@ public:
 		Cypher.clear();
 
 		//TODO: Handle key reduction?
+		for (uint8_t i = 0; i < Cypher.keySize(); i++)
+		{
+			KeyHolder[i] = secretKey[i];
+		}
 
-		if (!Cypher.setKey(secretKey, Cypher.keySize()))
+		//Test if key is accepted.
+		if (!Cypher.setKey(KeyHolder, Cypher.keySize()))
 		{
 			return false;
 		}
 
-		EncoderState = StageEnum::HasSecretKey;
+		//Test setting IV.
+		if (!Cypher.setIV(IVHolder, 16))
+		{
+			return false;
+		}
 
-		return true;
+		//Test encoding decoding.
+		ResetCypherBlock();
+		TestData[0] = random(0,UINT8_MAX);
+		TestData[1] = TestData[0];
+		Cypher.encrypt(TestData, TestData, 1);
+		ResetCypherBlock();
+		Cypher.decrypt(TestData, TestData, 1);
+
+		ResetCypherBlock();
+
+		if (TestData[0] != TestData[1])
+		{
+			return false;
+		}
+
+		EncoderState = StageEnum::AllReady;
+
+#ifdef DEBUG_LOLA_CRYPTO
+		Serial.print("Secret Key:\n\t|");
+		for (uint8_t i = 0; i < Cypher.keySize(); i++)
+		{
+			Serial.print(KeyHolder[i]);
+			Serial.print('|');
+		}
+		Serial.println();
+#endif // DEBUG_LOLA_CRYPTO		
+
+		return EncoderState == StageEnum::AllReady;
 	}
 
 	void SetIvData(const uint8_t sessionId, const uint32_t localId, const uint32_t partnerId)
@@ -118,37 +151,15 @@ public:
 
 	bool SetAuthData(const uint8_t* pin, const uint8_t pinLength)
 	{
-		if (EncoderState != StageEnum::HasSecretKey)
+		if (pinLength != 4) //TODO: Pin.
 		{
 			return false; //Wrong state
 		}
 
-		Serial.print("IV: |");
-		for (uint8_t i = 0; i < 16; i++)
-		{
-			Serial.print(IVHolder[i]);
-			Serial.print('|');
-		}
-		Serial.println('|');
-
-		Serial.print("Auth Data: |");
 		for (uint8_t i = 0; i < pinLength; i++)
 		{
-			Serial.print(pin[i]);
-			Serial.print('|');
+			PinHolder[i] = pin[i];
 		}
-		if(pinLength == 0)
-			Serial.println('|');
-
-		if (Cypher.setIV(IVHolder, 16))
-		{
-			EncoderState = StageEnum::AllDone;
-		}
-
-		if (pinLength > 0)
-		{
-			Cypher.addAuthData(pin, pinLength);
-		}		
 
 		return true;
 	}

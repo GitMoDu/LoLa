@@ -25,9 +25,9 @@ public:
 		return BufferPacket;
 	}
 
-	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
+	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder, bool* cryptoEnabled)
 	{
-		if (LoLaBuffer::Setup(packetMap, cryptoEncoder))
+		if (LoLaBuffer::Setup(packetMap, cryptoEncoder, cryptoEnabled))
 		{
 			BufferPacket = &ReceiverPacket;
 			for (uint8_t i = 0; i < GetBufferSize(); i++)
@@ -60,10 +60,9 @@ public:
 				return false;
 			}
 
-			if (CryptoEnabled &&
-				!Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize))
+			if (*CryptoEnabled)
 			{
-				return false;
+				Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize);
 			}
 
 			//Find a packet definition from map.

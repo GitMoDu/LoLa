@@ -68,7 +68,10 @@ protected:
 	ArrayToUint32 ATUI_R;
 	ArrayToUint32 ATUI_S;
 
+	///Crypto key exchanger.
 	LoLaCryptoKeyExchanger	KeyExchanger;
+	uint32_t KeysLastGenerated = ILOLA_INVALID_MILLIS;
+	///
 
 
 
@@ -93,6 +96,11 @@ protected:
 	//Subservices.
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 	LoLaDiagnosticsService Diagnostics;
+#endif
+
+#ifdef DEBUG_LOLA
+	uint32_t PartnerSeekDuration = 0;
+	uint32_t PartnerPKCDuration = 0;
 #endif
 
 protected:
@@ -125,7 +133,6 @@ protected:
 	///
 
 	//Internal housekeeping.
-	//virtual void SetBaseSeed() {}
 	virtual void OnClearSession() {};
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 
@@ -186,7 +193,25 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			OnAwaitingLink();
+			if (KeysLastGenerated == ILOLA_INVALID_MILLIS || millis() - KeysLastGenerated > LOLA_LINK_SERVICE_UNLINK_KEY_PAIR_LIFETIME)
+			{
+#ifdef DEBUG_LOLA
+				uint32_t SharedKeyTime = micros();
+#endif
+				KeyExchanger.GenerateNewKeyPair();
+				KeysLastGenerated = millis();
+#ifdef DEBUG_LOLA
+
+				SharedKeyTime = micros() - SharedKeyTime;
+				Serial.print(F("Keys generation took "));
+				Serial.print(SharedKeyTime);
+				Serial.println(F(" us."));
+#endif
+			}
+			else
+			{
+				OnAwaitingLink();
+			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
@@ -367,12 +392,6 @@ protected:
 		}
 	}
 
-	//void SetTOTPEnabled()
-	//{
-	//	//SetBaseSeed();
-	//	//CryptoSeed.SetTOTPEnabled(true, GetLoLa()->GetClockSource(), ChallengeTransaction->GetToken());
-	//}
-
 	void SetLinkingState(const uint8_t linkingState)
 	{
 		LinkingState = linkingState;
@@ -477,6 +496,7 @@ protected:
 			{
 				LinkInfo->SetDriver(GetLoLa());
 				LinkInfo->Reset();
+				KeysLastGenerated = ILOLA_INVALID_MILLIS;
 
 				//Make sure to lazy load the local MAC on startup.
 				LinkInfo->GetLocalMACHash();
@@ -484,11 +504,12 @@ protected:
 				if (PowerBalancer.Setup(GetLoLa(), LinkInfo))
 				{
 #ifdef USE_FREQUENCY_HOP
-					FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
+					//FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
 #endif
 
 					ClearSession();
-
+					GetLoLa()->GetCryptoEncoder()->Clear();
+					GetLoLa()->SetCryptoEnabled(false);
 #ifdef DEBUG_LOLA
 					Serial.print(F("Local MAC: "));
 					LinkInfo->PrintMac(&Serial);
@@ -496,7 +517,7 @@ protected:
 					Serial.print(F(" hash: "));
 					Serial.println(LinkInfo->GetLocalMACHash());
 #endif
-					//GetLoLa()->GetCryptoSeed()->Reset();
+
 					ResetStateStartTime();
 					SetNextRunASAP();
 
@@ -587,8 +608,8 @@ protected:
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 				ClearSession();
+				GetLoLa()->SetCryptoEnabled(true);
 				GetLoLa()->GetCryptoEncoder()->Clear();
-				//GetLoLa()->GetCryptoSeed()->Reset();
 				SetNextRunDefault();
 #ifdef USE_FREQUENCY_HOP
 				FrequencyHopper.ResetChannel();
@@ -597,26 +618,31 @@ protected:
 #endif
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-				//GetLoLa()->GetCryptoSeed();
+				GetLoLa()->SetCryptoEnabled(false);
 				GetLoLa()->GetCryptoEncoder()->Clear();
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-				//GetLoLa()->GetCryptoSeed()->Reset();
+				GetLoLa()->SetCryptoEnabled(false);
 				//Sleep time is set on Host/Remote
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
-
-				//SetBaseSeed(); //TODO: Update time seed usage.
-				////TODO: Enable global crypto for all packets.
+				GetLoLa()->SetCryptoEnabled(true);
 
 				SetLinkingState(0);
 #ifdef DEBUG_LOLA				
-				Serial.print(F("PKC took unlink: "));
-				Serial.print(millis() - LinkingStart);
+				Serial.print(F("Partner Seek took "));
+				Serial.print(PartnerSeekDuration);
 				Serial.println(F(" ms."));
+				Serial.print(F("PKC took "));
+				Serial.print(PartnerPKCDuration);
+				Serial.println(F(" ms."));
+
+				//Serial.print(F("PKC took unlink: "));
+				//Serial.print(millis() - LinkingStart);
+				//Serial.println(F(" ms."));
 #endif
 				LinkingStart = millis();
 #ifdef DEBUG_LOLA				

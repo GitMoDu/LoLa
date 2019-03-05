@@ -36,7 +36,7 @@ protected:
 
 	///Cryptography
 	LoLaCryptoEncoder* Encoder = nullptr;
-	bool CryptoEnabled = 0;
+	bool* CryptoEnabled = nullptr;
 	///
 
 	uint8_t BufferSize = 0;
@@ -53,23 +53,19 @@ protected:
 	}
 
 public:
-	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
+	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder, bool* cryptoEnabled)
 	{
 		PacketMap = packetMap;
 		Encoder = cryptoEncoder;
+		CryptoEnabled = cryptoEnabled;
 
-		return PacketMap != nullptr && Encoder != nullptr;
+		return PacketMap != nullptr && Encoder != nullptr && CryptoEnabled != nullptr;
 	}
 	
 public:
 	uint8_t * GetBuffer()
 	{
 		return BufferPacket->GetRaw();
-	}
-
-	void SetCryptoEnabled(const bool cryptoEnabled)
-	{
-		CryptoEnabled = cryptoEnabled;
 	}
 
 	void SetBufferSize(const uint8_t size)

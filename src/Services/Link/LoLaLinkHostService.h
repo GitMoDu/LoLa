@@ -57,12 +57,7 @@ protected:
 		switch (newState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (!NewSession())
-			{
-#ifdef DEBUG_LOLA
-				Serial.print(F("Unable to start session."));
-#endif
-			}
+			NewSession();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD);
@@ -78,12 +73,6 @@ protected:
 			break;
 		}
 	}
-
-	//Host version, PartnerMAC is the Remote's MAC.
-	//void SetBaseSeed()
-	//{
-	//	GetLoLa()->GetCryptoSeed()->SetBaseSeed(LinkInfo->GetLocalMACHash(), LinkInfo->GetPartnerMACHash(), LinkInfo->GetSessionId());
-	//}
 
 	void OnClearSession()
 	{
@@ -124,6 +113,9 @@ protected:
 
 				LinkingStart = millis();//Reset local timeout.
 				ResetLastSentTimeStamp();
+#ifdef DEBUG_LOLA
+				PartnerSeekDuration = millis() - PartnerSeekDuration;
+#endif
 				SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
 			}
 			else
@@ -151,56 +143,8 @@ protected:
 			//TODO: Solve key size issue
 			//TODO: Use authorization data?
 			if (KeyExchanger.GenerateSharedKey() &&
-				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16) &&
-				GetLoLa()->GetCryptoEncoder()->SetAuthData(nullptr, 0) &&
-				GetLoLa()->GetCryptoEncoder()->IsReadyForUse())
+				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16))
 			{
-#ifdef DEBUG_LOLA
-				uint8_t pk[21];
-
-				for (uint8_t i = 0; i < 21; i++)
-				{
-					pk[i] = 0;
-				}
-
-				Serial.print(F("Local Public Key\n\t|"));
-				KeyExchanger.GetPublicKeyCompressed(pk);
-				for (uint8_t i = 0; i < 21; i++)
-				{
-					Serial.print(pk[i]);
-					Serial.print('|');
-				}
-				Serial.println();
-
-				for (uint8_t i = 0; i < 21; i++)
-				{
-					pk[i] = 0;
-				}
-
-				Serial.print(F("Partner Public Key\n\t|"));
-				KeyExchanger.GetPartnerPublicKeyCompressed(pk);
-
-				for (uint8_t i = 0; i < 21; i++)
-				{
-					Serial.print(pk[i]);
-					Serial.print('|');
-				}
-				Serial.println();
-
-				for (uint8_t i = 0; i < 21; i++)
-				{
-					pk[i] = 0;
-				}
-
-				Serial.print(F("Shared Key\n\t|"));
-				for (uint8_t i = 0; i < 20; i++)
-				{
-					Serial.print(KeyExchanger.GetSharedKeyPointer()[i]);
-					Serial.print('|');
-				}
-				Serial.println();
-#endif
-				LinkingStart = millis();//Reset local timeout.
 				ResetLastSentTimeStamp();
 				SetLinkingState(AwaitingLinkEnum::GotSharedKey);
 			}
@@ -217,16 +161,9 @@ protected:
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				if (PrepareCryptoStartRequest())
-				{
-					Serial.println("Send Crypto Start Request");
-					RequestSendPacket(true);
-				}
-				else
-				{
-					SetNextRunDelay(LOLA_SERVICE_LONG_SLEEP_PERIOD_MILLIS);
-				}
-
+				Serial.println("Send Crypto Start Request");
+				PrepareCryptoStartRequest();
+				RequestSendPacket(true);
 			}
 			else
 			{
@@ -234,6 +171,9 @@ protected:
 			}
 			break;
 		case AwaitingLinkEnum::LinkingSwitchOver:
+#ifdef DEBUG_LOLA
+			PartnerPKCDuration = millis() - PartnerPKCDuration;
+#endif
 			//All set to start linking.
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
 			break;
@@ -259,6 +199,9 @@ protected:
 			LinkInfo->HasSessionId() &&
 			LinkInfo->GetSessionId() == sessionId)
 		{
+#ifdef DEBUG_LOLA
+			PartnerSeekDuration = millis();
+#endif
 			LinkInfo->SetPartnerMACHash(remoteMACHash);
 			SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 		}
@@ -274,11 +217,10 @@ protected:
 			//The partner Public Key is encoded at this point.
 			if (KeyExchanger.SetPartnerPublicKey(remotePublicKey))
 			{
+#ifdef DEBUG_LOLA
+				PartnerPKCDuration = millis();
+#endif
 				SetLinkingState(AwaitingLinkEnum::ProcessingPKC);
-			}
-			else
-			{
-				Serial.println("Partner Key Rejected");
 			}
 		}
 	}
@@ -600,7 +542,7 @@ protected:
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			LatencyMeter.OnAckReceived(id);
-			if (header == LOLA_LINK_HEADER_SHORT &&
+			if (header == LOLA_LINK_HEADER_SHORT_WITH_ACK &&
 				LinkingState == AwaitingLinkEnum::GotSharedKey &&
 				LinkInfo->GetSessionId() == id)
 			{
@@ -618,54 +560,13 @@ protected:
 		}
 	}
 
-	//void OnAckReceived(const uint8_t header, const uint8_t id)
-	//{
-	//	if (!LinkInfo->HasLink())
-	//	{
-	//		//Catch and store acked packets' round trip time.
-	//		LatencyMeter.OnAckReceived(id);
-	//	}
-
-	//	switch (header)
-	//	{
-	//	case PACKET_DEFINITION_UNLINKED_LONG_HEADER:
-	//		OnCryptoStartAckReceived(id);
-	//		break;
-	//	default:
-	//		break;
-	//	}
-	//}
-
-
 private:
-	bool NewSession()
+	void NewSession()
 	{
 		ClearSession();
 
-#ifdef DEBUG_LOLA
-		SharedKeyTime = micros();
-#endif
-
-		if (!KeyExchanger.GenerateNewKeyPair())
-		{
-			return false;
-		}
-
-		if (!LinkInfo->SetSessionId((uint8_t)random(1, (UINT8_MAX - 1))))
-		{
-			return false;
-		}
-
-#ifdef DEBUG_LOLA
-		SharedKeyTime = micros() - SharedKeyTime;
-		Serial.print(F("New keys took "));
-		Serial.print(SharedKeyTime);
-		Serial.println(F(" us to generate."));
-#endif
-
+		LinkInfo->SetSessionId((uint8_t)random(1, (UINT8_MAX - 1)));
 		SessionLastStarted = millis();
-
-		return true;
 	}
 
 	void PrepareIdBroadcast()
@@ -675,49 +576,16 @@ private:
 		S_ArrayToPayload();
 	}
 
-	bool PrepareCryptoStartRequest()
+	void PrepareCryptoStartRequest()
 	{
 		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
 		ATUI_S.uint = LinkInfo->GetPartnerMACHash();
+		PacketHolder.GetPayload()[0] = ATUI_S.array[0];
+		PacketHolder.GetPayload()[1] = ATUI_S.array[1];
+		PacketHolder.GetPayload()[2] = ATUI_S.array[2];
+		PacketHolder.GetPayload()[3] = ATUI_S.array[3];
 
-		if (!GetLoLa()->GetCryptoEncoder()->Encode(PacketHolder.GetPayload(), sizeof(uint32_t)))
-		{
-#ifdef DEBUG_LOLA
-			Serial.println("Failed to encode");
-#endif
-			return false;
-		}
-
-#ifdef DEBUG_LOLA
-		if (!GetLoLa()->GetCryptoEncoder()->Decode(PacketHolder.GetPayload(), sizeof(uint32_t)))
-		{
-			Serial.println("Failed to decode");
-		}
-
-		ArrayToR_Array(PacketHolder.GetPayload());
-		if (!LinkInfo->PartnerMACHashMatches(ATUI_R.uint))
-		{
-			Serial.println("Failed decoded match");
-			Serial.print('|');
-			for (uint8_t i = 0; i < sizeof(uint32_t); i++)
-			{
-				Serial.print(ATUI_R.array[i]);
-				Serial.print('|');
-			}
-			Serial.print(" vs |");
-			ATUI_R.uint = LinkInfo->GetPartnerMACHash();
-			for (uint8_t i = 0; i < sizeof(uint32_t); i++)
-			{
-				Serial.print(ATUI_R.array[i]);
-				Serial.print('|');
-			}
-			Serial.println();
-
-			return false;
-		}
-#endif
-
-		return true;
+		GetLoLa()->GetCryptoEncoder()->Encode(PacketHolder.GetPayload(), sizeof(uint32_t));
 	}
 };
 #endif

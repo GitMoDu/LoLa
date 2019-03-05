@@ -43,12 +43,6 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	//Remote version, ParnerMAC is the Host's MAC.
-	//void SetBaseSeed()
-	//{
-	//	GetLoLa()->GetCryptoSeed()->SetBaseSeed(LinkInfo->GetPartnerMACHash(), LinkInfo->GetLocalMACHash(), LinkInfo->GetSessionId());
-	//}
-
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
 	{
 		switch (newState)
@@ -94,11 +88,15 @@ protected:
 				//TODO: Filter accepted hosts by MAC hash.
 				if (true)
 				{
+					
 					GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
 						LinkInfo->GetPartnerMACHash(), LinkInfo->GetLocalMACHash());
 
 					LinkingStart = millis();//Reset local timeout.
 					ResetLastSentTimeStamp();
+#ifdef DEBUG_LOLA
+					PartnerSeekDuration = millis() - PartnerSeekDuration;
+#endif
 					SetLinkingState(AwaitingLinkEnum::AwaitingHostPublicKey);
 				}
 				else
@@ -126,56 +124,9 @@ protected:
 			case AwaitingLinkEnum::ProcessingSharedKey:
 				//TODO: Solve key size issue
 				//GetLoLa()->GetCryptoEncoder()->SetIv() //TODO: Set Iv from known entropy + session id.
-				if (GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16) &&
-					GetLoLa()->GetCryptoEncoder()->SetAuthData(nullptr, 0) &&
-					GetLoLa()->GetCryptoEncoder()->IsReadyForUse())
+				if (KeyExchanger.GenerateSharedKey() &&
+					GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16))
 				{
-#ifdef DEBUG_LOLA
-					uint8_t pk[21];
-
-					for (uint8_t i = 0; i < 21; i++)
-					{
-						pk[i] = 0;
-					}
-
-					Serial.print(F("Local Public Key\n\t|"));
-					KeyExchanger.GetPublicKeyCompressed(pk);
-					for (uint8_t i = 0; i < 21; i++)
-					{
-						Serial.print(pk[i]);
-						Serial.print('|');
-					}
-					Serial.println();
-
-					for (uint8_t i = 0; i < 21; i++)
-					{
-						pk[i] = 0;
-					}
-
-					Serial.print(F("Partner Public Key\n\t|"));
-					KeyExchanger.GetPartnerPublicKeyCompressed(pk);
-
-					for (uint8_t i = 0; i < 21; i++)
-					{
-						Serial.print(pk[i]);
-						Serial.print('|');
-					}
-					Serial.println();
-
-					for (uint8_t i = 0; i < 21; i++)
-					{
-						pk[i] = 0;
-					}
-
-					Serial.print(F("Shared Key\n\t|"));
-					for (uint8_t i = 0; i < 20; i++)
-					{
-						Serial.print(KeyExchanger.GetSharedKeyPointer()[i]);
-						Serial.print('|');
-					}
-					Serial.println();
-#endif
-					LinkingStart = millis();//Reset local timeout.
 					ResetLastSentTimeStamp();
 					SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
 				}
@@ -203,6 +154,9 @@ protected:
 				}
 				break;
 			case AwaitingLinkEnum::LinkingSwitchOver:
+#ifdef DEBUG_LOLA
+				PartnerPKCDuration = millis() - PartnerPKCDuration;
+#endif
 				//All set to start linking.
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
 				break;
@@ -223,6 +177,9 @@ protected:
 			case AwaitingLinkEnum::SearchingForHost:
 				if (!LinkInfo->HasSession() && LinkInfo->SetSessionId(sessionId))
 				{
+#ifdef DEBUG_LOLA
+					PartnerSeekDuration = millis();
+#endif
 					LinkInfo->SetPartnerMACHash(hostMACHash);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
@@ -235,6 +192,9 @@ protected:
 					LinkInfo->PartnerMACHashMatches(hostMACHash) &&
 					LinkInfo->SetSessionId(sessionId))
 				{
+#ifdef DEBUG_LOLA
+					PartnerSeekDuration = millis();
+#endif
 					LinkInfo->SetPartnerMACHash(hostMACHash);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
@@ -258,6 +218,9 @@ protected:
 			//Assumes public key is the correct size.
 			if (KeyExchanger.SetPartnerPublicKey(hostPublicKey))
 			{
+#ifdef DEBUG_LOLA
+				PartnerPKCDuration = millis();
+#endif
 				SetLinkingState(AwaitingLinkEnum::ProcessingSharedKey);
 			}
 		}
@@ -272,40 +235,22 @@ protected:
 				LinkInfo->HasSessionId() &&
 				LinkInfo->GetSessionId() == sessionId)
 			{
-				if (!GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t)))
-				{
-#ifdef DEBUG_LOLA
-					Serial.println("Failed to decode");
-#endif
-				}
-				if (GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array) &&
-					LinkInfo->PartnerMACHashMatches(ATUI_R.uint))
+				///Quick decode for validation.
+				GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array);
+
+				if (LinkInfo->GetLocalMACHash() == ATUI_R.uint)
 				{
 					Serial.println("Crypto start accepted");
 					SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
-
 
 					return true;
 				}
 				else
 				{
 					Serial.println("Crypto start rejected");
-					Serial.println("Decoded Partner Id: |");
-					for (uint8_t i = 0; i < sizeof(uint32_t); i++)
-					{
-						Serial.print(ATUI_R.array[i]);
-						Serial.print('|');
-					}
-					Serial.print("\n\t ");
-					Serial.print(ATUI_R.uint);
-					Serial.print(" vs ");
-					Serial.println(LinkInfo->GetPartnerMACHash());
+					return false;
 				}
 			}
-
-
-
-
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			//This should never happen, as packets are encrypted at this point.
