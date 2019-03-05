@@ -32,7 +32,7 @@ private:
 
 
 private:
-	Acorn128 Cypher;
+	Ascon128 Cypher;
 	TinyCrcModbus8 Hasher;
 
 private:
