@@ -21,7 +21,7 @@ private:
 	const static uint8_t AuthorizationDataSize = 4;
 	const uint8_t AuthorizationData[AuthorizationDataSize] = { 0, 1 ,2 ,3 };
 private:
-	Ascon128 Cypher;
+	Acorn128 Cypher;
 
 public:
 	bool Encode(const uint8_t * message, const uint8_t messageLength, uint8_t * encryptedOutput)
