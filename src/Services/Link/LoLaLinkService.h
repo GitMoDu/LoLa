@@ -99,7 +99,6 @@ protected:
 #endif
 
 #ifdef DEBUG_LOLA
-	uint32_t PartnerSeekDuration = 0;
 	uint32_t PartnerPKCDuration = 0;
 #endif
 
@@ -633,9 +632,6 @@ protected:
 
 				SetLinkingState(0);
 #ifdef DEBUG_LOLA				
-				Serial.print(F("Partner Seek took "));
-				Serial.print(PartnerSeekDuration);
-				Serial.println(F(" ms."));
 				Serial.print(F("PKC took "));
 				Serial.print(PartnerPKCDuration);
 				Serial.println(F(" ms."));

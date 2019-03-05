@@ -113,9 +113,6 @@ protected:
 
 				LinkingStart = millis();//Reset local timeout.
 				ResetLastSentTimeStamp();
-#ifdef DEBUG_LOLA
-				PartnerSeekDuration = millis() - PartnerSeekDuration;
-#endif
 				SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
 			}
 			else
@@ -150,7 +147,6 @@ protected:
 			}
 			else
 			{
-				Serial.println("Nope!");
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			break;
@@ -161,7 +157,6 @@ protected:
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				Serial.println("Send Crypto Start Request");
 				PrepareCryptoStartRequest();
 				RequestSendPacket(true);
 			}
@@ -200,7 +195,7 @@ protected:
 			LinkInfo->GetSessionId() == sessionId)
 		{
 #ifdef DEBUG_LOLA
-			PartnerSeekDuration = millis();
+			PartnerPKCDuration = millis();
 #endif
 			LinkInfo->SetPartnerMACHash(remoteMACHash);
 			SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
@@ -217,9 +212,6 @@ protected:
 			//The partner Public Key is encoded at this point.
 			if (KeyExchanger.SetPartnerPublicKey(remotePublicKey))
 			{
-#ifdef DEBUG_LOLA
-				PartnerPKCDuration = millis();
-#endif
 				SetLinkingState(AwaitingLinkEnum::ProcessingPKC);
 			}
 		}

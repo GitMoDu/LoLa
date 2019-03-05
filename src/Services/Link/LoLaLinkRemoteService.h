@@ -94,9 +94,6 @@ protected:
 
 					LinkingStart = millis();//Reset local timeout.
 					ResetLastSentTimeStamp();
-#ifdef DEBUG_LOLA
-					PartnerSeekDuration = millis() - PartnerSeekDuration;
-#endif
 					SetLinkingState(AwaitingLinkEnum::AwaitingHostPublicKey);
 				}
 				else
@@ -132,7 +129,6 @@ protected:
 				}
 				else
 				{
-					Serial.println("Nope!");
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 					SetNextRunASAP();
 				}
@@ -177,9 +173,6 @@ protected:
 			case AwaitingLinkEnum::SearchingForHost:
 				if (!LinkInfo->HasSession() && LinkInfo->SetSessionId(sessionId))
 				{
-#ifdef DEBUG_LOLA
-					PartnerSeekDuration = millis();
-#endif
 					LinkInfo->SetPartnerMACHash(hostMACHash);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
@@ -192,9 +185,6 @@ protected:
 					LinkInfo->PartnerMACHashMatches(hostMACHash) &&
 					LinkInfo->SetSessionId(sessionId))
 				{
-#ifdef DEBUG_LOLA
-					PartnerSeekDuration = millis();
-#endif
 					LinkInfo->SetPartnerMACHash(hostMACHash);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
@@ -240,20 +230,17 @@ protected:
 
 				if (LinkInfo->GetLocalMACHash() == ATUI_R.uint)
 				{
-					Serial.println("Crypto start accepted");
 					SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
 
 					return true;
 				}
 				else
 				{
-					Serial.println("Crypto start rejected");
 					return false;
 				}
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
-			//This should never happen, as packets are encrypted at this point.
 			break;
 		default:
 			break;
