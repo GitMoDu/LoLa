@@ -10,20 +10,23 @@
 
 class LoLaCryptoEncoder
 {
-private: 
+private:
 	enum  StageEnum : uint8_t
 	{
 		AllClear,
-		HasSharedKey,
-		ReadyForUse
+		HasSecretKey,
+		AllDone
 	} EncoderState = StageEnum::AllClear;
+
+	const static uint8_t AuthorizationDataSize = 4;
+	const uint8_t AuthorizationData[AuthorizationDataSize] = { 0, 1 ,2 ,3 };
 private:
 	Ascon128 Cypher;
 
 public:
 	bool Encode(const uint8_t * message, const uint8_t messageLength, uint8_t * encryptedOutput)
 	{
-		if (EncoderState != StageEnum::ReadyForUse)
+		if (EncoderState != StageEnum::AllDone)
 		{
 			return false;
 		}
@@ -35,7 +38,7 @@ public:
 
 	bool Decode(const uint8_t * encryptedMessage, const uint8_t messageLength, uint8_t * messageOutput)
 	{
-		if (EncoderState != StageEnum::ReadyForUse)
+		if (EncoderState != StageEnum::AllDone)
 		{
 			return false;
 		}
@@ -50,57 +53,48 @@ public:
 		EncoderState = StageEnum::AllClear;
 	}
 
-	inline bool IsReadyForUse()
+	bool IsReadyForUse()
 	{
-		return EncoderState == StageEnum::ReadyForUse;
+		return EncoderState == StageEnum::AllDone;
 	}
 
-	bool SetSharedKey(const uint8_t * sharedKey, const uint8_t keyLength)	
+	bool SetSecretKey(uint8_t * sharedKey, const uint8_t keyLength)
 	{
-		if (keyLength < Cypher.keySize())
-		{
-			return false;
-		}
+		Cypher.clear();
 
 		//TODO: Handle key reduction?
-
-		Cypher.clear();
 
 		if (!Cypher.setKey(sharedKey, keyLength))
 		{
 			return false;
-		}	
+		}
 
-		EncoderState = StageEnum::HasSharedKey;
+		EncoderState = StageEnum::HasSecretKey;
 
 		return true;
 	}
 
-	bool SetIv(const uint8_t * iv, const uint8_t ivLength)
+	bool SetIv(uint8_t * iv, const uint8_t ivLength)
 	{
-		if (EncoderState != StageEnum::HasSharedKey && 
-			EncoderState != StageEnum::ReadyForUse)
+		if (EncoderState != StageEnum::HasSecretKey)
 		{
 			return false; //Wrong state
 		}
 
-		if (ivLength < Cypher.keySize())
-		{
-			return false;
-		}
-
 		//TODO: Handle key reduction?
-
-		Cypher.clear();
-
 		if (!Cypher.setIV(iv, ivLength))
 		{
 			return false;
 		}
 
-		//Do not set IV yet.		
+		//TODO: Use authorization data?
+		for (uint8_t i = 0; i < AuthorizationDataSize; i++)
+		{
+			Cypher.addAuthData(&AuthorizationData[i], sizeof(uint8_t));
+		}
 
-		EncoderState = StageEnum::HasSharedKey;
+
+		EncoderState = StageEnum::AllDone;
 
 		return true;
 	}
