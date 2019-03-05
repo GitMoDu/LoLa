@@ -17,7 +17,6 @@
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 
-#include <Services\Link\LoLaLinkCryptoChallenge.h>
 #include <Services\Link\LoLaLinkInfoSyncTransaction.h>
 
 #include <Services\Link\LoLaLinkPowerBalancer.h>
@@ -75,7 +74,6 @@ protected:
 	///
 
 
-
 	//Sub state.
 	uint8_t LinkingState = 0;
 
@@ -84,9 +82,6 @@ protected:
 	////Synced Clock.
 	LoLaLinkClockSyncer* ClockSyncerPointer = nullptr;
 	IClockSyncTransaction* ClockSyncTransaction = nullptr;
-
-	////Crypto Challenge.
-	IChallengeTransaction* ChallengeTransaction = nullptr;
 
 	//Optimized memory usage grunt packet.
 	TemplateLoLaPacket<LOLA_LINK_SERVICE_PACKET_MAX_SIZE> PacketHolder;
@@ -106,7 +101,7 @@ protected:
 
 protected:
 	///Common packet handling.
-	virtual void OnLinkInfoSyncReceived(const uint16_t rtt, const uint8_t rssi) {}
+	
 
 	///Host packet handling.
 	//Unlinked packets.
@@ -115,8 +110,8 @@ protected:
 	virtual void OnRemotePublicKeyReceived(const uint8_t sessionId, uint8_t * encodedPublicKey) {}
 
 	//Linked packets.
+	virtual void OnRemoteInfoReceived(const uint8_t rssi) {}
 	//virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
-	//virtual void OnChallengeResponseReceived(const uint8_t requestId, const uint32_t token) {}
 	//virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	///
 
@@ -127,9 +122,9 @@ protected:
 	virtual bool OnAckedPacketReceived(ILoLaPacket* receivedPacket) { return false; }
 
 	//Linked packets.
+	virtual void OnHostInfoReceived(const uint16_t rtt, const uint8_t rssi) {}
 	//virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	//virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
-	//virtual void OnChallengeRequestReceived(const uint8_t requestId, const uint32_t token) {}
 	//virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
 	///
 
@@ -139,11 +134,7 @@ protected:
 
 	//Runtime handlers.
 	virtual void OnLinking() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
-	virtual void OnAwaitingLink() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
-	//virtual bool OnChallenging() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); return false; }
-	//virtual bool OnClockSync() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); return false; }
-	//virtual bool OnInfoSync() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); return false; }
-	//virtual void OnLinkProtocolSwitchOver() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
+	virtual bool OnAwaitingLink() { return false; }
 	virtual void OnKeepingLink() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 
 
@@ -202,16 +193,21 @@ protected:
 				KeyExchanger.GenerateNewKeyPair();
 				KeysLastGenerated = millis();
 #ifdef DEBUG_LOLA
+#ifdef DEBUG_LOLA_CRYPTO
 				SharedKeyTime = micros() - SharedKeyTime;
 				Serial.print(F("Keys generation took "));
 				Serial.print(SharedKeyTime);
 				Serial.println(F(" us."));
 #endif
+#endif
 				SetNextRunASAP();
 			}
 			else
 			{
-				OnAwaitingLink();
+				if (!OnAwaitingLink())
+				{
+					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+				}
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
@@ -220,8 +216,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
 			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-				SetNextRunASAP();
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			}
 			else
 			{
@@ -229,7 +224,14 @@ protected:
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
-			OnKeepingLinkCommon();
+			if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT)
+			{
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
+			}
+			else
+			{
+				OnKeepingLinkCommon();
+			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Disabled:
 		default:
@@ -241,52 +243,9 @@ protected:
 
 
 private:
-	//inline void OnLinking()
-	//{
-	//	switch (LinkingState)
-	//	{
-	//	case LinkingStagesEnum::ChallengeStage:
-	//		if (OnChallenging())
-	//		{
-	//			SetLinkingState(LinkingStagesEnum::ClockSyncStage);
-	//		}
-	//		break;
-	//	case LinkingStagesEnum::InfoSyncStage:
-	//		if (OnInfoSync())
-	//		{
-	//			SetLinkingState(LinkingStagesEnum::LinkProtocolSwitchOver);
-	//		}
-	//		break;
-	//	case LinkingStagesEnum::ClockSyncStage:
-	//		if (OnClockSync())
-	//		{
-	//			SetLinkingState(LinkingStagesEnum::LinkProtocolSwitchOver);
-	//		}
-	//		break;
-	//	case LinkingStagesEnum::LinkProtocolSwitchOver:
-	//		//We transition forward when we receive the exppected packet/ack.
-	//		OnLinkProtocolSwitchOver();
-	//		break;
-	//	case LinkingStagesEnum::LinkingDone:
-	//		//All connecting stages complete, we have a link.
-	//		UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linked);
-	//		break;
-	//	default:
-	//		UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-	//		SetNextRunASAP();
-	//		break;
-	//	}
-	//}
-//}
-
 	inline void OnKeepingLinkCommon()
 	{
-		if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT)
-		{
-			//Link timed out.
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
-		}
-		else if (PowerBalancer.Update())
+		if (PowerBalancer.Update())
 		{
 			SetNextRunASAP();
 		}
@@ -398,6 +357,7 @@ protected:
 		LinkingState = linkingState;
 		ResetLastSentTimeStamp();
 
+		Serial.println(linkingState);
 		SetNextRunASAP();
 	}
 
@@ -461,11 +421,6 @@ protected:
 			ClockSyncTransaction->Reset();
 		}
 
-		if (ChallengeTransaction != nullptr)
-		{
-			ChallengeTransaction->Clear();
-		}
-
 		if (LinkInfo != nullptr)
 		{
 			LinkInfo->Reset();
@@ -483,7 +438,6 @@ protected:
 		if (IPacketSendService::OnSetup() &&
 			ClockSyncTransaction != nullptr &&
 			ClockSyncerPointer != nullptr &&
-			ChallengeTransaction != nullptr &&
 			ServicesManager != nullptr &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
 			KeyExchanger.Setup())
@@ -512,10 +466,9 @@ protected:
 					Serial.print(F("Local MAC: "));
 					LinkInfo->PrintMac(&Serial);
 					Serial.println();
-					Serial.print(F(" hash: "));
+					Serial.print(F("\tId: "));
 					Serial.println(LinkInfo->GetLocalId());
 #endif
-
 					ResetStateStartTime();
 					SetNextRunASAP();
 
@@ -612,14 +565,16 @@ protected:
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 				ClearSession();
-				GetLoLa()->SetCryptoEnabled(true);
+				GetLoLa()->SetCryptoEnabled(false);
 				GetLoLa()->GetCryptoEncoder()->Clear();
-				SetNextRunDefault();
+				SetLinkingState(0);
+
 #ifdef USE_FREQUENCY_HOP
 				FrequencyHopper.ResetChannel();
 #else
 				GetLoLa()->SetChannel(0);
 #endif
+				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				GetLoLa()->SetCryptoEnabled(false);
@@ -629,13 +584,14 @@ protected:
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+				SetLinkingState(0);
 				GetLoLa()->SetCryptoEnabled(false);
-				//Sleep time is set on Host/Remote
+				GetLoLa()->GetCryptoEncoder()->Clear();
+				//Sleep time is set on Host/Remote virtual.
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
-				GetLoLa()->SetCryptoEnabled(true);
 				SetLinkingState(0);
-
+				//GetLoLa()->SetCryptoEnabled(true);
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
 				Serial.println(LinkInfo->GetPartnerId());
@@ -645,8 +601,7 @@ protected:
 				Serial.print(PKCDuration);
 				Serial.println(F(" ms."));
 #endif
-				//SetNextRunASAP();
-				SetNextRunLong();
+				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linked:
 				LinkInfo->StampLinkStarted();
@@ -722,20 +677,39 @@ protected:
 		case LOLA_LINK_HEADER_SHORT:
 			switch (receivedPacket->GetPayload()[0])
 			{
+				///Unlinked packets.
 				//To Host.
-			//case LOLA_LINK_SUBHEADER_INFO_SYNC:
-			//	ATUI_R.uint = incomingPacket->GetPayload()[2] << 8;
-			//	ATUI_R.uint += incomingPacket->GetPayload()[3];
-			//	OnLinkInfoSyncReceived(incomingPacket->GetPayload()[0], (uint16_t)ATUI_R.uint);
-			//	break;
+			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
+				OnLinkDiscoveryReceived();
+				break;
+			case LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST:
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnPKCRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
+				break;
+
+				//To remote.
+			case LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST:
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnIdBroadcastReceived(receivedPacket->GetId(), ATUI_R.uint);
+				break;
+				///
+
+				///Linked Packets
+				//To Host.
+			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
+				ATUI_R.uint = receivedPacket->GetPayload()[2] << 8;
+				ATUI_R.uint += receivedPacket->GetPayload()[3];
+				OnHostInfoReceived(receivedPacket->GetPayload()[1], (uint16_t)ATUI_R.uint);
+				break;
 			//case LOLA_LINK_SUBHEADER_LINK_INFO_REPORT:
 			//	OnLinkInfoReportReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[1]);
 			//	break;
 
-			//case LOLA_LINK_SUBHEADER_CHALLENGE_REPLY:
-			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-			//	OnChallengeResponseReceived(incomingPacket->GetId(), ATUI_R.uint);
-			//	break;
+				//To Remote.
+			case LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE:
+				OnRemoteInfoReceived(receivedPacket->GetPayload()[1]);
+				break;
+
 			//case LOLA_LINK_SUBHEADER_NTP_REQUEST:
 			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
 			//	OnClockSyncRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
@@ -754,25 +728,8 @@ protected:
 			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
 			//	OnClockSyncTuneResponseReceived(incomingPacket->GetId(), ATUI_R.iint);
 			//	break;
-			//case LOLA_LINK_SUBHEADER_CHALLENGE_REQUEST:
-			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-			//	OnChallengeRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
-			//	break;
 			
-			//To Host.
-			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
-				OnLinkDiscoveryReceived();
-				break;
-			case LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST:
-				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
-				OnPKCRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
-				break;
-
-			//To remote.
-			case LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST:
-				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
-				OnIdBroadcastReceived(receivedPacket->GetId(), ATUI_R.uint);
-				break;
+				///
 			default:
 				break;
 			}
@@ -832,33 +789,6 @@ protected:
 	}
 
 	/////Linking time packets.
-	//void PrepareChallengeRequest()							//Host.
-	//{
-	//	PrepareLinkedPacket(ChallengeTransaction->GetTransactionId(), LOLA_LINK_SUBHEADER_CHALLENGE_REQUEST);
-	//	ATUI_S.uint = ChallengeTransaction->GetToken();
-	//	ArrayToPayload();
-	//}
-
-	//void PrepareChallengeReply()							//Remote.
-	//{
-	//	PrepareLinkedPacket(ChallengeTransaction->GetTransactionId(), LOLA_LINK_SUBHEADER_CHALLENGE_REPLY);
-	//	ATUI_S.uint = ChallengeTransaction->GetToken();
-	//	ArrayToPayload();
-	//}
-
-	//void PrepareClockSyncRequest(const uint8_t requestId)	//Remote
-	//{
-	//	PrepareLinkedPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REQUEST);
-	//	//Rest of Payload is set on OnPreSend.
-	//}
-
-	//void PrepareClockSyncResponse(const uint8_t requestId, const uint32_t estimationError)
-	//{
-	//	PrepareLinkedPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REPLY);
-	//	ATUI_S.uint = estimationError;
-	//	ArrayToPayload();
-	//}
-
 	void PrepareClockSyncTuneRequest(const uint8_t requestId)	//Remote
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST);
@@ -870,15 +800,6 @@ protected:
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY);
 		ATUI_S.uint = estimationError;
 		S_ArrayToPayload();
-	}
-
-	void PrepareLinkInfoSyncUpdate(const uint16_t rtt, const uint8_t rssi) //Both
-	{
-		PrepareShortPacket(0, LOLA_LINK_SUBHEADER_INFO_SYNC);//Ignore id.
-		PacketHolder.GetPayload()[1] = rssi;
-		PacketHolder.GetPayload()[2] = rtt & 0xFF; //MSB 16 bit unsigned.
-		PacketHolder.GetPayload()[3] = (rtt >> 8) & 0xFF;
-		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
 	}
 
 	void PrepareLinkInfoReport()
