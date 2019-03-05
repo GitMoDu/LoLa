@@ -205,6 +205,7 @@ protected:
 				Serial.print(SharedKeyTime);
 				Serial.println(F(" us."));
 #endif
+				SetNextRunASAP();
 			}
 			else
 			{
