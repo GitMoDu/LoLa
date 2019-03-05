@@ -68,7 +68,7 @@ protected:
 	ArrayToUint32 ATUI_R;
 	ArrayToUint32 ATUI_S;
 
-	ICryptoKeyExchanger*		KeyExchanger = nullptr;
+	LoLaCryptoKeyExchanger	KeyExchanger;
 
 
 
@@ -103,8 +103,7 @@ protected:
 	//Unlinked packets.
 	virtual void OnLinkDiscoveryReceived() {}
 	virtual void OnPKCRequestReceived(const uint8_t sessionId, const uint32_t remoteMACHash) {}
-	virtual void OnEncodedPublicKeyReceived(const uint8_t sessionId, uint8_t * encodedPublicKey) {}
-	virtual bool OnEncodedLinkRequestReceived(const uint8_t sessionId, uint32_t encodedMACHash) {}
+	virtual void OnRemotePublicKeyReceived(const uint8_t sessionId, uint8_t * encodedPublicKey) {}
 
 	//Linked packets.
 	//virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
@@ -115,8 +114,8 @@ protected:
 	///Remote packet handling.
 	//Unlinked packets.
 	virtual void OnIdBroadcastReceived(const uint8_t sessionId, const uint32_t hostMACHash) {}
-	virtual void OnPKCBroadcastReceived(const uint8_t sessionId, uint8_t* hostPublicKey) {}
-	virtual void OnEncodedSharedKeyReceived(const uint8_t sessionId, uint8_t* encodedSharedKey) {}
+	virtual void OnHostPublicKeyReceived(const uint8_t sessionId, uint8_t* hostPublicKey) {}
+	virtual bool OnAckedPacketReceived(ILoLaPacket* receivedPacket) { return false; }
 
 	//Linked packets.
 	//virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
@@ -309,7 +308,7 @@ protected:
 	{
 		LastSent = millis();
 
-		if (header == DefinitionLinked.GetHeader())
+		if (header == DefinitionShort.GetHeader())
 		{
 			if (ReportPending)
 			{
@@ -470,7 +469,7 @@ protected:
 			ChallengeTransaction != nullptr &&
 			ServicesManager != nullptr &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
-			KeyExchanger->Setup())
+			KeyExchanger.Setup())
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 
@@ -588,6 +587,7 @@ protected:
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 				ClearSession();
+				GetLoLa()->GetCryptoEncoder()->Clear();
 				//GetLoLa()->GetCryptoSeed()->Reset();
 				SetNextRunDefault();
 #ifdef USE_FREQUENCY_HOP
@@ -598,6 +598,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				//GetLoLa()->GetCryptoSeed();
+				GetLoLa()->GetCryptoEncoder()->Clear();
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
 				SetNextRunASAP();
@@ -699,7 +700,7 @@ protected:
 		//Switch the packet to the appropriate method.
 		switch (receivedPacket->GetDataHeader())
 		{
-		case LOLA_LINK_HEADER_LINKED:
+		case LOLA_LINK_HEADER_SHORT:
 			switch (receivedPacket->GetPayload()[0])
 			{
 				//To Host.
@@ -738,15 +739,8 @@ protected:
 			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
 			//	OnChallengeRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
 			//	break;
-			default:
-				break;
-			}
-			break;
-
-		case LOLA_LINK_HEADER_UNLINKED_SHORT_HEADER:
-			switch (receivedPacket->GetPayload()[0])
-			{
-				//To Host.
+			
+			//To Host.
 			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
 				OnLinkDiscoveryReceived();
 				break;
@@ -755,27 +749,26 @@ protected:
 				OnPKCRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
 				break;
 
-				//To remote.
+			//To remote.
 			case LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnIdBroadcastReceived(receivedPacket->GetId(), ATUI_R.uint);
 				break;
+			default:
+				break;
 			}
 			break;
-		case LOLA_LINK_HEADER_UNLINKED_LONG_HEADER:
+		case LOLA_LINK_HEADER_LONG:
 			switch (receivedPacket->GetPayload()[0])
 			{
 				//To Host.
-			case LOLA_LINK_SUBHEADER_REMOTE_PKC_PUBLIC_ENCODED:
-				OnEncodedPublicKeyReceived(receivedPacket->GetId(), &receivedPacket->GetPayload()[1]);
+			case LOLA_LINK_SUBHEADER_REMOTE_PUBLIC_KEY:
+				OnRemotePublicKeyReceived(receivedPacket->GetId(), &receivedPacket->GetPayload()[1]);
 				break;
 
 				//To remote.
-			case LOLA_LINK_SUBHEADER_HOST_PKC_BROADCAST:
-				OnPKCBroadcastReceived(receivedPacket->GetId(), &receivedPacket->GetPayload()[1]);
-				break;
-			case LOLA_LINK_SUBHEADER_HOST_SHARED_KEY_PUBLIC_ENCODED:
-				OnEncodedSharedKeyReceived(receivedPacket->GetId(), &receivedPacket->GetPayload()[1]);
+			case LOLA_LINK_SUBHEADER_HOST_PUBLIC_KEY:
+				OnHostPublicKeyReceived(receivedPacket->GetId(), &receivedPacket->GetPayload()[1]);
 				break;
 			}
 			break;
@@ -786,29 +779,18 @@ protected:
 		return true;
 	}
 
+	
 	bool ProcessAckedPacket(ILoLaPacket* receivedPacket)
 	{
 		if (LinkInfo->HasLink())
 		{
-			if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_LINKED_WITH_ACK)
+			if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
 			{
 				return true;//Ping packet.
 			}
 		}
-		else
-		{
-			switch (receivedPacket->GetDataHeader())
-			{
-			case LOLA_LINK_HEADER_UNLINKED_LONG_WITH_ACK_HEADER:
-				//To host.
-				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
-				return OnEncodedLinkRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
-			default:
-				break;
-			}
-		}
 
-		return false;
+		return OnAckedPacketReceived(receivedPacket);
 	}
 
 	///Packet builders.
@@ -816,6 +798,18 @@ protected:
 	{
 		PacketHolder.SetDefinition(&DefinitionPing);
 		PacketHolder.SetId(random(0, UINT8_MAX));
+	}
+
+	void PreparePublicKeyPacket(const uint8_t subHeader)
+	{
+		PrepareLongPacket(LinkInfo->GetSessionId(), subHeader);
+
+		if (!KeyExchanger.GetPublicKeyCompressed(&PacketHolder.GetPayload()[1]))
+		{
+#ifdef DEBUG_LOLA
+			Serial.println(F("Unable to read PK"));
+#endif
+		}
 	}
 
 	/////Linking time packets.
@@ -848,13 +842,13 @@ protected:
 
 	void PrepareClockSyncTuneRequest(const uint8_t requestId)	//Remote
 	{
-		PrepareLinkedPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST);
+		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST);
 		//Rest of Payload is set on OnPreSend.
 	}
 
 	void PrepareClockSyncTuneResponse(const uint8_t requestId, const uint32_t estimationError)
 	{
-		PrepareLinkedPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY);
+		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY);
 		ATUI_S.uint = estimationError;
 		S_ArrayToPayload();
 	}
@@ -866,7 +860,7 @@ protected:
 
 	void PrepareLinkInfoSyncUpdate(const uint16_t rtt, const uint8_t rssi) //Both
 	{
-		PrepareLinkedPacket(0, LOLA_LINK_SUBHEADER_INFO_SYNC);//Ignore id.
+		PrepareShortPacket(0, LOLA_LINK_SUBHEADER_INFO_SYNC);//Ignore id.
 		PacketHolder.GetPayload()[1] = rssi;
 		PacketHolder.GetPayload()[2] = rtt & 0xFF; //MSB 16 bit unsigned.
 		PacketHolder.GetPayload()[3] = (rtt >> 8) & 0xFF;
@@ -875,14 +869,17 @@ protected:
 
 	void PrepareLinkInfoReport()
 	{
-		PrepareLinkedPacket(LinkInfo->GetPartnerInfoUpdateElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD, LOLA_LINK_SUBHEADER_LINK_INFO_REPORT, 4);
+		PrepareShortPacket(LinkInfo->GetPartnerInfoUpdateElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD, LOLA_LINK_SUBHEADER_LINK_INFO_REPORT);
 		PacketHolder.GetPayload()[1] = LinkInfo->GetRSSINormalized();
+		PacketHolder.GetPayload()[2] = UINT8_MAX; //Padding
+		PacketHolder.GetPayload()[3] = UINT8_MAX; //Padding
+		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
 	}
 
 
-	inline void PrepareLinkedPacket(const uint8_t requestId, const uint8_t subHeader, const uint8_t paddingSize = 0)
+	/*inline void PrepareLinkedPacket(const uint8_t requestId, const uint8_t subHeader, const uint8_t paddingSize = 0)
 	{
-		PacketHolder.SetDefinition(&DefinitionLinked);
+		PacketHolder.SetDefinition(&DefinitionLink);
 		PacketHolder.GetPayload()[0] = subHeader;
 		if (paddingSize > 0)
 		{
@@ -891,25 +888,25 @@ protected:
 				PacketHolder.GetPayload()[i] = UINT8_MAX;
 			}
 		}
-	}
+	}*/
 
-	inline void PrepareUnlinkedShortPacket(const uint8_t requestId, const uint8_t subHeader)
+	inline void PrepareShortPacket(const uint8_t requestId, const uint8_t subHeader)
 	{
-		PacketHolder.SetDefinition(&DefinitionUnlinkedShort);
+		PacketHolder.SetDefinition(&DefinitionShort);
 		PacketHolder.SetId(requestId);
 		PacketHolder.GetPayload()[0] = subHeader;
 	}
 
-	inline void PrepareUnlinkedLongPacket(const uint8_t requestId, const uint8_t subHeader)
+	inline void PrepareLongPacket(const uint8_t requestId, const uint8_t subHeader)
 	{
-		PacketHolder.SetDefinition(&DefinitionUnlinkedLong);
+		PacketHolder.SetDefinition(&DefinitionLong);
 		PacketHolder.SetId(requestId);
 		PacketHolder.GetPayload()[0] = subHeader;
 	}
 
-	inline void PrepareUnlinkedLongPacketWithAck(const uint8_t requestId)
+	inline void PrepareShortPacketWithAck(const uint8_t requestId)
 	{
-		PacketHolder.SetDefinition(&DefinitionUnlinkedLongWithAck);
+		PacketHolder.SetDefinition(&DefinitionShortWithAck);
 		PacketHolder.SetId(requestId);
 	}
 

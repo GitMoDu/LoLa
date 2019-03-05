@@ -7,10 +7,10 @@
 
 #define CRYPTO_ENTROPY_SOURCE_ANALOG_PIN	PB0
 
-#define LOLA_LINK_CRYPTO_KEY_LENGTH			20 //Derived from selected curve.
-#define LOLA_LINK_CRYPTO_SIGNATURE_LENGTH	(2 * LOLA_LINK_CRYPTO_KEY_LENGTH)
+#define LOLA_LINK_CRYPTO_KEY_MAX_SIZE		21 //Derived from selected curve.
+//#define LOLA_LINK_CRYPTO_SIGNATURE_LENGTH	(2 * LOLA_LINK_CRYPTO_KEY_LENGTH)
 
-class ICryptoKeyExchanger
+class LoLaCryptoKeyExchanger
 {
 private:
 	static int RNG(uint8_t *dest, unsigned size)
@@ -49,24 +49,19 @@ protected:
 		StageClear,
 		StageLocalKey,
 		StagePartnerKey,
-		StageSharedKey,
-		StageReadyForUse,
+		StageSharedKey
 	} PairingStage = PairingStageEnum::StageClear;
 
 	const struct uECC_Curve_t * ECC_CURVE = uECC_secp160r1();
-	static const uint8_t KEY_CURVE_SIZE = LOLA_LINK_CRYPTO_KEY_LENGTH; //160 bits take 20 bytes.
+	static const uint8_t KEY_CURVE_SIZE = 20; //160 bits take 20 bytes.
 
-	uint8_t PartnerPublicKey[KEY_CURVE_SIZE + 1];
-	uint8_t LocalPublicKey[KEY_CURVE_SIZE + 1];
-	uint8_t PrivateKey[KEY_CURVE_SIZE];
+	uint8_t PartnerPublicKeyCompressed[KEY_CURVE_SIZE + 1];
+	uint8_t LocalPublicKeyCompressed[KEY_CURVE_SIZE + 1];
+	uint8_t PrivateKey[KEY_CURVE_SIZE + 1];
 	uint8_t SharedKey[KEY_CURVE_SIZE];
 
 	//Temporary holder for the uncompressed public keys.
-	uint8_t UncompressedKey[(KEY_CURVE_SIZE * 2) + 1];
-
-protected:
-	virtual bool OnFinalize() { return true; }
-	virtual bool HasSharedKey() { return false; }
+	uint8_t UncompressedKey[KEY_CURVE_SIZE * 2];
 
 public:
 	bool Setup(const uint8_t entropySourcePin = CRYPTO_ENTROPY_SOURCE_ANALOG_PIN)
@@ -78,13 +73,18 @@ public:
 
 	bool IsReadyToUse()
 	{
-		return PairingStage == PairingStageEnum::StageReadyForUse;
+		return PairingStage == PairingStageEnum::StageSharedKey;
+	}
+
+	uint8_t* GetSharedKeyPointer()
+	{
+		return SharedKey;
 	}
 
 	///Make sure there is room for KEY_SIZE bytes in the destination array.
 	bool GetSharedKey(uint8_t * keyTarget)
 	{
-		if (!HasSharedKey())
+		if (PairingStage != PairingStageEnum::StageSharedKey)
 		{
 			return false;
 		}
@@ -99,39 +99,28 @@ public:
 		return true;
 	}
 
-	bool Finalize()
+#ifdef DEBUG_LOLA
+	bool GetPartnerPublicKeyCompressed(uint8_t * keyTarget)
 	{
-		if (PairingStage != PairingStageEnum::StageSharedKey)
+		for (uint8_t i = 0; i < KEY_CURVE_SIZE + 1; i++)
 		{
-			return false;
+			keyTarget[i] = PartnerPublicKeyCompressed[i];
 		}
 
-		if (PairingStage == PairingStageEnum::StageReadyForUse)
-		{
-			return true;
-		}
-
-		//Restore public key to decompressed, ready to use.
-		uECC_decompress(LocalPublicKey, UncompressedKey, ECC_CURVE);
-
-		if (OnFinalize())
-		{
-			PairingStage = PairingStageEnum::StageReadyForUse;
-		}
-
-		return IsReadyToUse();
+		return true;
 	}
+#endif
 
-	bool GetPublicKey(uint8_t * keyTarget)
+	bool GetPublicKeyCompressed(uint8_t * keyTarget)
 	{
 		if (PairingStage == PairingStageEnum::StageClear)
 		{
 			return false;
 		}
 
-		for (uint8_t i = 0; i < KEY_CURVE_SIZE; i++)
+		for (uint8_t i = 0; i < KEY_CURVE_SIZE + 1; i++)
 		{
-			keyTarget[i] = LocalPublicKey[i];
+			keyTarget[i] = LocalPublicKeyCompressed[i];
 		}
 
 		return true;
@@ -139,19 +128,14 @@ public:
 
 	bool SetPartnerPublicKey(uint8_t* keySource)
 	{
-		switch (PairingStage)
+		if (PairingStage != PairingStageEnum::StageLocalKey)
 		{
-		case PairingStageEnum::StageClear:
-		case PairingStageEnum::StageReadyForUse:
-		case PairingStageEnum::StageSharedKey:
 			return false;
-		default:
-			break;
 		}
 
-		for (uint8_t i = 0; i < KEY_CURVE_SIZE; i++)
+		for (uint8_t i = 0; i < KEY_CURVE_SIZE + 1; i++)
 		{
-			PartnerPublicKey[i] = keySource[i];
+			PartnerPublicKeyCompressed[i] = keySource[i];
 		}
 
 		PairingStage = PairingStageEnum::StagePartnerKey;
@@ -163,7 +147,7 @@ public:
 	{
 		if (uECC_make_key(UncompressedKey, PrivateKey, ECC_CURVE))
 		{
-			uECC_compress(UncompressedKey, LocalPublicKey, ECC_CURVE);
+			uECC_compress(UncompressedKey, LocalPublicKeyCompressed, ECC_CURVE);
 
 			PairingStage = PairingStageEnum::StageLocalKey;
 
@@ -171,6 +155,32 @@ public:
 		}
 
 		return false;
+	}
+
+	bool GenerateSharedKey()
+	{
+		switch (PairingStage)
+		{
+		case PairingStageEnum::StagePartnerKey:
+			break;
+		case PairingStageEnum::StageSharedKey:
+			//Already generated.
+			return true;
+		default:
+			return false;
+		}
+
+		uECC_decompress(PartnerPublicKeyCompressed, UncompressedKey, ECC_CURVE);
+
+		if (uECC_shared_secret(UncompressedKey, PrivateKey, SharedKey, ECC_CURVE) > 0)
+		{
+			//Restore public key to decompressed, ready to use.
+			uECC_decompress(LocalPublicKeyCompressed, UncompressedKey, ECC_CURVE);
+
+			PairingStage = PairingStageEnum::StageSharedKey;
+		}
+
+		return PairingStage == PairingStageEnum::StageSharedKey;
 	}
 
 	//Untested. TODO: Test.
@@ -206,79 +216,6 @@ public:
 
 	//}
 
-};
-
-class RemoteCryptoKeyExchanger : public ICryptoKeyExchanger
-{
-protected:
-	bool HasSharedKey()
-	{
-		return PairingStage == PairingStageEnum::StageReadyForUse;
-	}
-
-	bool OnFinalize() 
-	{ 
-		//TODO: Decode Shared key with local private key.
-
-		return true; 
-	}
-
-public:
-	bool SetEncodedSharedKey(uint8_t* keySource)
-	{
-		if (PairingStage != PairingStageEnum::StagePartnerKey)
-		{
-			return false;
-		}
-
-		for (uint8_t i = 0; i < KEY_CURVE_SIZE; i++)
-		{
-			SharedKey[i] = keySource[i];
-		}
-
-		PairingStage = PairingStageEnum::StageSharedKey;
-
-		return true;
-	}
-};
-class HostCryptoKeyExchanger : public ICryptoKeyExchanger
-{
-protected:
-	bool HasSharedKey()
-	{
-		return PairingStage == PairingStageEnum::StageSharedKey || PairingStage == PairingStageEnum::StageReadyForUse;
-	}
-
-	bool OnFinalize()
-	{
-		//TODO: Decode Shared key with local private key.
-
-		return true;
-	}
-
-public:
-	bool GenerateSharedKey()
-	{
-		switch (PairingStage)
-		{
-		case PairingStageEnum::StagePartnerKey:
-			break;
-		case PairingStageEnum::StageSharedKey:
-			//Already generated.
-			return true;
-		default:
-			return false;
-		}
-
-		uECC_decompress(PartnerPublicKey, UncompressedKey, ECC_CURVE);
-
-		if (uECC_shared_secret(UncompressedKey, PrivateKey, SharedKey, ECC_CURVE) > 0)
-		{
-			PairingStage = PairingStageEnum::StageSharedKey;
-		}
-
-		return PairingStage == PairingStageEnum::StageSharedKey;
-	}
 };
 #endif
 

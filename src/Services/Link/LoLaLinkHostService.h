@@ -15,14 +15,12 @@ private:
 	{
 		BroadcastingOpenSession = 0,
 		ValidatingPartner = 1,
-		BroadcastingPKC = 2,
+		SendingPublicKey = 2,
 		ProcessingPKC = 3,
-		SendingSharedKey = 4,
-		ProcessingLinkRequest = 5,
-		LinkingSwitchOver = 6
+		GotSharedKey = 4,
+		LinkingSwitchOver = 5
 	};
 
-	HostCryptoKeyExchanger HostKeyExchanger;
 	LinkHostClockSyncer ClockSyncer;
 	ClockSyncResponseTransaction HostClockSyncTransaction;
 
@@ -34,14 +32,10 @@ private:
 	//Session timing.
 	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
 
-	//Awaiting link helper.
-	uint32_t EncodedRequestMACHash = 0;
-
 public:
 	LoLaLinkHostService(Scheduler *scheduler, ILoLa* loLa)
 		: LoLaLinkService(scheduler, loLa)
 	{
-		KeyExchanger = &HostKeyExchanger;
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &HostClockSyncTransaction;
 		ChallengeTransaction = &HostChallengeTransaction;
@@ -127,7 +121,7 @@ protected:
 			{
 				LinkingStart = millis();//Reset local timeout.
 				ResetLastSentTimeStamp();
-				SetLinkingState(AwaitingLinkEnum::BroadcastingPKC);
+				SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
 			}
 			else
 			{
@@ -135,14 +129,14 @@ protected:
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			break;
-		case AwaitingLinkEnum::BroadcastingPKC:
+		case AwaitingLinkEnum::SendingPublicKey:
 			if (millis() - LinkingStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
 			{
-				PreparePKCBroadcast();
+				PreparePublicKeyPacket(LOLA_LINK_SUBHEADER_HOST_PUBLIC_KEY);
 				RequestSendPacket(true);
 			}
 			else
@@ -151,70 +145,94 @@ protected:
 			}
 			break;
 		case AwaitingLinkEnum::ProcessingPKC:
-			//TODO: Decode partner public key with local private key.
-
-#ifdef DEBUG_LOLA
-			SharedKeyTime = micros();
-#endif
-			if (HostKeyExchanger.GenerateSharedKey())
+			//TODO: Solve key size issue
+			//GetLoLa()->GetCryptoEncoder()->SetIv() //TODO: Set Iv from known entropy + session id.
+			if (KeyExchanger.GenerateSharedKey() &&
+				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16) &&
+				GetLoLa()->GetCryptoEncoder()->SetIv(KeyExchanger.GetSharedKeyPointer(), 16) &&//TODO: use actual IV
+				GetLoLa()->GetCryptoEncoder()->IsReadyForUse())
 			{
 #ifdef DEBUG_LOLA
-				SharedKeyTime = micros() - SharedKeyTime;
-				Serial.print(F("Shared key took "));
-				Serial.print(SharedKeyTime);
-				Serial.println(F(" us to generate."));
+				uint8_t pk[21];
+
+				for (uint8_t i = 0; i < 21; i++)
+				{
+					pk[i] = 0;
+				}
+
+				Serial.print(F("Local Public Key\n\t|"));
+				KeyExchanger.GetPublicKeyCompressed(pk);
+				for (uint8_t i = 0; i < 21; i++)
+				{
+					Serial.print(pk[i]);
+					Serial.print('|');
+				}
+				Serial.println();
+
+				for (uint8_t i = 0; i < 21; i++)
+				{
+					pk[i] = 0;
+				}
+
+				Serial.print(F("Partner Public Key\n\t|"));
+				KeyExchanger.GetPartnerPublicKeyCompressed(pk);
+
+				for (uint8_t i = 0; i < 21; i++)
+				{
+					Serial.print(pk[i]);
+					Serial.print('|');
+				}
+				Serial.println();
+
+				for (uint8_t i = 0; i < 21; i++)
+				{
+					pk[i] = 0;
+				}
+
+				Serial.print(F("Shared Key\n\t|"));
+				for (uint8_t i = 0; i < 20; i++)
+				{
+					Serial.print(KeyExchanger.GetSharedKeyPointer()[i]);
+					Serial.print('|');
+				}
+				Serial.println();
 #endif
+				LinkingStart = millis();//Reset local timeout.
 				ResetLastSentTimeStamp();
-				SetLinkingState(AwaitingLinkEnum::SendingSharedKey);
+				SetLinkingState(AwaitingLinkEnum::GotSharedKey);
 			}
 			else
 			{
-#ifdef DEBUG_LOLA
-				Serial.println(F("Failed to generate shared key"));
-#endif
+				Serial.println("Nope!");
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			break;
-		case AwaitingLinkEnum::SendingSharedKey:
+		case AwaitingLinkEnum::GotSharedKey:
 			if (millis() - LinkingStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
+			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				PrepareSharedKey();
-				RequestSendPacket(true);
+				if (PrepareCryptoStartRequest())
+				{
+					Serial.println("Send Crypto Start Request");
+					RequestSendPacket(true);
+				}
+				else
+				{
+					SetNextRunDelay(LOLA_SERVICE_LONG_SLEEP_PERIOD_MILLIS);
+				}
+
 			}
 			else
 			{
 				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
-		case AwaitingLinkEnum::ProcessingLinkRequest:
-			//TODO: Decode EncodedRequestMACHash with the shared key.
-
-			if (LinkInfo->PartnerMACHashMatches(EncodedRequestMACHash))
-			{
-				SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
-			}
-			else
-			{
-#ifdef DEBUG_LOLA
-				Serial.println(F("Link request rejected"));
-#endif
-				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
-			}
-			break;
 		case AwaitingLinkEnum::LinkingSwitchOver:
-			if (KeyExchanger->Finalize())
-			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
-			}
-			else
-			{
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-				SetNextRunASAP();
-			}
+			//All set to start linking.
+			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
 			break;
 		default:
 			SetLinkingState(0);
@@ -235,6 +253,7 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::BroadcastingOpenSession &&
+			LinkInfo->HasSessionId() &&
 			LinkInfo->GetSessionId() == sessionId)
 		{
 			LinkInfo->SetPartnerMACHash(remoteMACHash);
@@ -242,41 +261,25 @@ protected:
 		}
 	}
 
-	void OnEncodedPublicKeyReceived(const uint8_t sessionId, uint8_t * encodedPublicKey)
+	void OnRemotePublicKeyReceived(const uint8_t sessionId, uint8_t *remotePublicKey)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
-			LinkingState == AwaitingLinkEnum::BroadcastingPKC &&
+			LinkingState == AwaitingLinkEnum::SendingPublicKey &&
+			LinkInfo->HasSessionId() &&
 			LinkInfo->GetSessionId() == sessionId)
 		{
 			//The partner Public Key is encoded at this point.
-			KeyExchanger->SetPartnerPublicKey(encodedPublicKey);
-
-			SetLinkingState(AwaitingLinkEnum::ProcessingPKC);
-		}
-	}
-
-	bool OnEncodedLinkRequestReceived(const uint8_t sessionId, uint32_t encodedMACHash)
-	{
-		switch (LinkInfo->GetLinkState())
-		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (LinkingState == AwaitingLinkEnum::SendingSharedKey &&
-				LinkInfo->HasSession() &&
-				LinkInfo->GetSessionId() == sessionId)
+			if (KeyExchanger.SetPartnerPublicKey(remotePublicKey))
 			{
-				EncodedRequestMACHash = encodedMACHash;
-				SetLinkingState(AwaitingLinkEnum::ProcessingLinkRequest);
-				return true;
+				SetLinkingState(AwaitingLinkEnum::ProcessingPKC);
 			}
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Linking:
-			//This should never happen, as packets are encrypted at this point.
-			break;
-		default:
-			break;
+			else
+			{
+				Serial.println("Partner Key Rejected");
+			}
 		}
-
 	}
+
 
 
 	//void OnCryptoStartAckReceived(const uint8_t subHeader)
@@ -587,6 +590,31 @@ protected:
 		}
 	}
 
+
+	void OnAckReceived(const uint8_t header, const uint8_t id)
+	{
+		switch (LinkInfo->GetLinkState())
+		{
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+			LatencyMeter.OnAckReceived(id);
+			if (header == LOLA_LINK_HEADER_SHORT &&
+				LinkingState == AwaitingLinkEnum::GotSharedKey &&
+				LinkInfo->GetSessionId() == id)
+			{
+				SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
+			}
+			break;
+		case LoLaLinkInfo::LinkStateEnum::Linking:
+			LatencyMeter.OnAckReceived(id);
+			break;
+		case LoLaLinkInfo::LinkStateEnum::Linked:
+			//Ping Ack, ignore.
+			break;
+		default:
+			break;
+		}
+	}
+
 	//void OnAckReceived(const uint8_t header, const uint8_t id)
 	//{
 	//	if (!LinkInfo->HasLink())
@@ -615,7 +643,7 @@ private:
 		SharedKeyTime = micros();
 #endif
 
-		if (!KeyExchanger->GenerateNewKeyPair())
+		if (!KeyExchanger.GenerateNewKeyPair())
 		{
 			return false;
 		}

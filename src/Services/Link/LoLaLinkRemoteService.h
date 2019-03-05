@@ -13,14 +13,10 @@ private:
 		SearchingForHost = 0,
 		ValidatingPartner = 1,
 		AwaitingHostPublicKey = 2,
-		GotHostPublicKey = 3,
-		ProcessingSharedKey = 4,
-		GotSharedKey = 5,
-		LinkingSwitchOver = 6
+		ProcessingSharedKey = 3,
+		SendingPublicKey = 4,
+		LinkingSwitchOver = 5
 	};
-
-	RemoteCryptoKeyExchanger RemoteKeyExchanger;
-
 
 	LinkRemoteClockSyncer ClockSyncer;
 	ClockSyncRequestTransaction RemoteClockSyncTransaction;
@@ -31,7 +27,6 @@ public:
 	LoLaLinkRemoteService(Scheduler* scheduler, ILoLa* loLa)
 		: LoLaLinkService(scheduler, loLa)
 	{
-		KeyExchanger = &RemoteKeyExchanger;
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &RemoteClockSyncTransaction;
 		ChallengeTransaction = &RemoteChallengeTransaction;
@@ -59,7 +54,7 @@ protected:
 		switch (newState)
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			KeyExchanger->GenerateNewKeyPair();
+			KeyExchanger.GenerateNewKeyPair();
 			ClearSession();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
@@ -125,7 +120,71 @@ protected:
 					SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 				}
 				break;
-			case AwaitingLinkEnum::GotHostPublicKey:
+			case AwaitingLinkEnum::ProcessingSharedKey:
+				//TODO: Solve key size issue
+				//GetLoLa()->GetCryptoEncoder()->SetIv() //TODO: Set Iv from known entropy + session id.
+				if (KeyExchanger.GenerateSharedKey() &&
+					GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16) &&
+					GetLoLa()->GetCryptoEncoder()->SetIv(KeyExchanger.GetSharedKeyPointer(), 16) &&//TODO: use actual IV
+					GetLoLa()->GetCryptoEncoder()->IsReadyForUse())
+				{
+#ifdef DEBUG_LOLA
+					uint8_t pk[21];
+
+					for (uint8_t i = 0; i < 21; i++)
+					{
+						pk[i] = 0;
+					}
+
+					Serial.print(F("Local Public Key\n\t|"));
+					KeyExchanger.GetPublicKeyCompressed(pk);
+					for (uint8_t i = 0; i < 21; i++)
+					{
+						Serial.print(pk[i]);
+						Serial.print('|');
+					}
+					Serial.println();
+
+					for (uint8_t i = 0; i < 21; i++)
+					{
+						pk[i] = 0;
+					}
+
+					Serial.print(F("Partner Public Key\n\t|"));
+					KeyExchanger.GetPartnerPublicKeyCompressed(pk);
+
+					for (uint8_t i = 0; i < 21; i++)
+					{
+						Serial.print(pk[i]);
+						Serial.print('|');
+					}
+					Serial.println();
+
+					for (uint8_t i = 0; i < 21; i++)
+					{
+						pk[i] = 0;
+					}
+
+					Serial.print(F("Shared Key\n\t|"));
+					for (uint8_t i = 0; i < 20; i++)
+					{
+						Serial.print(KeyExchanger.GetSharedKeyPointer()[i]);
+						Serial.print('|');
+					}
+					Serial.println();
+#endif
+					LinkingStart = millis();//Reset local timeout.
+					ResetLastSentTimeStamp();
+					SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
+				}
+				else
+				{
+					Serial.println("Nope!");
+					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
+					SetNextRunASAP();
+				}
+				break;
+			case AwaitingLinkEnum::SendingPublicKey:
 				if (millis() - LinkingStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
 				{
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
@@ -133,35 +192,7 @@ protected:
 				}
 				else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
 				{
-					PreparePublicEncodedPKC();
-					RequestSendPacket(true);
-				}
-				else
-				{
-					SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-				}
-				break;
-			case AwaitingLinkEnum::ProcessingSharedKey:
-				if (KeyExchanger->Finalize())
-				{
-					ResetLastSentTimeStamp();
-					SetLinkingState(AwaitingLinkEnum::GotSharedKey);
-				}
-				else
-				{
-					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-					SetNextRunASAP();
-				}
-				break;
-			case AwaitingLinkEnum::GotSharedKey:
-				if (millis() - LinkingStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
-				{
-					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-					SetNextRunASAP();
-				}
-				else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
-				{
-					PrepareSharedEncodedLinkRequest();
+					PreparePublicKeyPacket(LOLA_LINK_SUBHEADER_REMOTE_PUBLIC_KEY);
 					RequestSendPacket(true);
 				}
 				else
@@ -170,15 +201,8 @@ protected:
 				}
 				break;
 			case AwaitingLinkEnum::LinkingSwitchOver:
-				if (KeyExchanger->IsReadyToUse())
-				{
-					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
-				}
-				else
-				{
-					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
-					SetNextRunASAP();
-				}
+				//All set to start linking.
+				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
 				break;
 			default:
 				break;
@@ -222,7 +246,7 @@ protected:
 		}
 	}
 
-	void OnPKCBroadcastReceived(const uint8_t sessionId, uint8_t* hostPublicKey)
+	void OnHostPublicKeyReceived(const uint8_t sessionId, uint8_t* hostPublicKey)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::AwaitingHostPublicKey &&
@@ -230,32 +254,62 @@ protected:
 			LinkInfo->GetSessionId() == sessionId)
 		{
 			//Assumes public key is the correct size.
-			if (KeyExchanger->SetPartnerPublicKey(hostPublicKey))
+			if (KeyExchanger.SetPartnerPublicKey(hostPublicKey))
 			{
-				SetLinkingState(AwaitingLinkEnum::GotHostPublicKey);
+				SetLinkingState(AwaitingLinkEnum::ProcessingSharedKey);
 			}
 		}
 	}
 
-	void OnEncodedSharedKeyReceived(const uint8_t sessionId, uint8_t* encodedSharedKey)
+	bool OnCryptoStartReceived(const uint8_t sessionId, const uint8_t* encodedMACHashArray)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
-			LinkingState == AwaitingLinkEnum::GotHostPublicKey &&
-			LinkInfo->HasSession() &&
-			LinkInfo->GetSessionId() == sessionId)
+		switch (LinkInfo->GetLinkState())
 		{
-			//Assumes key is the correct size.
-			if (RemoteKeyExchanger.SetEncodedSharedKey(encodedSharedKey))
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+			if (LinkingState == AwaitingLinkEnum::SendingPublicKey &&
+				LinkInfo->HasSessionId() &&
+				LinkInfo->GetSessionId() == sessionId)
 			{
-				SetLinkingState(AwaitingLinkEnum::ProcessingSharedKey);
-			}
-			else
-			{
+				if (!GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array))
+				{
 #ifdef DEBUG_LOLA
-				Serial.println(F("Something went wrong with Shared Key"));
-				SetLinkingState(AwaitingLinkEnum::SearchingForHost);
+					Serial.println("Failed to decode");
 #endif
+				}
+				if (GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array) &&
+					LinkInfo->PartnerMACHashMatches(ATUI_R.uint))
+				{
+					Serial.println("Crypto start accepted");
+					SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
+
+
+					return true;
+				}
+				else
+				{
+					Serial.println("Crypto start rejected");
+					Serial.println("Decoded Partner Id: |");
+					for (uint8_t i = 0; i < sizeof(uint32_t); i++)
+					{
+						Serial.print(ATUI_R.array[i]);
+						Serial.print('|');
+					}
+					Serial.print("\n\t ");
+					Serial.print(ATUI_R.uint);
+					Serial.print(" vs ");
+					Serial.println(LinkInfo->GetPartnerMACHash());					
+				}
 			}
+
+			
+
+
+			break;
+		case LoLaLinkInfo::LinkStateEnum::Linking:
+			//This should never happen, as packets are encrypted at this point.
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -548,19 +602,24 @@ protected:
 	//	}
 	//}
 
+	bool OnAckedPacketReceived(ILoLaPacket* receivedPacket)
+	{
+		switch (receivedPacket->GetDataHeader())
+		{
+		case LOLA_LINK_HEADER_SHORT_WITH_ACK:
+			//To host.
+			return OnCryptoStartReceived(receivedPacket->GetId(), receivedPacket->GetPayload());
+		default:
+			break;
+		}
+
+		return false;
+	}
+
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
 		switch (LinkInfo->GetLinkState())
 		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (header == LOLA_LINK_HEADER_UNLINKED_LONG_WITH_ACK_HEADER &&
-				LinkingState == AwaitingLinkEnum::GotSharedKey)
-			{
-				SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
-			}
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Linking:
-			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
 			//Ping Ack, ignore.
 			break;
