@@ -95,8 +95,6 @@ protected:
 	LoLaServicesManager Services;
 	///
 
-	bool SetupOk = false;
-
 public:
 	LoLaPacketDriver();
 	LoLaServicesManager* GetServices();

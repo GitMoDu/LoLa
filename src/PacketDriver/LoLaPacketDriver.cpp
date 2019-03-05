@@ -63,7 +63,7 @@ void LoLaPacketDriver::OnReceivedFail(const int16_t rssi)
 
 void LoLaPacketDriver::OnReceived()
 {
-	if (!SetupOk || !Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
+	if (!Enabled || !Receiver.ReceivePacket() || !(Receiver.GetIncomingDefinition() != nullptr))
 	{
 		RejectedCount++;
 	}
@@ -121,11 +121,6 @@ void LoLaPacketDriver::OnReceived()
 							LastSent = millis();
 							OutgoingInfo.SetPending(PACKET_DEFINITION_ACK_HEADER, Sender.GetBufferSize(), LastSent);
 						}
-						else
-						{
-							//Transmit failed.
-							//TODO: Store statistics.
-						}
 					}
 				}
 			}
@@ -142,8 +137,6 @@ void LoLaPacketDriver::OnReceived()
 
 bool LoLaPacketDriver::Setup()
 {
-	SetupOk = false;
-
 	if (Receiver.Setup(&PacketMap, &CryptoEncoder, &CryptoEnabled) &&
 		Sender.Setup(&PacketMap, &CryptoEncoder, &CryptoEnabled))
 	{
@@ -154,10 +147,10 @@ bool LoLaPacketDriver::Setup()
 		//Receiver.SetCryptoTokenSource(GetCryptoTokenSource());
 		//Sender.SetCryptoTokenSource(GetCryptoTokenSource());
 
-		SetupOk = true;
+		return true;
 	}
 
-	return SetupOk;
+	return false;
 }
 
 LoLaServicesManager* LoLaPacketDriver::GetServices()
@@ -260,27 +253,24 @@ bool LoLaPacketDriver::AllowedSend(const bool overridePermission)
 
 bool LoLaPacketDriver::SendPacket(ILoLaPacket* packet)
 {
-	if (SetupOk)
+	if (Sender.SendPacket(packet))
 	{
-		if (Sender.SendPacket(packet))
-		{
 #ifdef USE_MOCK_PACKET_LOSS
-			if (!GetLossChance())
-			{
+		if (!GetLossChance())
+		{
 #ifdef DEBUG_LOLA
-				Serial.println("Packet Lost, Oh noes!");
-				return true;
+			Serial.println("Packet Lost, Oh noes!");
+			return true;
 #endif
-			}
-#endif	
-			if (Transmit())
-			{
-				LastSent = millis();
-				OutgoingInfo.SetPending(packet->GetDataHeader(), Sender.GetBufferSize(), LastSent);
-				return true;
-			}
-		
 		}
+#endif	
+		if (Transmit())
+		{
+			LastSent = millis();
+			OutgoingInfo.SetPending(packet->GetDataHeader(), Sender.GetBufferSize(), LastSent);
+			return true;
+		}
+
 	}
 
 	return false;
