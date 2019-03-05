@@ -677,7 +677,7 @@ private:
 		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
 		ATUI_S.uint = LinkInfo->GetPartnerMACHash();
 
-		if (!GetLoLa()->GetCryptoEncoder()->Encode(ATUI_S.array, sizeof(uint32_t), PacketHolder.GetPayload()))
+		if (!GetLoLa()->GetCryptoEncoder()->Encode(PacketHolder.GetPayload(), sizeof(uint32_t)))
 		{
 #ifdef DEBUG_LOLA
 			Serial.println("Failed to encode");
@@ -686,25 +686,26 @@ private:
 		}
 
 #ifdef DEBUG_LOLA
-		ATUI_S.uint = 0;
-		if (!GetLoLa()->GetCryptoEncoder()->Decode(PacketHolder.GetPayload(), sizeof(uint32_t), ATUI_S.array))
+		if (!GetLoLa()->GetCryptoEncoder()->Decode(PacketHolder.GetPayload(), sizeof(uint32_t)))
 		{
 			Serial.println("Failed to decode");
 		}
-		if (!LinkInfo->PartnerMACHashMatches(ATUI_S.uint))
+
+		ArrayToR_Array(PacketHolder.GetPayload());
+		if (!LinkInfo->PartnerMACHashMatches(ATUI_R.uint))
 		{
 			Serial.println("Failed decoded match");
 			Serial.print('|');
 			for (uint8_t i = 0; i < sizeof(uint32_t); i++)
 			{
-				Serial.print(ATUI_S.array[i]);
+				Serial.print(ATUI_R.array[i]);
 				Serial.print('|');
 			}
 			Serial.print(" vs |");
-			ATUI_S.uint = LinkInfo->GetPartnerMACHash();
+			ATUI_R.uint = LinkInfo->GetPartnerMACHash();
 			for (uint8_t i = 0; i < sizeof(uint32_t); i++)
 			{
-				Serial.print(ATUI_S.array[i]);
+				Serial.print(ATUI_R.array[i]);
 				Serial.print('|');
 			}
 			Serial.println();

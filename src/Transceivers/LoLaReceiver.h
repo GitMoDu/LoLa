@@ -61,7 +61,7 @@ public:
 			}
 
 			if (CryptoEnabled &&
-				!Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize, CryptoBuffer))
+				!Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize))
 			{
 				return false;
 			}

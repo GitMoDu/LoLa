@@ -24,26 +24,38 @@ private:
 	Acorn128 Cypher;
 
 public:
-	bool Encode(const uint8_t * message, const uint8_t messageLength, uint8_t * encryptedOutput)
+	bool Encode(uint8_t* message, const uint8_t messageLength)
 	{
 		if (EncoderState != StageEnum::AllDone)
 		{
 			return false;
 		}
 
-		Cypher.encrypt(encryptedOutput, message, messageLength);
+		Cypher.encrypt(message, message, messageLength);
 
 		return true;
 	}
 
-	bool Decode(const uint8_t * encryptedMessage, const uint8_t messageLength, uint8_t * messageOutput)
+	bool Decode(uint8_t * message, const uint8_t messageLength)
 	{
 		if (EncoderState != StageEnum::AllDone)
 		{
 			return false;
 		}
 
-		Cypher.decrypt(messageOutput, encryptedMessage, messageLength);
+		Cypher.decrypt(message, message, messageLength);
+
+		return true;
+	}
+
+	bool Decode(uint8_t * inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
+	{
+		if (EncoderState != StageEnum::AllDone)
+		{
+			return false;
+		}
+
+		Cypher.decrypt(outputMessage, inputMessage, messageLength);
 
 		return true;
 	}
@@ -58,13 +70,13 @@ public:
 		return EncoderState == StageEnum::AllDone;
 	}
 
-	bool SetSecretKey(uint8_t * sharedKey, const uint8_t keyLength)
+	bool SetSecretKey(uint8_t * secretKey, const uint8_t keyLength)
 	{
 		Cypher.clear();
 
 		//TODO: Handle key reduction?
 
-		if (!Cypher.setKey(sharedKey, keyLength))
+		if (!Cypher.setKey(secretKey, Cypher.keySize()))
 		{
 			return false;
 		}

@@ -270,7 +270,7 @@ protected:
 				LinkInfo->HasSessionId() &&
 				LinkInfo->GetSessionId() == sessionId)
 			{
-				if (!GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array))
+				if (!GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t)))
 				{
 #ifdef DEBUG_LOLA
 					Serial.println("Failed to decode");

@@ -30,11 +30,8 @@ public:
 
 		if (CryptoEnabled)
 		{
-			//Copy current content to crypto buffer.
-			memcpy(CryptoBuffer, BufferPacket->GetRawContent(), OutgoingContentSize);
-
-			//Encode crypto buffer into packet content.
-			if (!Encoder->Encode(CryptoBuffer, OutgoingContentSize, BufferPacket->GetRawContent()))
+			//Encode packet content.
+			if (!Encoder->Encode(BufferPacket->GetRawContent(), OutgoingContentSize))
 			{
 				return false;
 			}

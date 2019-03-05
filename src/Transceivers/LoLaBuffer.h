@@ -36,7 +36,6 @@ protected:
 
 	///Cryptography
 	LoLaCryptoEncoder* Encoder = nullptr;
-	uint8_t CryptoBuffer[LOLA_PACKET_MAX_PACKET_SIZE];
 	bool CryptoEnabled = 0;
 	///
 
