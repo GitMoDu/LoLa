@@ -5,6 +5,7 @@
 
 #include <LoLaCrypto\TinyCRC.h>
 #include <ILoLa.h>
+#include <ClockSource.h>
 
 class LoLaCryptoTokenSource : public ISeedSource
 {
