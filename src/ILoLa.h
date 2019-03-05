@@ -10,7 +10,7 @@
 #define USE_LATENCY_COMPENSATION
 //#define USE_FREQUENCY_HOP
 
-#define DEBUG_LOLA_CRYPTO
+//#define DEBUG_LOLA_CRYPTO
 
 #include <stdint.h>
 #include <Transceivers\LoLaReceiver.h>
