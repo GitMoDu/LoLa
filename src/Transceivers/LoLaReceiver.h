@@ -11,6 +11,9 @@ class LoLaReceiver : public LoLaBuffer
 private:
 	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> ReceiverPacket;
 
+	uint8_t IncomingContentSize = 0;
+
+
 public:
 	PacketDefinition * GetIncomingDefinition()
 	{
@@ -46,26 +49,28 @@ public:
 
 		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
 		{
-			BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader()));
+			IncomingContentSize = PacketDefinition::GetContentSize(BufferSize);
+			//Hash everything but the CRC at the start.
+			CalculatorCRC.Reset();
+			CalculatorCRC.Update(BufferPacket->GetRawContent(), IncomingContentSize);
 
-			if (BufferPacket->GetDefinition() != nullptr)
+			if (CalculatorCRC.GetCurrent() != BufferPacket->GetMACCRC())
 			{
-				CRCIndex = 0;
-				CalculatorCRC.Reset();
+				//CRC Rejected.
+				return false;
+			}
 
-				//Hash everything but the CRC at the start.
-				CalculatorCRC.Update(BufferPacket->GetRawContent(), BufferPacket->GetDefinition()->GetContentSize());
+			if (CryptoEnabled &&
+				!Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize, CryptoBuffer))
+			{
+				return false;
+			}
 
-				//if (CalculatorCRC.Update(IncomingToken) == BufferPacket->GetMACCRC())
-				if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
-				{
-					//MAC, then decrypt.
-					if (BufferPacket->GetDefinition()->HasCrypto())
-					{
-						//TODO: Decrypt content.
-					}
-					return true;
-				}
+			//Find a packet definition from map.
+			if (BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader())) &&
+				IncomingContentSize == BufferPacket->GetDefinition()->GetContentSize())
+			{
+				return true;
 			}
 		}
 

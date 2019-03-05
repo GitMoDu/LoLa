@@ -9,15 +9,15 @@
 #include <LoLaLinkInfo.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 
-#define LOLA_LINK_PROTOCOL_VERSION							0 //N < 20
-#define LOLA_LINK_SERVICE_LINK_PAYLOAD_SIZE					(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
-#define LOLA_LINK_SERVICE_LINK_WITH_ACK_PAYLOAD_SIZE		(0)
-#define LOLA_LINK_SERVICE_UNLINK_SHORT_PAYLOAD_SIZE			LOLA_LINK_SERVICE_LINK_PAYLOAD_SIZE
-#define LOLA_LINK_SERVICE_UNLINK_LONG_WITH_ACK_PAYLOAD_SIZE	(LOLA_LINK_CRYPTO_KEY_LENGTH) 
-#define LOLA_LINK_SERVICE_UNLINK_LONG_PAYLOAD_SIZE			(1 + max(LOLA_LINK_CRYPTO_KEY_LENGTH, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.
+#define LOLA_LINK_PROTOCOL_VERSION							0 //N < 16
 
-#define LOLA_LINK_SERVICE_PAYLOAD_MAX_SIZE					(max(LOLA_LINK_SERVICE_UNLINK_LONG_WITH_ACK_PAYLOAD_SIZE, LOLA_LINK_SERVICE_UNLINK_LONG_PAYLOAD_SIZE))
-#define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_SIZE_WITH_ID + LOLA_LINK_SERVICE_PAYLOAD_MAX_SIZE)
+
+#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING					0 //Only payload is Id.
+#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT				(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
+#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK		(sizeof(uint32_t))	//1 byte encoded Partner Id.
+#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG					(1 + max(LOLA_LINK_CRYPTO_KEY_MAX_SIZE, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.		
+
+#define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_SIZE_WITH_ID + LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
 
 //Linked.
 #define LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD				(uint32_t)(15)
@@ -54,15 +54,13 @@
 
 //Pre-Linking headers, with space for protocol versioning.
 #define LOLA_LINK_SUBHEADER_LINK_DISCOVERY					0x00 + LOLA_LINK_PROTOCOL_VERSION
-#define LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST				0x20 + LOLA_LINK_PROTOCOL_VERSION
+#define LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST				0x10 + LOLA_LINK_PROTOCOL_VERSION
 
 //Public Key Cryptography (PKC) headers.
-#define LOLA_LINK_SUBHEADER_HOST_PKC_BROADCAST				0x40
-#define LOLA_LINK_SUBHEADER_HOST_SHARED_KEY_PUBLIC_ENCODED	0x41
+#define LOLA_LINK_SUBHEADER_HOST_PUBLIC_KEY					0x20
 
-#define LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST		0x50
-#define LOLA_LINK_SUBHEADER_REMOTE_PKC_PUBLIC_ENCODED		0x51
-//#define LOLA_LINK_SUBHEADER_REMOTE_LINK_REQUEST_ENCODED		0x52
+#define LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST		0x30
+#define LOLA_LINK_SUBHEADER_REMOTE_PUBLIC_KEY				0x31
 
 //Linking packets.
 #define LOLA_LINK_SUBHEADER_CHALLENGE_REQUEST				0x60
@@ -88,11 +86,10 @@
 //#define LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE			0xF4
 #define LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER			0xFE
 
-#define LOLA_LINK_HEADER_LINKED								(PACKET_DEFINITION_LINK_START_HEADER)
-#define LOLA_LINK_HEADER_LINKED_WITH_ACK					(LOLA_LINK_HEADER_LINKED + 1)
-#define LOLA_LINK_HEADER_UNLINKED_SHORT_HEADER				(LOLA_LINK_HEADER_LINKED_WITH_ACK + 1)
-#define LOLA_LINK_HEADER_UNLINKED_LONG_HEADER				(LOLA_LINK_HEADER_UNLINKED_SHORT_HEADER + 1)
-#define LOLA_LINK_HEADER_UNLINKED_LONG_WITH_ACK_HEADER		(LOLA_LINK_HEADER_UNLINKED_LONG_HEADER + 1)
+#define LOLA_LINK_HEADER_PING_WITH_ACK						(PACKET_DEFINITION_LINK_START_HEADER)
+#define LOLA_LINK_HEADER_SHORT								(LOLA_LINK_HEADER_PING_WITH_ACK + 1)
+#define LOLA_LINK_HEADER_SHORT_WITH_ACK						(LOLA_LINK_HEADER_SHORT + 1)
+#define LOLA_LINK_HEADER_LONG								(LOLA_LINK_HEADER_SHORT_WITH_ACK + 1)
 
 
 enum LinkingStagesEnum : uint8_t
@@ -104,31 +101,12 @@ enum LinkingStagesEnum : uint8_t
 	LinkingDone = 6
 };
 
-class LinkedPacketDefinition : public PacketDefinition
-{
-public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_HAS_ID; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_LINKED; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_LINK_PAYLOAD_SIZE; }
-
-#ifdef DEBUG_LOLA
-	void PrintName(Stream* serial)
-	{
-		serial->print(F("Link\t"));
-	}
-#endif
-};
-
 class PingPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() {
-		return PACKET_DEFINITION_MASK_BASE |
-			PACKET_DEFINITION_MASK_HAS_ACK |
-			PACKET_DEFINITION_MASK_HAS_ID;
-	}
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_LINKED_WITH_ACK; }
-	uint8_t GetPayloadSize() { return 0; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_PING_WITH_ACK; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -138,58 +116,49 @@ public:
 #endif
 };
 
-class UnlinkedShortPacketDefinition : public PacketDefinition
+class LinkShortPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() {
-		return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO |
-			PACKET_DEFINITION_MASK_HAS_ID;
-	}
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_UNLINKED_SHORT_HEADER; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_UNLINK_SHORT_PAYLOAD_SIZE; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("UShort\t"));
+		serial->print(F("L-Short\t"));
 	}
 #endif
 };
 
-class UnlinkedLongPacketDefinition : public PacketDefinition
+class LinkShortWithAckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() {
-		return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO |
-			PACKET_DEFINITION_MASK_HAS_ID;
-	}
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_UNLINKED_LONG_HEADER; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_UNLINK_LONG_PAYLOAD_SIZE; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID | PACKET_DEFINITION_MASK_HAS_ACK; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT_WITH_ACK; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("ULong\t"));
+		serial->print(F("L-ShortAck"));
 	}
 #endif
 };
 
-class UnlinkedLongWithAckPacketDefinition : public PacketDefinition
+class LinkLongPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() {
-		return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO |
-			PACKET_DEFINITION_MASK_HAS_ID |
-			PACKET_DEFINITION_MASK_HAS_ACK;
-	}
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_UNLINKED_LONG_WITH_ACK_HEADER; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_UNLINK_LONG_WITH_ACK_PAYLOAD_SIZE; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_LONG; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("ULongAck"));
+		serial->print(F("L-Long\t"));
 	}
 #endif
 };
+
 #endif

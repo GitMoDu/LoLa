@@ -64,13 +64,15 @@ public:
 		return GetRaw()[LOLA_PACKET_HEADER_INDEX];
 	}
 
-	void SetDefinition(PacketDefinition* definition)
+	bool SetDefinition(PacketDefinition* definition)
 	{
 		if (definition != nullptr)
 		{
 			GetRaw()[LOLA_PACKET_HEADER_INDEX] = definition->GetHeader();
 		}
 		Definition = definition;
+
+		return Definition != nullptr;
 	}
 
 	uint8_t* GetPayload()

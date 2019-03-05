@@ -9,18 +9,17 @@
 
 //Reserved [0;1] for AckS
 #define PACKET_DEFINITION_ACK_HEADER				0x00
-#define PACKET_DEFINITION_ACK_ENCRYPTED_HEADER		0x01
 
-//Reserved [2;6] for Link service.
-#define PACKET_DEFINITION_LINK_START_HEADER			(PACKET_DEFINITION_ACK_ENCRYPTED_HEADER + 1)
+//Reserved [1;4] for Link service.
+#define PACKET_DEFINITION_LINK_START_HEADER			(PACKET_DEFINITION_ACK_HEADER + 1)
 
 //User service range start
-#define PACKET_DEFINITION_USER_HEADERS_START		(PACKET_DEFINITION_LINK_START_HEADER + 5)
+#define PACKET_DEFINITION_USER_HEADERS_START		(PACKET_DEFINITION_LINK_START_HEADER + 4)
 
 class AckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE_NO_CRYPTO | PACKET_DEFINITION_MASK_IS_ACK; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_IS_ACK; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
 	uint8_t GetPayloadSize() {
 		return 2;//Payload is original Header. Id is optional.
@@ -33,27 +32,10 @@ public:
 #endif
 };
 
-class AckEncryptedPacketDefinition : public PacketDefinition
-{
-public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE | PACKET_DEFINITION_MASK_IS_ACK; }
-	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_ENCRYPTED_HEADER; }
-	uint8_t GetPayloadSize() {
-		return 2;//Payload is original Header. Id is optional.
-	}
-#ifdef DEBUG_LOLA
-	void PrintName(Stream* serial)
-	{
-		serial->print(F("AckEnc"));
-	}
-#endif
-};
-
 class LoLaPacketMap
 {
 private:
 	AckPacketDefinition DefinitionACK;
-	AckEncryptedPacketDefinition DefinitionACKEncrypted;
 protected:
 	uint8_t MappingSize = 0;
 	PacketDefinition* Mapping[LOLA_PACKET_MAP_TOTAL_SIZE];
@@ -85,7 +67,6 @@ public:
 
 		//Add base mappings
 		AddMapping(&DefinitionACK);
-		AddMapping(&DefinitionACKEncrypted);
 	}
 
 	LoLaPacketMap()

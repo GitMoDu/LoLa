@@ -573,41 +573,26 @@ protected:
 private:
 	void PrepareLinkDiscovery()
 	{
-		PrepareUnlinkedShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
-		ATUI_S.uint = random(0, UINT32_MAX); //Padding.
-		S_ArrayToPayload();
+		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
+
+		//TODO: Maybe use data slot for quick reconnect token?
+
+		PacketHolder.GetPayload()[1] = UINT8_MAX; //Padding
+		PacketHolder.GetPayload()[2] = UINT8_MAX; //Padding
+		PacketHolder.GetPayload()[3] = UINT8_MAX; //Padding
+		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
 	}
 
 	void PreparePKCStartRequest()
 	{
-		PrepareUnlinkedShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST);
+		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST);
 		ATUI_S.uint = LinkInfo->GetLocalMACHash();
 		S_ArrayToPayload();
 	}
 
-	//Encoded packets.
-	void PreparePublicEncodedPKC()
-	{
-		PrepareUnlinkedLongPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_PKC_PUBLIC_ENCODED);
 
-		if (!KeyExchanger->GetPublicKey(&PacketHolder.GetPayload()[1]))
-		{
-#ifdef DEBUG_LOLA
-			Serial.println(F("Unable to read PK"));
-#endif
-		}
 
-		//TODO: Encode payload with partner (Host) public key.
-	}
 
-	void PrepareSharedEncodedLinkRequest()
-	{
-		PrepareUnlinkedLongPacketWithAck(LinkInfo->GetSessionId());
-		ATUI_S.uint = LinkInfo->GetLocalMACHash();
-		S_ArrayToPayload();
-
-		//TODO: Encode payload with shared key.
-	}
 
 	//void PrepareEncodedCryptoStart()
 	//{

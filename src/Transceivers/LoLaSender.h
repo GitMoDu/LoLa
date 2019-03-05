@@ -10,7 +10,6 @@ class LoLaSender : public LoLaBuffer
 {
 private:
 	PacketDefinition* AckDefinition = nullptr;
-	PacketDefinition* AckEncryptedDefinition = nullptr;
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE_WITH_ID> AckPacket;
 
@@ -19,75 +18,44 @@ private:
 	///
 
 	//Optimization helper.
-	PacketDefinition* OutgoingDefinition = nullptr;
+	uint8_t OutgoingContentSize = 0;
 
 public:
-	//Fast Ack, Nack, Ack with Id and Nack with Id packet sender, writes directly to output.
+	//Writes directly to output buffer.
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
 		BufferPacket = transmitPacket;
+		OutgoingContentSize = BufferPacket->GetDefinition()->GetContentSize();
+		CalculatorCRC.Reset();
 
-		if (BufferPacket != nullptr)
+		if (CryptoEnabled)
 		{
-			OutgoingDefinition = BufferPacket->GetDefinition();
-			CalculatorCRC.Reset();
+			//Copy current content to crypto buffer.
+			memcpy(CryptoBuffer, BufferPacket->GetRawContent(), OutgoingContentSize);
 
-			//Encrypt, then MAC.
-			if (OutgoingDefinition->HasCrypto())
+			//Encode crypto buffer into packet content.
+			if (!Encoder->Encode(CryptoBuffer, OutgoingContentSize, BufferPacket->GetRawContent()))
 			{
-				//TODO: Encode content.
+				return false;
 			}
-
-			//Hash everything but the CRC at the start.
-			CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetContentSize());
-
-			//Crypto starts at the start of the hash.
-			//BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
-			BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());//Disabled.
-
-			BufferSize = OutgoingDefinition->GetTotalSize();
-
-			return true;
 		}
 
-		return false;
+		//Hash everything but the CRC at the start.
+		CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingContentSize);
+		BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());
+
+		BufferSize = BufferPacket->GetDefinition()->GetTotalSize();
+
+		return true;
 	}
 
 	bool SendAck(PacketDefinition* payloadDefinition, const uint8_t id)
 	{
-		CalculatorCRC.Reset();
-		BufferPacket = &AckPacket;
+		AckPacket.SetDefinition(AckDefinition);
+		AckPacket.GetPayload()[0] = payloadDefinition->GetHeader();
+		AckPacket.GetPayload()[1] = id;
 
-		if (payloadDefinition->HasCrypto())
-		{
-			OutgoingDefinition = AckEncryptedDefinition;
-		}
-		else
-		{
-			OutgoingDefinition = AckDefinition;
-		}
-
-		BufferPacket->SetDefinition(OutgoingDefinition);
-		BufferPacket->GetPayload()[0] = payloadDefinition->GetHeader();
-		BufferPacket->GetPayload()[1] = id;
-
-		//Encrypt, then MAC.
-		if (OutgoingDefinition->HasCrypto())
-		{
-			//TODO: Encrypt content.
-		}
-
-		//Hash everything but the CRC at the start.
-		CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingDefinition->GetContentSize());
-
-		//Hash with time token as late as possible.
-		//BufferPacket->SetMACCRC(CalculatorCRC.Update(GetCryptoToken(ETTM)));
-		BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());//Disabled.
-		//
-
-		BufferSize = AckDefinition->GetTotalSize();
-
-		return true;
+		return SendPacket(&AckPacket);
 	}
 
 	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
@@ -95,8 +63,7 @@ public:
 		if (LoLaBuffer::Setup(packetMap, cryptoEncoder))
 		{
 			AckDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_HEADER);
-			AckEncryptedDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_ENCRYPTED_HEADER);
-			if (AckDefinition != nullptr && AckEncryptedDefinition != nullptr)
+			if (AckDefinition != nullptr)
 			{
 				return true;
 			}

@@ -10,12 +10,11 @@
 #define PACKET_DEFINITION_MASK_CUSTOM_4			B00000010
 #define PACKET_DEFINITION_MASK_CUSTOM_3			B00000100
 #define PACKET_DEFINITION_MASK_CUSTOM_2			B00001000
-#define PACKET_DEFINITION_MASK_IS_ACK			B00010000
-#define PACKET_DEFINITION_MASK_HAS_CRYPTO		B00100000	//TODO: Implement in Transceivers.
+#define PACKET_DEFINITION_MASK_CUSTOM_1			B00010000
+#define PACKET_DEFINITION_MASK_IS_ACK			B00100000
 #define PACKET_DEFINITION_MASK_HAS_ID			B01000000 
 #define PACKET_DEFINITION_MASK_HAS_ACK			B10000000
-#define PACKET_DEFINITION_MASK_BASE				PACKET_DEFINITION_MASK_HAS_CRYPTO //Default is crypto on.
-#define PACKET_DEFINITION_MASK_BASE_NO_CRYPTO	B00000000
+#define PACKET_DEFINITION_MASK_BASIC			B00000000
 
 #define LOLA_PACKET_MACCRC_INDEX				(0)
 #define LOLA_PACKET_HEADER_INDEX				(LOLA_PACKET_MACCRC_INDEX + 1)
@@ -29,7 +28,7 @@
 class PacketDefinition
 {
 public:
-	virtual uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASE; }
+	virtual uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
 	virtual uint8_t GetHeader() { return 0; }
 	virtual uint8_t GetPayloadSize() { return 0; }
 
@@ -42,23 +41,28 @@ public:
 		return GetTotalSize() - LOLA_PACKET_HEADER_INDEX;
 	}
 
+	static uint8_t GetContentSize(const uint8_t unknownTotalSize)
+	{
+		return min(LOLA_PACKET_MAX_PACKET_SIZE + LOLA_PACKET_HEADER_INDEX, unknownTotalSize) - LOLA_PACKET_HEADER_INDEX;
+	}
+
 	uint8_t GetTotalSize()
 	{
 		if (HasId())
 		{
-			return LOLA_PACKET_MIN_SIZE_WITH_ID + GetPayloadSize(); 
+			return LOLA_PACKET_MIN_SIZE_WITH_ID + GetPayloadSize();
 		}
 		else
 		{
-			return LOLA_PACKET_MIN_SIZE + GetPayloadSize(); 
+			return LOLA_PACKET_MIN_SIZE + GetPayloadSize();
 		}
 	}
 
 	bool IsAck()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_IS_ACK;
-	}	
-	
+	}
+
 	bool HasACK()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ACK;
@@ -67,11 +71,6 @@ public:
 	bool HasId()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ID;
-	}
-
-	bool HasCrypto()
-	{
-		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_CRYPTO;
 	}
 
 #ifdef DEBUG_LOLA
@@ -85,7 +84,8 @@ public:
 		if (IsAck())
 		{
 			serial->print(F("IsACK|"));
-		}else if (HasACK())
+		}
+		else if (HasACK())
 		{
 			serial->print(F("ACK|"));
 		}
@@ -93,11 +93,6 @@ public:
 		if (HasId())
 		{
 			serial->print(F("Id|"));
-		}
-
-		if (HasCrypto())
-		{
-			serial->print(F("Crypto"));
 		}
 	}
 #endif

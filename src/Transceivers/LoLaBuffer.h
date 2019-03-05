@@ -28,7 +28,6 @@ protected:
 
 	///CRC validation.
 	TinyCrcModbus8 CalculatorCRC;
-	uint8_t CRCIndex = 0;
 	///
 
 	///Crypto validation.
@@ -37,6 +36,8 @@ protected:
 
 	///Cryptography
 	LoLaCryptoEncoder* Encoder = nullptr;
+	uint8_t CryptoBuffer[LOLA_PACKET_MAX_PACKET_SIZE];
+	bool CryptoEnabled = 0;
 	///
 
 	uint8_t BufferSize = 0;
@@ -65,6 +66,11 @@ public:
 	uint8_t * GetBuffer()
 	{
 		return BufferPacket->GetRaw();
+	}
+
+	void SetCryptoEnabled(const bool cryptoEnabled)
+	{
+		CryptoEnabled = cryptoEnabled;
 	}
 
 	void SetBufferSize(const uint8_t size)

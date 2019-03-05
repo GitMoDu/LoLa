@@ -639,36 +639,53 @@ private:
 
 	void PrepareIdBroadcast()
 	{
-		PrepareUnlinkedShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST);
+		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST);
 		ATUI_S.uint = LinkInfo->GetLocalMACHash();
 		S_ArrayToPayload();
 	}
 
-	void PreparePKCBroadcast()
+	bool PrepareCryptoStartRequest()
 	{
-		PrepareUnlinkedLongPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_PKC_BROADCAST);
+		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
+		ATUI_S.uint = LinkInfo->GetPartnerMACHash();
 
-		if (!KeyExchanger->GetPublicKey(&PacketHolder.GetPayload()[1]))
+		if (!GetLoLa()->GetCryptoEncoder()->Encode(ATUI_S.array, sizeof(uint32_t), PacketHolder.GetPayload()))
 		{
 #ifdef DEBUG_LOLA
-			Serial.println(F("Unable to read PK"));
+			Serial.println("Failed to encode");
 #endif
+			return false;
 		}
-	}
 
-	//Encoded packets.
-	void PrepareSharedKey()
-	{
-		PrepareUnlinkedLongPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_SHARED_KEY_PUBLIC_ENCODED);
-
-		if (!KeyExchanger->GetSharedKey(&PacketHolder.GetPayload()[1]))
-		{
 #ifdef DEBUG_LOLA
-			Serial.println(F("Unable to read SK"));
-#endif
+		ATUI_S.uint = 0;
+		if (!GetLoLa()->GetCryptoEncoder()->Decode(PacketHolder.GetPayload(), sizeof(uint32_t), ATUI_S.array))
+		{
+			Serial.println("Failed to decode");
 		}
+		if (!LinkInfo->PartnerMACHashMatches(ATUI_S.uint))
+		{
+			Serial.println("Failed decoded match");
+			Serial.print('|');
+			for (uint8_t i = 0; i < sizeof(uint32_t); i++)
+			{
+				Serial.print(ATUI_S.array[i]);
+				Serial.print('|');
+			}
+			Serial.print(" vs |");
+			ATUI_S.uint = LinkInfo->GetPartnerMACHash();
+			for (uint8_t i = 0; i < sizeof(uint32_t); i++)
+			{
+				Serial.print(ATUI_S.array[i]);
+				Serial.print('|');
+			}
+			Serial.println();
 
-		//TODO: Encode payload with partner (Remote) public key.
+			return false;
+		}
+#endif
+
+		return true;
 	}
 };
 #endif

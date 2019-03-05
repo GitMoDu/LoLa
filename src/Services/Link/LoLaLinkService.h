@@ -33,12 +33,11 @@
 class LoLaLinkService : public IPacketSendService
 {
 private:
-	LinkedPacketDefinition				DefinitionLinked;
 	PingPacketDefinition				DefinitionPing;
 
-	UnlinkedShortPacketDefinition		DefinitionUnlinkedShort;
-	UnlinkedLongWithAckPacketDefinition	DefinitionUnlinkedLongWithAck;
-	UnlinkedLongPacketDefinition		DefinitionUnlinkedLong;
+	LinkShortPacketDefinition			DefinitionShort;
+	LinkShortWithAckPacketDefinition	DefinitionShortWithAck;
+	LinkLongPacketDefinition			DefinitionLong;
 
 	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
 
@@ -410,21 +409,19 @@ protected:
 
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
-		if (!packetMap->AddMapping(&DefinitionLinked) ||
-			!packetMap->AddMapping(&DefinitionPing) ||
-			!packetMap->AddMapping(&DefinitionUnlinkedShort) ||
-			!packetMap->AddMapping(&DefinitionUnlinkedLong) ||
-			!packetMap->AddMapping(&DefinitionUnlinkedLongWithAck))
+		if (!packetMap->AddMapping(&DefinitionPing) ||
+			!packetMap->AddMapping(&DefinitionShort) ||
+			!packetMap->AddMapping(&DefinitionShortWithAck) ||
+			!packetMap->AddMapping(&DefinitionLong))
 		{
 			return false;
 		}
 
 		//Make sure our re-usable packet has enough space for all our packets.
-		if (Packet->GetMaxSize() < DefinitionLinked.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionPing.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionUnlinkedShort.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionUnlinkedLong.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionUnlinkedLongWithAck.GetTotalSize())
+		if (Packet->GetMaxSize() < DefinitionPing.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionShort.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionShortWithAck.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionLong.GetTotalSize())
 		{
 			return false;
 		}
