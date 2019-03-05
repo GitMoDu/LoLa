@@ -200,7 +200,6 @@ protected:
 				KeyExchanger.GenerateNewKeyPair();
 				KeysLastGenerated = millis();
 #ifdef DEBUG_LOLA
-
 				SharedKeyTime = micros() - SharedKeyTime;
 				Serial.print(F("Keys generation took "));
 				Serial.print(SharedKeyTime);
@@ -395,9 +394,6 @@ protected:
 	{
 		LinkingState = linkingState;
 		ResetLastSentTimeStamp();
-
-		Serial.print(F("Awaiting Link:"));
-		Serial.println(LinkingState);
 
 		SetNextRunASAP();
 	}
@@ -629,23 +625,17 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				GetLoLa()->SetCryptoEnabled(true);
-
 				SetLinkingState(0);
-#ifdef DEBUG_LOLA				
-				Serial.print(F("PKC took "));
-				Serial.print(PartnerPKCDuration);
-				Serial.println(F(" ms."));
-
-				//Serial.print(F("PKC took unlink: "));
-				//Serial.print(millis() - LinkingStart);
-				//Serial.println(F(" ms."));
-#endif
 				LinkingStart = millis();
+
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to MAC Hash: "));
 				Serial.println(LinkInfo->GetPartnerMACHash());
 				Serial.print(F("-Session: "));
 				Serial.println(LinkInfo->GetSessionId());
+				Serial.print(F("PKC took "));
+				Serial.print(PartnerPKCDuration);
+				Serial.println(F(" ms."));
 #endif
 				//SetNextRunASAP();
 				SetNextRunLong();
@@ -653,7 +643,6 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Linked:
 				LinkInfo->StampLinkStarted();
 				GetLoLa()->ResetStatistics();
-				//SetTOTPEnabled();
 				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
 				PowerBalancer.SetMaxPower();
@@ -875,11 +864,6 @@ protected:
 		S_ArrayToPayload();
 	}
 
-	//void PrepareLinkProtocolSwitchOver()					//Host.
-	//{
-	//	PrepareLinkedPacketWithAck(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER);
-	//}
-
 	void PrepareLinkInfoSyncUpdate(const uint16_t rtt, const uint8_t rssi) //Both
 	{
 		PrepareShortPacket(0, LOLA_LINK_SUBHEADER_INFO_SYNC);//Ignore id.
@@ -897,20 +881,6 @@ protected:
 		PacketHolder.GetPayload()[3] = UINT8_MAX; //Padding
 		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
 	}
-
-
-	/*inline void PrepareLinkedPacket(const uint8_t requestId, const uint8_t subHeader, const uint8_t paddingSize = 0)
-	{
-		PacketHolder.SetDefinition(&DefinitionLink);
-		PacketHolder.GetPayload()[0] = subHeader;
-		if (paddingSize > 0)
-		{
-			for (uint8_t i = 1; i < min(DefinitionLinked.GetPayloadSize(), paddingSize + 1); i++)
-			{
-				PacketHolder.GetPayload()[i] = UINT8_MAX;
-			}
-		}
-	}*/
 
 	inline void PrepareShortPacket(const uint8_t requestId, const uint8_t subHeader)
 	{
