@@ -50,6 +50,7 @@ private:
 	//Sub-services.
 	LoLaLinkPowerBalancer PowerBalancer;
 
+	//Private helper.
 #ifdef USE_FREQUENCY_HOP
 	LoLaLinkFrequencyHopper FrequencyHopper;
 #endif
@@ -91,7 +92,7 @@ protected:
 	TemplateLoLaPacket<LOLA_LINK_SERVICE_PACKET_MAX_SIZE> PacketHolder;
 
 	//Shared helper.
-	uint32_t LinkingStart = 0;
+	uint32_t SubStateStart = ILOLA_INVALID_MILLIS;
 
 	//Subservices.
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
@@ -99,7 +100,8 @@ protected:
 #endif
 
 #ifdef DEBUG_LOLA
-	uint32_t PartnerPKCDuration = 0;
+	uint32_t LinkingDuration = 0;
+	uint32_t PKCDuration = 0;
 #endif
 
 protected:
@@ -216,7 +218,7 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
-			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
+			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				SetNextRunASAP();
@@ -585,6 +587,12 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() != newState)
 		{
+#ifdef DEBUG_LOLA
+			if (newState == LoLaLinkInfo::LinkStateEnum::Linked)
+			{
+				LinkingDuration = GetElapsedSinceStateStart();
+			}			
+#endif
 			ResetStateStartTime();
 			ResetLastSentTimeStamp();
 
@@ -627,15 +635,14 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				GetLoLa()->SetCryptoEnabled(true);
 				SetLinkingState(0);
-				LinkingStart = millis();
 
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
 				Serial.println(LinkInfo->GetPartnerId());
-				Serial.print(F("-Session: "));
+				Serial.print(F("\tSession: "));
 				Serial.println(LinkInfo->GetSessionId());
 				Serial.print(F("PKC took "));
-				Serial.print(PartnerPKCDuration);
+				Serial.print(PKCDuration);
 				Serial.println(F(" ms."));
 #endif
 				//SetNextRunASAP();
@@ -650,7 +657,7 @@ protected:
 
 #ifdef DEBUG_LOLA
 				Serial.print(F("Linking took "));
-				Serial.print(millis() - LinkingStart);
+				Serial.print(LinkingDuration);
 				Serial.println(F(" ms."));
 				Serial.print(F("Round Trip Time: "));
 				Serial.print(LinkInfo->GetRTT());

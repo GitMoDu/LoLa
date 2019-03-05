@@ -91,9 +91,8 @@ protected:
 					
 					GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
 						LinkInfo->GetPartnerId(), LinkInfo->GetLocalId());
-
-					LinkingStart = millis();//Reset local timeout.
 					ResetLastSentTimeStamp();
+					SubStateStart = millis();
 					SetLinkingState(AwaitingLinkEnum::AwaitingHostPublicKey);
 				}
 				else
@@ -103,7 +102,7 @@ protected:
 				}
 				break;
 			case AwaitingLinkEnum::AwaitingHostPublicKey:
-				if (millis() - LinkingStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
+				if (millis() - SubStateStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKC_CANCEL)
 				{
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 					SetNextRunASAP();
@@ -134,7 +133,7 @@ protected:
 				}
 				break;
 			case AwaitingLinkEnum::SendingPublicKey:
-				if (millis() - LinkingStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_CANCEL)
+				if (millis() - SubStateStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKC_CANCEL)
 				{
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 					SetNextRunASAP();
@@ -151,7 +150,7 @@ protected:
 				break;
 			case AwaitingLinkEnum::LinkingSwitchOver:
 #ifdef DEBUG_LOLA
-				PartnerPKCDuration = millis() - PartnerPKCDuration;
+				PKCDuration = millis() - SubStateStart;
 #endif
 				//All set to start linking.
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
@@ -208,9 +207,6 @@ protected:
 			//Assumes public key is the correct size.
 			if (KeyExchanger.SetPartnerPublicKey(hostPublicKey))
 			{
-#ifdef DEBUG_LOLA
-				PartnerPKCDuration = millis();
-#endif
 				SetLinkingState(AwaitingLinkEnum::ProcessingSharedKey);
 			}
 		}
