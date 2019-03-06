@@ -93,7 +93,7 @@ protected:
 		else switch (LinkingState)
 		{
 		case AwaitingLinkEnum::BroadcastingOpenSession:
-			if (SessionLastStarted == ILOLA_INVALID_MILLIS || millis() - SessionLastStarted > LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME)
+			if (!LinkInfo->HasSessionId() || SessionLastStarted == ILOLA_INVALID_MILLIS || millis() - SessionLastStarted > LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME)
 			{
 				NewSession();
 			}
