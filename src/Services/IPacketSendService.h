@@ -9,7 +9,7 @@
 #include <Packet\LoLaPacket.h>
 
 //Takes around the same time as a full time out.
-#define LOLA_SEND_SERVICE_DELAYED_MAX_DUPLEX				10 //Take care, as to SEND_TIMEOUT_DEFAULT not exceed UINT8_MAX.
+#define LOLA_SEND_SERVICE_DELAYED_MAX_DUPLEX				10 // [2 ; UINT8_MAX]
 #define LOLA_SEND_SERVICE_DENIED_MAX_FAILS					3
 
 
