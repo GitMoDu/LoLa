@@ -128,7 +128,6 @@ protected:
 				break;
 			case AwaitingLinkEnum::ProcessingSharedKey:
 				//TODO: Solve key size issue
-				//GetLoLa()->GetCryptoEncoder()->SetIv() //TODO: Set Iv from known entropy + session id.
 				if (KeyExchanger.GenerateSharedKey() &&
 					GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16))
 				{
