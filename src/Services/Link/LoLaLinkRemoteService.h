@@ -71,17 +71,7 @@ protected:
 		}
 	}
 
-	void OnAckReceived(const uint8_t header, const uint8_t id)
-	{
-		switch (LinkInfo->GetLinkState())
-		{
-		case LoLaLinkInfo::LinkStateEnum::Linked:
-			//Ping Ack, ignore.
-			break;
-		default:
-			break;
-		}
-	}
+
 
 	bool OnAwaitingLink()
 	{

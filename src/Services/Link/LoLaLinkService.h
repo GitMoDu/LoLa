@@ -100,7 +100,8 @@ protected:
 
 protected:
 	///Common packet handling.
-	
+	virtual void OnLinkAckReceived(const uint8_t header, const uint8_t id) {}
+	virtual void OnPingAckReceived(const uint8_t id) {}
 
 	///Host packet handling.
 	//Unlinked packets.
@@ -772,7 +773,20 @@ protected:
 			}
 		}
 
-		return OnAckedPacketReceived(receivedPacket);		
+		return OnAckedPacketReceived(receivedPacket);
+		
+	}
+
+	void OnAckReceived(const uint8_t header, const uint8_t id)
+	{
+		if (header == LOLA_LINK_HEADER_PING_WITH_ACK)
+		{
+			OnPingAckReceived(id);
+		}
+		else
+		{
+			OnLinkAckReceived(header, id);
+		}
 	}
 
 	///Packet builders.

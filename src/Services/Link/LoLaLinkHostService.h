@@ -387,8 +387,15 @@ protected:
 		}
 	}
 
+	void OnPingAckReceived(const uint8_t id)
+	{
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
+		{
+			LatencyMeter.OnAckReceived(id);
+		}			
+	}
 
-	void OnAckReceived(const uint8_t header, const uint8_t id)
+	void OnLinkAckReceived(const uint8_t header, const uint8_t id)
 	{
 		switch (LinkInfo->GetLinkState())
 		{
@@ -409,9 +416,6 @@ protected:
 			{
 				SetLinkingState(LinkingStagesEnum::LinkingDone);
 			}
-			break;
-		case LoLaLinkInfo::LinkStateEnum::Linked:
-			//Ping Ack, ignore.
 			break;
 		default:
 			break;
