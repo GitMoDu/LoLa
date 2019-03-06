@@ -53,9 +53,6 @@ protected:
 	{
 		switch (newState)
 		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			NewSession();
-			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD);
 			break;
