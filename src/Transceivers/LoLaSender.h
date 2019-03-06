@@ -47,7 +47,7 @@ public:
 	{
 		AckPacket.SetDefinition(AckDefinition);
 		AckPacket.GetPayload()[0] = payloadDefinition->GetHeader();
-		AckPacket.GetPayload()[1] = id;
+		AckPacket.SetId(id);
 
 		return SendPacket(&AckPacket);
 	}
