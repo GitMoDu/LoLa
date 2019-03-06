@@ -68,7 +68,7 @@ void OnLinkStatusUpdated(const LoLaLinkInfo::LinkStateEnum state)
 		Serial.println(F("Sleeping"));
 		break;
 	case LoLaLinkInfo::LinkStateEnum::Linking:
-		//Serial.println(F("Linking"));
+		Serial.println(F("Linking"));
 		break;
 	case LoLaLinkInfo::LinkStateEnum::Linked:
 		Serial.println(F("Linked"));
