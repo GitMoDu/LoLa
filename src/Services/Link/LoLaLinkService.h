@@ -760,15 +760,20 @@ protected:
 	
 	bool ProcessAckedPacket(ILoLaPacket* receivedPacket)
 	{
-		if (LinkInfo->HasLink())
+		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
-			if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
+			switch (LinkInfo->GetLinkState())
 			{
-				return true;//Ping packet.
+			case LoLaLinkInfo::LinkStateEnum::Linking:
+				return true;
+			case LoLaLinkInfo::LinkStateEnum::Linked:
+				return true;
+			default:
+				return false;
 			}
 		}
 
-		return OnAckedPacketReceived(receivedPacket);
+		return OnAckedPacketReceived(receivedPacket);		
 	}
 
 	///Packet builders.
