@@ -143,10 +143,6 @@ bool LoLaPacketDriver::Setup()
 		IncomingInfo.Clear();
 		OutgoingInfo.Clear();
 
-		//Disabled.
-		//Receiver.SetCryptoTokenSource(GetCryptoTokenSource());
-		//Sender.SetCryptoTokenSource(GetCryptoTokenSource());
-
 		return true;
 	}
 

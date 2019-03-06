@@ -11,7 +11,6 @@
 
 #include <Callback.h>
 #include <LoLaCrypto\TinyCRC.h>
-//#include <LoLaCrypto\LoLaCryptoTokenSource.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
