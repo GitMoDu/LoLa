@@ -100,7 +100,8 @@ public:
 		return LocalMacGenerator.GetMACHash();
 	}
 
-	void ClearPartnerId()
+	//Only for use in Host
+	void ClearRemoteId()
 	{
 		PartnerIdPresent = false;
 	}

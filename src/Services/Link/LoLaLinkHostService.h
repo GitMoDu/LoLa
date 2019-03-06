@@ -53,6 +53,9 @@ protected:
 	{
 		switch (newState)
 		{
+		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+			NewSession();
+			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD);
 			break;
@@ -116,15 +119,14 @@ protected:
 			}
 			else
 			{
-				LinkInfo->ClearPartnerId();
+				LinkInfo->ClearRemoteId();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			break;
 		case AwaitingLinkEnum::SendingPublicKey:
 			if (millis() - SubStateStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKC_CANCEL)
 			{
-				LinkInfo->ClearPartnerId();
-				KeyExchanger.ClearPartner();
+				ClearSession();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
@@ -147,16 +149,14 @@ protected:
 			}
 			else
 			{
-				LinkInfo->ClearPartnerId();
-				KeyExchanger.ClearPartner();
+				ClearSession();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			break;
 		case AwaitingLinkEnum::GotSharedKey:
 			if (millis() - SubStateStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKC_CANCEL)
 			{
-				LinkInfo->ClearPartnerId();
-				KeyExchanger.ClearPartner();
+				ClearSession();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)

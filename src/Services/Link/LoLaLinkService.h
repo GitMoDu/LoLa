@@ -409,8 +409,6 @@ protected:
 	{
 		ReportPending = false;
 
-		LastSent = ILOLA_INVALID_MILLIS;
-
 		if (ClockSyncerPointer != nullptr)
 		{
 			ClockSyncerPointer->Reset();
@@ -425,6 +423,8 @@ protected:
 		{
 			LinkInfo->Reset();
 		}
+		
+		KeyExchanger.ClearPartner();
 
 		OnClearSession();
 
