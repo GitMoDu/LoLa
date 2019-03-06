@@ -67,7 +67,22 @@ public:
 	{
 		uECC_set_rng(&RNG);
 
+		PairingStage = PairingStageEnum::StageClear;
+
 		return true;
+	}
+
+	void Clear()
+	{
+		PairingStage = PairingStageEnum::StageClear;
+	}
+
+	void ClearPartner()
+	{
+		if (PairingStage == PairingStageEnum::StagePartnerKey || PairingStage == PairingStageEnum::StageSharedKey)
+		{
+			PairingStage = PairingStageEnum::StageLocalKey;
+		}	
 	}
 
 	bool IsReadyToUse()
