@@ -204,7 +204,7 @@ protected:
 			}
 			else
 			{
-				if (!OnAwaitingLink())
+				if (!OnAwaitingLink())//Time out is different for host/remote.
 				{
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				}
