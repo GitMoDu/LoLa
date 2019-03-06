@@ -96,6 +96,7 @@ protected:
 			if (!LinkInfo->HasSessionId() || SessionLastStarted == ILOLA_INVALID_MILLIS || millis() - SessionLastStarted > LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME)
 			{
 				NewSession();
+				SessionLastStarted = millis();
 			}
 
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD)
@@ -431,7 +432,6 @@ private:
 		ClearSession();
 
 		LinkInfo->SetSessionId((uint8_t)random(1, (UINT8_MAX - 1)));
-		SessionLastStarted = millis();
 	}
 
 	void PrepareIdBroadcast()

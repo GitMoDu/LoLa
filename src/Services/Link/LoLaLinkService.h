@@ -423,7 +423,10 @@ protected:
 		{
 			LinkInfo->Reset();
 		}
-		
+
+		GetLoLa()->SetCryptoEnabled(false);
+		GetLoLa()->GetCryptoEncoder()->Clear();		
+
 		KeyExchanger.ClearPartner();
 
 		OnClearSession();
@@ -460,8 +463,6 @@ protected:
 #endif
 
 					ClearSession();
-					GetLoLa()->GetCryptoEncoder()->Clear();
-					GetLoLa()->SetCryptoEnabled(false);
 #ifdef DEBUG_LOLA
 					Serial.print(F("Local MAC: "));
 					LinkInfo->PrintMac(&Serial);
@@ -566,8 +567,6 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 				ClearSession();
 				KeyExchanger.Clear();
-				GetLoLa()->SetCryptoEnabled(false);
-				GetLoLa()->GetCryptoEncoder()->Clear();
 				SetLinkingState(0);
 
 #ifdef USE_FREQUENCY_HOP
@@ -578,9 +577,7 @@ protected:
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-				KeyExchanger.ClearPartner();
-				GetLoLa()->SetCryptoEnabled(false);
-				GetLoLa()->GetCryptoEncoder()->Clear();
+				ClearSession();
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
 				SetNextRunASAP();
