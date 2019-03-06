@@ -565,6 +565,7 @@ protected:
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
 				ClearSession();
+				KeyExchanger.Clear();
 				GetLoLa()->SetCryptoEnabled(false);
 				GetLoLa()->GetCryptoEncoder()->Clear();
 				SetLinkingState(0);
@@ -577,6 +578,7 @@ protected:
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+				KeyExchanger.ClearPartner();
 				GetLoLa()->SetCryptoEnabled(false);
 				GetLoLa()->GetCryptoEncoder()->Clear();
 				SetLinkingState(0);
