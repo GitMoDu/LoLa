@@ -13,6 +13,7 @@
 
 
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING					0 //Only payload is Id.
+#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT				3
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT				(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK		(sizeof(uint32_t))	//1 byte encoded Partner Id.
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG					(1 + max(LOLA_LINK_CRYPTO_KEY_MAX_SIZE, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.		
@@ -90,6 +91,7 @@
 #define LOLA_LINK_HEADER_SHORT								(LOLA_LINK_HEADER_PING_WITH_ACK + 1)
 #define LOLA_LINK_HEADER_SHORT_WITH_ACK						(LOLA_LINK_HEADER_SHORT + 1)
 #define LOLA_LINK_HEADER_LONG								(LOLA_LINK_HEADER_SHORT_WITH_ACK + 1)
+#define LOLA_LINK_HEADER_REPORT								(LOLA_LINK_HEADER_LONG + 1)
 
 
 enum LinkingStagesEnum : uint8_t
@@ -111,6 +113,21 @@ public:
 	void PrintName(Stream* serial)
 	{
 		serial->print(F("Ping\t"));
+	}
+#endif
+};
+
+class LinkReportPacketDefinition : public PacketDefinition
+{
+public:
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetHeader() { return LOLA_LINK_HEADER_REPORT; }
+	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; }
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("L-Report"));
 	}
 #endif
 };
