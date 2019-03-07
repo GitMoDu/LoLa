@@ -172,7 +172,6 @@ protected:
 #endif
 				//All set to start linking.
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
-				SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_REMOTE_BACK_OFF_PERIOD);
 				break;
 			default:
 				break;
@@ -205,7 +204,6 @@ protected:
 					LinkInfo->GetPartnerId() == hostId &&
 					LinkInfo->SetSessionId(sessionId))
 				{
-					LinkInfo->SetPartnerId(hostId);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
 				break;
