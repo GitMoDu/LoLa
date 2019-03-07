@@ -34,7 +34,7 @@ private:
 	//Latency measurement.
 	LoLaLinkLatencyMeter<LOLA_LINK_SERVICE_UNLINK_MAX_LATENCY_SAMPLES> LatencyMeter;
 
-	//Session timing.
+	//Session lifetime.
 	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
 
 public:
@@ -53,7 +53,6 @@ protected:
 	{
 		serial->print(F("Link Host"));
 	}
-	uint32_t SharedKeyTime;
 #endif // DEBUG_LOLA
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
@@ -82,7 +81,7 @@ protected:
 	{
 		if (!LinkInfo->HasLink() && PacketHolder.GetDefinition()->HasACK())
 		{
-			//Piggy back on any link with ack packets to measure latency.
+			//Piggy back on any link acked packets to measure latency.
 			LatencyMeter.OnAckPacketSent(PacketHolder.GetId());
 		}
 	}
@@ -93,7 +92,7 @@ protected:
 		SessionLastStarted = ILOLA_INVALID_MILLIS;
 	}
 
-	///PKC Stage.
+	///PKC region.
 	bool OnAwaitingLink()
 	{
 		if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_HOST_MAX_BEFORE_SLEEP)
@@ -152,7 +151,7 @@ protected:
 			break;
 		case AwaitingLinkEnum::ProcessingPKC:
 			//TODO: Solve key size issue
-			//TODO: Use authorization data?
+			//TODO: Use authorization dataas token?
 			if (KeyExchanger.GenerateSharedKey() &&
 				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16))
 			{
@@ -386,15 +385,15 @@ protected:
 		}
 	}
 
-	//void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
-	//{
-	//	if (LinkInfo->HasLink())
-	//	{
-	//		HostClockSyncTransaction.SetResult(requestId,
-	//			(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
-	//		SetNextRunASAP();
-	//	}
-	//}
+	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
+	{
+		if (LinkInfo->HasLink())
+		{
+			HostClockSyncTransaction.SetResult(requestId,
+				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
+			SetNextRunASAP();
+		}
+	}
 
 	void OnKeepingLink()
 	{

@@ -115,7 +115,7 @@ protected:
 	virtual void OnRemoteInfoSyncReceived(const uint8_t rssi) {}
 	virtual void OnHostInfoSyncRequestReceived() {}
 	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
-	//virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
+	virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	///
 
 	///Remote packet handling.
@@ -127,8 +127,7 @@ protected:
 	//Linked packets.
 	virtual void OnHostInfoSyncReceived(const uint8_t rssi, const uint16_t rtt) {}
 	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
-	//virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
-	//virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
+	virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	///
 
 	//Internal housekeeping.
@@ -190,7 +189,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (KeysLastGenerated == ILOLA_INVALID_MILLIS || millis() - KeysLastGenerated > LOLA_LINK_SERVICE_UNLINK_KEY_PAIR_LIFETIME)
 			{
-#ifdef DEBUG_LOLA
+#ifdef DEBUG_LOLA_CRYPTO
 				uint32_t SharedKeyTime = micros();
 #endif
 				KeyExchanger.GenerateNewKeyPair();
@@ -689,47 +688,50 @@ protected:
 				//To Host.
 			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
 				OnLinkDiscoveryReceived();
-				return true;
+				break;
+
 			case LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnPKCRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
-				return true;
+				break;
 
 				//To remote.
 			case LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnIdBroadcastReceived(receivedPacket->GetId(), ATUI_R.uint);
-				return true;
+				break;
 				///
 
 				///Linking Packets
 			case LOLA_LINK_SUBHEADER_NTP_REQUEST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnClockSyncRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
-				return true;
+				break;
 
 				//To Remote.
 			case LOLA_LINK_SUBHEADER_NTP_REPLY:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnClockSyncResponseReceived(receivedPacket->GetId(), ATUI_R.iint);
-				return true;
+				break;
 				///
 
 				///Linked packets.
-		/*	case LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST:
-				ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-				OnClockSyncTuneRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
+				//Host.
+			case LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST:
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnClockSyncTuneRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
 				break;
 
+				//Remote.
 			case LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY:
-				ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-				OnClockSyncTuneResponseReceived(incomingPacket->GetId(), ATUI_R.iint);
-				break;*/
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnClockSyncTuneResponseReceived(receivedPacket->GetId(), ATUI_R.iint);
+				break;
 				///
 			default:
 				break;
 			}
-			break;
+			return true;
 		case LOLA_LINK_HEADER_LONG:
 			switch (receivedPacket->GetPayload()[0])
 			{
@@ -764,9 +766,7 @@ protected:
 			default:
 				break;
 			}
-
 			return true;
-
 		default:
 			break;
 		}
@@ -778,7 +778,9 @@ protected:
 	{
 		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
+#ifdef DEBUG_LOLA
 			Serial.println("Got a Ping...");
+#endif
 			switch (LinkInfo->GetLinkState())
 			{
 			case LoLaLinkInfo::LinkStateEnum::Linking:
@@ -797,8 +799,10 @@ protected:
 	{
 		if (header == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
-			OnPingAckReceived(id);
+#ifdef DEBUG_LOLA
 			Serial.println("Pong!");
+#endif
+			OnPingAckReceived(id);
 		}
 		else
 		{

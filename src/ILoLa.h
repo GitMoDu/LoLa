@@ -4,8 +4,10 @@
 #define _ILOLA_h
 
 #define DEBUG_LOLA
+
 //#define MOCK_RADIO
 //#define USE_MOCK_PACKET_LOSS
+
 #define USE_TIME_SLOT
 #define USE_LATENCY_COMPENSATION
 //#define USE_ENCRYPTION

@@ -391,51 +391,9 @@ protected:
 			}
 		}
 	}
-
 	///
 
-	//void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader)
-	//{
-	//	switch (LinkInfo->GetLinkState())
-	//	{
-	//	case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-	//		if (subHeader == LOLA_LINK_SUBHEADER_ACK_LINK_REQUEST_SWITCHOVER &&
-	//			LinkingState == AwaitingLinkEnum::LinkingSwitchOver)
-	//		{
-	//!LinkInfo->HasSession() ||
-	//	!KeyExchanger.HasSharedKey() ||
-	//			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
-	//		}
-	//		break;
-	//	case LoLaLinkInfo::LinkStateEnum::Linking:
-	//		switch (LinkingState)
-	//		{
-	//		case LinkingStagesEnum::ClockSyncStage:
-	//			//If we break here, we need to receive two of the same protocol packet.
-	//	
-	//		case LinkingStagesEnum::InfoSyncStage:
-	//			if (subHeader == LOLA_LINK_SUBHEADER_ACK_INFO_SYNC_ADVANCE)
-	//			{
-	//				RemoteInfoTransaction.OnAdvanceRequestReceived(requestId);
-	//				SetNextRunASAP();
-	//			}
-	//			break;
-	//		case LinkingStagesEnum::LinkProtocolSwitchOver:
-	//			if (subHeader == LOLA_LINK_SUBHEADER_ACK_PROTOCOL_SWITCHOVER &&
-	//				LinkInfo->GetSessionId() == requestId)
-	//			{
-	//				SetLinkingState(LinkingStagesEnum::AllConnectingStagesDone);
-	//			}
-	//			break;
-	//		default:
-	//			break;
-	//		}
-	//	default:
-	//		break;
-	//	}
-	//}
-
-
+	///Linked region.
 	void OnKeepingLink()
 	{
 		if (RemoteClockSyncTransaction.IsResultWaiting())
@@ -468,9 +426,6 @@ protected:
 		}
 	}
 
-	///Clock Sync
-
-
 	void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked &&
@@ -480,10 +435,7 @@ protected:
 			SetNextRunASAP();
 		}
 	}
-	///
 
-
-	/////Info Sync
 	bool OnAckedPacketReceived(ILoLaPacket* receivedPacket)
 	{
 		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_SHORT_WITH_ACK)
@@ -506,7 +458,6 @@ protected:
 
 		return false;
 	}
-
 	///
 
 private:
@@ -539,13 +490,13 @@ private:
 		}
 	}
 
-	void PrepareClockSyncRequest(const uint8_t requestId)	//Remote
+	void PrepareClockSyncRequest(const uint8_t requestId)
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REQUEST);
 		//Rest of Payload is set on OnPreSend.
 	}
 
-	void PrepareClockSyncTuneRequest(const uint8_t requestId)	//Remote
+	void PrepareClockSyncTuneRequest(const uint8_t requestId)
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST);
 		//Rest of Payload is set on OnPreSend.
