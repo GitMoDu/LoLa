@@ -420,10 +420,11 @@ protected:
 
 	void OnPingAckReceived(const uint8_t id)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking && 
+			LatencyMeter.OnAckReceived(id))
 		{
-			LatencyMeter.OnAckReceived(id);
 			PingAcked = true;
+			SetNextRunASAP();
 		}
 	}
 
