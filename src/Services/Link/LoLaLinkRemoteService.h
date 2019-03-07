@@ -235,9 +235,10 @@ protected:
 
 	bool OnLinkProtocolReceived(const uint8_t sessionId, uint32_t hostId)
 	{
-		if (LinkingState == LinkingStagesEnum::ClockSyncStage &&
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+			LinkingState == LinkingStagesEnum::ClockSyncStage &&
 			LinkInfo->GetSessionId() == sessionId &&
-			LinkInfo->GetPartnerId() == hostId)
+			LinkInfo->GetLocalId() == hostId)
 		{
 			SetLinkingState(LinkingStagesEnum::LinkingDone);
 
@@ -356,12 +357,19 @@ protected:
 			RemoteClockSyncTransaction.Reset();
 			SetNextRunASAP();
 		}
-		else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+		if (!RemoteClockSyncTransaction.IsRequested() || !RemoteClockSyncTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME))
 		{
 			RemoteClockSyncTransaction.Reset();
-			PrepareClockSyncRequest(RemoteClockSyncTransaction.GetId());
-			RemoteClockSyncTransaction.SetRequested();//TODO: Only set requested on OnSendOk, to reduce the possible DOS window.
-			RequestSendPacket(true);
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				RemoteClockSyncTransaction.SetRequested();
+				PrepareClockSyncRequest(RemoteClockSyncTransaction.GetId());
+				RequestSendPacket(true);
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			}
 		}
 		else
 		{
@@ -369,17 +377,20 @@ protected:
 		}
 	}
 
-	//void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
-	//{
-	//	if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
-	//		LinkingState == LinkingStagesEnum::ClockSyncStage &&
-	//		RemoteClockSyncTransaction.IsRequested() &&
-	//		RemoteClockSyncTransaction.GetId() == requestId)
-	//	{
-	//		RemoteClockSyncTransaction.SetResult(estimatedError);
-	//		SetNextRunASAP();
-	//	}
-	//}
+	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
+	{
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+			LinkingState == LinkingStagesEnum::ClockSyncStage &&
+			RemoteClockSyncTransaction.IsRequested() &&
+			RemoteClockSyncTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME) 
+			)
+		{
+			if (RemoteClockSyncTransaction.SetResult(requestId, estimatedError))
+			{
+				SetNextRunASAP();
+			}
+		}
+	}
 
 	///
 
@@ -463,15 +474,13 @@ protected:
 	void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked &&
-			RemoteClockSyncTransaction.IsRequested() &&
-			RemoteClockSyncTransaction.GetId() == requestId)
+			RemoteClockSyncTransaction.IsRequested())
 		{
-			RemoteClockSyncTransaction.SetResult(estimatedError);
+			RemoteClockSyncTransaction.SetResult(requestId, estimatedError);
 			SetNextRunASAP();
 		}
 	}
 	///
-
 
 
 	/////Info Sync
@@ -484,7 +493,11 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				return OnCryptoStartReceived(receivedPacket->GetId(), receivedPacket->GetPayload());
 			case LoLaLinkInfo::LinkStateEnum::Linking:
-				ArrayToR_Array(receivedPacket->GetPayload());
+				ATUI_R.array[0] = receivedPacket->GetPayload()[0];
+				ATUI_R.array[1] = receivedPacket->GetPayload()[1];
+				ATUI_R.array[2] = receivedPacket->GetPayload()[2];
+				ATUI_R.array[3] = receivedPacket->GetPayload()[3];
+
 				return OnLinkProtocolReceived(receivedPacket->GetId(), ATUI_R.uint);
 			default:
 				break;
@@ -529,6 +542,12 @@ private:
 	void PrepareClockSyncRequest(const uint8_t requestId)	//Remote
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REQUEST);
+		//Rest of Payload is set on OnPreSend.
+	}
+
+	void PrepareClockSyncTuneRequest(const uint8_t requestId)	//Remote
+	{
+		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST);
 		//Rest of Payload is set on OnPreSend.
 	}
 };

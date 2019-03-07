@@ -4,7 +4,6 @@
 #define _CLOCKSYNCTRANSACTION_h
 
 #include <stdint.h>
-#include <Services\Link\LoLaLinkDefinitions.h>
 
 class IClockSyncTransaction
 {
@@ -45,16 +44,22 @@ private:
 public:
 	void Reset()
 	{
-		Id--;
+		Id = 0;
 		Stage = 0;
 		Result = 0;
 		LastRequested = 0;
 	}
 
-	void SetResult(const int32_t resultError)
+	bool SetResult(const uint8_t requestId, const int32_t resultError)
 	{
-		Result = resultError;
-		Stage = TransactionStage::ResultIn;
+		if (Stage = TransactionStage::Requested && Id == requestId)
+		{
+			Result = resultError;
+			Stage = TransactionStage::ResultIn;
+			return true;
+		}
+
+		return false;
 	}
 
 	int32_t GetResult()
@@ -65,30 +70,23 @@ public:
 	void SetRequested()
 	{
 		Stage = TransactionStage::Requested;
+		Id = random(0, UINT8_MAX);
 		LastRequested = millis();
 	}
 
 	bool IsRequested()
 	{
-		return Stage == TransactionStage::Requested && IsFresh();
+		return Stage == TransactionStage::Requested;
 	}
 
-	bool IsFresh()
+	bool IsFresh(const uint32_t lifetimeMillis)
 	{
-		return millis() - LastRequested < LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME;
+		return millis() - LastRequested < lifetimeMillis;
 	}
 
 	bool IsResultWaiting()
 	{
 		return Stage == TransactionStage::ResultIn;
-	}
-
-	void SetResultWaiting()
-	{
-		if (Stage == TransactionStage::Requested)
-		{
-			Stage = TransactionStage::ResultIn;
-		}
 	}
 };
 

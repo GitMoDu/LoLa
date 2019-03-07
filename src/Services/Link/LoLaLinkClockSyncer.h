@@ -116,7 +116,6 @@ public:
 		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS));
 	}	
 
-
 	void SetSynced()
 	{
 		HostSynced = true;

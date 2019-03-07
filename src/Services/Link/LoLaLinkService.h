@@ -126,7 +126,7 @@ protected:
 
 	//Linked packets.
 	virtual void OnHostInfoSyncReceived(const uint16_t rtt, const uint8_t rssi) {}
-	//virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
+	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	//virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	//virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
 	///
@@ -430,7 +430,7 @@ protected:
 		}
 
 		GetLoLa()->SetCryptoEnabled(false);
-		GetLoLa()->GetCryptoEncoder()->Clear();		
+		GetLoLa()->GetCryptoEncoder()->Clear();
 
 		KeyExchanger.ClearPartner();
 
@@ -552,7 +552,7 @@ protected:
 			if (newState == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
 				LinkingDuration = GetElapsedSinceStateStart();
-			}			
+			}
 #endif
 			ResetStateStartTime();
 			ResetLastSentTimeStamp();
@@ -702,26 +702,29 @@ protected:
 				return true;
 				///
 
-				///Linked Packets
+				///Linking Packets
 			case LOLA_LINK_SUBHEADER_NTP_REQUEST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnClockSyncRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
-				break;
-			//case LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST:
-			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-			//	OnClockSyncTuneRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
-			//	break;
+				return true;
 
-			//	//To Remote.
-			//case LOLA_LINK_SUBHEADER_NTP_REPLY:
-			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-			//	OnClockSyncResponseReceived(incomingPacket->GetId(), ATUI_R.iint);
-			//	break;
-			//case LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY:
-			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-			//	OnClockSyncTuneResponseReceived(incomingPacket->GetId(), ATUI_R.iint);
-			//	break;
-			
+				//To Remote.
+			case LOLA_LINK_SUBHEADER_NTP_REPLY:
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnClockSyncResponseReceived(receivedPacket->GetId(), ATUI_R.iint);
+				return true;
+				///
+
+				///Linked packets.
+		/*	case LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST:
+				ArrayToR_Array(&incomingPacket->GetPayload()[1]);
+				OnClockSyncTuneRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
+				break;
+
+			case LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY:
+				ArrayToR_Array(&incomingPacket->GetPayload()[1]);
+				OnClockSyncTuneResponseReceived(incomingPacket->GetId(), ATUI_R.iint);
+				break;*/
 				///
 			default:
 				break;
@@ -763,7 +766,7 @@ protected:
 			}
 
 			return true;
-		
+
 		default:
 			break;
 		}
@@ -771,7 +774,6 @@ protected:
 		return false;
 	}
 
-	
 	bool ProcessAckedPacket(ILoLaPacket* receivedPacket)
 	{
 		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
@@ -789,7 +791,6 @@ protected:
 		}
 
 		return OnAckedPacketReceived(receivedPacket);
-		
 	}
 
 	void OnAckReceived(const uint8_t header, const uint8_t id)
@@ -826,19 +827,6 @@ protected:
 	}
 
 	/////Linking time packets.
-	void PrepareClockSyncTuneRequest(const uint8_t requestId)	//Remote
-	{
-		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST);
-		//Rest of Payload is set on OnPreSend.
-	}
-
-	void PrepareClockSyncTuneResponse(const uint8_t requestId, const uint32_t estimationError)
-	{
-		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY);
-		ATUI_S.uint = estimationError;
-		S_ArrayToPayload();
-	}
-
 	void PrepareLinkReport(const bool requestReply)
 	{
 		if (requestReply)
@@ -849,7 +837,7 @@ protected:
 		{
 			PrepareReportPacket(LOLA_LINK_SUBHEADER_LINK_REPORT);
 		}
-		
+
 		PacketHolder.GetPayload()[0] = LinkInfo->GetRSSINormalized();
 		for (uint8_t i = 1; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
 		{

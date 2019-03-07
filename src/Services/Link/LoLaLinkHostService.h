@@ -475,12 +475,7 @@ private:
 
 	void PrepareCryptoStartRequest()
 	{
-		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
-		ATUI_S.uint = LinkInfo->GetPartnerId();
-		PacketHolder.GetPayload()[0] = ATUI_S.array[0];
-		PacketHolder.GetPayload()[1] = ATUI_S.array[1];
-		PacketHolder.GetPayload()[2] = ATUI_S.array[2];
-		PacketHolder.GetPayload()[3] = ATUI_S.array[3];
+		PrepareLinkProtocolSwitchOver();
 
 		GetLoLa()->GetCryptoEncoder()->Encode(PacketHolder.GetPayload(), sizeof(uint32_t));
 	}
@@ -506,10 +501,10 @@ private:
 		}
 	}
 
-	void PrepareClockSyncResponse(const uint8_t requestId, const uint32_t estimationError)
+	void PrepareClockSyncResponse(const uint8_t requestId, const int32_t estimationError)
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REPLY);
-		ATUI_S.uint = estimationError;
+		ATUI_S.iint = estimationError;
 		S_ArrayToPayload();
 	}
 
@@ -517,6 +512,16 @@ private:
 	{
 		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
 		ATUI_S.uint = LinkInfo->GetPartnerId();
+		PacketHolder.GetPayload()[0] = ATUI_S.array[0];
+		PacketHolder.GetPayload()[1] = ATUI_S.array[1];
+		PacketHolder.GetPayload()[2] = ATUI_S.array[2];
+		PacketHolder.GetPayload()[3] = ATUI_S.array[3];
+	}
+
+	void PrepareClockSyncTuneResponse(const uint8_t requestId, const int32_t estimationError)
+	{		
+		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY);
+		ATUI_S.iint = estimationError;
 		S_ArrayToPayload();
 	}
 };
