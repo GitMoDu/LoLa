@@ -15,7 +15,7 @@
 
 
 #ifdef DEBUG_LOG
-#define SERIAL_BAUD_RATE 57600
+#define SERIAL_BAUD_RATE 500000
 #endif
 
 #define _TASK_OO_CALLBACKS

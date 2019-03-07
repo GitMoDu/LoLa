@@ -15,7 +15,7 @@
 #define DEBUG_LOG
 
 #ifdef DEBUG_LOG
-#define SERIAL_BAUD_RATE 57600
+#define SERIAL_BAUD_RATE 500000
 #endif
 
 
