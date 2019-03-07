@@ -18,6 +18,13 @@ private:
 		LinkingSwitchOver = 5
 	};
 
+	enum InfoSyncStagesEnum : uint8_t
+	{
+		AwaitingHostRequest = 0,
+		SendingRemoteInfo = 1,
+		InfoSyncDone = 2
+	};
+
 	LinkRemoteClockSyncer ClockSyncer;
 	ClockSyncRequestTransaction RemoteClockSyncTransaction;
 
@@ -50,6 +57,9 @@ protected:
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD);
+			break;
+		case LoLaLinkInfo::LinkStateEnum::Linking:
+			InfoSyncStage = InfoSyncStagesEnum::AwaitingHostRequest;
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
 			RemoteClockSyncTransaction.Reset();
@@ -264,7 +274,10 @@ protected:
 		switch (LinkingState)
 		{
 		case LinkingStagesEnum::InfoSyncStage:
-			OnInfoSync();
+			if (OnInfoSync())
+			{
+				SetLinkingState(LinkingStagesEnum::ClockSyncStage);
+			}
 			break;
 		case LinkingStagesEnum::ClockSyncStage:
 			OnClockSync();//We transition forward when we receive the protocol switch over.
@@ -282,30 +295,56 @@ protected:
 		}
 	}
 
-
-	void OnInfoSync()
+	bool OnInfoSync()
 	{
-		//First move is done by remote, sending our update until we receive host's.
-		if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+		switch (InfoSyncStage)
 		{
-			PrepareRemoteInfoUpdate();
-			RequestSendPacket(true);
-		}
-		else
-		{
+		case InfoSyncStagesEnum::AwaitingHostRequest:
 			SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			break;
+		case InfoSyncStagesEnum::SendingRemoteInfo:
+			//First move is done by remote, sending our update until we receive host's.
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareRemoteInfoSync();
+				RequestSendPacket(true);
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			}
+			break; 
+		case InfoSyncStagesEnum::InfoSyncDone:
+			return true;
+		default:
+			break;
+		}
+
+		return false;
+	}
+
+	void OnHostInfoSyncRequestReceived()
+	{
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+			LinkingState == LinkingStagesEnum::InfoSyncStage &&
+			InfoSyncStage == InfoSyncStagesEnum::AwaitingHostRequest)
+		{
+			InfoSyncStage = InfoSyncStagesEnum::SendingRemoteInfo;
+			SetNextRunASAP();
 		}
 	}
 
-	void OnHostInfoReceived(const uint16_t rtt, const uint8_t rssi)
+	void OnHostInfoSyncReceived(const uint16_t rtt, const uint8_t rssi)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
-			LinkingState == LinkingStagesEnum::InfoSyncStage)
+			LinkingState == LinkingStagesEnum::InfoSyncStage &&
+			InfoSyncStage == InfoSyncStagesEnum::SendingRemoteInfo)
 		{
 			LinkInfo->SetRTT(rtt);
 			LinkInfo->SetPartnerRSSINormalized(rssi);
 
-			SetLinkingState(LinkingStagesEnum::ClockSyncStage);
+			InfoSyncStage = InfoSyncStagesEnum::InfoSyncDone;
+			SetNextRunASAP();
 		}
 	}
 
@@ -477,13 +516,14 @@ private:
 		S_ArrayToPayload();
 	}
 
-	void PrepareRemoteInfoUpdate()
+	void PrepareRemoteInfoSync()
 	{
-		PrepareShortPacket(0, LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE);//Ignore id.
-		PacketHolder.GetPayload()[1] = LinkInfo->GetRSSINormalized();
-		PacketHolder.GetPayload()[2] = UINT8_MAX; //Padding
-		PacketHolder.GetPayload()[3] = UINT8_MAX; //Padding
-		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
+		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE);
+		PacketHolder.GetPayload()[0] = LinkInfo->GetRSSINormalized();
+		for (uint8_t i = 1; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
+		{
+			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
+		}
 	}
 
 	void PrepareClockSyncRequest(const uint8_t requestId)	//Remote

@@ -21,6 +21,13 @@ private:
 		LinkingSwitchOver = 5
 	};
 
+	enum InfoSyncStagesEnum : uint8_t
+	{
+		AwaitingLatencyMeasurement = 0,
+		SendingInfoRequest = 1,
+		SendingHostInfo = 2
+	};
+
 	LinkHostClockSyncer ClockSyncer;
 	ClockSyncResponseTransaction HostClockSyncTransaction;
 
@@ -58,6 +65,9 @@ protected:
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD);
+			break;
+		case LoLaLinkInfo::LinkStateEnum::Linking:
+			InfoSyncStage = InfoSyncStagesEnum::AwaitingLatencyMeasurement;
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
 			ClockSyncer.SetReadyForEstimation();
@@ -264,17 +274,22 @@ protected:
 
 	void OnInfoSync()
 	{
-		//If we don't have enough latency samples, we make more.
-		if (LatencyMeter.GetSampleCount() >= LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES)
+		switch (InfoSyncStage)
 		{
-			if (LinkInfo->HasPartnerRSSI())//First move is done by remote.
+		case InfoSyncStagesEnum::AwaitingLatencyMeasurement:
+			if (LatencyMeter.GetSampleCount() >= LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES)
 			{
 				//Update link info RTT.
 				LinkInfo->SetRTT(LatencyMeter.GetAverageLatency());
 
-				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+				InfoSyncStage = InfoSyncStagesEnum::SendingInfoRequest;
+				SetNextRunASAP();
+			}
+			else
+			{	//If we don't have enough latency samples, we make more.
+				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD)
 				{
-					PrepareHostInfoUpdate();
+					PreparePing();
 					RequestSendPacket(true);
 				}
 				else
@@ -282,26 +297,43 @@ protected:
 					SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 				}
 			}
+			break;
+		case InfoSyncStagesEnum::SendingInfoRequest:
+			if (LinkInfo->HasPartnerRSSI())
+			{
+				InfoSyncStage = InfoSyncStagesEnum::SendingHostInfo;
+				SetNextRunASAP();
+			}
 			else
 			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+				{
+					PrepareInfoSyncRequest();
+					RequestSendPacket(true);
+				}
+				else
+				{
+					SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+				}
 			}
-		}
-		else
-		{
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD)
+			break;
+		case InfoSyncStagesEnum::SendingHostInfo:
+			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
-				PreparePing();
+				PrepareHostInfoSync();
 				RequestSendPacket(true);
 			}
 			else
 			{
 				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
+			break;
+		default:
+			break;
 		}
 	}
 
-	void OnRemoteInfoReceived(const uint8_t rssi)
+	void OnRemoteInfoSyncReceived(const uint8_t rssi)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage)
@@ -330,7 +362,8 @@ protected:
 	///Clock Sync.
 	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking )
+		Serial.println("Much Clock");
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
 				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
@@ -350,7 +383,7 @@ protected:
 			default:
 				HostClockSyncTransaction.Reset();
 				break;
-			}		
+			}
 		}
 	}
 
@@ -396,7 +429,7 @@ protected:
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
 			LatencyMeter.OnAckReceived(id);
-		}			
+		}
 	}
 
 	void OnLinkAckReceived(const uint8_t header, const uint8_t id)
@@ -453,13 +486,25 @@ private:
 		GetLoLa()->GetCryptoEncoder()->Encode(PacketHolder.GetPayload(), sizeof(uint32_t));
 	}
 
-	void PrepareHostInfoUpdate()
+	void PrepareHostInfoSync()
 	{
-		PrepareShortPacket(0, LOLA_LINK_SUBHEADER_INFO_SYNC_HOST);//Ignore id.
-		PacketHolder.GetPayload()[1] = LinkInfo->GetRSSINormalized();
-		PacketHolder.GetPayload()[2] = LinkInfo->GetRTT() & 0xFF; //MSB 16 bit unsigned.
-		PacketHolder.GetPayload()[3] = (LinkInfo->GetRTT() >> 8) & 0xFF;
-		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
+		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_HOST);
+		PacketHolder.GetPayload()[0] = LinkInfo->GetRSSINormalized();
+		PacketHolder.GetPayload()[1] = LinkInfo->GetRTT() & 0xFF; //MSB 16 bit unsigned.
+		PacketHolder.GetPayload()[2] = (LinkInfo->GetRTT() >> 8) & 0xFF;
+		for (uint8_t i = 3; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
+		{
+			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
+		}
+	}
+
+	void PrepareInfoSyncRequest()
+	{
+		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST);
+		for (uint8_t i = 3; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
+		{
+			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
+		}
 	}
 
 	void PrepareClockSyncResponse(const uint8_t requestId, const uint32_t estimationError)

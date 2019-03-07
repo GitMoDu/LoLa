@@ -32,6 +32,7 @@ class LoLaLinkService : public IPacketSendService
 {
 private:
 	PingPacketDefinition				DefinitionPing;
+	LinkReportPacketDefinition			DefinitionReport;
 
 	LinkShortPacketDefinition			DefinitionShort;
 	LinkShortWithAckPacketDefinition	DefinitionShortWithAck;
@@ -73,8 +74,9 @@ protected:
 	///
 
 
-	//Sub state.
+	//Shared Sub state helpers.
 	uint8_t LinkingState = 0;
+	uint8_t InfoSyncStage = 0;
 
 	LoLaLinkInfo* LinkInfo = nullptr;
 
@@ -110,7 +112,8 @@ protected:
 	virtual void OnRemotePublicKeyReceived(const uint8_t sessionId, uint8_t * encodedPublicKey) {}
 
 	//Linked packets.
-	virtual void OnRemoteInfoReceived(const uint8_t rssi) {}
+	virtual void OnRemoteInfoSyncReceived(const uint8_t rssi) {}
+	virtual void OnHostInfoSyncRequestReceived() {}
 	//virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	//virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	///
@@ -122,7 +125,7 @@ protected:
 	virtual bool OnAckedPacketReceived(ILoLaPacket* receivedPacket) { return false; }
 
 	//Linked packets.
-	virtual void OnHostInfoReceived(const uint16_t rtt, const uint8_t rssi) {}
+	virtual void OnHostInfoSyncReceived(const uint16_t rtt, const uint8_t rssi) {}
 	//virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	//virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	//virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
@@ -206,6 +209,7 @@ protected:
 			{
 				if (!OnAwaitingLink())//Time out is different for host/remote.
 				{
+					Serial.println("Awaiting Link time out");
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				}
 			}
@@ -216,6 +220,7 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
 			{
+				Serial.println("Linking time out");
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			}
 			else
@@ -240,8 +245,6 @@ protected:
 		}
 	}
 
-
-
 private:
 	inline void OnKeepingLinkCommon()
 	{
@@ -251,7 +254,7 @@ private:
 		}
 		else if (ReportPending) //Priority update, to keep link info up to date.
 		{
-			PrepareLinkInfoReport();
+			PrepareLinkReport(LinkInfo->GetPartnerLastReportElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD);
 			RequestSendPacket();
 		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
@@ -386,6 +389,7 @@ protected:
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
 		if (!packetMap->AddMapping(&DefinitionPing) ||
+			!packetMap->AddMapping(&DefinitionReport) ||
 			!packetMap->AddMapping(&DefinitionShort) ||
 			!packetMap->AddMapping(&DefinitionShortWithAck) ||
 			!packetMap->AddMapping(&DefinitionLong))
@@ -395,6 +399,7 @@ protected:
 
 		//Make sure our re-usable packet has enough space for all our packets.
 		if (Packet->GetMaxSize() < DefinitionPing.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionReport.GetTotalSize() ||
 			Packet->GetMaxSize() < DefinitionShort.GetTotalSize() ||
 			Packet->GetMaxSize() < DefinitionShortWithAck.GetTotalSize() ||
 			Packet->GetMaxSize() < DefinitionLong.GetTotalSize())
@@ -428,6 +433,8 @@ protected:
 		GetLoLa()->GetCryptoEncoder()->Clear();		
 
 		KeyExchanger.ClearPartner();
+
+		InfoSyncStage = 0;
 
 		OnClearSession();
 
@@ -590,7 +597,9 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
-				//GetLoLa()->SetCryptoEnabled(true);
+#ifdef USE_ENCRYPTION
+				GetLoLa()->SetCryptoEnabled(true);
+#endif
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
 				Serial.println(LinkInfo->GetPartnerId());
@@ -680,34 +689,21 @@ protected:
 				//To Host.
 			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
 				OnLinkDiscoveryReceived();
-				break;
+				return true;
 			case LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnPKCRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
-				break;
+				return true;
 
 				//To remote.
 			case LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnIdBroadcastReceived(receivedPacket->GetId(), ATUI_R.uint);
-				break;
+				return true;
 				///
 
 				///Linked Packets
-				//To Host.
-			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
-				ATUI_R.uint = receivedPacket->GetPayload()[2] << 8;
-				ATUI_R.uint += receivedPacket->GetPayload()[3];
-				OnHostInfoReceived(receivedPacket->GetPayload()[1], (uint16_t)ATUI_R.uint);
-				break;
-			//case LOLA_LINK_SUBHEADER_LINK_INFO_REPORT:
-			//	OnLinkInfoReportReceived(incomingPacket->GetId(), incomingPacket->GetPayload()[1]);
-			//	break;
 
-				//To Remote.
-			case LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE:
-				OnRemoteInfoReceived(receivedPacket->GetPayload()[1]);
-				break;
 
 			//case LOLA_LINK_SUBHEADER_NTP_REQUEST:
 			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
@@ -746,12 +742,35 @@ protected:
 				OnHostPublicKeyReceived(receivedPacket->GetId(), &receivedPacket->GetPayload()[1]);
 				break;
 			}
-			break;
+			return true;
+		case LOLA_LINK_HEADER_REPORT:
+			switch (receivedPacket->GetId())
+			{
+				//To Host.
+			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
+				ATUI_R.uint = receivedPacket->GetPayload()[1] << 8;
+				ATUI_R.uint += receivedPacket->GetPayload()[2];
+				OnHostInfoSyncReceived(receivedPacket->GetPayload()[0], (uint16_t)ATUI_R.uint);
+				break;
+
+				//To Remote.
+			case LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE:
+				OnRemoteInfoSyncReceived(receivedPacket->GetPayload()[0]);
+				break;
+			case LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST:
+				OnHostInfoSyncRequestReceived();
+				break;
+			default:
+				break;
+			}
+
+			return true;
+		
 		default:
-			return false;
+			break;
 		}
 
-		return true;
+		return false;
 	}
 
 	
@@ -759,6 +778,7 @@ protected:
 	{
 		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
+			Serial.println("Got a Ping...");
 			switch (LinkInfo->GetLinkState())
 			{
 			case LoLaLinkInfo::LinkStateEnum::Linking:
@@ -779,6 +799,7 @@ protected:
 		if (header == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
 			OnPingAckReceived(id);
+			Serial.println("Pong!");
 		}
 		else
 		{
@@ -789,6 +810,7 @@ protected:
 	///Packet builders.
 	void PreparePing()
 	{
+		Serial.println("Ping!");
 		PacketHolder.SetDefinition(&DefinitionPing);
 		PacketHolder.SetId(random(0, UINT8_MAX));
 	}
@@ -819,13 +841,28 @@ protected:
 		S_ArrayToPayload();
 	}
 
-	void PrepareLinkInfoReport()
+	void PrepareLinkReport(const bool requestReply)
 	{
-		PrepareShortPacket(LinkInfo->GetPartnerInfoUpdateElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD, LOLA_LINK_SUBHEADER_LINK_INFO_REPORT);
-		PacketHolder.GetPayload()[1] = LinkInfo->GetRSSINormalized();
-		PacketHolder.GetPayload()[2] = UINT8_MAX; //Padding
-		PacketHolder.GetPayload()[3] = UINT8_MAX; //Padding
-		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
+		if (requestReply)
+		{
+			PrepareReportPacket(LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY);
+		}
+		else
+		{
+			PrepareReportPacket(LOLA_LINK_SUBHEADER_LINK_REPORT);
+		}
+		
+		PacketHolder.GetPayload()[0] = LinkInfo->GetRSSINormalized();
+		for (uint8_t i = 1; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
+		{
+			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
+		}
+	}
+
+	inline void PrepareReportPacket(const uint8_t subHeader)
+	{
+		PacketHolder.SetDefinition(&DefinitionReport);
+		PacketHolder.SetId(subHeader);
 	}
 
 	inline void PrepareShortPacket(const uint8_t requestId, const uint8_t subHeader)

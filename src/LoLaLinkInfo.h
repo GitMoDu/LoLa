@@ -174,7 +174,7 @@ public:
 		return ILOLA_INVALID_MILLIS;
 	}
 
-	uint32_t GetPartnerInfoUpdateElapsed()
+	uint32_t GetPartnerLastReportElapsed()
 	{
 		if (PartnerInfoLastUpdated != ILOLA_INVALID_MILLIS)
 		{
