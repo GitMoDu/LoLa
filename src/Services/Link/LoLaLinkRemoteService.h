@@ -335,7 +335,7 @@ protected:
 		}
 	}
 
-	void OnHostInfoSyncReceived(const uint16_t rtt, const uint8_t rssi)
+	void OnHostInfoSyncReceived(const uint8_t rssi, const uint16_t rtt)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage &&

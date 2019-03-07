@@ -125,7 +125,7 @@ protected:
 	virtual bool OnAckedPacketReceived(ILoLaPacket* receivedPacket) { return false; }
 
 	//Linked packets.
-	virtual void OnHostInfoSyncReceived(const uint16_t rtt, const uint8_t rssi) {}
+	virtual void OnHostInfoSyncReceived(const uint8_t rssi, const uint16_t rtt) {}
 	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	//virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
 	//virtual void OnLinkingSwitchOverReceived(const uint8_t requestId, const uint8_t subHeader) {}
@@ -749,8 +749,8 @@ protected:
 			{
 				//To Host.
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
-				ATUI_R.uint = receivedPacket->GetPayload()[1] << 8;
-				ATUI_R.uint += receivedPacket->GetPayload()[2];
+				ATUI_R.uint = receivedPacket->GetPayload()[1];
+				ATUI_R.uint += receivedPacket->GetPayload()[2] << 8;
 				OnHostInfoSyncReceived(receivedPacket->GetPayload()[0], (uint16_t)ATUI_R.uint);
 				break;
 
