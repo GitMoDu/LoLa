@@ -65,22 +65,26 @@ public:
 		LastSentPacketId = packetId;
 	}
 
-	void OnAckReceived(const uint8_t packetId)
+	bool OnAckReceived(const uint8_t packetId)
 	{
+		Grunt = micros() - LastSentWith;
+
 		if (LastSentWith != ILOLA_INVALID_MICROS &&
 			LastSentPacketId == packetId)
 		{
-			Grunt = micros() - LastSentWith;
-
 			if (Grunt < LOLA_LATENCY_SERVICE_PING_TIMEOUT_MICROS)
 			{
 				DurationStack.addForce((uint16_t)Grunt);
+
+				return true;
 			}
 			else
 			{
 				//Outlier value discarded.
 			}
 		}
+
+		return false;
 	}
 };
 #endif
