@@ -313,14 +313,13 @@ protected:
 		SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 	}
 
-	void OnLinkInfoReportReceived(const bool requestUpdate, const uint8_t rssi)
+	void OnLinkInfoReportReceived(const uint8_t rssi)
 	{
 		if (LinkInfo->HasLink())
 		{
 			LinkInfo->SetPartnerRSSINormalized(rssi);
 			LinkInfo->StampPartnerInfoUpdated();
 
-			ReportPending = requestUpdate;
 			SetNextRunASAP();
 		}
 	}
@@ -749,6 +748,15 @@ protected:
 		case LOLA_LINK_HEADER_REPORT:
 			switch (receivedPacket->GetId())
 			{
+				//To both.
+			case LOLA_LINK_SUBHEADER_LINK_REPORT:
+				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0]);
+				break;			
+			case LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY:
+				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0]);
+				ReportPending = true;
+				break;
+
 				//To Host.
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
 				ATUI_R.uint = receivedPacket->GetPayload()[1];
