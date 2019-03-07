@@ -604,9 +604,8 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linked:
 				LinkInfo->StampLinkStarted();
-				GetLoLa()->ResetStatistics();
-				SetNextRunASAP();
 				ClockSyncerPointer->StampSynced();
+				GetLoLa()->ResetStatistics();
 				PowerBalancer.SetMaxPower();
 
 #ifdef DEBUG_LOLA
@@ -631,6 +630,7 @@ protected:
 
 				//Notify all link dependent services they can start.
 				ServicesManager->NotifyServicesLinkUpdated(true);
+				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Disabled:
 				LinkInfo->Reset();
