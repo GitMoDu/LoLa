@@ -32,6 +32,7 @@ private:
 	ClockSyncResponseTransaction HostClockSyncTransaction;
 
 	//Latency measurement.
+	bool PingAcked = false;
 	LoLaLinkLatencyMeter<LOLA_LINK_SERVICE_UNLINK_MAX_LATENCY_SAMPLES> LatencyMeter;
 
 	//Session lifetime.
@@ -286,8 +287,9 @@ protected:
 			}
 			else
 			{	//If we don't have enough latency samples, we make more.
-				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD)
+				if (PingAcked || GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MIN)
 				{
+					PingAcked = false;
 					PreparePing();
 					RequestSendPacket(true);
 				}
@@ -421,6 +423,7 @@ protected:
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
 			LatencyMeter.OnAckReceived(id);
+			PingAcked = true;
 		}
 	}
 
