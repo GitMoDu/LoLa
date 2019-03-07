@@ -398,17 +398,11 @@ protected:
 	void OnKeepingLink()
 	{
 		if (HostClockSyncTransaction.IsResultReady())
-		{
-			if (HostClockSyncTransaction.GetResult() == 0)
-			{
-				ClockSyncer.StampSynced();
-			}
-#ifdef DEBUG_LOLA
-			else
+		{			
+			if (HostClockSyncTransaction.GetResult() != 0)
 			{
 				LinkInfo->StampClockSyncAdjustment();
 			}
-#endif
 
 			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
 
