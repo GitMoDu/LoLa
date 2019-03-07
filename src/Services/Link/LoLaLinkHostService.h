@@ -362,7 +362,6 @@ protected:
 	///Clock Sync.
 	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
 	{
-		Serial.println("Much Clock");
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
 			HostClockSyncTransaction.SetResult(requestId,

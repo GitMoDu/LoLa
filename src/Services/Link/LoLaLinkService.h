@@ -114,7 +114,7 @@ protected:
 	//Linked packets.
 	virtual void OnRemoteInfoSyncReceived(const uint8_t rssi) {}
 	virtual void OnHostInfoSyncRequestReceived() {}
-	//virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
+	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	//virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
 	///
 
@@ -703,12 +703,10 @@ protected:
 				///
 
 				///Linked Packets
-
-
-			//case LOLA_LINK_SUBHEADER_NTP_REQUEST:
-			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
-			//	OnClockSyncRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
-			//	break;
+			case LOLA_LINK_SUBHEADER_NTP_REQUEST:
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnClockSyncRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
+				break;
 			//case LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST:
 			//	ArrayToR_Array(&incomingPacket->GetPayload()[1]);
 			//	OnClockSyncTuneRequestReceived(incomingPacket->GetId(), ATUI_R.uint);
