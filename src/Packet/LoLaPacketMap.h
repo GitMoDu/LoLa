@@ -19,7 +19,7 @@
 class AckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_IS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_IS_ACK; }
 	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
 	uint8_t GetPayloadSize() {
 		return 1;//Payload is original Header. Id is optional.

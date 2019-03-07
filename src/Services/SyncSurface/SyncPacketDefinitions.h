@@ -48,7 +48,7 @@ public:
 	SyncDataPacketDefinition() : SyncAbstractPacketDefinition() {}
 
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
 
 	//TODO: Refactor as template.
 	void SetBaseHeader(const uint8_t baseHeader)
@@ -76,7 +76,7 @@ public:
 	SyncMetaPacketDefinition() :SyncAbstractPacketDefinition() {}
 
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID;}
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC;}
 
 	void SetBaseHeader(const uint8_t baseHeader)
 	{

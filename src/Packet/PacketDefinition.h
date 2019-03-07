@@ -11,17 +11,18 @@
 #define PACKET_DEFINITION_MASK_CUSTOM_3			B00000100
 #define PACKET_DEFINITION_MASK_CUSTOM_2			B00001000
 #define PACKET_DEFINITION_MASK_CUSTOM_1			B00010000
-#define PACKET_DEFINITION_MASK_IS_ACK			B00100000
-#define PACKET_DEFINITION_MASK_HAS_ID			B01000000 
+#define PACKET_DEFINITION_MASK_IS_ACK			B01000000
 #define PACKET_DEFINITION_MASK_HAS_ACK			B10000000
 #define PACKET_DEFINITION_MASK_BASIC			B00000000
 
+// Packet: [MACCRC|HEADER|INDEX|PAYLOAD]
+
 #define LOLA_PACKET_MACCRC_INDEX				(0)
 #define LOLA_PACKET_HEADER_INDEX				(LOLA_PACKET_MACCRC_INDEX + 1)
-#define LOLA_PACKET_PAYLOAD_INDEX				(LOLA_PACKET_HEADER_INDEX + 1)
+#define LOLA_PACKET_ID_INDEX					(LOLA_PACKET_HEADER_INDEX + 1)
+#define LOLA_PACKET_PAYLOAD_INDEX				(LOLA_PACKET_ID_INDEX + 1)
 
-#define LOLA_PACKET_MIN_SIZE					(LOLA_PACKET_PAYLOAD_INDEX)	//CRC + Header + Payload
-#define LOLA_PACKET_MIN_SIZE_WITH_ID			(LOLA_PACKET_MIN_SIZE + 1)		//CRC + Header + Payload + Id
+#define LOLA_PACKET_MIN_SIZE					(LOLA_PACKET_PAYLOAD_INDEX)	//CRC + Header + Id + Payload
 
 #define LOLA_PACKET_MAX_PACKET_SIZE				32
 
@@ -48,14 +49,7 @@ public:
 
 	uint8_t GetTotalSize()
 	{
-		if (HasId())
-		{
-			return LOLA_PACKET_MIN_SIZE_WITH_ID + GetPayloadSize();
-		}
-		else
-		{
-			return LOLA_PACKET_MIN_SIZE + GetPayloadSize();
-		}
+		return LOLA_PACKET_MIN_SIZE + GetPayloadSize();
 	}
 
 	bool IsAck()
@@ -66,11 +60,6 @@ public:
 	bool HasACK()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ACK;
-	}
-
-	bool HasId()
-	{
-		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ID;
 	}
 
 #ifdef DEBUG_LOLA
@@ -88,11 +77,6 @@ public:
 		else if (HasACK())
 		{
 			serial->print(F("ACK|"));
-		}
-
-		if (HasId())
-		{
-			serial->print(F("Id|"));
 		}
 	}
 #endif

@@ -11,7 +11,7 @@ class LoLaSender : public LoLaBuffer
 private:
 	PacketDefinition* AckDefinition = nullptr;
 
-	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE_WITH_ID> AckPacket;
+	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE> AckPacket;
 
 	///For use of estimated latency features
 	uint8_t ETTM = 0;//Estimated transmission time in millis.

@@ -18,7 +18,7 @@
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK		(sizeof(uint32_t))	//1 byte encoded Partner Id.
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG					(1 + max(LOLA_LINK_CRYPTO_KEY_MAX_SIZE, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.		
 
-#define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_SIZE_WITH_ID + LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
+#define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_SIZE + LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
 
 //Linked.
 #define LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD				(uint32_t)(15)
@@ -103,7 +103,7 @@ enum LinkingStagesEnum : uint8_t
 class PingPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK | PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
 	uint8_t GetHeader() { return LOLA_LINK_HEADER_PING_WITH_ACK; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING; }
 
@@ -118,7 +118,7 @@ public:
 class LinkReportPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
 	uint8_t GetHeader() { return LOLA_LINK_HEADER_REPORT; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; }
 
@@ -133,7 +133,7 @@ public:
 class LinkShortPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
 	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT; }
 
@@ -148,7 +148,7 @@ public:
 class LinkShortWithAckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID | PACKET_DEFINITION_MASK_HAS_ACK; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
 	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT_WITH_ACK; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK; }
 
@@ -163,7 +163,7 @@ public:
 class LinkLongPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ID; }
+	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
 	uint8_t GetHeader() { return LOLA_LINK_HEADER_LONG; }
 	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG; }
 

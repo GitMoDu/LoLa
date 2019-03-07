@@ -222,12 +222,10 @@ public:
 			if (SendStatus == SendStatusEnum::WaitingForAck &&
 				HasSendPendingInternal())
 			{
-				if (Packet->GetDefinition()->HasId() &&
-					Packet->GetId() != id)
+				if (Packet->GetId() != id)
 				{
 					return false;
 				}
-
 
 				//Notify Ack received will be fired, as soon as the service runs.
 				SendStatus = SendStatusEnum::AckOk;

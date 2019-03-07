@@ -15,12 +15,6 @@ public:
 	virtual uint8_t * GetRaw() { return nullptr; }
 	virtual uint8_t GetMaxSize() { return 0; }
 
-private:
-	inline uint8_t GetIdIndex()
-	{
-		return LOLA_PACKET_PAYLOAD_INDEX + Definition->GetPayloadSize();
-	}
-
 public:
 	PacketDefinition * GetDefinition()
 	{
@@ -34,19 +28,12 @@ public:
 
 	uint8_t GetId()
 	{
-		if (Definition != nullptr && Definition->HasId())
-		{
-			return GetRaw()[GetIdIndex()];
-		}
-		return 0;
+		return GetRaw()[LOLA_PACKET_ID_INDEX];
 	}
 
 	void SetId(const uint8_t id)
 	{
-		if (Definition != nullptr && Definition->HasId())
-		{
-			GetRaw()[GetIdIndex()] = id;
-		}	
+		GetRaw()[LOLA_PACKET_ID_INDEX] = id;
 	}
 
 	uint8_t GetMACCRC()
