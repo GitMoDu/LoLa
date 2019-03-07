@@ -10,11 +10,11 @@
 //Reserved [0;1] for AckS
 #define PACKET_DEFINITION_ACK_HEADER				0x00
 
-//Reserved [1;4] for Link service.
+//Reserved [1;5] for Link service.
 #define PACKET_DEFINITION_LINK_START_HEADER			(PACKET_DEFINITION_ACK_HEADER + 1)
 
 //User service range start
-#define PACKET_DEFINITION_USER_HEADERS_START		(PACKET_DEFINITION_LINK_START_HEADER + 4)
+#define PACKET_DEFINITION_USER_HEADERS_START		(PACKET_DEFINITION_LINK_START_HEADER + 5)
 
 class AckPacketDefinition : public PacketDefinition
 {
