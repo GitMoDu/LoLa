@@ -15,9 +15,6 @@
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
-
-#include <Services\Link\LoLaLinkInfoSyncTransaction.h>
-
 #include <Services\Link\LoLaLinkPowerBalancer.h>
 
 #ifdef USE_FREQUENCY_HOP
@@ -208,7 +205,6 @@ protected:
 			{
 				if (!OnAwaitingLink())//Time out is different for host/remote.
 				{
-					Serial.println("Awaiting Link time out");
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				}
 			}
@@ -219,7 +215,6 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
 			{
-				Serial.println("Linking time out");
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			}
 			else
@@ -358,7 +353,6 @@ protected:
 		LinkingState = linkingState;
 		ResetLastSentTimeStamp();
 
-		Serial.println(linkingState);
 		SetNextRunASAP();
 	}
 
@@ -786,9 +780,6 @@ protected:
 	{
 		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
-#ifdef DEBUG_LOLA
-			Serial.println("Got a Ping...");
-#endif
 			switch (LinkInfo->GetLinkState())
 			{
 			case LoLaLinkInfo::LinkStateEnum::Linking:
@@ -807,9 +798,6 @@ protected:
 	{
 		if (header == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
-#ifdef DEBUG_LOLA
-			Serial.println("Pong!");
-#endif
 			OnPingAckReceived(id);
 		}
 		else
@@ -821,7 +809,6 @@ protected:
 	///Packet builders.
 	void PreparePing()
 	{
-		Serial.println("Ping!");
 		PacketHolder.SetDefinition(&DefinitionPing);
 		PacketHolder.SetId(random(0, UINT8_MAX));
 	}
