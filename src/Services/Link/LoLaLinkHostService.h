@@ -80,9 +80,10 @@ protected:
 
 	void OnPreSend()
 	{
-		if (!LinkInfo->HasLink() && PacketHolder.GetDefinition()->HasACK())
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+			LinkingState == LinkingStagesEnum::InfoSyncStage &&
+			PacketHolder.GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
-			//Piggy back on any link acked packets to measure latency.
 			LatencyMeter.OnAckPacketSent(PacketHolder.GetId());
 		}
 	}
@@ -420,7 +421,8 @@ protected:
 
 	void OnPingAckReceived(const uint8_t id)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking && 
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+			LinkingState == LinkingStagesEnum::InfoSyncStage &&
 			LatencyMeter.OnAckReceived(id))
 		{
 			PingAcked = true;
