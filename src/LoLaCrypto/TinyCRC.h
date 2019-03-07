@@ -8,6 +8,7 @@
 #define _TINYCRC_h
 
 #include <stdint.h>
+#include <avr/pgmspace.h>
 
 
 const uint8_t crc_table_smbus[256] PROGMEM = {
