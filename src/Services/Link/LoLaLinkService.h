@@ -290,13 +290,12 @@ protected:
 	{
 		LastSent = millis();
 
-		if (header == LOLA_LINK_HEADER_REPORT)
+		if (header == LOLA_LINK_HEADER_REPORT &&
+			LinkInfo->HasLink() &&
+			ReportPending)
 		{
-			if (ReportPending)
-			{
-				ReportPending = false;
-				LinkInfo->StampLocalInfoLastUpdatedRemotely();
-			}
+			ReportPending = false;
+			LinkInfo->StampLocalInfoLastUpdatedRemotely();
 		}
 
 		SetNextRunASAP();
