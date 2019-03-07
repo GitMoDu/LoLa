@@ -295,7 +295,7 @@ protected:
 	{
 		LastSent = millis();
 
-		if (header == DefinitionShort.GetHeader())
+		if (header == LOLA_LINK_HEADER_REPORT)
 		{
 			if (ReportPending)
 			{
