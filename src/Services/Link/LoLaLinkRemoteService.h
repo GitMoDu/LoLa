@@ -282,6 +282,7 @@ protected:
 			OnClockSync();//We transition forward when we receive the protocol switch over.
 			break;
 		case LinkingStagesEnum::LinkProtocolSwitchOver:
+			ClockSyncer.SetSynced();
 			SetLinkingState(LinkingStagesEnum::LinkingDone);//Nothing to do here.
 			break;
 		case LinkingStagesEnum::LinkingDone:
