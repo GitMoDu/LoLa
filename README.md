@@ -11,13 +11,9 @@
 For Arduino compatible boards. 
   
 
-# THIS PROJECT IS A WORKING IN PROGRESS, DO NOT EXPECT ANYTHING TO WORK OUT OF THE BOX 
+# This project would not be possible (and actually won't compile) without these contributions
 
-  
-
-This project would not be possible (and actually won't compile) without the contributions for: 
-
-
+ 
 Radio Driver for Si446x: https://github.com/zkemble/Si446x 
 
 Ring Buffer: https://github.com/wizard97/Embedded_RingBuf_CPP 
@@ -31,17 +27,26 @@ Tiny CRC calculator fork: https://github.com/GitMoDu/TinyCRC
 
 Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git
 
+Micro Elyptic Curve Cryptography: https://github.com/kmackay/micro-ecc
 
- 
+Crypto Library for modern embedded Cyphers: https://github.com/rweather/arduinolibs
 
 
-Goal for this project: 
 
+
+
+# Goal for this project
 
 Make seamlessly bi-directional communicating real-time system, for Remote Control and Robotics applications (Example: RC car and remote), with the least possible latency while still providing room for lots of "channels".
 
+Gist of the Packet Driver: 
+When receiving, it tries to throw the incoming packet to one of the registered LoLa Services. There is no callback for when no registered service wants the packet. 
 
-Link Features:
+The packets definitions and payload are defined in a very minimalistic way with only some configurability.
+  
+
+
+# Link Features
 
 Driver for Si4463 [WORKING]: The radio IC this project is based around, but not limited to.
 
@@ -66,32 +71,26 @@ Simulated Packet Loss for Testing[WORKING]: This feature allows us to test the s
 Link diagnostics [WORKING]: Measures link properties: Latency, RSSI, Remote RSSI. Not included in Link by default, only used for diagnose and debug the radio IC.
 
 
-Implemented services.
+# Implemented services
 
 SyncSurface Service [WORKING]: The star feature and whole reason I started this project. Synchronises an array of N blocks (32bits wide) in a differential fashion, i.e., only send over radio the changing blocks, not the whole data array. There's a 2-way protocol to ensure data integrity without compromising data update latency.
 
 
-Why not Radiohead or similar radio libraries? 
+# Why not Radiohead or similar radio libraries? 
 
 I'd like to build a real time system, biasing the implementation for low latency and code readability. Besides, it's fun. 
 
  
 
-Gist of the Packet Driver: 
 
-When receiving, it tries to throw the incoming packet to one of the registered LoLa Services. There is no callback for when no registered service wants the packet. 
-
-The packets definitions and payload are defined in a very minimalistic way with only some configurability.
-  
-
-Notable issues: 
+# Notable issues
 
 It's quite a memory hog (around 1.5 kB for the example projects with only 2 sync surfaces), and ROM but there's a lot of functionality. 
 
  
 
 
-Future : 
+# Future : 
 Async Radio Driver [IN_PROGRESS] – Perform the long packet processing in the main loop, instead of hogging the interrupt.
 
 Cryptography[IN_PROGRESS] – Linking doesn't start until an Elyptic Curve Diffie-Hellman key exchange is done. Packet encoding is buggy, is awaitng Async driver.
@@ -106,7 +105,7 @@ Man-In-Middle attacks are very easy as data is not encrypted. There was an easy 
 Channel Hopping[IN PROGRESS]: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. During link time, we can use the same time-base mechanism of the TOTP to generate a pseudo-random channel hopping. Maybe include a white-list of usable channels, which could itself be self-updating. Current version collides with packet operations on the driver and wipes the FIFO, needs improvement to work with short time frames. Waiting for async radio driver.
 
 
-Deprecated:
+# Deprecated:
 
 AVR Support: Way too much cool stuff happening for a simple Arduino to keep up with.
 
@@ -115,7 +114,7 @@ AVR Support: Way too much cool stuff happening for a simple Arduino to keep up w
 Piggy backing on linking time was producing bad values, reverted to exclusively measuring latency with Ping packets.
 
 
-Tested with: 
+# Tested with: 
 
 Maple Mini (STM32F103)
 
