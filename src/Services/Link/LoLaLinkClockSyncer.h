@@ -5,11 +5,13 @@
 
 #include <ClockSource.h>
 #include <Services\Link\ClockSyncTransaction.h>
+#include <Services\Link\LoLaLinkDefinitions.h>
 
-#define CLOCK_SYNC_GOOD_ENOUGH_COUNT						2
 
-#define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)5000
-#define CLOCK_SYNC_MAX_TUNE_ERROR							(int32_t)100
+//#define CLOCK_SYNC_GOOD_ENOUGH_COUNT						2
+
+//#define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)5000
+#define LOLA_CLOCK_SYNC_MAX_TUNE_ERROR							(int32_t)100
 
 #define LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR				(int8_t)4
 #define LOLA_CLOCK_SYNC_TUNE_RATIO							(int8_t)3
@@ -113,7 +115,7 @@ public:
 
 	bool IsTimeToTune()
 	{
-		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (CLOCK_SYNC_TUNE_ELAPSED_MILLIS));
+		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD));
 	}	
 
 	void SetSynced()
@@ -147,7 +149,7 @@ public:
 	bool OnTuneErrorReceived(const int32_t estimationError)
 	{
 		uint8_t Result = false;
-		if (abs(estimationError) > CLOCK_SYNC_MAX_TUNE_ERROR)
+		if (abs(estimationError) > LOLA_CLOCK_SYNC_MAX_TUNE_ERROR)
 		{
 			//TODO: Break connection on threshold value.
 		}
@@ -214,7 +216,7 @@ public:
 
 	bool IsSynced()
 	{
-		return SyncGoodCount >= CLOCK_SYNC_GOOD_ENOUGH_COUNT;
+		return SyncGoodCount >= LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES;
 	}
 
 	void SetReadyForEstimation()
@@ -226,7 +228,7 @@ public:
 	{
 		return IsSynced() && LastSynced != ILOLA_INVALID_MILLIS &&
 			(LastEstimation == ILOLA_INVALID_MILLIS ||
-			(millis() - LastEstimation) > CLOCK_SYNC_TUNE_ELAPSED_MILLIS);
+			(millis() - LastEstimation) > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD);
 	}
 
 	void OnEstimationReceived(const int32_t estimationError)
