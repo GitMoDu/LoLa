@@ -43,10 +43,10 @@ public:
 		return true;
 	}
 
-	bool SendAck(PacketDefinition* payloadDefinition, const uint8_t id)
+	bool SendAck(const uint8_t header, const uint8_t id)
 	{
 		AckPacket.SetDefinition(AckDefinition);
-		AckPacket.GetPayload()[0] = payloadDefinition->GetHeader();
+		AckPacket.GetPayload()[0] = header;
 		AckPacket.SetId(id);
 
 		return SendPacket(&AckPacket);

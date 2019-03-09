@@ -90,7 +90,7 @@ protected:
 	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
 	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
 
-	uint32_t TransmitedCount = 0;
+	volatile uint32_t TransmitedCount = 0;
 	uint32_t ReceivedCount = 0;
 	uint32_t RejectedCount = 0;
 	///
@@ -348,7 +348,8 @@ public:
 	virtual bool AllowedSend(const bool overridePermission = false) { return true; }
 	virtual void OnStart() {}
 	virtual void OnStop() {}
-
+	virtual void OnChannelUpdated() {}
+	virtual void OnTransmitPowerUpdated() {}
 
 	//Device driver implementation.
 	virtual uint8_t GetChannelMax() const { return 0; }
@@ -357,15 +358,10 @@ public:
 	//Device driver events.
 	virtual void OnWakeUpTimer() {}
 	virtual void OnBatteryAlarm() {}
-	virtual void OnReceiveBegin(const uint8_t length, const  int16_t rssi) {}
+	virtual void OnReceiveBegin(const uint8_t length, const int16_t rssi) {}
 	virtual void OnReceivedFail(const int16_t rssi) {}
-	virtual void OnReceived() {}
 	virtual void OnSentOk() {}
 	virtual void OnIncoming(const int16_t rssi) {}
-
-	//Device driver overloads.
-	virtual void OnChannelUpdated() {}
-	virtual void OnTransmitPowerUpdated() {}
 
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)

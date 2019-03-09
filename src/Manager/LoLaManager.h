@@ -60,7 +60,6 @@ public:
 
 	void Start()
 	{		
-		LoLa->Enable();
 		GetLinkService()->Enable();
 	}
 

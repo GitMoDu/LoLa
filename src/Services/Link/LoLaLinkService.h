@@ -181,6 +181,7 @@ protected:
 		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
+			GetLoLa()->Enable();
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:

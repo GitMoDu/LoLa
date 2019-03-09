@@ -59,13 +59,16 @@ public:
 		return false;
 	}
 
-	void ProcessSent(uint8_t header)
+	void ProcessSent(const uint8_t header)
 	{
-		for (uint8_t i = 0; i < ServicesCount; i++)
+		if (header != PACKET_DEFINITION_ACK_HEADER)
 		{
-			if (Services[i] != nullptr && Services[i]->ProcessSent(header))
+			for (uint8_t i = 0; i < ServicesCount; i++)
 			{
-				return;
+				if (Services[i] != nullptr && Services[i]->ProcessSent(header))
+				{
+					return;
+				}
 			}
 		}
 	}

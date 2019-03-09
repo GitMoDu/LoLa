@@ -37,23 +37,117 @@
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
 private:
-	uint8_t LastTransmitPower = 0;
+	volatile uint8_t InterruptStatus = 0xFF;
+
 
 protected:
-	bool Transmit();
-	bool CanTransmit();
-	void OnStart();
+	void DisableInterrupts()
+	{
+#ifndef MOCK_RADIO
+		InterruptStatus = Si446x_irq_off();
+#endif
+	}
 
-private:
-	void DisableInterruptsInternal();
+	void EnableInterrupts()
+	{
+#ifndef MOCK_RADIO
+		Si446x_irq_on(InterruptStatus);
+#endif
+	}
+
+	void SetRadioPower()
+	{
+#ifndef MOCK_RADIO
+		Si446x_setTxPower(CurrentTransmitPower);
+#endif
+	}
+
+	bool Transmit()
+	{
+#ifdef MOCK_RADIO
+		delayMicroseconds(500);
+		return true;
+#else
+
+		if (Sender.GetBufferSize() > 0)
+		{
+			return Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX);
+		}
+
+		return false;
+#endif
+	}
+
+	void ReadReceived()
+	{
+#ifndef MOCK_RADIO
+		Si446x_read(Receiver.GetBuffer(), Receiver.GetBufferSize());
+#endif
+	}
+
+	void SetToReceiving()
+	{
+#ifndef MOCK_RADIO
+		Si446x_RX(CurrentChannel);
+#endif
+	}
+
+	bool SetupRadio()
+	{
+#ifdef MOCK_RADIO
+		return true;
+#else
+		//The SPI interface is designed to operate at a maximum of 10 MHz.
+#if defined(ARDUINO_ARCH_AVR)
+		SPI.setClockDivider(SPI_CLOCK_DIV2); // 16 MHz / 2 = 8 MHz
+#elif defined(ARDUINO_ARCH_STM32F1)
+		SPI.setClockDivider(SPI_CLOCK_DIV8); // 72 MHz / 8 = 9 MHz
+#endif
+
+		// Start up
+		Si446x_init();
+		si446x_info_t info;
+		Si446x_getInfo(&info);
+
+		if (info.part == PART_NUMBER_SI4463X)
+		{
+			Si446x_setTxPower(CurrentTransmitPower);
+			Si446x_setupCallback(SI446X_CBS_RXBEGIN | SI446X_CBS_SENT, 1); // Enable packet RX begin and packet sent callbacks
+			Si446x_setLowBatt(3200); // Set low battery voltage to 3200mV
+			Si446x_setupWUT(1, 8192, 0, SI446X_WUT_BATT); // Run check battery every 2 seconds.
+
+			Si446x_SERVICE();
+			Si446x_sleep();
+#ifdef DEBUG_LOLA
+			Serial.println(F("Si4463 Present"));
+			//Serial.println(info.revBranch);
+			//Serial.println(info.revExternal);
+			//Serial.println(info.revInternal);
+			//Serial.println(info.chipRev);
+			//Serial.println(info.customer);
+			//Serial.println(info.id);
+			//Serial.println(info.patch);
+			//Serial.println(info.partBuild);
+			//Serial.println(info.func);
+			//Serial.println(info.romId);
+#endif // DEBUG_LOLA
+			return true;
+		}
+		else
+		{
+#ifdef DEBUG_LOLA
+			Serial.print(F("Part number invalid: "));
+			Serial.println(info.part);
+			Serial.println(F("Si4463 Driver failed to start."));
+#endif // DEBUG_LOLA
+		}
+
+		return false;
+#endif
+	}
 
 public:
 	LoLaSi446xPacketDriver(Scheduler* scheduler);
-	bool Setup();
-
-	void OnReceiveBegin(const uint8_t length, const int16_t rssi);
-
-	void OnChannelUpdated();
 
 	///Driver constants.
 	uint8_t GetTransmitPowerMax() const

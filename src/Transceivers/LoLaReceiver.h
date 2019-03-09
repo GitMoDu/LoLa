@@ -47,6 +47,7 @@ public:
 		//Get token as early as possible.
 		//IncomingToken = GetCryptoToken(0);//No latency compensation on receiver.
 
+		BufferPacket->SetDefinition(nullptr);
 		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
 		{
 			IncomingContentSize = PacketDefinition::GetContentSize(BufferSize);
@@ -54,29 +55,25 @@ public:
 			CalculatorCRC.Reset();
 			CalculatorCRC.Update(BufferPacket->GetRawContent(), IncomingContentSize);
 
-			if (CalculatorCRC.GetCurrent() != BufferPacket->GetMACCRC())
+			if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
 			{
-				//CRC Rejected.
-				return false;
-			}
+				if (*CryptoEnabled)
+				{
+					Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize);
+				}
 
-			if (*CryptoEnabled)
-			{
-				Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize);
-			}
-
-			//Find a packet definition from map.
-			if (BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader())) &&
-				IncomingContentSize == BufferPacket->GetDefinition()->GetContentSize())
-			{
-				return true;
-			}
+				//Find a packet definition from map.
+				if (!BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader())) ||
+					IncomingContentSize != BufferPacket->GetDefinition()->GetContentSize())
+				{
+					BufferPacket->SetDefinition(nullptr);
+				}
+			}			
 		}
 
 		BufferSize = 0;
-		BufferPacket->SetDefinition(nullptr);
 
-		return false;
+		return BufferPacket->GetDefinition() != nullptr;
 	}
 };
 
