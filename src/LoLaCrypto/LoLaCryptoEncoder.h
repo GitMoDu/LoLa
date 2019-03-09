@@ -51,14 +51,14 @@ public:
 		ResetCypherBlock();
 	}
 
-	void Decode(uint8_t * message, const uint8_t messageLength)
+	void Decode(uint8_t* message, const uint8_t messageLength)
 	{
 		Cypher.decrypt(message, message, messageLength);
 
 		ResetCypherBlock();
 	}
 
-	void Decode(uint8_t * inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
+	void Decode(uint8_t* inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
 	{
 		Cypher.decrypt(outputMessage, inputMessage, messageLength);
 	}

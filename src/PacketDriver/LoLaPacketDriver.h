@@ -222,7 +222,13 @@ private:
 		}
 
 		DriverActiveState = DriverActiveStates::ProcessingIncoming;
-		if (!Enabled || !Receiver.ReceivePacket())
+		if (!Enabled)
+		{
+			RestoreToReceiving();
+
+			return;
+		}
+		if (!Receiver.ReceivePacket())
 		{
 			RejectedCount++;
 			RestoreToReceiving();

@@ -45,8 +45,6 @@ public:
 	bool ReceivePacket()
 	{
 		//Get token as early as possible.
-		//IncomingToken = GetCryptoToken(0);//No latency compensation on receiver.
-
 		BufferPacket->SetDefinition(nullptr);
 		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
 		{
