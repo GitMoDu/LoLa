@@ -377,7 +377,7 @@ private:
 	bool IsInSendSlot()
 	{
 #ifdef USE_TIME_SLOT
-		SendSlotElapsed = (GetSyncMillis() - (uint32_t)ETTM) % DuplexPeriodMillis;
+		SendSlotElapsed = (GetSyncMillis() + (uint32_t)ETTM) % DuplexPeriodMillis;
 
 		//Even spread of true and false across the DuplexPeriod
 		if (EvenSlot)
