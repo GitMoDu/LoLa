@@ -149,16 +149,6 @@ public:
 
 		EncoderState = StageEnum::AllReady;
 
-#ifdef DEBUG_LOLA_CRYPTO
-		Serial.print("Secret Key:\n\t|");
-		for (uint8_t i = 0; i < Cypher.keySize(); i++)
-		{
-			Serial.print(KeyHolder[i]);
-			Serial.print('|');
-		}
-		Serial.println();
-#endif // DEBUG_LOLA_CRYPTO		
-
 		return EncoderState == StageEnum::AllReady;
 	}
 
@@ -166,6 +156,16 @@ public:
 	void Debug(Stream* serial)
 	{
 		serial->print("Ascon128");
+	}
+
+	void PrintKey(Stream* serial)
+	{
+		serial->print("Secret Key:\n\t|");
+		for (uint8_t i = 0; i < Cypher.keySize(); i++)
+		{
+			serial->print(KeyHolder[i]);
+			serial->print('|');
+		}
 	}
 #endif
 
