@@ -16,8 +16,8 @@
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 #include <Services\Link\LoLaLinkPowerBalancer.h>
+#include <Services\Link\LoLaLinkChannelManager.h>
 
-#include <Services\Link\LoLaLinkFrequencyHopper.h>
 
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
@@ -42,10 +42,12 @@ private:
 	LoLaServicesManager * ServicesManager = nullptr;
 
 	//Sub-services.
-	LoLaLinkPowerBalancer PowerBalancer;
 
 	//Channel management.
-	LoLaLinkFrequencyHopper FrequencyHopper;
+	LoLaLinkChannelManager ChannelManager;
+
+	//Power balancer.
+	LoLaLinkPowerBalancer PowerBalancer;
 
 #ifdef DEBUG_LOLA
 	uint32_t LastDebugged = ILOLA_INVALID_MILLIS;
@@ -136,7 +138,6 @@ protected:
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, loLa, &PacketHolder)
-		, FrequencyHopper(scheduler, loLa)
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
@@ -149,7 +150,7 @@ public:
 
 		if (ServicesManager != nullptr)
 		{
-			return ServicesManager->Add(&FrequencyHopper);
+			return true;
 		}
 		return false;
 	}
@@ -431,8 +432,9 @@ protected:
 			ClockSyncTransaction != nullptr &&
 			ClockSyncerPointer != nullptr &&
 			ServicesManager != nullptr &&
+			KeyExchanger.Setup() &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
-			KeyExchanger.Setup())
+			ChannelManager.Setup(GetLoLa()))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 
@@ -561,7 +563,7 @@ protected:
 				//Notify all link dependent services to stop.
 				ClearSession();
 				PowerBalancer.SetMaxPower();
-				FrequencyHopper.ResetChannel();
+				ChannelManager.ResetChannel();
 				GetLoLa()->OnStart();
 				ServicesManager->NotifyServicesLinkUpdated(false);
 			}
@@ -573,7 +575,7 @@ protected:
 				SetLinkingState(0);
 				ClearSession();
 				PowerBalancer.SetMaxPower();
-				FrequencyHopper.ResetChannel();
+				ChannelManager.ResetChannel();
 				GetLoLa()->OnStart();
 				SetNextRunASAP();
 				break;
@@ -581,14 +583,14 @@ protected:
 				ClearSession();
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
-				FrequencyHopper.ResetChannel();
+				ChannelManager.ResetChannel();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 				ClearSession();
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
-				FrequencyHopper.ResetChannel();
+				ChannelManager.ResetChannel();
 				GetLoLa()->OnStart();
 				//Sleep time is set on Host/Remote virtual.
 				break;
