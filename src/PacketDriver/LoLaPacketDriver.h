@@ -224,12 +224,20 @@ private:
 		}
 		else if (Receiver.GetIncomingDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
 		{
-			if (Services.ProcessAckedPacket(Receiver.GetIncomingPacket()) &&
-				Sender.SendAck(Receiver.GetIncomingDefinition()->GetHeader(), Receiver.GetIncomingPacket()->GetId()) &&
-				Transmit())
+			if (Services.ProcessAckedPacket(Receiver.GetIncomingPacket()))
 			{
-				OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
-				DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
+				CryptoEncoder.ResetCypherBlock();
+				if (Sender.SendAck(Receiver.GetIncomingDefinition()->GetHeader(), Receiver.GetIncomingPacket()->GetId()) &&
+					Transmit())
+				{
+					OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
+					DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
+				}
+				else
+				{
+					//Failed to send.
+					RestoreToReceiving();
+				}
 			}
 			else
 			{
@@ -255,9 +263,10 @@ private:
 
 	void RestoreToReceiving()
 	{
+		CryptoEncoder.ResetCypherBlock();
+		LastChannel = CurrentChannel;
 		DriverActiveState = DriverActiveStates::ReadyForAnything;
 		EnableInterrupts();
-		LastChannel = CurrentChannel;
 		SetToReceiving();
 	}
 

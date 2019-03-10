@@ -36,21 +36,19 @@ private:
 	Ascon128 Cypher;
 	TinyCrcModbus8 Hasher;
 
-private:
-	inline void ResetCypherBlock()
+public:
+	void ResetCypherBlock()
 	{
 		Cypher.setKey(KeyHolder, sizeof(KeyHolder));
 		Cypher.setIV(IVHolder, sizeof(IVHolder));
 		Cypher.addAuthData(PinHolder, sizeof(PinHolder));
 	}
 
-public:
 	void Encode(uint8_t* message, const uint8_t messageLength)
 	{
 		if (CryptoEnable)
 		{
 			Cypher.encrypt(message, message, messageLength);
-			ResetCypherBlock();
 		}
 	}
 
@@ -59,7 +57,6 @@ public:
 		if (CryptoEnable)
 		{
 			Cypher.encrypt(outputMessage, message, messageLength);
-			ResetCypherBlock();
 		}
 		else
 		{
@@ -72,7 +69,6 @@ public:
 		if (CryptoEnable)
 		{
 			Cypher.decrypt(message, message, messageLength);
-			ResetCypherBlock();
 		}
 	}
 
