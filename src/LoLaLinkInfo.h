@@ -202,13 +202,11 @@ public:
 
 		ClockSyncAdjustments = 0;
 
-#ifdef USE_LATENCY_COMPENSATION
 		if (Driver != nullptr)
 		{
 			Driver->SetLinkStatus(false);
 			Driver->ResetLiveData();
 		}
-#endif
 	}
 
 	void UpdateState(LinkStateEnum newState)
@@ -240,12 +238,10 @@ public:
 	void SetRTT(const uint16_t rtt)
 	{
 		RTT = rtt;
-#ifdef USE_LATENCY_COMPENSATION
 		if (Driver != nullptr)
 		{
 			Driver->SetETTM((uint8_t)round((float)RTT / (float)2000));
 		}
-#endif
 	}
 
 	uint16_t GetRTT()
