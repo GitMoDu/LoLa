@@ -31,6 +31,9 @@ public:
 		//Encode packet content, if crypto is enabled.
 		Encoder->Encode(transmitPacket->GetRawContent(), OugoingDefinition->GetContentSize(), BufferPacket.GetRawContent());
 
+		//TODO: Use encryption tag (truncated) when crypto is on, instead of crc.
+
+
 		//Hash everything but the CRC at the start.
 		CalculatorCRC.Update(BufferPacket.GetRawContent(), OugoingDefinition->GetContentSize());
 		BufferPacket.SetMACCRC(CalculatorCRC.GetCurrent());

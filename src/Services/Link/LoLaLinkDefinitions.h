@@ -9,7 +9,7 @@
 #include <LoLaLinkInfo.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 
-#define LOLA_LINK_PROTOCOL_VERSION							0 //N < 16
+#define LOLA_LINK_PROTOCOL_VERSION							1 //N < 16
 
 
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING					0 //Only payload is Id.

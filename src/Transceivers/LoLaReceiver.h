@@ -39,13 +39,14 @@ public:
 	bool ReceivePacket()
 	{
 		BufferPacket.SetDefinition(nullptr);
-		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
+		if (BufferSize > 0 && BufferSize <= LOLA_PACKET_MAX_PACKET_SIZE)
 		{
 			IncomingContentSize = PacketDefinition::GetContentSize(BufferSize);
 			//Hash everything but the CRC at the start.
 			CalculatorCRC.Reset();
 			CalculatorCRC.Update(BufferPacket.GetRawContent(), IncomingContentSize);
 
+			//TODO: Use encryption tag (truncated) when crypto is on, instead of crc.
 			if (CalculatorCRC.GetCurrent() == BufferPacket.GetMACCRC())
 			{
 				//Decode packet content, if crypto is enabled.
