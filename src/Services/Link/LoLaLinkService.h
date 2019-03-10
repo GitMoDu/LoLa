@@ -510,11 +510,12 @@ protected:
 		serial->print(F("Partner Got: "));
 		serial->println(LinkInfo->GetPartnerReceivedCount());
 		serial->print(F("Lost: "));
-		serial->println(GetLoLa()->GetSentCount() - LinkInfo->GetPartnerReceivedCount());
+		serial->println(GetLoLa()->GetSentCount() - max(LinkInfo->GetPartnerReceivedCount(), GetLoLa()->GetSentCount()));
 		serial->print(F("Received: "));
 		serial->println(GetLoLa()->GetReceivedCount());
 		serial->print(F("Rejected: "));
 		serial->print(GetLoLa()->GetRejectedCount());
+
 		serial->print(F(" ("));
 		if (GetLoLa()->GetReceivedCount() > 0)
 		{
