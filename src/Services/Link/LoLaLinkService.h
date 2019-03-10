@@ -420,6 +420,7 @@ protected:
 		}
 
 		GetLoLa()->GetCryptoEncoder()->Clear();
+		CryptoToken.SetSeed(0);
 
 		KeyExchanger.ClearPartner();
 
@@ -603,8 +604,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
-				//TODO: Set Starting SetAuthData
-				//GetLoLa()->GetCryptoEncoder()->SetAuthData();
+				CryptoToken.SetSeed(GetLoLa()->GetCryptoEncoder()->GetSeed());
 				GetLoLa()->GetCryptoEncoder()->SetEnabled();
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
