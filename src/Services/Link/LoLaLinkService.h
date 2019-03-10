@@ -13,11 +13,14 @@
 #include <LoLaCrypto\TinyCRC.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
+#include <LoLaCrypto\LoLaCryptoTokenSource.h>
+
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 #include <Services\Link\LoLaLinkPowerBalancer.h>
 #include <Services\Link\LoLaLinkChannelManager.h>
 
+#include <Services\Link\LoLaLinkTimedHopper.h>
 
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
@@ -48,6 +51,9 @@ private:
 
 	//Power balancer.
 	LoLaLinkPowerBalancer PowerBalancer;
+
+	//Crypto.
+	LoLaCryptoTokenSource	CryptoToken;
 
 #ifdef DEBUG_LOLA
 	uint32_t LastDebugged = ILOLA_INVALID_MILLIS;
@@ -434,6 +440,7 @@ protected:
 			ServicesManager != nullptr &&
 			KeyExchanger.Setup() &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
+			CryptoToken.Setup(GetLoLa()->GetClockSource()) &&
 			ChannelManager.Setup(GetLoLa()))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();

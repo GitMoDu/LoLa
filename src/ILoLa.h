@@ -60,8 +60,6 @@
 #include <Arduino.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
-#include <LoLaCrypto\ISeedSource.h>
-#include <LoLaCrypto\LoLaCryptoTokenSource.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
 
@@ -135,7 +133,6 @@ protected:
 	///
 
 	///Crypto
-	LoLaCryptoTokenSource	CryptoToken;
 	LoLaCryptoEncoder		CryptoEncoder;
 	///
 
@@ -160,16 +157,6 @@ protected:
 public:
 	ILoLa() : PacketMap(), SyncedClock()
 	{
-	}
-
-	LoLaCryptoTokenSource* GetCryptoSeed()
-	{
-		return &CryptoToken;
-	}
-
-	ISeedSource* GetCryptoTokenSource()
-	{
-		return &CryptoToken;
 	}
 
 	LoLaCryptoEncoder* GetCryptoEncoder()
