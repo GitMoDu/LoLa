@@ -13,10 +13,6 @@ private:
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE> AckPacket;
 
-	///For use of estimated latency features
-	uint8_t ETTM = 0;//Estimated transmission time in millis.
-	///
-
 	//Optimization helper.
 	PacketDefinition* OugoingDefinition = nullptr;
 
@@ -65,18 +61,6 @@ public:
 
 		return false;
 	}
-
-#ifdef USE_LATENCY_COMPENSATION
-	void SetETTM(const int8_t ettm)
-	{
-		ETTM = ettm / 2;
-	}
-
-	uint8_t GetETTM()
-	{
-		return ETTM;
-	}
-#endif
 };
 
 #endif

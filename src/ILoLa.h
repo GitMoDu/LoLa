@@ -233,8 +233,6 @@ public:
 #else
 		ETTM = 0;
 #endif
-		Sender.SetETTM(ETTM);
-
 	}
 
 #ifdef USE_TIME_SLOT
@@ -254,7 +252,6 @@ public:
 	void ResetLiveData()
 	{
 		ETTM = 0;
-		Sender.SetETTM(ETTM);
 
 		LastReceivedInfo.Clear();
 		LastSentInfo.Clear();
