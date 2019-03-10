@@ -298,12 +298,13 @@ protected:
 		SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 	}
 
-	void OnLinkInfoReportReceived(const uint8_t rssi)
+	void OnLinkInfoReportReceived(const uint8_t rssi, const uint32_t partnerReceivedCount)
 	{
 		if (LinkInfo->HasLink())
 		{
-			LinkInfo->SetPartnerRSSINormalized(rssi);
 			LinkInfo->StampPartnerInfoUpdated();
+			LinkInfo->SetPartnerRSSINormalized(rssi);
+			LinkInfo->SetPartnerReceivedCount(partnerReceivedCount);
 
 			SetNextRunASAP();
 		}
@@ -506,6 +507,10 @@ protected:
 
 		serial->print(F("Sent: "));
 		serial->println(GetLoLa()->GetSentCount());
+		serial->print(F("Partner Got: "));
+		serial->println(LinkInfo->GetPartnerReceivedCount());
+		serial->print(F("Lost: "));
+		serial->println(GetLoLa()->GetSentCount() - LinkInfo->GetPartnerReceivedCount());
 		serial->print(F("Received: "));
 		serial->println(GetLoLa()->GetReceivedCount());
 		serial->print(F("Rejected: "));
@@ -733,12 +738,11 @@ protected:
 			switch (receivedPacket->GetId())
 			{
 				//To both.
-			case LOLA_LINK_SUBHEADER_LINK_REPORT:
-				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0]);
-				break;
 			case LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY:
-				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0]);
 				ReportPending = true;
+			case LOLA_LINK_SUBHEADER_LINK_REPORT:
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0], ATUI_R.uint);
 				break;
 
 				//To Host.
@@ -828,10 +832,8 @@ protected:
 		}
 
 		PacketHolder.GetPayload()[0] = LinkInfo->GetRSSINormalized();
-		for (uint8_t i = 1; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
-		{
-			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
-		}
+		ATUI_S.uint = GetLoLa()->GetReceivedCount();
+		S_ArrayToPayload();
 	}
 
 	inline void PrepareReportPacket(const uint8_t subHeader)
