@@ -44,9 +44,7 @@ public:
 	{
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &HostClockSyncTransaction;
-#ifdef USE_TIME_SLOT
-		loLa->SetDuplexSlot(false);
-#endif
+		loLa->SetDuplexSlot(true);
 	}
 protected:
 #ifdef DEBUG_LOLA

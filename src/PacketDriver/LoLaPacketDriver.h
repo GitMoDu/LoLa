@@ -280,17 +280,14 @@ public:
 #ifdef DEBUG_LOLA
 			Serial.println(F("Bad state OnIncoming"));
 #endif
-			RestoreToReceiving();
 		}
-		else
-		{
-			if (LinkActive && !IsInReceiveSlot())
-			{
-				TimingCollisionCount++;
-			}
 
-			DriverActiveState = DriverActiveStates::BlockedForIncoming;
+		if (LinkActive && !IsInReceiveSlot())
+		{
+			TimingCollisionCount++;
 		}
+
+		DriverActiveState = DriverActiveStates::BlockedForIncoming;
 	}
 
 	//When RF has packet to read, copy content into receive buffer.
@@ -383,12 +380,13 @@ private:
 
 	bool IsInReceiveSlot()
 	{
-		DuplexElapsed = GetSyncMillis() % DuplexPeriodMillis;
+		//TODO: Remove ETTM parameter when Clock Sync accuracy is < 1 ms (currently it's < 3 ms).
+		DuplexElapsed = (GetSyncMillis() + (uint32_t)ETTM) % DuplexPeriodMillis;
 
 		//Even spread of true and false across the DuplexPeriod
 		if (EvenSlot)
 		{
-			if (DuplexElapsed >= (DuplexPeriodMillis / 2))
+			if (DuplexElapsed > (DuplexPeriodMillis / 2))
 			{
 				return true;
 			}
@@ -403,6 +401,7 @@ private:
 
 		return false;
 	}
+
 	bool IsInSendSlot()
 	{
 #ifdef USE_TIME_SLOT
@@ -411,14 +410,16 @@ private:
 		//Even spread of true and false across the DuplexPeriod
 		if (EvenSlot)
 		{
-			if (DuplexElapsed < (DuplexPeriodMillis / 2))
+			if (DuplexElapsed < (DuplexPeriodMillis / 2) &&
+				DuplexElapsed > 0)
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if (DuplexElapsed >= (DuplexPeriodMillis / 2))
+			if (DuplexElapsed > (DuplexPeriodMillis / 2) &&
+				DuplexElapsed < DuplexPeriodMillis)
 			{
 				return true;
 			}
