@@ -39,7 +39,7 @@ private:
 	TinyCrcModbus8 Hasher;
 
 public:
-	void ResetCypherBlock()
+	inline void ResetCypherBlock()
 	{
 		Cypher.setKey(KeyHolder, sizeof(KeyHolder));
 		Cypher.setIV(IVHolder, sizeof(IVHolder));
@@ -50,6 +50,7 @@ public:
 	{
 		if (CryptoEnable)
 		{
+			ResetCypherBlock();
 			Cypher.encrypt(message, message, messageLength);
 		}
 	}
@@ -58,6 +59,7 @@ public:
 	{
 		if (CryptoEnable)
 		{
+			ResetCypherBlock();
 			Cypher.encrypt(outputMessage, message, messageLength);
 		}
 		else
@@ -70,20 +72,21 @@ public:
 	{
 		if (CryptoEnable)
 		{
+			ResetCypherBlock();
 			Cypher.decrypt(message, message, messageLength);
 		}
 	}
 
 	void EncodeDirect(uint8_t* message, const uint8_t messageLength)
 	{
-		Cypher.encrypt(message, message, messageLength);
 		ResetCypherBlock();
+		Cypher.encrypt(message, message, messageLength);	
 	}
 
 	void DecodeDirect(uint8_t* inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
 	{
-		Cypher.decrypt(outputMessage, inputMessage, messageLength);
 		ResetCypherBlock();
+		Cypher.decrypt(outputMessage, inputMessage, messageLength);
 	}
 
 	void Clear()

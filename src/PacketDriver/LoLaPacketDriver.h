@@ -223,7 +223,6 @@ private:
 		{
 			if (Services.ProcessAckedPacket(Receiver.GetIncomingPacket()))
 			{
-				CryptoEncoder.ResetCypherBlock();
 				if (Sender.SendAck(Receiver.GetIncomingDefinition()->GetHeader(), Receiver.GetIncomingPacket()->GetId()) &&
 					Transmit())
 				{
@@ -260,7 +259,6 @@ private:
 
 	void RestoreToReceiving()
 	{
-		CryptoEncoder.ResetCypherBlock();
 		LastChannel = CurrentChannel;
 		DriverActiveState = DriverActiveStates::ReadyForAnything;
 		EnableInterrupts();
