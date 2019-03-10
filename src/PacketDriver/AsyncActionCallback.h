@@ -10,6 +10,8 @@
 #include <RingBufCPP.h>
 
 
+#define ASYNC_ACTION_CALLBACK_EASE_PERIOD_MILLIS	(uint32_t)(1)
+
 template <const uint8_t QueueSize, typename ActionType>
 class TemplateAsyncActionCallback : Task
 {
@@ -29,12 +31,15 @@ public:
 		ActionEvent.attach(slot);
 	}
 
-	void AppendToQueue(ActionType action)
+	void AppendToQueue(ActionType action, const bool easeNextEvent)
 	{
 		EventQueue.addForce(action);
 		enable();
+		if (easeNextEvent && EventQueue.numElements() == 1)
+		{
+			Task::delay(ASYNC_ACTION_CALLBACK_EASE_PERIOD_MILLIS);
+		}
 	}
-
 
 	bool OnEnable()
 	{

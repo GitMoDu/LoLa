@@ -56,8 +56,12 @@ public:
 
 	void ResetChannel()
 	{
+#ifdef USE_FREQUENCY_HOP
 		GetLoLa()->SetChannel(ChannelDefault);
-		GetLoLa()->OnStart();
+#else
+		GetLoLa()->SetChannel(ILOLA_DEFAULT_CHANNEL);
+#endif
+
 	}
 
 protected:
@@ -72,15 +76,19 @@ protected:
 	{
 		if (IsSetupOk())
 		{
+#ifdef USE_FREQUENCY_HOP
 			TokenCachedHash = CryptoSeed->GetCurrentSeed();
 			Enable();
+#endif
 		}
 	}
 
 	void OnLinkLost()
 	{
 		ResetChannel();
+#ifdef USE_FREQUENCY_HOP
 		TokenCachedHash = CryptoSeed->GetCurrentSeed();
+#endif
 		Disable();
 	}
 
@@ -92,6 +100,7 @@ protected:
 
 	bool Callback()
 	{
+#ifdef USE_FREQUENCY_HOP
 		if (IsWarmUpTime)
 		{
 			SetNextRunDelay(LOLA_LINK_FREQUENCY_HOPPER_WARMUP_MILLIS);
@@ -104,9 +113,13 @@ protected:
 
 			//Try to sync the next run based on the synced clock.
 			SetNextRunDelay(GetNextSwitchOverDelay());
+			return true;
 		}
+#else
+		Disable();
+#endif
 
-		return true;
+		return false;
 	}
 
 	bool OnSetup()

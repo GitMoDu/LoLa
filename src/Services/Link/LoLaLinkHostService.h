@@ -401,7 +401,7 @@ protected:
 	void OnKeepingLink()
 	{
 		if (HostClockSyncTransaction.IsResultReady())
-		{			
+		{
 			if (HostClockSyncTransaction.GetResult() != 0)
 			{
 				LinkInfo->StampClockSyncAdjustment();
@@ -518,7 +518,7 @@ private:
 	}
 
 	void PrepareClockSyncTuneResponse(const uint8_t requestId, const int32_t estimationError)
-	{		
+	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY);
 		ATUI_S.iint = estimationError;
 		S_ArrayToPayload();

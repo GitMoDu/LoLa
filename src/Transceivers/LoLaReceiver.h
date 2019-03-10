@@ -3,7 +3,6 @@
 #ifndef _LOLARECEIVER_h
 #define _LOLARECEIVER_h
 
-#include <Arduino.h>
 #include <Transceivers\LoLaBuffer.h>
 
 class LoLaReceiver : public LoLaBuffer
@@ -12,7 +11,6 @@ private:
 	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> ReceiverPacket;
 
 	uint8_t IncomingContentSize = 0;
-
 
 public:
 	PacketDefinition * GetIncomingDefinition()
@@ -41,10 +39,8 @@ public:
 		return false;
 	}
 
-	//uint8_t IncomingToken = 0;
 	bool ReceivePacket()
 	{
-		//Get token as early as possible.
 		BufferPacket->SetDefinition(nullptr);
 		if (BufferSize > 0 && BufferSize < LOLA_PACKET_MAX_PACKET_SIZE)
 		{
@@ -65,11 +61,10 @@ public:
 					IncomingContentSize != BufferPacket->GetDefinition()->GetContentSize())
 				{
 					BufferPacket->SetDefinition(nullptr);
+					BufferSize = 0;
 				}
 			}			
 		}
-
-		BufferSize = 0;
 
 		return BufferPacket->GetDefinition() != nullptr;
 	}

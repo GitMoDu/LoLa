@@ -53,7 +53,6 @@ protected:
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			KeyExchanger.GenerateNewKeyPair();
-			ClearSession();
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD);
@@ -107,7 +106,6 @@ protected:
 				//TODO: Filter accepted hosts by Id.
 				if (true)
 				{
-
 					GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
 						LinkInfo->GetPartnerId(), LinkInfo->GetLocalId());
 					ResetLastSentTimeStamp();

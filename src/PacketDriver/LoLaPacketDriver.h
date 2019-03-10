@@ -13,86 +13,6 @@
 class LoLaPacketDriver : public ILoLa
 {
 private:
-	class IncomingInfoStruct
-	{
-	private:
-		uint32_t PacketTime = ILOLA_INVALID_MILLIS;
-		int16_t PacketRSSI = ILOLA_INVALID_RSSI;
-
-	public:
-		IncomingInfoStruct() {}
-
-		uint32_t GetPacketTime()
-		{
-			return PacketTime;
-		}
-
-		int16_t GetPacketRSSI()
-		{
-			return PacketRSSI;
-		}
-
-		void Clear()
-		{
-			PacketTime = ILOLA_INVALID_MILLIS;
-			PacketRSSI = ILOLA_INVALID_RSSI;
-		}
-
-		bool HasInfo()
-		{
-			return PacketTime != ILOLA_INVALID_MILLIS && PacketRSSI != ILOLA_INVALID_RSSI;
-		}
-
-		void SetInfo(const uint32_t time, const int16_t rssi)
-		{
-			PacketTime = time;
-			PacketRSSI = rssi;
-		}
-	} IncomingInfo;
-
-protected:
-	///Services that are served receiving packets.
-	LoLaServicesManager Services;
-	///
-
-private:
-
-	class ActionCallbackClass
-	{
-	public:
-		uint8_t Action;
-		uint8_t Value;
-
-	} ActionGrunt;
-
-	TemplateAsyncActionCallback<10, ActionCallbackClass> CallbackHandler;
-
-	//Async helpers for values.
-	uint8_t LastPower = 0;
-	uint8_t LastChannel = 0;
-
-public:
-	LoLaPacketDriver(Scheduler* scheduler) : ILoLa(), Services(), CallbackHandler(scheduler)
-	{
-
-	}
-
-	LoLaServicesManager* GetServices()
-	{
-		return &Services;
-	}
-
-	enum DriverActiveStates :uint8_t
-	{
-		ReadyForAnything,
-		BlockedForIncoming,
-		AwaitingProcessing,
-		ProcessingIncoming,
-		SendingOutgoing,
-		SendingAck,
-		WaitingForTransmissionEnd
-	};
-
 	enum DriverAsyncActions : uint8_t
 	{
 		ActionProcessIncomingPacket = 0,
@@ -101,16 +21,56 @@ public:
 		ActionUpdateChannel = 3,
 		ActionProcessBatteryAlarm = 0xff
 	};
+	class ActionCallbackClass
+	{
+	public:
+		uint8_t Action;
+		uint8_t Value;
 
-	volatile DriverActiveStates DriverActiveState = DriverActiveStates::ReadyForAnything;
+	} ActionGrunt;
+
+	//Event queue, very rarely goes over 2.
+	TemplateAsyncActionCallback<4, ActionCallbackClass> CallbackHandler;
+
+	//Async helpers for values.
+	uint8_t LastPower = 0;
+	uint8_t LastChannel = 0;
+
+	volatile DriverActiveStates DriverActiveState = DriverActiveStates::DriverDisabled;
 	volatile uint8_t LastSentHeader = 0xFF;
 
+protected:
+	///Services that are served receiving packets.
+	LoLaServicesManager Services;
+	///
+
+protected:
+	//Driver implementation.
+	virtual bool SetupRadio() { return false; }
+	virtual void ReadReceived() {}
+	virtual void SetToReceiving() {}
+	virtual void SetRadioPower() {}
+	virtual bool Transmit() { return false; }
+	virtual bool CanTransmit() { return true; }
+	virtual void DisableInterrupts() {}
+	virtual void EnableInterrupts() {}
+
+public:
+	LoLaPacketDriver(Scheduler* scheduler) : ILoLa(), Services(), CallbackHandler(scheduler)
+	{
+	}
+
+	LoLaServicesManager* GetServices()
+	{
+		return &Services;
+	}
+
 private:
-	inline void AddAsyncAction(const uint8_t action, const uint8_t value)
+	void AddAsyncAction(const uint8_t action, const uint8_t value, const bool easeRetry = false)
 	{
 		ActionGrunt.Action = action;
 		ActionGrunt.Value = value;
-		CallbackHandler.AppendToQueue(ActionGrunt);
+		CallbackHandler.AppendToQueue(ActionGrunt, easeRetry);
 	}
 
 	void OnAsyncAction(ActionCallbackClass action)
@@ -124,11 +84,28 @@ private:
 			ProcessSent(action.Value);
 			break;
 		case DriverAsyncActions::ActionProcessBatteryAlarm:
+#ifdef DEBUG_LOLA
 			Serial.println(F("ActionProcessBatteryAlarm"));
+#endif
+			break;
+		case DriverAsyncActions::ActionUpdatePower:
+			OnTransmitPowerUpdated();
+			break;
+		case DriverAsyncActions::ActionUpdateChannel:
+			OnChannelUpdated();
 			break;
 		default:
 			break;
 		}
+	}
+
+	inline void OnTransmitted(const uint8_t header)
+	{
+		LastSent = millis();
+		LastSentHeader = header;
+		LastChannel = CurrentChannel;
+		OnTransmitPowerUpdated();
+		//TODO: Add time out check. Maybe an action just for post transmit.
 	}
 
 protected:
@@ -145,15 +122,14 @@ protected:
 		{
 			if (DriverActiveState == DriverActiveStates::ReadyForAnything)
 			{
-				SetToReceiving();
-				LastChannel = CurrentChannel;
+				RestoreToReceiving();
 			}
 			else
 			{
-				AddAsyncAction(DriverAsyncActions::ActionUpdateChannel, LastSentHeader);
+				AddAsyncAction(DriverAsyncActions::ActionUpdateChannel, 0, true);
 			}
 		}
-	}	
+	}
 
 	void OnTransmitPowerUpdated()
 	{
@@ -163,15 +139,17 @@ protected:
 			{
 				SetRadioPower();
 				LastPower = CurrentTransmitPower;
+				RestoreToReceiving();
 			}
 			else
 			{
-				AddAsyncAction(DriverAsyncActions::ActionUpdatePower, LastSentHeader);
+				AddAsyncAction(DriverAsyncActions::ActionUpdatePower, 0, true);
 			}
 		}
 	}
 
 public:
+	///Public methods.
 	bool Setup()
 	{
 		if (Receiver.Setup(&PacketMap, &CryptoEncoder, &CryptoEnabled) &&
@@ -188,21 +166,18 @@ public:
 		return false;
 	}
 
-public:
-	///Public methods.
 	bool SendPacket(ILoLaPacket* packet)
 	{
 		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
 		{
-			Serial.println(F("Bad state SendPacket"));
+			RestoreToReceiving();
+			return false;
 		}
 
 		DriverActiveState = DriverActiveStates::SendingOutgoing;
 		if (Sender.SendPacket(packet) && Transmit())
 		{
-			LastSent = millis();
-			LastSentHeader = packet->GetDataHeader();
-			LastChannel = CurrentChannel;
+			OnTransmitted(packet->GetDataHeader());
 			DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
 
 			return true;
@@ -214,20 +189,19 @@ public:
 	}
 
 private:
-	inline void ProcessIncoming()
+	void ProcessIncoming()
 	{
 		if (DriverActiveState != DriverActiveStates::AwaitingProcessing)
-		{
-			Serial.println(F("Bad state ProcessIncoming"));
-		}
-
-		DriverActiveState = DriverActiveStates::ProcessingIncoming;
-		if (!Enabled)
 		{
 			RestoreToReceiving();
 
 			return;
 		}
+
+		DriverActiveState = DriverActiveStates::ProcessingIncoming;
+
+		ReadReceived();
+
 		if (!Receiver.ReceivePacket())
 		{
 			RejectedCount++;
@@ -254,9 +228,7 @@ private:
 				Sender.SendAck(Receiver.GetIncomingDefinition()->GetHeader(), Receiver.GetIncomingPacket()->GetId()) &&
 				Transmit())
 			{
-				LastSent = millis();
-				LastSentHeader = PACKET_DEFINITION_ACK_HEADER;
-				LastChannel = CurrentChannel;
+				OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
 				DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
 			}
 			else
@@ -275,13 +247,8 @@ private:
 		Receiver.SetBufferSize(0);
 	}
 
-	inline void ProcessSent(const uint8_t header)
+	void ProcessSent(const uint8_t header)
 	{
-		if (DriverActiveState != DriverActiveStates::WaitingForTransmissionEnd)
-		{
-			Serial.println(F("Bad state OnIncoming"));
-		}
-
 		Services.ProcessSent(header);
 		RestoreToReceiving();
 	}
@@ -289,8 +256,9 @@ private:
 	void RestoreToReceiving()
 	{
 		DriverActiveState = DriverActiveStates::ReadyForAnything;
+		EnableInterrupts();
+		LastChannel = CurrentChannel;
 		SetToReceiving();
-		EnableInterrupts();		
 	}
 
 public:
@@ -303,7 +271,10 @@ public:
 
 		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
 		{
+#ifdef DEBUG_LOLA
 			Serial.println(F("Bad state OnIncoming"));
+#endif
+			RestoreToReceiving();
 		}
 
 		DriverActiveState = DriverActiveStates::BlockedForIncoming;
@@ -316,39 +287,39 @@ public:
 	{
 		DisableInterrupts();
 
-		Receiver.SetBufferSize(length);
-
-		if (DriverActiveState != DriverActiveStates::BlockedForIncoming)
+		if (DriverActiveState == DriverActiveStates::BlockedForIncoming)
 		{
-			Serial.println(F("Badstate OnReceiveBegin"));
+			DriverActiveState = DriverActiveStates::AwaitingProcessing;
+			Receiver.SetBufferSize(length);
+
+			AddAsyncAction(DriverAsyncActions::ActionProcessIncomingPacket, 0);
 		}
-
-		DriverActiveState = DriverActiveStates::AwaitingProcessing;
-		ReadReceived();
-
-		AddAsyncAction(DriverAsyncActions::ActionProcessIncomingPacket, 0);
+		else
+		{
+#ifdef DEBUG_LOLA
+			Serial.println(F("Badstate OnReceiveBegin"));
+#endif
+			RestoreToReceiving();
+		}
 	}
 
 	//When RF has received a garbled packet.
 	void OnReceivedFail(const int16_t rssi)
 	{
 		IncomingInfo.Clear();
+#ifdef DEBUG_LOLA
 		if (DriverActiveState != DriverActiveStates::BlockedForIncoming)
 		{
 			Serial.println(F("Bad state OnReceivedFail"));
 		}
-		SetToReceiving();
+#endif
+		RestoreToReceiving();
 	}
 
 	void OnSentOk()
 	{
 		LastValidSent = LastSent;
-
-		if (DriverActiveState != DriverActiveStates::WaitingForTransmissionEnd)
-		{
-			Serial.println(F("Bad state OnSentOk"));
-		}
-
+		TransmitedCount++;
 		AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, LastSentHeader);
 		LastSentHeader = 0xFF;
 	}
@@ -364,27 +335,19 @@ public:
 		//TODO: Can this be used as stable clock source?
 	}
 
-	bool AllowedSend(const bool overridePermission = false)
+	bool AllowedSend(const bool override = false)
 	{
-#ifdef USE_TIME_SLOT
 		if (LinkActive)
 		{
-			return Enabled &&
-				DriverActiveState == DriverActiveStates::ReadyForAnything &&
-				(overridePermission || IsInSendSlot());
+			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
+				(override || IsInSendSlot());
 		}
 		else
 		{
-			return Enabled &&
-				overridePermission &&
-				DriverActiveState == DriverActiveStates::ReadyForAnything;
+			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
+				override &&
+				CoolAfterSend();
 		}
-#else
-		return Enabled &&
-			!HotAfterSend() && !HotAfterReceive() &&
-			DriverActiveState == DriverActiveStates::ReadyForAnything &&
-			(overridePermission || LinkActive);
-#endif
 	}
 
 #ifdef DEBUG_LOLA
@@ -395,49 +358,13 @@ public:
 	}
 #endif
 
-protected:
-	//Driver implementation.
-	virtual bool SetupRadio() { return false; }
-	virtual void ReadReceived() {}
-	virtual void SetToReceiving() {}
-	virtual void SetRadioPower() {}
-	virtual bool Transmit() { return false; }
-	virtual bool CanTransmit() { return true; }
-	void DisableInterrupts() {}
-	void EnableInterrupts() {}
-
 private:
-	inline bool HotAfterSend()
+	inline bool CoolAfterSend()
 	{
-		if (LastSent != ILOLA_INVALID_MILLIS && LastValidSent != ILOLA_INVALID_MILLIS)
-		{
-			if (LastSent - LastValidSent > 0)
-			{
-				return millis() - LastSent <= LOLA_LINK_SEND_BACK_OFF_DURATION_MILLIS;
-			}
-			else
-			{
-				return millis() - LastValidSent <= LOLA_LINK_RE_SEND_BACK_OFF_DURATION_MILLIS;
-			}
-		}
-		else if (LastValidSent != ILOLA_INVALID_MILLIS)
-		{
-			return millis() - LastValidSent <= LOLA_LINK_RE_SEND_BACK_OFF_DURATION_MILLIS;
-		}
-		else if (LastSent != ILOLA_INVALID_MILLIS)
-		{
-			return millis() - LastSent <= LOLA_LINK_SEND_BACK_OFF_DURATION_MILLIS;
-		}
-
-		return false;
+		return LastSent == ILOLA_INVALID_MILLIS || millis() - LastSent > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
 	}
 
-	inline bool HotAfterReceive()
-	{
-		return millis() - LastReceived <= LOLA_LINK_RECEIVE_BACK_OFF_DURATION_MILLIS || LastReceived != ILOLA_INVALID_MILLIS;
-	}
-
-	inline bool IsInSendSlot()
+	bool IsInSendSlot()
 	{
 #ifdef USE_TIME_SLOT
 		SendSlotElapsed = (GetSyncMillis() - (uint32_t)ETTM) % DuplexPeriodMillis;

@@ -17,9 +17,7 @@
 #include <Services\Link\LoLaLinkClockSyncer.h>
 #include <Services\Link\LoLaLinkPowerBalancer.h>
 
-#ifdef USE_FREQUENCY_HOP
 #include <Services\Link\LoLaLinkFrequencyHopper.h>
-#endif
 
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
@@ -46,10 +44,8 @@ private:
 	//Sub-services.
 	LoLaLinkPowerBalancer PowerBalancer;
 
-	//Private helper.
-#ifdef USE_FREQUENCY_HOP
+	//Channel management.
 	LoLaLinkFrequencyHopper FrequencyHopper;
-#endif
 
 #ifdef DEBUG_LOLA
 	uint32_t LastDebugged = ILOLA_INVALID_MILLIS;
@@ -140,9 +136,7 @@ protected:
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, loLa, &PacketHolder)
-#ifdef USE_FREQUENCY_HOP
 		, FrequencyHopper(scheduler, loLa)
-#endif
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
@@ -153,20 +147,17 @@ public:
 	{
 		ServicesManager = servicesManager;
 
-#ifdef USE_FREQUENCY_HOP
 		if (ServicesManager != nullptr)
 		{
 			return ServicesManager->Add(&FrequencyHopper);
 		}
 		return false;
-#else
-		return true;
-#endif
 	}
 
 	bool OnEnable()
 	{
 		UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Setup);
+
 		return true;
 	}
 
@@ -181,7 +172,6 @@ protected:
 		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
-			GetLoLa()->Enable();
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
@@ -460,7 +450,6 @@ protected:
 #ifdef USE_FREQUENCY_HOP
 					//FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
 #endif
-
 					ClearSession();
 #ifdef DEBUG_LOLA
 					Serial.print(F("Local MAC: "));
@@ -556,42 +545,43 @@ protected:
 				DebugLinkStatistics(&Serial);
 #endif
 				//Notify all link dependent services to stop.
-				LinkInfo->Reset();
+				ClearSession();
 				PowerBalancer.SetMaxPower();
+				FrequencyHopper.ResetChannel();
+				GetLoLa()->OnStart();
 				ServicesManager->NotifyServicesLinkUpdated(false);
 			}
 
 			switch (newState)
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
-				ClearSession();
-				KeyExchanger.Clear();
+				GetLoLa()->Enable();
 				SetLinkingState(0);
-
-#ifdef USE_FREQUENCY_HOP
+				ClearSession();
+				PowerBalancer.SetMaxPower();
 				FrequencyHopper.ResetChannel();
-#else
-				GetLoLa()->SetChannel(0);
-#endif
+				GetLoLa()->OnStart();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 				ClearSession();
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
+				FrequencyHopper.ResetChannel();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+				ClearSession();
 				SetLinkingState(0);
-				GetLoLa()->SetCryptoEnabled(false);
-				GetLoLa()->GetCryptoEncoder()->Clear();
+				PowerBalancer.SetMaxPower();
+				FrequencyHopper.ResetChannel();
+				GetLoLa()->OnStart();
 				//Sleep time is set on Host/Remote virtual.
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
-#ifdef USE_ENCRYPTION
 				GetLoLa()->SetCryptoEnabled(true);
-#endif
+				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
 				Serial.println(LinkInfo->GetPartnerId());
@@ -647,26 +637,12 @@ protected:
 
 	uint32_t GetElapsedLastValidReceived()
 	{
-		if (GetLoLa()->GetLastValidReceivedMillis() != ILOLA_INVALID_MILLIS)
-		{
-			return millis() - GetLoLa()->GetLastValidReceivedMillis();
-		}
-		else
-		{
-			return UINT32_MAX;
-		}
+		return millis() - GetLoLa()->GetLastValidReceivedMillis();
 	}
 
 	uint32_t GetElapsedLastSent()
 	{
-		if (GetLoLa()->GetLastValidSentMillis() != ILOLA_INVALID_MILLIS)
-		{
-			return millis() - GetLoLa()->GetLastValidSentMillis();
-		}
-		else
-		{
-			return 0;
-		}
+		return millis() - GetLoLa()->GetLastValidSentMillis();
 	}
 
 	bool ProcessPacket(ILoLaPacket* receivedPacket)
@@ -745,7 +721,7 @@ protected:
 				//To both.
 			case LOLA_LINK_SUBHEADER_LINK_REPORT:
 				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0]);
-				break;			
+				break;
 			case LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY:
 				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0]);
 				ReportPending = true;

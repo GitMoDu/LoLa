@@ -36,22 +36,18 @@
 
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
-private:
-	volatile uint8_t InterruptStatus = 0xFF;
-
-
 protected:
 	void DisableInterrupts()
 	{
 #ifndef MOCK_RADIO
-		InterruptStatus = Si446x_irq_off();
+		//Si446x_irq_off();//Not working.
 #endif
 	}
 
 	void EnableInterrupts()
 	{
 #ifndef MOCK_RADIO
-		Si446x_irq_on(InterruptStatus);
+		Si446x_irq_on(0xFF);
 #endif
 	}
 
