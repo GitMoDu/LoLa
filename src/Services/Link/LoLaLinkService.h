@@ -513,6 +513,10 @@ protected:
 			serial->print('0');
 		serial->println((AliveSeconds % 3600) % 60);
 
+		serial->print(F("Transmit Power: "));
+		serial->print((float)(((LinkInfo->GetTransmitPowerNormalized() * 100) / UINT8_MAX)), 0);
+		serial->println(F(" %"));
+
 		serial->print(F("RSSI: "));
 		serial->print((float)(((LinkInfo->GetRSSINormalized()*100) / UINT8_MAX)), 0);
 		serial->println(F(" %"));
