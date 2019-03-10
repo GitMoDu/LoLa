@@ -19,7 +19,13 @@ private:
 	//Synced clock.
 	ClockSource* SyncedClock = nullptr;
 
+	//Crypto Encoder.
+	LoLaCryptoEncoder* Encoder = nullptr;
+
 	const uint32_t HopPeriod = LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS;
+
+	//Helper.
+	uint32_t TokenHelper = 0;
 
 public:
 	LoLaLinkTimedHopper(Scheduler* scheduler, ILoLa* loLa)
@@ -60,38 +66,27 @@ protected:
 
 	bool Callback()
 	{
-		Serial.print(F("TimedHop: "));
-		Serial.println(CryptoSeed.GetToken());
-#ifdef USE_FREQUENCY_HOP
-#endif
 		SetNextRunDelay(CryptoSeed.GetNextSwitchOverMillis());
+
+		TokenHelper = CryptoSeed.GetToken();
+
+		Encoder->SetToken(TokenHelper);
+#ifdef USE_FREQUENCY_HOP
+		//GetLoLa()->SetChannel(GetHopChannel());
+#endif
+#ifdef DEBUG_LOLA
+		Serial.print(F("Hop: "));
+		Serial.println(TokenHelper);
+#endif
 	}
-	//#ifdef USE_FREQUENCY_HOP
-	//		if (IsWarmUpTime)
-	//		{
-	//			SetNextRunDelay(LOLA_LINK_FREQUENCY_HOPPER_WARMUP_MILLIS);
-	//			IsWarmUpTime = false;
-	//			return true;
-	//		}
-	//		else
-	//		{
-	//			GetLoLa()->SetChannel(GetHopChannel());
-	//
-	//			//Try to sync the next run based on the synced clock.
-	//			SetNextRunDelay(GetNextSwitchOverDelay());
-	//			return true;
-	//		}
-	//#else
-	//		Disable();
-	//#endif
-	//
-	//		return false;
-	//	}
+
 public:
 	bool Setup(ClockSource* syncedClock)
 	{
 		SyncedClock = syncedClock;
-		if (CryptoSeed.Setup(SyncedClock))
+		Encoder = GetLoLa()->GetCryptoEncoder();
+		if (Encoder != nullptr &&
+			CryptoSeed.Setup(SyncedClock))
 		{
 			CryptoSeed.SetTOTPPeriod(HopPeriod);
 
