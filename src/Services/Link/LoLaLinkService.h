@@ -480,6 +480,13 @@ protected:
 
 		uint32_t AliveSeconds = (LinkInfo->GetLinkDuration() / 1000L);
 
+		if (AliveSeconds / 86400 > 0)
+		{
+			serial->print(AliveSeconds / 86400);
+			serial->print(F("d "));
+			AliveSeconds = AliveSeconds % 86400;
+		}
+
 		if (AliveSeconds / 3600 < 10)
 			serial->print('0');
 		serial->print(AliveSeconds / 3600);
@@ -579,6 +586,8 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
+				//TODO: Set Starting SetAuthData
+				//GetLoLa()->GetCryptoEncoder()->SetAuthData();
 				GetLoLa()->GetCryptoEncoder()->SetEnabled();
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
@@ -599,6 +608,17 @@ protected:
 				PowerBalancer.SetMaxPower();
 
 #ifdef DEBUG_LOLA
+				Serial.println();
+				Serial.print(F("Linked: "));
+				Serial.println(MillisSync());
+#ifdef USE_ENCRYPTION
+				Serial.print(F("Link secured with "));
+				KeyExchanger.Debug(&Serial);
+				Serial.println();
+				Serial.print(F("\tEncrypted with "));
+				GetLoLa()->GetCryptoEncoder()->Debug(&Serial);
+				Serial.println();
+#endif
 				Serial.print(F("Linking took "));
 				Serial.print(LinkingDuration);
 				Serial.println(F(" ms."));
@@ -608,14 +628,9 @@ protected:
 				Serial.print(F("Estimated Latency: "));
 				Serial.print((float)LinkInfo->GetRTT() / (float)2000, 2);
 				Serial.println(F(" ms"));
-#ifdef USE_LATENCY_COMPENSATION
 				Serial.print(F("Latency compensation: "));
 				Serial.print(GetLoLa()->GetETTM());
-				Serial.println(F(" ms"));
-#endif
-				Serial.print(F("Sync TimeStamp: "));
-				Serial.println(MillisSync());
-				Serial.println();
+				Serial.println(F(" ms"));				
 #endif
 
 				//Notify all link dependent services they can start.

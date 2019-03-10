@@ -123,6 +123,11 @@ public:
 
 		return true;
 	}
+
+	void Debug(Stream* serial)
+	{
+		serial->print(F("uECC SECP160 R1 Public Key Exchange"));
+	}
 #endif
 
 	bool GetPublicKeyCompressed(uint8_t * keyTarget)

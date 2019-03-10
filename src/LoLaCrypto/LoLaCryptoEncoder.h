@@ -151,6 +151,13 @@ public:
 		return EncoderState == StageEnum::AllReady;
 	}
 
+#ifdef DEBUG_LOLA
+	void Debug(Stream* serial)
+	{
+		serial->print("Ascon128");
+	}
+#endif
+
 	void SetIvData(const uint8_t sessionId, const uint32_t localId, const uint32_t partnerId)
 	{
 		Hasher.Reset();
