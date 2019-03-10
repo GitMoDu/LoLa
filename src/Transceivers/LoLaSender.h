@@ -36,7 +36,7 @@ public:
 
 		BufferSize = OugoingDefinition->GetTotalSize();
 
-		return BufferSize > 0 ;
+		return BufferSize > 0;
 	}
 
 	bool SendAck(const uint8_t header, const uint8_t id)
@@ -52,7 +52,7 @@ public:
 	{
 		if (LoLaBuffer::Setup(packetMap, cryptoEncoder))
 		{
-			AckDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_HEADER);
+			AckDefinition = PacketMap->GetDefinition(PACKET_DEFINITION_ACK_HEADER);
 			if (AckDefinition != nullptr)
 			{
 				return true;

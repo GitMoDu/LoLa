@@ -32,16 +32,6 @@ protected:
 	volatile uint8_t BufferSize = 0;
 	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> BufferPacket;
 
-protected:
-	PacketDefinition * FindPacketDefinition(const uint8_t header)
-	{
-		if (PacketMap != nullptr)
-		{
-			return PacketMap->GetDefinition(header);
-		}
-		return nullptr;
-	}
-
 public:
 	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
