@@ -137,10 +137,10 @@ public:
 		//Key expansion: don't throw away unused key bytes.
 		//Update token seed from last 4 bytes of the key.
 		TokenSeed = 0;
-		TokenSeed += (KeyHolder[keyLength - 4] >> 0) & 0xFF;
-		TokenSeed += (KeyHolder[keyLength - 3] >> 8) & 0xFF;
-		TokenSeed += (KeyHolder[keyLength - 2] >> 16) & 0xFF;
-		TokenSeed += (KeyHolder[keyLength - 1] >> 24) & 0xFF;
+		TokenSeed += (KeyHolder[keyLength - 4] >> 0);
+		TokenSeed += (KeyHolder[keyLength - 3] << 8);
+		TokenSeed += (KeyHolder[keyLength - 2] << 16);
+		TokenSeed += (KeyHolder[keyLength - 1] << 24);
 
 		ResetCypherBlock();
 
