@@ -126,7 +126,6 @@ protected:
 	///Crypto
 	LoLaCryptoTokenSource	CryptoToken;
 	LoLaCryptoEncoder		CryptoEncoder;
-	bool CryptoEnabled = false;
 	///
 
 	///For use of estimated latency features
@@ -220,15 +219,6 @@ public:
 	bool HasLink()
 	{
 		return LinkActive;
-	}
-
-	void SetCryptoEnabled(const bool cryptoEnabled)
-	{
-#ifdef USE_ENCRYPTION
-		CryptoEnabled = cryptoEnabled;
-#else
-		CryptoEnabled = false;
-#endif
 	}
 
 #ifdef USE_MOCK_PACKET_LOSS

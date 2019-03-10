@@ -23,9 +23,9 @@ public:
 		return BufferPacket;
 	}
 
-	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder, bool* cryptoEnabled)
+	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
-		if (LoLaBuffer::Setup(packetMap, cryptoEncoder, cryptoEnabled))
+		if (LoLaBuffer::Setup(packetMap, cryptoEncoder))
 		{
 			BufferPacket = &ReceiverPacket;
 			for (uint8_t i = 0; i < GetBufferSize(); i++)
@@ -51,10 +51,8 @@ public:
 
 			if (CalculatorCRC.GetCurrent() == BufferPacket->GetMACCRC())
 			{
-				if (*CryptoEnabled)
-				{
-					Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize);
-				}
+				//Decode packet content, if crypto is enabled.
+				Encoder->Decode(BufferPacket->GetRawContent(), IncomingContentSize);
 
 				//Find a packet definition from map.
 				if (!BufferPacket->SetDefinition(PacketMap->GetDefinition(BufferPacket->GetDataHeader())) ||

@@ -32,7 +32,6 @@ protected:
 
 	///Cryptography
 	LoLaCryptoEncoder* Encoder = nullptr;
-	bool* CryptoEnabled = nullptr;
 	///
 
 	volatile uint8_t BufferSize = 0;
@@ -49,13 +48,12 @@ protected:
 	}
 
 public:
-	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder, bool* cryptoEnabled)
+	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
 		PacketMap = packetMap;
 		Encoder = cryptoEncoder;
-		CryptoEnabled = cryptoEnabled;
 
-		return PacketMap != nullptr && Encoder != nullptr && CryptoEnabled != nullptr;
+		return PacketMap != nullptr && Encoder != nullptr;
 	}
 	
 public:

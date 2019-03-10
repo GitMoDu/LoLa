@@ -152,8 +152,8 @@ public:
 	///Public methods.
 	bool Setup()
 	{
-		if (Receiver.Setup(&PacketMap, &CryptoEncoder, &CryptoEnabled) &&
-			Sender.Setup(&PacketMap, &CryptoEncoder, &CryptoEnabled))
+		if (Receiver.Setup(&PacketMap, &CryptoEncoder) &&
+			Sender.Setup(&PacketMap, &CryptoEncoder))
 		{
 			IncomingInfo.Clear();
 

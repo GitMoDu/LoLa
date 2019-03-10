@@ -30,6 +30,8 @@ private:
 	uint8_t PinHolder[4] = { 0, 0, 0, 0 };
 	uint8_t TestData[2] = { 0 , 0 };
 
+	bool CryptoEnable = false;
+
 
 private:
 	Ascon128 Cypher;
@@ -46,26 +48,45 @@ private:
 public:
 	void Encode(uint8_t* message, const uint8_t messageLength)
 	{
-		Cypher.encrypt(message, message, messageLength);
-
-		ResetCypherBlock();
+		if (CryptoEnable)
+		{
+			Cypher.encrypt(message, message, messageLength);
+			ResetCypherBlock();
+		}
 	}
 
 	void Decode(uint8_t* message, const uint8_t messageLength)
 	{
-		Cypher.decrypt(message, message, messageLength);
+		if (CryptoEnable)
+		{
+			Cypher.decrypt(message, message, messageLength);
+			ResetCypherBlock();
+		}
+	}
 
+	void EncodeFree(uint8_t* message, const uint8_t messageLength)
+	{
+		Cypher.encrypt(message, message, messageLength);
 		ResetCypherBlock();
 	}
 
-	void Decode(uint8_t* inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
+	void DecodeFree(uint8_t* inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
 	{
 		Cypher.decrypt(outputMessage, inputMessage, messageLength);
+		ResetCypherBlock();
 	}
 
 	void Clear()
 	{
 		EncoderState = StageEnum::AllClear;
+		CryptoEnable = false;
+	}
+
+	bool SetEnabled()
+	{
+#ifdef USE_ENCRYPTION
+		CryptoEnable = true;
+#endif
 	}
 
 	bool IsReadyForUse()
@@ -97,7 +118,7 @@ public:
 
 		//Test encoding decoding.
 		ResetCypherBlock();
-		TestData[0] = random(0,UINT8_MAX);
+		TestData[0] = random(0, UINT8_MAX);
 		TestData[1] = TestData[0];
 		Cypher.encrypt(TestData, TestData, 1);
 		ResetCypherBlock();
@@ -163,5 +184,5 @@ public:
 
 		return true;
 	}
-};
+	};
 #endif

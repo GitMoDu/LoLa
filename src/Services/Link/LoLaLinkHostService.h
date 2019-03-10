@@ -476,7 +476,7 @@ private:
 	{
 		PrepareLinkProtocolSwitchOver();
 
-		GetLoLa()->GetCryptoEncoder()->Encode(PacketHolder.GetPayload(), sizeof(uint32_t));
+		GetLoLa()->GetCryptoEncoder()->EncodeFree(PacketHolder.GetPayload(), sizeof(uint32_t));
 	}
 
 	void PrepareHostInfoSync()

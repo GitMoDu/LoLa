@@ -28,11 +28,8 @@ public:
 		OutgoingContentSize = BufferPacket->GetDefinition()->GetContentSize();
 		CalculatorCRC.Reset();
 
-		if (*CryptoEnabled)
-		{
-			//Encode packet content.
-			Encoder->Encode(BufferPacket->GetRawContent(), OutgoingContentSize);
-		}
+		//Encode packet content, if crypto is enabled.
+		Encoder->Encode(BufferPacket->GetRawContent(), OutgoingContentSize);
 
 		//Hash everything but the CRC at the start.
 		CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingContentSize);
@@ -52,9 +49,9 @@ public:
 		return SendPacket(&AckPacket);
 	}
 
-	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder, bool* cryptoEnabled)
+	bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
-		if (LoLaBuffer::Setup(packetMap, cryptoEncoder, cryptoEnabled))
+		if (LoLaBuffer::Setup(packetMap, cryptoEncoder))
 		{
 			AckDefinition = FindPacketDefinition(PACKET_DEFINITION_ACK_HEADER);
 			if (AckDefinition != nullptr)

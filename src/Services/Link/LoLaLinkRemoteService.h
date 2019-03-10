@@ -251,7 +251,7 @@ protected:
 			LinkInfo->GetSessionId() == sessionId)
 		{
 			///Quick decode for validation.
-			GetLoLa()->GetCryptoEncoder()->Decode(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array);
+			GetLoLa()->GetCryptoEncoder()->DecodeFree(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array);
 
 			if (LinkInfo->GetLocalId() == ATUI_R.uint)
 			{

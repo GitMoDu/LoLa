@@ -411,7 +411,6 @@ protected:
 			LinkInfo->Reset();
 		}
 
-		GetLoLa()->SetCryptoEnabled(false);
 		GetLoLa()->GetCryptoEncoder()->Clear();
 
 		KeyExchanger.ClearPartner();
@@ -580,7 +579,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
-				GetLoLa()->SetCryptoEnabled(true);
+				GetLoLa()->GetCryptoEncoder()->SetEnabled();
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
