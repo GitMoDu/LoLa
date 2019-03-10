@@ -513,10 +513,12 @@ protected:
 			serial->print('0');
 		serial->println((AliveSeconds % 3600) % 60);
 
-		serial->print(F("RSSI :"));
-		serial->println(LinkInfo->GetRSSINormalized());
-		serial->print(F("RSSI Partner:"));
-		serial->println(LinkInfo->GetPartnerRSSINormalized());
+		serial->print(F("RSSI: "));
+		serial->print((float)(((LinkInfo->GetRSSINormalized()*100) / UINT8_MAX)), 0);
+		serial->println(F(" %"));
+		serial->print(F("RSSI Partner: "));
+		serial->print((float)(((LinkInfo->GetPartnerRSSINormalized()*100) / UINT8_MAX)), 0);
+		serial->println(F(" %"));
 
 		serial->print(F("Sent: "));
 		serial->println(GetLoLa()->GetSentCount());
@@ -655,7 +657,7 @@ protected:
 				Serial.println(F(" ms"));
 				Serial.print(F("Latency compensation: "));
 				Serial.print(GetLoLa()->GetETTM());
-				Serial.println(F(" ms"));				
+				Serial.println(F(" ms"));
 #endif
 
 				//Notify all link dependent services they can start.
