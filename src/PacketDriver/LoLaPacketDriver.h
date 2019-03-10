@@ -282,8 +282,15 @@ public:
 #endif
 			RestoreToReceiving();
 		}
+		else
+		{
+			if (LinkActive && !IsInReceiveSlot())
+			{
+				TimingCollisionCount++;
+			}
 
-		DriverActiveState = DriverActiveStates::BlockedForIncoming;
+			DriverActiveState = DriverActiveStates::BlockedForIncoming;
+		}
 	}
 
 	//When RF has packet to read, copy content into receive buffer.
@@ -328,7 +335,7 @@ public:
 		}
 #endif
 
-		LastValidSentInfo.Time= LastSentInfo.Time;
+		LastValidSentInfo.Time = LastSentInfo.Time;
 		TransmitedCount++;
 		AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, LastSentHeader);
 		LastSentHeader = 0xFF;
@@ -374,24 +381,44 @@ private:
 		return LastSentInfo.Time == ILOLA_INVALID_MILLIS || millis() - LastSentInfo.Time > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
 	}
 
-	bool IsInSendSlot()
+	bool IsInReceiveSlot()
 	{
-#ifdef USE_TIME_SLOT
-		SendSlotElapsed = (GetSyncMillis() + (uint32_t)ETTM) % DuplexPeriodMillis;
+		DuplexElapsed = GetSyncMillis() % DuplexPeriodMillis;
 
 		//Even spread of true and false across the DuplexPeriod
 		if (EvenSlot)
 		{
-			if ((SendSlotElapsed < (DuplexPeriodMillis / 2)) &&
-				SendSlotElapsed > 0)
+			if (DuplexElapsed >= (DuplexPeriodMillis / 2))
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if ((SendSlotElapsed > (DuplexPeriodMillis / 2)) &&
-				SendSlotElapsed < DuplexPeriodMillis)
+			if (DuplexElapsed < (DuplexPeriodMillis / 2))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+	bool IsInSendSlot()
+	{
+#ifdef USE_TIME_SLOT
+		DuplexElapsed = (GetSyncMillis() + (uint32_t)ETTM) % DuplexPeriodMillis;
+
+		//Even spread of true and false across the DuplexPeriod
+		if (EvenSlot)
+		{
+			if (DuplexElapsed < (DuplexPeriodMillis / 2))
+			{
+				return true;
+			}
+		}
+		else
+		{
+			if (DuplexElapsed >= (DuplexPeriodMillis / 2))
 			{
 				return true;
 			}

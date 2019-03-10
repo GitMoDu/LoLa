@@ -530,6 +530,8 @@ protected:
 		{
 			serial->println(F("0 %)"));
 		}
+		serial->print(F("Timming Collision: "));
+		serial->println(GetLoLa()->GetTimingCollisionCount());
 
 		serial->print(F("ClockSync adjustments: "));
 		serial->println(LinkInfo->GetClockSyncAdjustments());

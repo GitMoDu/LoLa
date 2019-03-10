@@ -111,6 +111,7 @@ protected:
 	uint32_t TransmitedCount = 0;
 	uint32_t ReceivedCount = 0;
 	uint32_t RejectedCount = 0;
+	uint32_t TimingCollisionCount = 0;
 	///
 
 	///Configurations
@@ -131,7 +132,7 @@ protected:
 #ifdef USE_TIME_SLOT
 	bool EvenSlot = false;
 	//Helper.
-	uint32_t SendSlotElapsed;
+	uint32_t DuplexElapsed;
 #endif
 	///
 
@@ -247,6 +248,7 @@ public:
 		TransmitedCount = 0;
 		ReceivedCount = 0;
 		RejectedCount = 0;
+		TimingCollisionCount = 0;
 	}
 
 	void ResetLiveData()
@@ -292,6 +294,11 @@ public:
 	uint32_t GetSentCount()
 	{
 		return TransmitedCount;
+	}	
+	
+	uint32_t GetTimingCollisionCount()
+	{
+		return TimingCollisionCount;
 	}
 
 	int16_t GetLastRSSI()
