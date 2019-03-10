@@ -29,15 +29,15 @@
 class PacketDefinition
 {
 public:
-	virtual uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	virtual uint8_t GetHeader() { return 0; }
-	virtual uint8_t GetPayloadSize() { return 0; }
+	virtual const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	virtual const uint8_t GetHeader() { return 0; }
+	virtual const uint8_t GetPayloadSize() { return 0; }
 
 #ifdef DEBUG_LOLA
 	virtual void PrintName(Stream* serial) {}
 #endif
 
-	uint8_t GetContentSize()
+	const uint8_t GetContentSize()
 	{
 		return GetTotalSize() - LOLA_PACKET_HEADER_INDEX;
 	}
@@ -47,17 +47,17 @@ public:
 		return min(LOLA_PACKET_MAX_PACKET_SIZE + LOLA_PACKET_HEADER_INDEX, unknownTotalSize) - LOLA_PACKET_HEADER_INDEX;
 	}
 
-	uint8_t GetTotalSize()
+	const uint8_t GetTotalSize()
 	{
 		return LOLA_PACKET_MIN_SIZE + GetPayloadSize();
 	}
 
-	bool IsAck()
+	const bool IsAck()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_IS_ACK;
 	}
 
-	bool HasACK()
+	const bool HasACK()
 	{
 		return GetConfiguration() & PACKET_DEFINITION_MASK_HAS_ACK;
 	}

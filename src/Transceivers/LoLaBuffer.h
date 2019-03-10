@@ -30,16 +30,11 @@ protected:
 	TinyCrcModbus8 CalculatorCRC;
 	///
 
-	///Crypto validation.
-	//ISeedSource* CryptoSeed = nullptr;
-	///
-
 	///Cryptography
 	LoLaCryptoEncoder* Encoder = nullptr;
-	bool* CryptoEnabled = nullptr;
 	///
 
-	uint8_t BufferSize = 0;
+	volatile uint8_t BufferSize = 0;
 	ILoLaPacket* BufferPacket = nullptr;
 
 protected:
@@ -53,13 +48,12 @@ protected:
 	}
 
 public:
-	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder, bool* cryptoEnabled)
+	virtual bool Setup(LoLaPacketMap* packetMap, LoLaCryptoEncoder* cryptoEncoder)
 	{
 		PacketMap = packetMap;
 		Encoder = cryptoEncoder;
-		CryptoEnabled = cryptoEnabled;
 
-		return PacketMap != nullptr && Encoder != nullptr && CryptoEnabled != nullptr;
+		return PacketMap != nullptr && Encoder != nullptr;
 	}
 	
 public:
@@ -77,16 +71,6 @@ public:
 	{
 		return BufferSize;
 	}
-
-	//void SetCryptoTokenSource(ISeedSource* cryptoSeedSource)
-	//{
-	//	CryptoSeed = cryptoSeedSource;
-	//}
-
-	//inline uint8_t GetCryptoToken(const int8_t offsetMillis)
-	//{
-	//	return CryptoSeed->GetToken(offsetMillis);
-	//}
 
 #ifdef DEBUG_LOLA
 	void Debug(Stream * serial)

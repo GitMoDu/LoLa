@@ -16,7 +16,7 @@ class RemoteManager : public LoLaManagerRemote
 private:
 	ControllerSurface Controller;
 
-	SyncSurfaceWriter Writer;
+	SyncSurfaceWriter<CONTROLLER_SURFACE_BASE_HEADER> Writer;
 
 protected:
 	bool OnSetupServices()
@@ -27,7 +27,7 @@ protected:
 public:
 	RemoteManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManagerRemote(scheduler, loLa)
-		, Writer(scheduler, loLa, CONTROLLER_SURFACE_BASE_HEADER, &Controller)
+		, Writer(scheduler, loLa, &Controller)
 	{
 	}
 

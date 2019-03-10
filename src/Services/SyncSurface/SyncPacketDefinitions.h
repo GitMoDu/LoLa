@@ -13,26 +13,10 @@
 
 #define SYNC_SERVICE_PACKET_DEFINITION_COUNT			3 
 
+
 class SyncAbstractPacketDefinition : public PacketDefinition
 {
-private:
-	uint8_t BaseHeader = 0;
-
 public:
-	SyncAbstractPacketDefinition() {}
-
-	SyncAbstractPacketDefinition(const uint8_t baseHeader)
-	{
-		BaseHeader = baseHeader;
-	}
-
-	uint8_t GetHeader() { return BaseHeader; }
-
-	virtual void SetBaseHeader(const uint8_t baseHeader)
-	{
-		BaseHeader = baseHeader;
-	}
-
 #ifdef DEBUG_LOLA
 	ITrackedSurface* Owner = nullptr;
 	void SetOwner(ITrackedSurface* trackedSurface)
@@ -42,21 +26,13 @@ public:
 #endif
 };
 
+template <const uint8_t BaseHeader>
 class SyncDataPacketDefinition : public SyncAbstractPacketDefinition
 {
 public:
-	SyncDataPacketDefinition() : SyncAbstractPacketDefinition() {}
-
-public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-
-	//TODO: Refactor as template.
-	void SetBaseHeader(const uint8_t baseHeader)
-	{
-		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET);
-	}
-
-	uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	const uint8_t GetHeader() { return BaseHeader + PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET; }
+	const uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -70,20 +46,13 @@ public:
 #endif
 };
 
+template <const uint8_t BaseHeader>
 class SyncMetaPacketDefinition : public SyncAbstractPacketDefinition
 {
 public:
-	SyncMetaPacketDefinition() :SyncAbstractPacketDefinition() {}
-
-public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC;}
-
-	void SetBaseHeader(const uint8_t baseHeader)
-	{
-		SyncAbstractPacketDefinition::SetBaseHeader(baseHeader + PACKET_DEFINITION_SYNC_META_HEADER_OFFSET);
-	}
-
-	uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_META_PAYLOAD_SIZE; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC;}
+	const uint8_t GetHeader() { return BaseHeader + PACKET_DEFINITION_SYNC_META_HEADER_OFFSET; }
+	const uint8_t GetPayloadSize() { return PACKET_DEFINITION_SYNC_META_PAYLOAD_SIZE; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)

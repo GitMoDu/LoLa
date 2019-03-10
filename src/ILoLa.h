@@ -20,7 +20,7 @@
 #include <Transceivers\LoLaSender.h>
 
 #ifdef DEBUG_LOLA
-#define LOLA_LINK_DEBUG_UPDATE_SECONDS						10
+#define LOLA_LINK_DEBUG_UPDATE_SECONDS						60
 #endif
 
 // 1000 Relaxed period.
@@ -38,9 +38,7 @@
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS					10
 
 // Packet collision avoidance.
-#define LOLA_LINK_SEND_BACK_OFF_DURATION_MILLIS				3
-#define LOLA_LINK_RE_SEND_BACK_OFF_DURATION_MILLIS			2
-#define LOLA_LINK_RECEIVE_BACK_OFF_DURATION_MILLIS			1
+#define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			2
 
 // 
 #define ILOLA_TRANSMIT_EXPIRY_PERIOD_MIN_MILLIS				2
@@ -99,7 +97,6 @@ protected:
 	//From 0 to UINT8_MAX, limited by driver.
 	uint8_t CurrentTransmitPower = ILOLA_DEFAULT_TRANSMIT_POWER;
 	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
-	bool Enabled = false;
 	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
 	///
 
@@ -129,14 +126,60 @@ protected:
 	///Crypto
 	LoLaCryptoTokenSource	CryptoToken;
 	LoLaCryptoEncoder		CryptoEncoder;
-	bool CryptoEnabled = false;
 	///
 
-#ifdef USE_LATENCY_COMPENSATION
 	///For use of estimated latency features
 	uint8_t ETTM = 0;//Estimated transmission time in millis.
 	///
-#endif
+
+	enum DriverActiveStates :uint8_t
+	{
+		DriverDisabled,
+		ReadyForAnything,
+		BlockedForIncoming,
+		AwaitingProcessing,
+		ProcessingIncoming,
+		SendingOutgoing,
+		SendingAck,
+		WaitingForTransmissionEnd
+	};
+
+	class IncomingInfoStruct
+	{
+	private:
+		uint32_t PacketTime = ILOLA_INVALID_MILLIS;
+		int16_t PacketRSSI = ILOLA_INVALID_RSSI;
+
+	public:
+		IncomingInfoStruct() {}
+
+		uint32_t GetPacketTime()
+		{
+			return PacketTime;
+		}
+
+		int16_t GetPacketRSSI()
+		{
+			return PacketRSSI;
+		}
+
+		void Clear()
+		{
+			PacketTime = ILOLA_INVALID_MILLIS;
+			PacketRSSI = ILOLA_INVALID_RSSI;
+		}
+
+		bool HasInfo()
+		{
+			return PacketTime != ILOLA_INVALID_MILLIS && PacketRSSI != ILOLA_INVALID_RSSI;
+		}
+
+		void SetInfo(const uint32_t time, const int16_t rssi)
+		{
+			PacketTime = time;
+			PacketRSSI = rssi;
+		}
+	} IncomingInfo;
 
 public:
 	ILoLa() : PacketMap(), SyncedClock()
@@ -160,20 +203,12 @@ public:
 
 	void Enable()
 	{
-		if (!Enabled)
-		{
-			OnStart();
-		}
-		Enabled = true;
+		OnStart();
 	}
 
 	void Disable()
 	{
-		if (Enabled)
-		{
-			OnStop();
-		}
-		Enabled = false;
+		OnStop();
 	}
 
 	void SetLinkStatus(const bool linked)
@@ -184,11 +219,6 @@ public:
 	bool HasLink()
 	{
 		return LinkActive;
-	}
-
-	void SetCryptoEnabled(const bool cryptoEnabled)
-	{
-		CryptoEnabled = cryptoEnabled;
 	}
 
 #ifdef USE_MOCK_PACKET_LOSS
@@ -210,7 +240,7 @@ public:
 	uint8_t GetETTM()
 	{
 		return ETTM;
-	}
+		}
 
 	void SetETTM(const uint8_t ettm)
 	{
@@ -348,7 +378,8 @@ public:
 	virtual bool AllowedSend(const bool overridePermission = false) { return true; }
 	virtual void OnStart() {}
 	virtual void OnStop() {}
-
+	virtual void OnChannelUpdated() {}
+	virtual void OnTransmitPowerUpdated() {}
 
 	//Device driver implementation.
 	virtual uint8_t GetChannelMax() const { return 0; }
@@ -357,15 +388,10 @@ public:
 	//Device driver events.
 	virtual void OnWakeUpTimer() {}
 	virtual void OnBatteryAlarm() {}
-	virtual void OnReceiveBegin(const uint8_t length, const  int16_t rssi) {}
+	virtual void OnReceiveBegin(const uint8_t length, const int16_t rssi) {}
 	virtual void OnReceivedFail(const int16_t rssi) {}
-	virtual void OnReceived() {}
 	virtual void OnSentOk() {}
 	virtual void OnIncoming(const int16_t rssi) {}
-
-	//Device driver overloads.
-	virtual void OnChannelUpdated() {}
-	virtual void OnTransmitPowerUpdated() {}
 
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
@@ -373,5 +399,5 @@ public:
 		PacketMap.Debug(serial);
 	}
 #endif
-};
+	};
 #endif

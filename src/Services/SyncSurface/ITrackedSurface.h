@@ -17,7 +17,7 @@ class ITrackedSurface
 {
 private:
 	//Callback handler.
-	Signal<uint8_t> OnSurfaceUpdatedCallback;
+	Signal<const uint8_t> OnSurfaceUpdatedCallback;
 
 	//CRC Calculator.
 	TinyCrcModbus8 CalculatorCRC;
@@ -35,7 +35,7 @@ public:
 		CalculatorCRC.Reset();
 	}
 
-	void AttachOnSurfaceUpdated(const Slot<uint8_t>& slot)
+	void AttachOnSurfaceUpdated(const Slot<const uint8_t>& slot)
 	{
 		OnSurfaceUpdatedCallback.attach(slot);
 	}

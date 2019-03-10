@@ -49,7 +49,7 @@ protected:
 	virtual void OnSyncActive() {}
 
 	virtual void OnSurfaceDataChanged() {}
-	virtual void OnStateUpdated(const SyncStateEnum newState) {}
+	virtual void OnStateUpdated(const AbstractSync::SyncStateEnum newState) {}
 
 public:
 	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder)
@@ -85,7 +85,7 @@ public:
 		return SyncState == SyncStateEnum::Synced;
 	}
 
-	void SurfaceDataChangedEvent(uint8_t param)
+	void SurfaceDataChangedEvent(const uint8_t param)
 	{
 		InvalidateLocalHash();
 
@@ -244,7 +244,7 @@ protected:
 	{
 		if (IPacketSendService::OnSetup() && TrackedSurface != nullptr)
 		{
-			MethodSlot<AbstractSync, uint8_t> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
+			MethodSlot<AbstractSync, const uint8_t> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
 			TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
 			return true;
 		}

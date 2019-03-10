@@ -21,7 +21,7 @@
 #define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_SIZE + LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
 
 //Linked.
-#define LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD				(uint32_t)(15)
+#define LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD				(uint32_t)(10)
 #define LOLA_LINK_SERVICE_LINKED_RESEND_SLOW_PERIOD			(uint32_t)(50)
 #define LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT		(uint32_t)(3000)
 #define LOLA_LINK_SERVICE_LINKED_PERIOD_INTERVENTION		(uint32_t)((LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT*6)/10)
@@ -29,17 +29,17 @@
 #define LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD			(uint32_t)((LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT*5)/10)
 #define LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD			(uint32_t)(LOLA_LINK_SERVICE_LINKED_PERIOD_INTERVENTION)
 #define LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD		(uint32_t)((LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT*3)/10)
-#define LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD			(uint32_t)(5000)
+#define LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD			(uint32_t)(30000)
 
 //Not linked.
-#define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL	(uint32_t)(200) //Typical value is ~ 100 ms
 #define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKC_CANCEL		(uint32_t)(300) //Typical value is ~ 200 ms
+#define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL	(uint32_t)(200) //Typical value is ~ 100 ms
 #define LOLA_LINK_SERVICE_UNLINK_HOST_MAX_BEFORE_SLEEP		(uint32_t)(10000)
 #define LOLA_LINK_SERVICE_UNLINK_REMOTE_MAX_BEFORE_SLEEP	(uint32_t)(30000)
 #define LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD			(uint32_t)(UINT32_MAX)
 #define LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD		(uint32_t)(3000)
-#define LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD				(uint32_t)(15)
-#define LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MIN		(uint32_t)(40)
+#define LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD				(uint32_t)(5)
+#define LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MIN		(uint32_t)(15)
 #define LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD			(uint32_t)(30)
 #define LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD			(uint32_t)(50)
 #define LOLA_LINK_SERVICE_UNLINK_REMOTE_SEARCH_PERIOD		(uint32_t)(75)
@@ -103,9 +103,9 @@ enum LinkingStagesEnum : uint8_t
 class PingPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_PING_WITH_ACK; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_PING_WITH_ACK; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -118,9 +118,9 @@ public:
 class LinkReportPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_REPORT; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_REPORT; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -133,9 +133,9 @@ public:
 class LinkShortPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -148,9 +148,9 @@ public:
 class LinkShortWithAckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT_WITH_ACK; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT_WITH_ACK; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -163,9 +163,9 @@ public:
 class LinkLongPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_LONG; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_LONG; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)

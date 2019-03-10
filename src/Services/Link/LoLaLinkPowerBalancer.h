@@ -12,7 +12,7 @@
 #define RADIO_POWER_BALANCER_ADJUST_DOWN_LONG			(uint8_t)(10)
 #define RADIO_POWER_BALANCER_POWER_MIN					(uint8_t)(35)
 #define RADIO_POWER_BALANCER_POWER_MAX					(uint8_t)(UINT8_MAX)
-#define RADIO_POWER_BALANCER_RSSI_TARGET				(uint8_t)(130)
+#define RADIO_POWER_BALANCER_RSSI_TARGET				(uint8_t)(120)
 
 
 
@@ -45,8 +45,9 @@ public:
 
 	bool Update()
 	{
-		if (LastUpdated == ILOLA_INVALID_MILLIS ||
-			(millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD))
+		if (LoLa->GetLastValidReceivedMillis() < LOLA_LINK_SERVICE_LINKED_MAX_PANIC &&
+			(LastUpdated == ILOLA_INVALID_MILLIS ||
+			(millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD)))
 		{
 			CurrentPartnerRSSI = LinkInfo->GetPartnerRSSINormalized();
 
@@ -94,17 +95,10 @@ public:
 		return false;
 	}
 
-	bool SetMaxPower()
+	void SetMaxPower()
 	{
-		if (LoLa != nullptr)
-		{
-			TransmitPowerNormalized = RADIO_POWER_BALANCER_POWER_MAX;
-			LoLa->SetTransmitPower(TransmitPowerNormalized);
-
-			return true;
-		}
-
-		return false;
+		TransmitPowerNormalized = RADIO_POWER_BALANCER_POWER_MAX;
+		LoLa->SetTransmitPower(TransmitPowerNormalized);
 	}
 };
 #endif

@@ -20,8 +20,6 @@
 
 
 #define _TASK_OO_CALLBACKS
-
-
 #include <TaskScheduler.h>
 
 #include <Callback.h>
@@ -109,7 +107,7 @@ void setup()
 	}
 	ControllerInput = LoLa.GetControllerSurface();
 
-	FunctionSlot<uint8_t> ptrSlot(OnSurfaceUpdated);
+	FunctionSlot<const uint8_t> ptrSlot(OnSurfaceUpdated);
 	ControllerInput->AttachOnSurfaceUpdated(ptrSlot);
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
@@ -123,7 +121,7 @@ void setup()
 #endif
 }
 
-void OnSurfaceUpdated(uint8_t param)
+void OnSurfaceUpdated(const uint8_t param)
 {
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
 	ControllerInput->Debug(&Serial);
