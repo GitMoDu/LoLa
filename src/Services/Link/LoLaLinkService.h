@@ -614,12 +614,11 @@ protected:
 				ClockSyncerPointer->StampSynced();
 				GetLoLa()->ResetStatistics();
 				PowerBalancer.SetMaxPower();
-
 #ifdef DEBUG_LOLA
 				Serial.println();
 				Serial.print(F("Linked: "));
 				Serial.println(MillisSync());
-#ifdef USE_ENCRYPTION
+#ifdef LOLA_USE_ENCRYPTION
 				Serial.print(F("Link secured with "));
 				KeyExchanger.Debug(&Serial);
 				Serial.println();

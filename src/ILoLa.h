@@ -5,13 +5,14 @@
 
 #define DEBUG_LOLA
 
-//#define MOCK_RADIO
-//#define USE_MOCK_PACKET_LOSS
+//#define LOLA_MOCK_RADIO
+//#define LOLA_MOCK_PACKET_LOSS
 
-#define USE_TIME_SLOT
-#define USE_LATENCY_COMPENSATION
-#define USE_ENCRYPTION
-//#define USE_FREQUENCY_HOP
+#define LOLA_USE_LATENCY_COMPENSATION
+#define LOLA_USE_ENCRYPTION
+
+//#define LOLA_USE_FREQUENCY_HOP
+//#define LOLA_USE_CRYPTO_TOKEN
 
 //#define DEBUG_LOLA_CRYPTO
 
@@ -22,16 +23,6 @@
 #ifdef DEBUG_LOLA
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS						60
 #endif
-
-// 1000 Relaxed period.
-// 500 Recommended period.
-// 50 Minimum recommended period.
-#define LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS				500
-
-
-// 1000 Change TOTP every second, low chance of sync error.
-// 100 Agressive crypto denial.
-#define ILOLA_CRYPTO_TOTP_PERIOD_MILLIS						1000
 
 // 100 High latency, high bandwitdh.
 // 10 Low latency, lower bandwidth.
@@ -57,7 +48,7 @@
 #define ILOLA_INVALID_MICROS				ILOLA_INVALID_MILLIS
 #define ILOLA_INVALID_LATENCY				((uint16_t)UINT16_MAX)
 
-#ifdef USE_MOCK_PACKET_LOSS
+#ifdef LOLA_MOCK_PACKET_LOSS
 #define MOCK_PACKET_LOSS_SOFT				8
 #define MOCK_PACKET_LOSS_HARD				12
 #define MOCK_PACKET_LOSS_SMOKE_SIGNALS		35
@@ -126,14 +117,13 @@ protected:
 	LoLaSender Sender;
 	///
 
-	///Status
+	///Link Status.
 	bool LinkActive = false;
 
-#ifdef USE_TIME_SLOT
+	///Duplex.
 	bool EvenSlot = false;
 	//Helper.
 	uint32_t DuplexElapsed;
-#endif
 	///
 
 	///Packet Mapper for known definitions.
@@ -207,7 +197,7 @@ public:
 		return LinkActive;
 	}
 
-#ifdef USE_MOCK_PACKET_LOSS
+#ifdef LOLA_MOCK_PACKET_LOSS
 	bool GetLossChance()
 	{
 		if (LinkActive)
@@ -229,19 +219,17 @@ public:
 
 	void SetETTM(const uint8_t ettm)
 	{
-#ifdef USE_LATENCY_COMPENSATION
+#ifdef LOLA_USE_LATENCY_COMPENSATION
 		ETTM = ettm;
 #else
 		ETTM = 0;
 #endif
 	}
 
-#ifdef USE_TIME_SLOT
 	void SetDuplexSlot(const bool evenSlot)
 	{
 		EvenSlot = evenSlot;
 	}
-#endif
 
 	void ResetStatistics()
 	{

@@ -8,9 +8,9 @@
 #include <PacketDriver\LoLaPacketDriver.h>
 #include <RingBufCPP.h>
 
-#ifndef MOCK_RADIO
+#ifndef LOLA_MOCK_RADIO
 #include <Si446x.h>
-#endif // !MOCK_RADIO
+#endif
 
 //Expected part number.
 #define PART_NUMBER_SI4463X 17507
@@ -39,28 +39,28 @@ class LoLaSi446xPacketDriver : public LoLaPacketDriver
 protected:
 	void DisableInterrupts()
 	{
-#ifndef MOCK_RADIO
+#ifndef LOLA_MOCK_RADIO
 		//Si446x_irq_off();//Not working.
 #endif
 	}
 
 	void EnableInterrupts()
 	{
-#ifndef MOCK_RADIO
+#ifndef LOLA_MOCK_RADIO
 		Si446x_irq_on(0xFF);
 #endif
 	}
 
 	void SetRadioPower()
 	{
-#ifndef MOCK_RADIO
+#ifndef LOLA_MOCK_RADIO
 		Si446x_setTxPower(CurrentTransmitPower);
 #endif
 	}
 
 	bool Transmit()
 	{
-#ifdef MOCK_RADIO
+#ifdef LOLA_MOCK_RADIO
 		delayMicroseconds(500);
 		return true;
 #else
@@ -76,21 +76,21 @@ protected:
 
 	void ReadReceived()
 	{
-#ifndef MOCK_RADIO
+#ifndef LOLA_MOCK_RADIO
 		Si446x_read(Receiver.GetBuffer(), Receiver.GetBufferSize());
 #endif
 	}
 
 	void SetToReceiving()
 	{
-#ifndef MOCK_RADIO
+#ifndef LOLA_MOCK_RADIO
 		Si446x_RX(CurrentChannel);
 #endif
 	}
 
 	bool SetupRadio()
 	{
-#ifdef MOCK_RADIO
+#ifdef LOLA_MOCK_RADIO
 		return true;
 #else
 		//The SPI interface is designed to operate at a maximum of 10 MHz.

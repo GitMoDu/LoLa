@@ -289,7 +289,7 @@ protected:
 			Serial.println(F("Measuring Latency..."));
 #endif
 			ClearDurations();
-#ifdef MOCK_RADIO
+#ifdef LOLA_MOCK_RADIO
 #ifdef DEBUG_LOLA
 			Serial.println(F("Mock Latency done."));
 #endif
@@ -308,7 +308,7 @@ protected:
 				ClearDurations();
 				State = LatencyServiceStateEnum::Done;
 				SetNextRunASAP();
-#ifdef MOCK_RADIO
+#ifdef LOLA_MOCK_RADIO
 				MeasurementCompleteEvent.fire(true);
 #else
 #ifdef DEBUG_LOLA
