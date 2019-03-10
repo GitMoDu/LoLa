@@ -21,10 +21,6 @@ protected:
 	LoLaPacketMap * PacketMap = nullptr;
 	///
 
-	///Buffer use to store input/output packet raw data.
-	uint8_t BufferIndex = 0;
-	///
-
 	///CRC validation.
 	TinyCrcModbus8 CalculatorCRC;
 	///
