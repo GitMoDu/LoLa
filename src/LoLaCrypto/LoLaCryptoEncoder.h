@@ -87,6 +87,7 @@ public:
 #ifdef USE_ENCRYPTION
 		CryptoEnable = true;
 #endif
+		ResetCypherBlock();
 	}
 
 	bool IsReadyForUse()
