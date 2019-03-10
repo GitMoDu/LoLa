@@ -9,6 +9,8 @@
 #include <LoLaLinkInfo.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 
+#define LOLA_LINK_DEBUG_UPDATE_SECONDS						10
+
 #define LOLA_LINK_PROTOCOL_VERSION							1 //N < 16
 
 // How long to stay on a channel/token. TODO: Reduce when clocksync is better.

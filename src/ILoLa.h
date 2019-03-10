@@ -20,9 +20,6 @@
 #include <Transceivers\LoLaReceiver.h>
 #include <Transceivers\LoLaSender.h>
 
-#ifdef DEBUG_LOLA
-#define LOLA_LINK_DEBUG_UPDATE_SECONDS						60
-#endif
 
 // 100 High latency, high bandwitdh.
 // 10 Low latency, lower bandwidth.
