@@ -236,18 +236,23 @@ public:
 	}
 #endif
 
-#ifdef USE_LATENCY_COMPENSATION
+
 	uint8_t GetETTM()
 	{
 		return ETTM;
-		}
+	}
 
 	void SetETTM(const uint8_t ettm)
 	{
+#ifdef USE_LATENCY_COMPENSATION
 		ETTM = ettm;
-		Sender.SetETTM(ETTM);
-	}
+#else
+		ETTM = 0;
 #endif
+		Sender.SetETTM(ETTM);
+
+	}
+
 
 #ifdef USE_TIME_SLOT
 	void SetDuplexSlot(const bool evenSlot)
