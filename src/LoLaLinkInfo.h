@@ -41,7 +41,8 @@ private:
 	uint32_t PartnerInfoLastUpdatedRemotely = ILOLA_INVALID_MILLIS;
 
 	RingBufCPP<uint8_t, RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT> PartnerRSSISamples;
-	uint32_t PartnerAverageRSSI;
+	uint32_t PartnerAverageRSSI = 0;
+	uint32_t PartnerReceivedCount = 0;
 
 	//Link session information.
 	uint8_t SessionId = INVALID_SESSION;
@@ -197,6 +198,8 @@ public:
 			PartnerRSSISamples.pull();
 		}
 
+		PartnerReceivedCount = 0;
+
 		ClockSyncAdjustments = 0;
 
 #ifdef USE_LATENCY_COMPENSATION
@@ -311,6 +314,16 @@ public:
 	void SetPartnerRSSINormalized(const uint8_t rssiNormalized)
 	{
 		PartnerRSSISamples.addForce(rssiNormalized);
+	}
+
+	uint32_t GetPartnerReceivedCount()
+	{
+		return PartnerReceivedCount;
+	}
+
+	void SetPartnerReceivedCount(const uint32_t partnerReceivedCount)
+	{
+		PartnerReceivedCount = partnerReceivedCount;
 	}
 
 	//Output normalized to uint8_t range.
