@@ -5,7 +5,6 @@
 
 #include <Arduino.h>
 #include <LoLaCrypto\TinyCRC.h>
-#include <LoLaCrypto\ISeedSource.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
 
