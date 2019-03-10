@@ -28,7 +28,6 @@ private:
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 	uint8_t PinHolder[4] = { 0, 0, 0, 0 };
-	uint8_t TestData[2] = { 0 , 0 };
 
 	bool CryptoEnable = false;
 
@@ -40,9 +39,9 @@ private:
 private:
 	inline void ResetCypherBlock()
 	{
-		Cypher.setKey(KeyHolder, 16);
-		Cypher.setIV(IVHolder, 16);
-		Cypher.addAuthData(PinHolder, 1);
+		Cypher.setKey(KeyHolder, sizeof(KeyHolder));
+		Cypher.setIV(IVHolder, sizeof(IVHolder));
+		Cypher.addAuthData(PinHolder, sizeof(PinHolder));
 	}
 
 public:
@@ -93,6 +92,11 @@ public:
 	{
 		EncoderState = StageEnum::AllClear;
 		CryptoEnable = false;
+
+		for (uint8_t i = 0; i < sizeof(PinHolder); i++)
+		{
+			PinHolder[i] = 0;
+		}
 	}
 
 	bool SetEnabled()
@@ -130,20 +134,7 @@ public:
 			return false;
 		}
 
-		//Test encoding decoding.
 		ResetCypherBlock();
-		TestData[0] = random(0, UINT8_MAX);
-		TestData[1] = TestData[0];
-		Cypher.encrypt(TestData, TestData, 1);
-		ResetCypherBlock();
-		Cypher.decrypt(TestData, TestData, 1);
-
-		ResetCypherBlock();
-
-		if (TestData[0] != TestData[1])
-		{
-			return false;
-		}
 
 		EncoderState = StageEnum::AllReady;
 
@@ -198,5 +189,5 @@ public:
 
 		return true;
 	}
-	};
+};
 #endif
