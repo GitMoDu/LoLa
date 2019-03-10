@@ -27,7 +27,9 @@ private:
 	uint8_t IVHolder[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-	uint8_t PinHolder[4] = { 0, 0, 0, 0 };
+	uint8_t TokenHolder[4] = { 0, 0, 0, 0 };
+
+	uint32_t TokenSeed = 0; //Last 4 bytes of key are used for token.
 
 	bool CryptoEnable = false;
 
@@ -41,7 +43,7 @@ public:
 	{
 		Cypher.setKey(KeyHolder, sizeof(KeyHolder));
 		Cypher.setIV(IVHolder, sizeof(IVHolder));
-		Cypher.addAuthData(PinHolder, sizeof(PinHolder));
+		Cypher.addAuthData(TokenHolder, sizeof(TokenHolder));
 	}
 
 	void Encode(uint8_t* message, const uint8_t messageLength)
@@ -89,10 +91,12 @@ public:
 		EncoderState = StageEnum::AllClear;
 		CryptoEnable = false;
 
-		for (uint8_t i = 0; i < sizeof(PinHolder); i++)
+		for (uint8_t i = 0; i < sizeof(TokenHolder); i++)
 		{
-			PinHolder[i] = 0;
+			TokenHolder[i] = 0;
 		}
+
+		TokenSeed = 0;
 	}
 
 	bool SetEnabled()
@@ -112,7 +116,7 @@ public:
 	{
 		Cypher.clear();
 
-		//TODO: Handle key reduction?
+		//HKey reduction, only use keySize bytes for key (16).
 		for (uint8_t i = 0; i < Cypher.keySize(); i++)
 		{
 			KeyHolder[i] = secretKey[i];
@@ -129,6 +133,14 @@ public:
 		{
 			return false;
 		}
+
+		//Key expansion: don't throw away unused key bytes.
+		//Update token seed from last 4 bytes of the key.
+		TokenSeed = 0;
+		TokenSeed += (KeyHolder[keyLength - 4] >> 0) & 0xFF;
+		TokenSeed += (KeyHolder[keyLength - 3] >> 8) & 0xFF;
+		TokenSeed += (KeyHolder[keyLength - 2] >> 16) & 0xFF;
+		TokenSeed += (KeyHolder[keyLength - 1] >> 24) & 0xFF;
 
 		ResetCypherBlock();
 
@@ -178,19 +190,17 @@ public:
 		IVHolder[15] = Hasher.Update(sessionId);
 	}
 
-	bool SetAuthData(const uint8_t* pin, const uint8_t pinLength)
+	uint32_t GetSeed()
 	{
-		if (pinLength != 4) //TODO: Pin.
-		{
-			return false; //Wrong state
-		}
+		return TokenSeed;
+	}
 
-		for (uint8_t i = 0; i < pinLength; i++)
-		{
-			PinHolder[i] = pin[i];
-		}
-
-		return true;
+	void SetToken(const uint32_t token)
+	{
+		TokenHolder[0] = token & 0xFF;
+		TokenHolder[1] = (token >> 8) & 0xFF;
+		TokenHolder[2] = (token >> 16) & 0xFF;
+		TokenHolder[3] = (token >> 24) & 0xFF;
 	}
 };
 #endif
