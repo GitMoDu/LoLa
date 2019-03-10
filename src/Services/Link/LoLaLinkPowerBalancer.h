@@ -45,7 +45,7 @@ public:
 
 	bool Update()
 	{
-		if (LoLa->GetLastValidReceivedMillis() < LOLA_LINK_SERVICE_LINKED_MAX_PANIC &&
+		if (millis() - LoLa->GetLastValidReceivedMillis() < LOLA_LINK_SERVICE_LINKED_MAX_PANIC &&
 			(LastUpdated == ILOLA_INVALID_MILLIS ||
 			(millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD)))
 		{
