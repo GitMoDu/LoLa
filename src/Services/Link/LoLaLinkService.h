@@ -628,15 +628,19 @@ protected:
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA
 				Serial.println();
-				Serial.print(F("Linked: "));
-				Serial.println(MillisSync());
 #ifdef LOLA_USE_ENCRYPTION
-				Serial.print(F("Link secured with "));
+				Serial.print(F("Link secured with 160 bit "));
 				KeyExchanger.Debug(&Serial);
 				Serial.println();
-				Serial.print(F("\tEncrypted with "));
+				Serial.print(F("\tEncrypted with 128 bit key"));
 				GetLoLa()->GetCryptoEncoder()->Debug(&Serial);
 				Serial.println();
+				Serial.print(F("\tProtected with 32 bit TOTP @ "));
+				Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
+				Serial.println(F(" ms"));
+#else
+				Serial.print(F("Linked: "));
+				Serial.println(MillisSync());
 #endif
 				Serial.print(F("Linking took "));
 				Serial.print(LinkingDuration);

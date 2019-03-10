@@ -74,10 +74,6 @@ protected:
 #ifdef USE_FREQUENCY_HOP
 		//GetLoLa()->SetChannel(GetHopChannel());
 #endif
-#ifdef DEBUG_LOLA
-		Serial.print(F("Hop: "));
-		Serial.println(TokenHelper);
-#endif
 	}
 
 public:
