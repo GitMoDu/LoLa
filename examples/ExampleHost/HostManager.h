@@ -16,7 +16,7 @@ class HostManager : public LoLaManagerHost
 private:
 	ControllerSurface Controller;
 
-	SyncSurfaceReader Reader;
+	SyncSurfaceReader<CONTROLLER_SURFACE_BASE_HEADER> Reader;
 
 protected:
 	bool OnSetupServices()
@@ -27,7 +27,7 @@ protected:
 public:
 	HostManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
 		: LoLaManagerHost(scheduler, loLa)
-		, Reader(scheduler, loLa, CONTROLLER_SURFACE_BASE_HEADER, &Controller)
+		, Reader(scheduler, loLa, &Controller)
 	{
 	}
 

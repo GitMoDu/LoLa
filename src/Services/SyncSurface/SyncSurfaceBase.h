@@ -20,8 +20,8 @@
 class SyncSurfaceBase : public AbstractSync
 {
 private:
-	SyncMetaPacketDefinition SyncMetaDefinition;
-	SyncDataPacketDefinition DataPacketDefinition;
+	SyncAbstractPacketDefinition* SyncMetaDefinition = nullptr;
+	SyncAbstractPacketDefinition* DataPacketDefinition = nullptr;
 
 	union ArrayToUint32 {
 		byte array[4];
@@ -31,15 +31,15 @@ private:
 	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
 
 public:
-	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
+	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, ITrackedSurface* trackedSurface,
+		SyncAbstractPacketDefinition* metaDefinition, SyncAbstractPacketDefinition* dataDefinition)
 		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, loLa, trackedSurface, &PacketHolder)
 	{
-		SyncMetaDefinition.SetBaseHeader(baseHeader);
-		DataPacketDefinition.SetBaseHeader(baseHeader);
-
+		SyncMetaDefinition = metaDefinition;
+		DataPacketDefinition = dataDefinition;
 #ifdef DEBUG_LOLA
-		SyncMetaDefinition.SetOwner(trackedSurface);
-		DataPacketDefinition.SetOwner(trackedSurface);		
+		SyncMetaDefinition->SetOwner(trackedSurface);
+		DataPacketDefinition->SetOwner(trackedSurface);		
 #endif
 	}
 
@@ -57,8 +57,8 @@ protected:
 protected:
 	bool OnAddPacketMap(LoLaPacketMap* packetMap)
 	{
-		if (!packetMap->AddMapping(&SyncMetaDefinition) ||
-			!packetMap->AddMapping(&DataPacketDefinition))
+		if (!packetMap->AddMapping(SyncMetaDefinition) ||
+			!packetMap->AddMapping(DataPacketDefinition))
 		{
 			return false;
 		}
@@ -68,14 +68,14 @@ protected:
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket)
 	{
-		if (incomingPacket->GetDataHeader() == DataPacketDefinition.GetHeader())
+		if (incomingPacket->GetDataHeader() == DataPacketDefinition->GetHeader())
 		{
 			//To Reader.
 			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
 
 			return true;
 		}
-		else if (incomingPacket->GetDataHeader() == SyncMetaDefinition.GetHeader())
+		else if (incomingPacket->GetDataHeader() == SyncMetaDefinition->GetHeader())
 		{
 			SetRemoteHash(incomingPacket->GetPayload()[0]);
 
@@ -140,7 +140,7 @@ protected:
 
 	void PrepareMetaPacket(const uint8_t subHeader)
 	{
-		Packet->SetDefinition(&SyncMetaDefinition);
+		Packet->SetDefinition(SyncMetaDefinition);
 		Packet->SetId(subHeader);
 		UpdateLocalHash();
 		Packet->GetPayload()[0] = GetLocalHash();
@@ -156,7 +156,7 @@ protected:
 	{
 		if (index < TrackedSurface->GetBlockCount())
 		{
-			Packet->SetDefinition(&DataPacketDefinition);
+			Packet->SetDefinition(DataPacketDefinition);
 			Packet->SetId(index);
 			return true;
 		}

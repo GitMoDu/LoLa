@@ -103,9 +103,9 @@ enum LinkingStagesEnum : uint8_t
 class PingPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_PING_WITH_ACK; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_PING_WITH_ACK; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -118,9 +118,9 @@ public:
 class LinkReportPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_REPORT; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_REPORT; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -133,9 +133,9 @@ public:
 class LinkShortPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -148,9 +148,9 @@ public:
 class LinkShortWithAckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT_WITH_ACK; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT_WITH_ACK; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -163,9 +163,9 @@ public:
 class LinkLongPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	uint8_t GetHeader() { return LOLA_LINK_HEADER_LONG; }
-	uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG; }
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
+	const uint8_t GetHeader() { return LOLA_LINK_HEADER_LONG; }
+	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG; }
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)

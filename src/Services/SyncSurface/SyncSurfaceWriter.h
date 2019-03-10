@@ -6,11 +6,16 @@
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 
+template <const uint8_t BasePacketHeader>
 class SyncSurfaceWriter : public SyncSurfaceBase
 {
+private:
+	SyncMetaPacketDefinition<BasePacketHeader> SyncMetaDefinition;
+	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
+
 public:
-	SyncSurfaceWriter(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
-		: SyncSurfaceBase(scheduler, loLa, baseHeader, trackedSurface)
+	SyncSurfaceWriter(Scheduler* scheduler, ILoLa* loLa, ITrackedSurface* trackedSurface)
+		: SyncSurfaceBase(scheduler, loLa, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
 	{
 	}
 

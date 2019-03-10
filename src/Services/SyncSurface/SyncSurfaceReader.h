@@ -5,11 +5,16 @@
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 
+template <const uint8_t BasePacketHeader>
 class SyncSurfaceReader : public SyncSurfaceBase
 {
+private:
+	SyncMetaPacketDefinition<BasePacketHeader> SyncMetaDefinition;
+	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
+
 public:
-	SyncSurfaceReader(Scheduler* scheduler, ILoLa* loLa, const uint8_t baseHeader, ITrackedSurface* trackedSurface)
-		: SyncSurfaceBase(scheduler, loLa, baseHeader, trackedSurface)
+	SyncSurfaceReader(Scheduler* scheduler, ILoLa* loLa, ITrackedSurface* trackedSurface)
+		: SyncSurfaceBase(scheduler, loLa, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
 	{
 	}
 
@@ -43,7 +48,7 @@ protected:
 		}
 	}
 
-	void OnStateUpdated(const SyncStateEnum newState)
+	void OnStateUpdated(const AbstractSync::SyncStateEnum newState)
 	{
 		switch (newState)
 		{

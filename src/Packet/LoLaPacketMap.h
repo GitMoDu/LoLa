@@ -19,9 +19,9 @@
 class AckPacketDefinition : public PacketDefinition
 {
 public:
-	uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_IS_ACK; }
-	uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
-	uint8_t GetPayloadSize() {
+	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_IS_ACK; }
+	const uint8_t GetHeader() { return PACKET_DEFINITION_ACK_HEADER; }
+	const uint8_t GetPayloadSize() {
 		return 1;//Payload is original Header. Id is optional.
 	}
 #ifdef DEBUG_LOLA
