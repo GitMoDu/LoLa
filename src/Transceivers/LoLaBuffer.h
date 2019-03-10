@@ -35,7 +35,7 @@ protected:
 	///
 
 	volatile uint8_t BufferSize = 0;
-	ILoLaPacket* BufferPacket = nullptr;
+	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> BufferPacket;
 
 protected:
 	PacketDefinition * FindPacketDefinition(const uint8_t header)
@@ -57,9 +57,9 @@ public:
 	}
 	
 public:
-	uint8_t * GetBuffer()
+	uint8_t* GetBuffer()
 	{
-		return BufferPacket->GetRaw();
+		return BufferPacket.GetRaw();
 	}
 
 	void SetBufferSize(const uint8_t size)
@@ -78,7 +78,7 @@ public:
 		serial->print(F("|"));
 		for (uint8_t i = 0; i < BufferSize; i++)
 		{
-			serial->print(BufferPacket->GetRaw()[i]);
+			serial->print(BufferPacket.GetRaw()[i]);
 			serial->print(F("|"));
 		}
 		serial->println();

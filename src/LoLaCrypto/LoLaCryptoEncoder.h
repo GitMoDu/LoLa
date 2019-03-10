@@ -55,6 +55,19 @@ public:
 		}
 	}
 
+	void Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
+	{
+		if (CryptoEnable)
+		{
+			Cypher.encrypt(outputMessage, message, messageLength);
+			ResetCypherBlock();
+		}
+		else
+		{
+			memcpy(outputMessage, message, messageLength);
+		}
+	}
+
 	void Decode(uint8_t* message, const uint8_t messageLength)
 	{
 		if (CryptoEnable)

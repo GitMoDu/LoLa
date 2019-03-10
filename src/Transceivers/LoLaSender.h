@@ -18,26 +18,26 @@ private:
 	///
 
 	//Optimization helper.
-	uint8_t OutgoingContentSize = 0;
+	PacketDefinition* OugoingDefinition = nullptr;
 
 public:
 	//Writes directly to output buffer.
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
-		BufferPacket = transmitPacket;
-		OutgoingContentSize = BufferPacket->GetDefinition()->GetContentSize();
+		OugoingDefinition = transmitPacket->GetDefinition();
+
 		CalculatorCRC.Reset();
 
 		//Encode packet content, if crypto is enabled.
-		Encoder->Encode(BufferPacket->GetRawContent(), OutgoingContentSize);
+		Encoder->Encode(transmitPacket->GetRawContent(), OugoingDefinition->GetContentSize(), BufferPacket.GetRawContent());
 
 		//Hash everything but the CRC at the start.
-		CalculatorCRC.Update(BufferPacket->GetRawContent(), OutgoingContentSize);
-		BufferPacket->SetMACCRC(CalculatorCRC.GetCurrent());
+		CalculatorCRC.Update(BufferPacket.GetRawContent(), OugoingDefinition->GetContentSize());
+		BufferPacket.SetMACCRC(CalculatorCRC.GetCurrent());
 
-		BufferSize = BufferPacket->GetDefinition()->GetTotalSize();
+		BufferSize = OugoingDefinition->GetTotalSize();
 
-		return true;
+		return BufferSize > 0 ;
 	}
 
 	bool SendAck(const uint8_t header, const uint8_t id)
