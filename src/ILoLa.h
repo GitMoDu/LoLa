@@ -221,7 +221,6 @@ public:
 	}
 #endif
 
-
 	uint8_t GetETTM()
 	{
 		return ETTM;
@@ -237,7 +236,6 @@ public:
 		Sender.SetETTM(ETTM);
 
 	}
-
 
 #ifdef USE_TIME_SLOT
 	void SetDuplexSlot(const bool evenSlot)

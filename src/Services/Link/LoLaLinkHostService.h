@@ -288,7 +288,7 @@ protected:
 			}
 			else
 			{	//If we don't have enough latency samples, we make more.
-				if (PingAcked || GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MIN)
+				if (PingAcked || GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MAX)
 				{
 					PingAcked = false;
 					PreparePing();
