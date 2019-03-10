@@ -5,20 +5,20 @@
 
 #define DEBUG_LOLA
 
-//#define LOLA_MOCK_RADIO
-//#define LOLA_MOCK_PACKET_LOSS
-
-#define LOLA_USE_LATENCY_COMPENSATION
-#define LOLA_USE_ENCRYPTION
-
-//#define LOLA_USE_FREQUENCY_HOP
-//#define LOLA_USE_CRYPTO_TOKEN
-
-//#define DEBUG_LOLA_CRYPTO
-
 #include <stdint.h>
 #include <Transceivers\LoLaReceiver.h>
 #include <Transceivers\LoLaSender.h>
+#include <Packet\LoLaPacket.h>
+#include <Packet\LoLaPacketMap.h>
+#include <LoLaCrypto\LoLaCryptoEncoder.h>
+#include <ClockSource.h>
+
+
+
+#define LOLA_USE_LATENCY_COMPENSATION
+
+//#define LOLA_MOCK_RADIO
+//#define LOLA_MOCK_PACKET_LOSS
 
 
 // 100 High latency, high bandwitdh.
@@ -54,13 +54,6 @@
 #endif
 ///
 
-#include <Arduino.h>
-#include <Packet\LoLaPacket.h>
-#include <Packet\LoLaPacketMap.h>
-#include <LoLaCrypto\LoLaCryptoEncoder.h>
-
-
-#include <ClockSource.h>
 
 class ILoLa
 {
@@ -90,7 +83,7 @@ protected:
 	///Statistics
 	InputInfoType LastReceivedInfo;
 	OutputInfoType LastSentInfo;
-	
+
 	InputInfoType LastValidReceivedInfo;
 	OutputInfoType LastValidSentInfo;
 
@@ -149,7 +142,7 @@ protected:
 		WaitingForTransmissionEnd
 	};
 
-	
+
 
 public:
 	ILoLa() : PacketMap(), SyncedClock()
@@ -266,8 +259,8 @@ public:
 	uint32_t GetSentCount()
 	{
 		return TransmitedCount;
-	}	
-	
+	}
+
 	uint32_t GetTimingCollisionCount()
 	{
 		return TimingCollisionCount;
@@ -360,5 +353,5 @@ public:
 		PacketMap.Debug(serial);
 	}
 #endif
-	};
+};
 #endif

@@ -186,13 +186,13 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (KeysLastGenerated == ILOLA_INVALID_MILLIS || millis() - KeysLastGenerated > LOLA_LINK_SERVICE_UNLINK_KEY_PAIR_LIFETIME)
 			{
-#ifdef DEBUG_LOLA_CRYPTO
+#ifdef DEBUG_LOLA_LINK_CRYPTO
 				uint32_t SharedKeyTime = micros();
 #endif
 				KeyExchanger.GenerateNewKeyPair();
 				KeysLastGenerated = millis();
 #ifdef DEBUG_LOLA
-#ifdef DEBUG_LOLA_CRYPTO
+#ifdef DEBUG_LOLA_LINK_CRYPTO
 				SharedKeyTime = micros() - SharedKeyTime;
 				Serial.print(F("Keys generation took "));
 				Serial.print(SharedKeyTime);
@@ -608,7 +608,9 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
 				CryptoToken->SetSeed(GetLoLa()->GetCryptoEncoder()->GetSeed());
+#ifdef LOLA_LINK_USE_ENCRYPTION
 				GetLoLa()->GetCryptoEncoder()->SetEnabled();
+#endif
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
@@ -628,7 +630,7 @@ protected:
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA
 				Serial.println();
-#ifdef LOLA_USE_ENCRYPTION
+#ifdef LOLA_LINK_USE_ENCRYPTION
 				Serial.print(F("Link secured with 160 bit "));
 				KeyExchanger.Debug(&Serial);
 				Serial.println();

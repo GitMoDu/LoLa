@@ -38,12 +38,9 @@ protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("LinkTimedHopper ("));
-#ifdef LOLA_USE_CRYPTO_TOKEN
-		serial->print(F("Cryp"));
-#endif 
+		serial->print(F("LinkTimedHopper (Cryp"));
 		serial->print('|');
-#ifdef LOLA_USE_FREQUENCY_HOP
+#ifdef LOLA_LINK_USE_FREQUENCY_HOP
 		serial->print(F("Freq"));
 #endif 
 		serial->print(')');

@@ -104,9 +104,8 @@ public:
 
 	bool SetEnabled()
 	{
-#ifdef LOLA_USE_ENCRYPTION
 		CryptoEnable = true;
-#endif
+
 		ResetCypherBlock();
 	}
 

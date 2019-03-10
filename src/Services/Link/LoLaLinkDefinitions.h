@@ -9,6 +9,11 @@
 #include <LoLaLinkInfo.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 
+//#define DEBUG_LOLA_LINK_CRYPTO
+
+#define LOLA_LINK_USE_ENCRYPTION
+//#define LOLA_LINK_USE_FREQUENCY_HOP
+
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS						10
 
 #define LOLA_LINK_PROTOCOL_VERSION							1 //N < 16
