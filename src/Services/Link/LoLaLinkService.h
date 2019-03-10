@@ -45,6 +45,7 @@ private:
 	LoLaServicesManager * ServicesManager = nullptr;
 
 	//Sub-services.
+	LoLaLinkTimedHopper TimedHopper;
 
 	//Channel management.
 	LoLaLinkChannelManager ChannelManager;
@@ -52,8 +53,8 @@ private:
 	//Power balancer.
 	LoLaLinkPowerBalancer PowerBalancer;
 
-	//Crypto.
-	LoLaCryptoTokenSource	CryptoToken;
+	//Crypto Token.
+	ITokenSource* CryptoToken = nullptr;
 
 #ifdef DEBUG_LOLA
 	uint32_t LastDebugged = ILOLA_INVALID_MILLIS;
@@ -144,6 +145,7 @@ protected:
 public:
 	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, loLa, &PacketHolder)
+		, TimedHopper(scheduler, loLa)
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
@@ -156,7 +158,7 @@ public:
 
 		if (ServicesManager != nullptr)
 		{
-			return true;
+			return ServicesManager->Add(&TimedHopper);
 		}
 		return false;
 	}
@@ -420,7 +422,7 @@ protected:
 		}
 
 		GetLoLa()->GetCryptoEncoder()->Clear();
-		CryptoToken.SetSeed(0);
+		CryptoToken->SetSeed(0);
 
 		KeyExchanger.ClearPartner();
 
@@ -441,12 +443,13 @@ protected:
 			ServicesManager != nullptr &&
 			KeyExchanger.Setup() &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
-			CryptoToken.Setup(GetLoLa()->GetClockSource()) &&
-			ChannelManager.Setup(GetLoLa()))
+			ChannelManager.Setup(GetLoLa()) &&
+			TimedHopper.Setup(GetLoLa()->GetClockSource()))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
+			CryptoToken = TimedHopper.GetTokenSource();
 
-			if (LinkInfo != nullptr)
+			if (LinkInfo != nullptr && CryptoToken != nullptr)
 			{
 				LinkInfo->SetDriver(GetLoLa());
 				LinkInfo->Reset();
@@ -604,7 +607,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
-				CryptoToken.SetSeed(GetLoLa()->GetCryptoEncoder()->GetSeed());
+				CryptoToken->SetSeed(GetLoLa()->GetCryptoEncoder()->GetSeed());
 				GetLoLa()->GetCryptoEncoder()->SetEnabled();
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				

@@ -12,7 +12,7 @@ private:
 	LoLaLinkInfo* LinkInfo = nullptr;
 	ILoLa* LoLa = nullptr;
 
-	//uint32_t HopPeriod = LOLA_LINK_FREQUENCY_HOP_PERIOD_MILLIS;
+
 
 	//Helpers
 	//uint8_t HopIndex = 0;
