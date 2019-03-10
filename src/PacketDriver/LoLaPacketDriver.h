@@ -101,7 +101,7 @@ private:
 
 	inline void OnTransmitted(const uint8_t header)
 	{
-		LastSent = millis();
+		LastSentInfo.Time = millis();
 		LastSentHeader = header;
 		LastChannel = CurrentChannel;
 		OnTransmitPowerUpdated();
@@ -155,8 +155,6 @@ public:
 		if (Receiver.Setup(&PacketMap, &CryptoEncoder) &&
 			Sender.Setup(&PacketMap, &CryptoEncoder))
 		{
-			IncomingInfo.Clear();
-
 			MethodSlot<LoLaPacketDriver, ActionCallbackClass> memFunSlot(this, &LoLaPacketDriver::OnAsyncAction);
 			CallbackHandler.AttachActionCallback(memFunSlot);
 
@@ -211,9 +209,8 @@ private:
 		}
 
 		//Packet received Ok, let's commit that info really quick.
-		LastValidReceived = IncomingInfo.GetPacketTime();
-		LastValidReceivedRssi = IncomingInfo.GetPacketRSSI();
-		IncomingInfo.Clear();
+		LastValidReceivedInfo.Time = LastReceivedInfo.Time;
+		LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
 		ReceivedCount++;
 
 		//Is Ack packet.
@@ -275,8 +272,8 @@ public:
 	//When RF detects incoming packet.
 	void OnIncoming(const int16_t rssi)
 	{
-		LastReceived = millis();
-		LastReceivedRssi = rssi;
+		LastReceivedInfo.Time = millis();
+		LastReceivedInfo.RSSI = rssi;
 
 		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
 		{
@@ -287,8 +284,6 @@ public:
 		}
 
 		DriverActiveState = DriverActiveStates::BlockedForIncoming;
-
-		IncomingInfo.SetInfo(LastReceived, LastReceivedRssi);
 	}
 
 	//When RF has packet to read, copy content into receive buffer.
@@ -315,7 +310,6 @@ public:
 	//When RF has received a garbled packet.
 	void OnReceivedFail(const int16_t rssi)
 	{
-		IncomingInfo.Clear();
 #ifdef DEBUG_LOLA
 		if (DriverActiveState != DriverActiveStates::BlockedForIncoming)
 		{
@@ -327,7 +321,14 @@ public:
 
 	void OnSentOk()
 	{
-		LastValidSent = LastSent;
+#ifdef DEBUG_LOLA
+		if (DriverActiveState != DriverActiveStates::WaitingForTransmissionEnd)
+		{
+			Serial.println(F("Bad state OnSentOk"));
+		}
+#endif
+
+		LastValidSentInfo.Time= LastSentInfo.Time;
 		TransmitedCount++;
 		AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, LastSentHeader);
 		LastSentHeader = 0xFF;
@@ -370,7 +371,7 @@ public:
 private:
 	inline bool CoolAfterSend()
 	{
-		return LastSent == ILOLA_INVALID_MILLIS || millis() - LastSent > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
+		return LastSentInfo.Time == ILOLA_INVALID_MILLIS || millis() - LastSentInfo.Time > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
 	}
 
 	bool IsInSendSlot()

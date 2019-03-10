@@ -79,14 +79,34 @@
 class ILoLa
 {
 protected:
-	///Statistics
-	volatile uint32_t LastSent = ILOLA_INVALID_MILLIS;
-	volatile uint32_t LastReceived = ILOLA_INVALID_MILLIS;
-	volatile int16_t LastReceivedRssi = ILOLA_INVALID_RSSI;
+	struct InputInfoType
+	{
+		volatile uint32_t Time = ILOLA_INVALID_MILLIS;
+		volatile int16_t RSSI = ILOLA_INVALID_RSSI;
 
-	volatile uint32_t LastValidSent = ILOLA_INVALID_MILLIS;
-	uint32_t LastValidReceived = ILOLA_INVALID_MILLIS;
-	int16_t LastValidReceivedRssi = ILOLA_INVALID_RSSI;
+		void Clear()
+		{
+			Time = ILOLA_INVALID_MILLIS;
+			RSSI = ILOLA_INVALID_RSSI;
+		}
+	};
+
+	struct OutputInfoType
+	{
+		volatile uint32_t Time = ILOLA_INVALID_MILLIS;
+
+		void Clear()
+		{
+			Time = ILOLA_INVALID_MILLIS;
+		}
+	};
+
+	///Statistics
+	InputInfoType LastReceivedInfo;
+	OutputInfoType LastSentInfo;
+	
+	InputInfoType LastValidReceivedInfo;
+	OutputInfoType LastValidSentInfo;
 
 	uint32_t TransmitedCount = 0;
 	uint32_t ReceivedCount = 0;
@@ -144,42 +164,7 @@ protected:
 		WaitingForTransmissionEnd
 	};
 
-	class IncomingInfoStruct
-	{
-	private:
-		uint32_t PacketTime = ILOLA_INVALID_MILLIS;
-		int16_t PacketRSSI = ILOLA_INVALID_RSSI;
-
-	public:
-		IncomingInfoStruct() {}
-
-		uint32_t GetPacketTime()
-		{
-			return PacketTime;
-		}
-
-		int16_t GetPacketRSSI()
-		{
-			return PacketRSSI;
-		}
-
-		void Clear()
-		{
-			PacketTime = ILOLA_INVALID_MILLIS;
-			PacketRSSI = ILOLA_INVALID_RSSI;
-		}
-
-		bool HasInfo()
-		{
-			return PacketTime != ILOLA_INVALID_MILLIS && PacketRSSI != ILOLA_INVALID_RSSI;
-		}
-
-		void SetInfo(const uint32_t time, const int16_t rssi)
-		{
-			PacketTime = time;
-			PacketRSSI = rssi;
-		}
-	} IncomingInfo;
+	
 
 public:
 	ILoLa() : PacketMap(), SyncedClock()
@@ -270,17 +255,14 @@ public:
 
 	void ResetLiveData()
 	{
-#ifdef USE_LATENCY_COMPENSATION
 		ETTM = 0;
 		Sender.SetETTM(ETTM);
-#endif
-		LastSent = ILOLA_INVALID_MILLIS;
-		LastReceived = ILOLA_INVALID_MILLIS;
-		LastReceivedRssi = ILOLA_INVALID_RSSI;
 
-		LastValidReceived = ILOLA_INVALID_MILLIS;
-		LastValidReceivedRssi = ILOLA_INVALID_RSSI;
-		LastValidSent = ILOLA_INVALID_MILLIS;
+		LastReceivedInfo.Clear();
+		LastSentInfo.Clear();
+
+		LastValidReceivedInfo.Clear();
+		LastValidSentInfo.Clear();
 
 		ResetStatistics();
 	}
@@ -319,22 +301,22 @@ public:
 
 	int16_t GetLastRSSI()
 	{
-		return LastReceivedRssi;
+		return LastReceivedInfo.RSSI;
 	}
 
 	uint32_t GetLastValidReceivedMillis()
 	{
-		return LastValidReceived;
+		return LastValidReceivedInfo.Time;
 	}
 
 	uint32_t GetLastValidSentMillis()
 	{
-		return LastValidSent;
+		return LastValidSentInfo.Time;
 	}
 
 	int16_t GetLastValidRSSI()
 	{
-		return LastValidReceivedRssi;
+		return LastValidReceivedInfo.RSSI;
 	}
 
 	uint8_t GetTransmitPowerNormalized()
