@@ -63,6 +63,7 @@ Encrypted Link[WORKING] – Packets encrypted with Ascon128 cypher, using 16 byt
 TOTP protection [WORKING] - A TOTP seed is set using the last 4 bytes of the secret key, which is then used to generate a time based token, which is used by the cypher when encrypting/decrypting. The default hop time is 1 second.
 
 Synchronized clock [WORKING]: when establishing a link, the Remote's clock is synced to the Host's clock. The host clock is randomized for each new link session. The clock is tuned during link time. Possible improvements: get host/remote clock delta.
+
 Packet collision avoidance [WORKING]: with the Synchronized clock, we split a fixed period in half where the Host can only transmit during the first half and the Remote during the second half (half-duplex). Default duplex period is 10 milliseconds. Latency is taken into account for this feature (optional).
 
 Unbuffered Output [WORKING]: Each LoLa service can handle a packet send being delayed or even failed, so we don't need to buffer outputs. IPacketSendService extends the base ILoLaService and provides overloads for extension.
