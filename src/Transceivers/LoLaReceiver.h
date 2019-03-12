@@ -8,9 +8,6 @@
 //TODO: refactor into packet driver.
 class LoLaReceiver : public LoLaBuffer
 {
-private:
-	uint8_t IncomingContentSize = 0;
-
 public:
 	PacketDefinition * GetIncomingDefinition()
 	{
@@ -42,14 +39,11 @@ public:
 		BufferPacket.SetDefinition(nullptr);
 		if (BufferSize > 0 && BufferSize <= LOLA_PACKET_MAX_PACKET_SIZE)
 		{
-			IncomingContentSize = PacketDefinition::GetContentSize(BufferSize);
-			
-			//Hash everything and compare with the CRC at the start.
-			if (BufferPacket.GetMACCRC() == Encoder->Decode(BufferPacket.GetRawContent(), IncomingContentSize))
+			if (BufferPacket.GetMACCRC() == Encoder->Decode(BufferPacket.GetRawContent(), PacketDefinition::GetContentSize(BufferSize)))
 			{
 				//Find a packet definition from map.
 				if (!BufferPacket.SetDefinition(PacketMap->GetDefinition(BufferPacket.GetDataHeader())) ||
-					IncomingContentSize != BufferPacket.GetDefinition()->GetContentSize())
+					PacketDefinition::GetContentSize(BufferSize) != BufferPacket.GetDefinition()->GetContentSize())
 				{
 					BufferPacket.SetDefinition(nullptr);
 					BufferSize = 0;

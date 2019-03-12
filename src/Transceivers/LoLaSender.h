@@ -14,17 +14,12 @@ private:
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE> AckPacket;
 
-	//Optimization helper.
-	PacketDefinition* OugoingDefinition = nullptr;
-
 public:
 	//Writes directly to output buffer.
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
-		OugoingDefinition = transmitPacket->GetDefinition();
-
-		BufferPacket.SetMACCRC(Encoder->Encode(transmitPacket->GetRawContent(), OugoingDefinition->GetContentSize(), BufferPacket.GetRawContent()));
-		BufferSize = OugoingDefinition->GetTotalSize();
+		BufferPacket.SetMACCRC(Encoder->Encode(transmitPacket->GetRawContent(), transmitPacket->GetDefinition()->GetContentSize(), BufferPacket.GetRawContent()));
+		BufferSize = transmitPacket->GetDefinition()->GetTotalSize();
 
 		return BufferSize > 0;
 	}
