@@ -64,20 +64,14 @@ protected:
 		delayMicroseconds(500);
 		return true;
 #else
-
-		if (Sender.GetBufferSize() > 0)
-		{
-			return Si446x_TX(Sender.GetBuffer(), Sender.GetBufferSize(), CurrentChannel, SI446X_STATE_RX);
-		}
-
-		return false;
+		return Si446x_TX(OutgoingPacket.GetRaw(), OutgoingPacketSize, CurrentChannel, SI446X_STATE_RX);
 #endif
 	}
 
 	void ReadReceived()
 	{
 #ifndef LOLA_MOCK_RADIO
-		Si446x_read(Receiver.GetBuffer(), Receiver.GetBufferSize());
+		Si446x_read(IncomingPacket.GetRaw(), IncomingPacketSize);
 #endif
 	}
 

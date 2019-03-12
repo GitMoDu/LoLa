@@ -13,6 +13,7 @@
 class LoLaPacketDriver : public ILoLa
 {
 private:
+	///Async Callback.
 	enum DriverAsyncActions : uint8_t
 	{
 		ActionProcessIncomingPacket = 0,
@@ -31,18 +32,28 @@ private:
 
 	//Event queue, very rarely goes over 2.
 	TemplateAsyncActionCallback<4, ActionCallbackClass> CallbackHandler;
+	///
 
 	//Async helpers for values.
+	volatile uint8_t LastSentHeader = 0xFF;
+
 	uint8_t LastPower = 0;
 	uint8_t LastChannel = 0;
 
 	volatile DriverActiveStates DriverActiveState = DriverActiveStates::DriverDisabled;
-	volatile uint8_t LastSentHeader = 0xFF;
+
+	PacketDefinition* AckDefinition = nullptr;
 
 protected:
 	///Services that are served receiving packets.
 	LoLaServicesManager Services;
 	///
+
+	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> IncomingPacket;
+	uint8_t IncomingPacketSize = 0;
+
+	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> OutgoingPacket;
+	uint8_t OutgoingPacketSize = 0;
 
 protected:
 	//Driver implementation.
@@ -152,19 +163,19 @@ public:
 	///Public methods.
 	bool Setup()
 	{
-		if (Receiver.Setup(&PacketMap, &CryptoEncoder) &&
-			Sender.Setup(&PacketMap, &CryptoEncoder))
+		AckDefinition = PacketMap.GetDefinition(PACKET_DEFINITION_ACK_HEADER);
+		if (AckDefinition != nullptr)
 		{
 			MethodSlot<LoLaPacketDriver, ActionCallbackClass> memFunSlot(this, &LoLaPacketDriver::OnAsyncAction);
 			CallbackHandler.AttachActionCallback(memFunSlot);
 
-			return SetupRadio();
+			return true;
 		}
 
 		return false;
 	}
 
-	bool SendPacket(ILoLaPacket* packet)
+	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
 		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
 		{
@@ -173,9 +184,13 @@ public:
 		}
 
 		DriverActiveState = DriverActiveStates::SendingOutgoing;
-		if (Sender.SendPacket(packet) && Transmit())
+
+		OutgoingPacket.SetMACCRC(CryptoEncoder.Encode(transmitPacket->GetRawContent(), transmitPacket->GetDefinition()->GetContentSize(), OutgoingPacket.GetRawContent()));
+		OutgoingPacketSize = transmitPacket->GetDefinition()->GetTotalSize();
+
+		if (OutgoingPacketSize > 0  && Transmit())
 		{
-			OnTransmitted(packet->GetDataHeader());
+			OnTransmitted(transmitPacket->GetDataHeader());
 			DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
 
 			return true;
@@ -187,6 +202,15 @@ public:
 	}
 
 private:
+	bool SendAck(const uint8_t header, const uint8_t id)
+	{
+		OutgoingPacket.SetDefinition(AckDefinition);
+		OutgoingPacket.GetPayload()[0] = header;
+		OutgoingPacket.SetId(id);
+
+		return SendPacket(&OutgoingPacket);
+	}
+
 	void ProcessIncoming()
 	{
 		if (DriverActiveState != DriverActiveStates::AwaitingProcessing)
@@ -199,14 +223,19 @@ private:
 		DriverActiveState = DriverActiveStates::ProcessingIncoming;
 
 		ReadReceived();
-
-		if (!Receiver.ReceivePacket())
+		if (!(IncomingPacketSize > 0 && IncomingPacketSize <= LOLA_PACKET_MAX_PACKET_SIZE &&
+			IncomingPacket.GetMACCRC() == CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSize(IncomingPacketSize)) &&
+			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())) &&
+			IncomingPacketSize != IncomingPacket.GetDefinition()->GetTotalSize()))
 		{
+			RestoreToReceiving();
+
 			RejectedCount++;
 			RestoreToReceiving();
 
-			return;
+			return;//Failed to read incoming packet.
 		}
+
 
 		//Packet received Ok, let's commit that info really quick.
 		LastValidReceivedInfo.Time = LastReceivedInfo.Time;
@@ -214,26 +243,19 @@ private:
 		ReceivedCount++;
 
 		//Is Ack packet.
-		if (Receiver.GetIncomingDefinition()->IsAck())
+		if (IncomingPacket.GetDefinition()->IsAck())
 		{
-			Services.ProcessAck(Receiver.GetIncomingPacket());
+			Services.ProcessAck(&IncomingPacket);
 			RestoreToReceiving();
 		}
-		else if (Receiver.GetIncomingDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
+		else if (IncomingPacket.GetDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
 		{
-			if (Services.ProcessAckedPacket(Receiver.GetIncomingPacket()))
+			if (Services.ProcessAckedPacket(&IncomingPacket) &&
+				SendAck(IncomingPacket.GetDefinition()->GetHeader(), IncomingPacket.GetId()) &&
+				Transmit())
 			{
-				if (Sender.SendAck(Receiver.GetIncomingDefinition()->GetHeader(), Receiver.GetIncomingPacket()->GetId()) &&
-					Transmit())
-				{
-					OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
-					DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
-				}
-				else
-				{
-					//Failed to send.
-					RestoreToReceiving();
-				}
+				OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
+				DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
 			}
 			else
 			{
@@ -244,11 +266,9 @@ private:
 		else
 		{
 			//Process packet directly, no Ack.
-			Services.ProcessPacket(Receiver.GetIncomingPacket());
+			Services.ProcessPacket(&IncomingPacket);
 			RestoreToReceiving();
 		}
-
-		Receiver.SetBufferSize(0);
 	}
 
 	void ProcessSent(const uint8_t header)
@@ -296,7 +316,8 @@ public:
 		if (DriverActiveState == DriverActiveStates::BlockedForIncoming)
 		{
 			DriverActiveState = DriverActiveStates::AwaitingProcessing;
-			Receiver.SetBufferSize(length);
+			IncomingPacketSize = length;
+			LastReceivedInfo.RSSI = min(rssi, LastReceivedInfo.RSSI);
 
 			AddAsyncAction(DriverAsyncActions::ActionProcessIncomingPacket, 0);
 		}

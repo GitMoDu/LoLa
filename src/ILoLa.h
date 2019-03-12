@@ -6,8 +6,6 @@
 #define DEBUG_LOLA
 
 #include <stdint.h>
-#include <Transceivers\LoLaReceiver.h>
-#include <Transceivers\LoLaSender.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
@@ -100,11 +98,6 @@ protected:
 	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
 	///
 
-	///Transceivers.
-	LoLaReceiver Receiver;
-	LoLaSender Sender;
-	///
-
 	///Link Status.
 	bool LinkActive = false;
 
@@ -123,7 +116,7 @@ protected:
 	///
 
 	///Crypto
-	LoLaCryptoEncoder		CryptoEncoder;
+	LoLaCryptoEncoder	CryptoEncoder;
 	///
 
 	///For use of estimated latency features
