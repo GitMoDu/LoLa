@@ -65,7 +65,7 @@ public:
 		}
 		MappingSize = 0;
 
-		//Add base mappings
+		//Add base mappings.
 		AddMapping(&DefinitionACK);
 	}
 
