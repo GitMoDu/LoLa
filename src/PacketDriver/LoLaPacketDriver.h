@@ -164,7 +164,7 @@ public:
 	bool Setup()
 	{
 		AckDefinition = PacketMap.GetDefinition(PACKET_DEFINITION_ACK_HEADER);
-		if (AckDefinition != nullptr)
+		if (AckDefinition != nullptr && SetupRadio())
 		{
 			MethodSlot<LoLaPacketDriver, ActionCallbackClass> memFunSlot(this, &LoLaPacketDriver::OnAsyncAction);
 			CallbackHandler.AttachActionCallback(memFunSlot);
