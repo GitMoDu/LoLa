@@ -9,7 +9,7 @@
 #include <Services\SyncSurface\SyncSurfaceReader.h>
 #include <Services\SyncSurface\SyncSurfaceWriter.h>
 
-#define CONTROLLER_SURFACE_BASE_HEADER (PACKET_DEFINITION_USER_HEADERS_START + 1)
+#define CONTROLLER_SURFACE_BASE_HEADER (PACKET_DEFINITION_USER_HEADERS_START)
 
 class HostManager : public LoLaManagerHost
 {
