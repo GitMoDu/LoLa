@@ -80,9 +80,9 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage &&
-			PacketHolder.GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
+			OutPacket.GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
 		{
-			LatencyMeter.OnAckPacketSent(PacketHolder.GetId());
+			LatencyMeter.OnAckPacketSent(OutPacket.GetId());
 		}
 	}
 
@@ -474,18 +474,18 @@ private:
 	{
 		PrepareLinkProtocolSwitchOver();
 
-		GetLoLa()->GetCryptoEncoder()->EncodeDirect(PacketHolder.GetPayload(), sizeof(uint32_t));
+		GetLoLa()->GetCryptoEncoder()->EncodeDirect(OutPacket.GetPayload(), sizeof(uint32_t));
 	}
 
 	void PrepareHostInfoSync()
 	{
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_HOST);
-		PacketHolder.GetPayload()[0] = LinkInfo->GetRSSINormalized();
-		PacketHolder.GetPayload()[1] = LinkInfo->GetRTT() & 0xFF; //MSB 16 bit unsigned.
-		PacketHolder.GetPayload()[2] = (LinkInfo->GetRTT() >> 8) & 0xFF;
+		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
+		OutPacket.GetPayload()[1] = LinkInfo->GetRTT() & 0xFF; //MSB 16 bit unsigned.
+		OutPacket.GetPayload()[2] = (LinkInfo->GetRTT() >> 8) & 0xFF;
 		for (uint8_t i = 3; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
 		{
-			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
+			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
 		}
 	}
 
@@ -494,7 +494,7 @@ private:
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST);
 		for (uint8_t i = 3; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
 		{
-			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
+			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
 		}
 	}
 
@@ -509,10 +509,10 @@ private:
 	{
 		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
 		ATUI_S.uint = LinkInfo->GetPartnerId();
-		PacketHolder.GetPayload()[0] = ATUI_S.array[0];
-		PacketHolder.GetPayload()[1] = ATUI_S.array[1];
-		PacketHolder.GetPayload()[2] = ATUI_S.array[2];
-		PacketHolder.GetPayload()[3] = ATUI_S.array[3];
+		OutPacket.GetPayload()[0] = ATUI_S.array[0];
+		OutPacket.GetPayload()[1] = ATUI_S.array[1];
+		OutPacket.GetPayload()[2] = ATUI_S.array[2];
+		OutPacket.GetPayload()[3] = ATUI_S.array[3];
 	}
 
 	void PrepareClockSyncTuneResponse(const uint8_t requestId, const int32_t estimationError)

@@ -68,9 +68,9 @@ protected:
 
 	void OnPreSend()
 	{
-		if (PacketHolder.GetDataHeader() == LOLA_LINK_HEADER_SHORT &&
-			(PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_REQUEST ||
-				PacketHolder.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST))
+		if (OutPacket.GetDataHeader() == LOLA_LINK_HEADER_SHORT &&
+			(OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_REQUEST ||
+				OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST))
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
 			ATUI_S.uint = MillisSync();
@@ -462,10 +462,10 @@ private:
 
 		//TODO: Maybe use data slot for quick reconnect token?
 
-		PacketHolder.GetPayload()[1] = UINT8_MAX; //Padding
-		PacketHolder.GetPayload()[2] = UINT8_MAX; //Padding
-		PacketHolder.GetPayload()[3] = UINT8_MAX; //Padding
-		PacketHolder.GetPayload()[4] = UINT8_MAX; //Padding
+		OutPacket.GetPayload()[1] = UINT8_MAX; //Padding
+		OutPacket.GetPayload()[2] = UINT8_MAX; //Padding
+		OutPacket.GetPayload()[3] = UINT8_MAX; //Padding
+		OutPacket.GetPayload()[4] = UINT8_MAX; //Padding
 	}
 
 	void PreparePKCStartRequest()
@@ -478,10 +478,10 @@ private:
 	void PrepareRemoteInfoSync()
 	{
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE);
-		PacketHolder.GetPayload()[0] = LinkInfo->GetRSSINormalized();
+		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
 		for (uint8_t i = 1; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
 		{
-			PacketHolder.GetPayload()[i] = UINT8_MAX; //Padding
+			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
 		}
 	}
 
