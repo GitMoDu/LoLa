@@ -5,7 +5,7 @@
 
 #include <LoLaManagerInclude.h>
 
-#include <ExampleControllerSurface.h>
+#include "ExampleControllerSurface.h"
 #include <Services\SyncSurface\SyncSurfaceReader.h>
 #include <Services\SyncSurface\SyncSurfaceWriter.h>
 
