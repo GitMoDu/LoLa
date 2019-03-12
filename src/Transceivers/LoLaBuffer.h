@@ -21,10 +21,6 @@ protected:
 	LoLaPacketMap * PacketMap = nullptr;
 	///
 
-	///CRC validation.
-	TinyCrcModbus8 CalculatorCRC;
-	///
-
 	///Cryptography
 	LoLaCryptoEncoder* Encoder = nullptr;
 	///

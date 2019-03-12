@@ -6,6 +6,7 @@
 #include <Arduino.h>
 #include <Transceivers\LoLaBuffer.h>
 
+//TODO: refactor into packet driver.
 class LoLaSender : public LoLaBuffer
 {
 private:
@@ -22,18 +23,7 @@ public:
 	{
 		OugoingDefinition = transmitPacket->GetDefinition();
 
-		CalculatorCRC.Reset();
-
-		//Encode packet content, if crypto is enabled.
-		Encoder->Encode(transmitPacket->GetRawContent(), OugoingDefinition->GetContentSize(), BufferPacket.GetRawContent());
-
-		//TODO: Use encryption tag (truncated) when crypto is on, instead of crc.
-
-
-		//Hash everything but the CRC at the start.
-		CalculatorCRC.Update(BufferPacket.GetRawContent(), OugoingDefinition->GetContentSize());
-		BufferPacket.SetMACCRC(CalculatorCRC.GetCurrent());
-
+		BufferPacket.SetMACCRC(Encoder->Encode(transmitPacket->GetRawContent(), OugoingDefinition->GetContentSize(), BufferPacket.GetRawContent()));
 		BufferSize = OugoingDefinition->GetTotalSize();
 
 		return BufferSize > 0;
