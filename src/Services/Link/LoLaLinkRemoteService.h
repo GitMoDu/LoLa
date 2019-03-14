@@ -242,14 +242,14 @@ protected:
 		return false;
 	}
 
-	bool OnCryptoStartReceived(const uint8_t sessionId, uint8_t* encodedMACHashArray)
+	bool OnCryptoStartReceived(const uint8_t sessionId, uint8_t* localId)
 	{
 		if (LinkingState == AwaitingLinkEnum::SendingPublicKey &&
 			LinkInfo->HasSessionId() &&
 			LinkInfo->GetSessionId() == sessionId)
 		{
 			///Quick decode for validation.
-			GetLoLa()->GetCryptoEncoder()->DecodeDirect(encodedMACHashArray, sizeof(uint32_t), ATUI_R.array);
+			GetLoLa()->GetCryptoEncoder()->DecodeDirect(localId, sizeof(uint32_t), ATUI_R.array);
 
 			if (LinkInfo->GetLocalId() == ATUI_R.uint)
 			{
