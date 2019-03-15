@@ -28,7 +28,7 @@ private:
 		uint32_t uint;
 	} ATUI;
 
-	TemplateLoLaPacket<LOLA_PACKET_MIN_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
+	TemplateLoLaPacket<LOLA_PACKET_MIN_PACKET_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
 
 public:
 	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, ITrackedSurface* trackedSurface,

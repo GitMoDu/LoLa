@@ -22,7 +22,7 @@
 #define LOLA_PACKET_ID_INDEX					(LOLA_PACKET_HEADER_INDEX + 1)
 #define LOLA_PACKET_PAYLOAD_INDEX				(LOLA_PACKET_ID_INDEX + 1)
 
-#define LOLA_PACKET_MIN_SIZE					(LOLA_PACKET_PAYLOAD_INDEX)	//CRC + Header + Id + Payload
+#define LOLA_PACKET_MIN_PACKET_SIZE				(LOLA_PACKET_PAYLOAD_INDEX)	//CRC + Header + Id + Payload
 
 #define LOLA_PACKET_MAX_PACKET_SIZE				32
 
@@ -49,7 +49,7 @@ public:
 
 	const uint8_t GetTotalSize()
 	{
-		return LOLA_PACKET_MIN_SIZE + GetPayloadSize();
+		return LOLA_PACKET_MIN_PACKET_SIZE + GetPayloadSize();
 	}
 
 	const bool IsAck()
