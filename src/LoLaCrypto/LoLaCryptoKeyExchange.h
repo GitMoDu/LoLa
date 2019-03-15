@@ -12,6 +12,9 @@
 
 class LoLaCryptoKeyExchanger
 {
+public:
+	static const uint8_t KEY_CURVE_SIZE = 20; //160 bits take 20 bytes.
+
 private:
 	static int RNG(uint8_t *dest, unsigned size)
 	{
@@ -52,7 +55,7 @@ private:
 	} PairingStage = PairingStageEnum::StageClear;
 
 	const struct uECC_Curve_t * ECC_CURVE = uECC_secp160r1();
-	static const uint8_t KEY_CURVE_SIZE = 20; //160 bits take 20 bytes.
+	
 
 	uint8_t PartnerPublicKeyCompressed[KEY_CURVE_SIZE + 1];
 	uint8_t LocalPublicKeyCompressed[KEY_CURVE_SIZE + 1];
