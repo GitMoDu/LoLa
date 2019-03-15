@@ -52,7 +52,7 @@ public:
 
 	bool SetResult(const uint8_t requestId, const int32_t resultError)
 	{
-		if (Stage = TransactionStage::Requested && Id == requestId)
+		if (Stage == TransactionStage::Requested && Id == requestId)
 		{
 			Result = resultError;
 			Stage = TransactionStage::ResultIn;
