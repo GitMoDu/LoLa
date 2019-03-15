@@ -71,6 +71,7 @@ protected:
 #ifdef USE_FREQUENCY_HOP
 		//GetLoLa()->SetChannel(GetHopChannel());
 #endif
+		return true;
 	}
 
 public:
