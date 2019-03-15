@@ -55,6 +55,9 @@ protected:
 	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> OutgoingPacket;
 	uint8_t OutgoingPacketSize = 0;
 
+	TemplateLoLaPacket<LOLA_PACKET_MIN_PACKET_SIZE> AckPacket;
+
+
 protected:
 	//Driver implementation.
 	virtual bool SetupRadio() { return false; }
@@ -202,15 +205,6 @@ public:
 	}
 
 private:
-	bool SendAck(const uint8_t header, const uint8_t id)
-	{
-		OutgoingPacket.SetDefinition(AckDefinition);
-		OutgoingPacket.GetPayload()[0] = header;
-		OutgoingPacket.SetId(id);
-
-		return SendPacket(&OutgoingPacket);
-	}
-
 	void ProcessIncoming()
 	{
 		if (DriverActiveState != DriverActiveStates::AwaitingProcessing)
@@ -248,12 +242,14 @@ private:
 			}
 			else if (IncomingPacket.GetDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
 			{
-				if (Services.ProcessAckedPacket(&IncomingPacket) &&
-					SendAck(IncomingPacket.GetDefinition()->GetHeader(), IncomingPacket.GetId()) &&
-					Transmit())
+				if (Services.ProcessAckedPacket(&IncomingPacket))
 				{
-					OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
-					DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
+					//Send Ack ASAP.
+					AckPacket.SetDefinition(AckDefinition);
+					AckPacket.GetPayload()[0] = IncomingPacket.GetDefinition()->GetHeader();
+					AckPacket.SetId(IncomingPacket.GetId());
+					DriverActiveState = DriverActiveStates::ReadyForAnything;
+					SendPacket(&AckPacket);
 				}
 				else
 				{
