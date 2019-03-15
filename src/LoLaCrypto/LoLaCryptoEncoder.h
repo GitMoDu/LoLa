@@ -147,7 +147,7 @@ public:
 
 			return true;
 		}
-		else if (EncoderState == StageEnum::AllReady)
+		else if (EncoderState == StageEnum::FullPower)
 		{
 			return true;
 		}
