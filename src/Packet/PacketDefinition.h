@@ -44,7 +44,7 @@ public:
 
 	static uint8_t GetContentSize(const uint8_t unknownTotalSize)
 	{
-		return min(LOLA_PACKET_MAX_PACKET_SIZE + LOLA_PACKET_HEADER_INDEX, unknownTotalSize) - LOLA_PACKET_HEADER_INDEX;
+		return min(LOLA_PACKET_MAX_PACKET_SIZE, unknownTotalSize) - LOLA_PACKET_HEADER_INDEX;
 	}
 
 	const uint8_t GetTotalSize()
