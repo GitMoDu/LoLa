@@ -50,6 +50,17 @@ private:
 		uint32_t uint;
 	} ATUI;
 
+private:
+	void SetTokenSeed(uint8_t* seedBytes, const uint8_t length)
+	{
+		Hasher.clear();
+		Hasher.update(seedBytes, length);
+
+		Hasher.finalize(ATUI.array, sizeof(uint32_t));	
+
+		TokenSeed = ATUI.uint;
+	}
+
 public:
 	inline void ResetCypherBlock()
 	{
@@ -164,13 +175,8 @@ public:
 			return false;
 		}
 
-		//Key expansion: don't throw away unused key bytes.
-		//Update token seed from last 4 bytes of the key.
-		TokenSeed = 0;
-		TokenSeed += (KeyHolder[keyLength - 4] >> 0);
-		TokenSeed += (KeyHolder[keyLength - 3] << 8);
-		TokenSeed += (KeyHolder[keyLength - 2] << 16);
-		TokenSeed += (KeyHolder[keyLength - 1] << 24);
+		//Update token seed from last 4 unused bytes of the key.
+		SetTokenSeed(&KeyHolder[keyLength - 4], 4);
 
 		ResetCypherBlock();
 
