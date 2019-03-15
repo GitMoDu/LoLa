@@ -223,51 +223,57 @@ private:
 		DriverActiveState = DriverActiveStates::ProcessingIncoming;
 
 		ReadReceived();
-		if (!(IncomingPacketSize > 0 && IncomingPacketSize <= LOLA_PACKET_MAX_PACKET_SIZE &&
-			IncomingPacket.GetMACCRC() == CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSize(IncomingPacketSize)) &&
-			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())) &&
-			IncomingPacketSize != IncomingPacket.GetDefinition()->GetTotalSize()))
+
+		if (IncomingPacketSize < LOLA_PACKET_MIN_SIZE ||
+			IncomingPacketSize > LOLA_PACKET_MAX_PACKET_SIZE)
 		{
 			RestoreToReceiving();
 
-			RejectedCount++;
-			RestoreToReceiving();
-
-			return;//Failed to read incoming packet.
+			return;//Invalid packet size;
 		}
-
-
-		//Packet received Ok, let's commit that info really quick.
-		LastValidReceivedInfo.Time = LastReceivedInfo.Time;
-		LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
-		ReceivedCount++;
-
-		//Is Ack packet.
-		if (IncomingPacket.GetDefinition()->IsAck())
+			
+		if (IncomingPacket.GetMACCRC() == CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSize(IncomingPacketSize)) &&
+			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
 		{
-			Services.ProcessAck(&IncomingPacket);
-			RestoreToReceiving();
-		}
-		else if (IncomingPacket.GetDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
-		{
-			if (Services.ProcessAckedPacket(&IncomingPacket) &&
-				SendAck(IncomingPacket.GetDefinition()->GetHeader(), IncomingPacket.GetId()) &&
-				Transmit())
+			//Packet received Ok, let's commit that info really quick.
+			LastValidReceivedInfo.Time = LastReceivedInfo.Time;
+			LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
+			ReceivedCount++;
+
+			//Is Ack packet.
+			if (IncomingPacket.GetDefinition()->IsAck())
 			{
-				OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
-				DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
+				Services.ProcessAck(&IncomingPacket);
+				RestoreToReceiving();
+			}
+			else if (IncomingPacket.GetDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
+			{
+				if (Services.ProcessAckedPacket(&IncomingPacket) &&
+					SendAck(IncomingPacket.GetDefinition()->GetHeader(), IncomingPacket.GetId()) &&
+					Transmit())
+				{
+					OnTransmitted(PACKET_DEFINITION_ACK_HEADER);
+					DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
+				}
+				else
+				{
+					//NACK.
+					RestoreToReceiving();
+				}
 			}
 			else
 			{
-				//NACK.
+				//Process packet directly, no Ack.
+				Services.ProcessPacket(&IncomingPacket);
 				RestoreToReceiving();
 			}
 		}
 		else
 		{
-			//Process packet directly, no Ack.
-			Services.ProcessPacket(&IncomingPacket);
+			RejectedCount++;
 			RestoreToReceiving();
+
+			return;//Failed to read incoming packet.
 		}
 	}
 
