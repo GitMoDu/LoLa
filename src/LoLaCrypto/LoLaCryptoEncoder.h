@@ -20,28 +20,12 @@ private:
 	enum  StageEnum : uint8_t
 	{
 		AllClear,
-		AllReady
+		AllReady,
+		FullPower
 	} EncoderState = StageEnum::AllClear;
 
-	uint8_t KeyHolder[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	//bool CryptoEnable = false;
 
-	uint8_t IVHolder[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-
-	uint8_t TokenHolder[4] = { 0, 0, 0, 0 };
-
-	uint32_t TokenSeed = 0; //Last 4 bytes of key are used for token.
-
-	bool CryptoEnable = false;
-
-
-	///CRC validation.
-	TinyCrcModbus8 CalculatorCRC;
-	///
-
-
-private:
 	Ascon128 Cypher;
 	SHA256 Hasher;
 
@@ -49,6 +33,21 @@ private:
 		byte array[sizeof(uint32_t)];
 		uint32_t uint;
 	} ATUI;
+
+	static const uint8_t KeySize = 16; //Should be the same as Cypher.keySize();
+	static const uint8_t TokenSize = 4; //Should be the same as Secret Key - Cypher.keySize();
+
+	uint8_t KeyHolder[KeySize];
+	uint8_t IVHolder[KeySize];
+	uint8_t TokenHolder[TokenSize];
+
+	uint32_t TokenSeed = 0; //Last 4 bytes of key are used for token.
+
+
+	///CRC validation.
+	TinyCrcModbus8 CalculatorCRC;
+	///
+
 
 private:
 	void SetTokenSeed(uint8_t* seedBytes, const uint8_t length)
@@ -72,7 +71,7 @@ public:
 	//Returns 8 bit MAC/CRC.
 	uint8_t Encode(uint8_t* message, const uint8_t messageLength)
 	{
-		if (CryptoEnable)
+		if (EncoderState == StageEnum::FullPower)
 		{
 			ResetCypherBlock();
 			Cypher.encrypt(message, message, messageLength);
@@ -86,7 +85,7 @@ public:
 	//Returns 8 bit MAC/CRC.
 	uint8_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
 	{
-		if (CryptoEnable)
+		if (EncoderState == StageEnum::FullPower)
 		{
 			ResetCypherBlock();
 			Cypher.encrypt(outputMessage, message, messageLength);
@@ -107,7 +106,7 @@ public:
 		CalculatorCRC.Reset();
 		CalculatorCRC.Update(message, messageLength);
 
-		if (CryptoEnable)
+		if (EncoderState == StageEnum::FullPower)
 		{
 			ResetCypherBlock();
 			Cypher.decrypt(message, message, messageLength);
@@ -131,7 +130,6 @@ public:
 	void Clear()
 	{
 		EncoderState = StageEnum::AllClear;
-		CryptoEnable = false;
 
 		for (uint8_t i = 0; i < sizeof(TokenHolder); i++)
 		{
@@ -143,46 +141,51 @@ public:
 
 	bool SetEnabled()
 	{
-		CryptoEnable = true;
+		if (EncoderState == StageEnum::AllReady)
+		{
+			EncoderState = StageEnum::FullPower;
 
-		ResetCypherBlock();
-	}
+			return true;
+		}
+		else if (EncoderState == StageEnum::AllReady)
+		{
+			return true;
+		}
 
-	bool IsReadyForUse()
-	{
-		return EncoderState == StageEnum::AllReady;
+		return false;
 	}
 
 	bool SetSecretKey(uint8_t * secretKey, const uint8_t keyLength)
 	{
+		if (keyLength < KeySize)
 		Cypher.clear();
 
 		//HKey reduction, only use keySize bytes for key (16).
-		for (uint8_t i = 0; i < Cypher.keySize(); i++)
+		for (uint8_t i = 0; i < KeySize; i++)
 		{
 			KeyHolder[i] = secretKey[i];
 		}
 
 		//Test if key is accepted.
-		if (!Cypher.setKey(KeyHolder, Cypher.keySize()))
+		if (!Cypher.setKey(KeyHolder, KeySize))
 		{
 			return false;
 		}
 
 		//Test setting IV.
-		if (!Cypher.setIV(IVHolder, 16))
+		if (!Cypher.setIV(IVHolder, KeySize))
 		{
 			return false;
 		}
 
 		//Update token seed from last 4 unused bytes of the key.
-		SetTokenSeed(&KeyHolder[keyLength - 4], 4);
+		SetTokenSeed(&KeyHolder[keyLength - TokenSize], TokenSize);
 
 		ResetCypherBlock();
 
 		EncoderState = StageEnum::AllReady;
 
-		return EncoderState == StageEnum::AllReady;
+		return true;
 	}
 
 #ifdef DEBUG_LOLA
@@ -194,7 +197,7 @@ public:
 	void PrintKey(Stream* serial)
 	{
 		serial->print("Secret Key:\n\t|");
-		for (uint8_t i = 0; i < Cypher.keySize(); i++)
+		for (uint8_t i = 0; i < KeySize; i++)
 		{
 			serial->print(KeyHolder[i]);
 			serial->print('|');
@@ -263,10 +266,14 @@ public:
 
 	void SetToken(const uint32_t token)
 	{
-		TokenHolder[0] = token & 0xFF;
-		TokenHolder[1] = (token >> 8) & 0xFF;
-		TokenHolder[2] = (token >> 16) & 0xFF;
-		TokenHolder[3] = (token >> 24) & 0xFF;
+		ATUI.uint = token;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		Hasher.finalize(ATUI.array, sizeof(uint32_t));
+
+		for (uint8_t i = 0; i < TokenSize; i++)
+		{
+			TokenHolder[i] = ATUI.array[i];
+		}
 	}
 };
 #endif
