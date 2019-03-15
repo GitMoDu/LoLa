@@ -47,6 +47,12 @@ public:
 		return min(LOLA_PACKET_MAX_PACKET_SIZE, unknownTotalSize) - LOLA_PACKET_HEADER_INDEX;
 	}
 
+	//No size checks.
+	static uint8_t GetContentSizeQuick(const uint8_t unknownTotalSize)
+	{
+		return unknownTotalSize - LOLA_PACKET_HEADER_INDEX;
+	}
+
 	const uint8_t GetTotalSize()
 	{
 		return LOLA_PACKET_MIN_PACKET_SIZE + GetPayloadSize();
