@@ -191,7 +191,7 @@ public:
 		OutgoingPacket.SetMACCRC(CryptoEncoder.Encode(transmitPacket->GetRawContent(), transmitPacket->GetDefinition()->GetContentSize(), OutgoingPacket.GetRawContent()));
 		OutgoingPacketSize = transmitPacket->GetDefinition()->GetTotalSize();
 
-		if (OutgoingPacketSize > 0  && Transmit())
+		if (OutgoingPacketSize > 0 && Transmit())
 		{
 			OnTransmitted(transmitPacket->GetDataHeader());
 			DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
