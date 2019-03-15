@@ -95,7 +95,7 @@ public:
 	{
 		for (uint8_t i = 0; i < ServicesCount; i++)
 		{
-			if (Services[i] != nullptr && Services[i]->ProcessAck(receivedPacket->GetPayload()[0], receivedPacket->GetId()))
+			if (Services[i] != nullptr && Services[i]->ReceivedAck(receivedPacket->GetPayload()[0], receivedPacket->GetId()))
 			{
 				return;
 			}
