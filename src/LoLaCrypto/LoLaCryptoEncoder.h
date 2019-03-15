@@ -11,6 +11,9 @@
 
 #include <LoLaCrypto\TinyCRC.h>
 
+#include <Crypto.h>
+#include <SHA256.h>
+
 class LoLaCryptoEncoder
 {
 private:
@@ -40,7 +43,12 @@ private:
 
 private:
 	Ascon128 Cypher;
-	TinyCrcModbus8 Hasher;
+	SHA256 Hasher;
+
+	union ArrayToUint32 {
+		byte array[sizeof(uint32_t)];
+		uint32_t uint;
+	} ATUI;
 
 public:
 	inline void ResetCypherBlock()
@@ -188,28 +196,58 @@ public:
 	}
 #endif
 
-	void SetIvData(const uint8_t sessionId, const uint32_t localId, const uint32_t partnerId)
+	void SetIvData(const uint32_t session, const uint32_t id1, const uint32_t id2)
 	{
-		Hasher.Reset();
-		Hasher.Update(sessionId);
+		//Custom key expansion.
+		//TODO: Replace with RFC HKDF.
 
-		IVHolder[0] = Hasher.Update(localId & 0xff);
-		IVHolder[1] = Hasher.Update(sessionId);
-		IVHolder[2] = Hasher.Update((localId >> 8) & 0xff);
-		IVHolder[3] = Hasher.Update(sessionId);
-		IVHolder[4] = Hasher.Update((localId >> 16) & 0xff);
-		IVHolder[5] = Hasher.Update(sessionId);
-		IVHolder[6] = Hasher.Update((localId >> 24) & 0xff);
-		IVHolder[7] = Hasher.Update(sessionId);
+		//Id 1 with Session.
+		Hasher.clear();
+		ATUI.uint = session;
+		Hasher.update(ATUI.array, sizeof(uint8_t));
+		ATUI.uint = id1;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		Hasher.finalize(ATUI.array, sizeof(uint32_t));
+		IVHolder[0] = ATUI.array[0];
+		IVHolder[1] = ATUI.array[1];
+		IVHolder[2] = ATUI.array[2];
+		IVHolder[3] = ATUI.array[3];
 
-		IVHolder[8] = Hasher.Update(partnerId & 0xff);
-		IVHolder[9] = Hasher.Update(sessionId);
-		IVHolder[10] = Hasher.Update((partnerId >> 8) & 0xff);
-		IVHolder[11] = Hasher.Update(sessionId);
-		IVHolder[12] = Hasher.Update((partnerId >> 16) & 0xff);
-		IVHolder[13] = Hasher.Update(sessionId);
-		IVHolder[14] = Hasher.Update((partnerId >> 24) & 0xff);
-		IVHolder[15] = Hasher.Update(sessionId);
+		//Id 2 with Session.
+		Hasher.clear();
+		ATUI.uint = session;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		ATUI.uint = id2;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		Hasher.finalize(ATUI.array, sizeof(uint32_t));
+		IVHolder[4] = ATUI.array[0];
+		IVHolder[5] = ATUI.array[1];
+		IVHolder[6] = ATUI.array[2];
+		IVHolder[7] = ATUI.array[3];
+
+		//Id 1 and 2 with Session.
+		Hasher.clear();
+		ATUI.uint = session;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		ATUI.uint = id1;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		ATUI.uint = id2;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		Hasher.finalize(ATUI.array, sizeof(uint32_t));
+		IVHolder[8] = ATUI.array[0];
+		IVHolder[9] = ATUI.array[1];
+		IVHolder[10] = ATUI.array[2];
+		IVHolder[11] = ATUI.array[3];
+
+		//Session only.
+		Hasher.clear();
+		ATUI.uint = session;
+		Hasher.update(ATUI.array, sizeof(uint32_t));
+		Hasher.finalize(ATUI.array, sizeof(uint32_t));
+		IVHolder[12] = ATUI.array[0];
+		IVHolder[13] = ATUI.array[1];
+		IVHolder[14] = ATUI.array[2];
+		IVHolder[15] = ATUI.array[3];
 	}
 
 	uint32_t GetSeed()
