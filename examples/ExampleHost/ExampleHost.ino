@@ -33,7 +33,7 @@ Scheduler SchedulerBase;
 
 ///Radio manager and driver.
 LoLaSi446xPacketDriver LoLaDriver(&SchedulerBase);
-HostManager LoLa(&SchedulerBase, &LoLaDriver);
+HostManager LoLaManager(&SchedulerBase, &LoLaDriver);
 ///
 
 ///Communicated Data
@@ -93,19 +93,19 @@ void setup()
 #endif	
 
 
-	if (!LoLa.Setup())
+	if (!LoLaManager.Setup())
 	{
 		Halt();
 	}
 
 	FunctionSlot<const LoLaLinkInfo::LinkStateEnum> funcSlot(OnLinkStatusUpdated);
-	LoLa.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
+	LoLaManager.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
 
-	if (LoLa.GetControllerSurface() == nullptr)
+	if (LoLaManager.GetControllerSurface() == nullptr)
 	{
 		Halt();
 	}
-	ControllerInput = LoLa.GetControllerSurface();
+	ControllerInput = LoLaManager.GetControllerSurface();
 
 	FunctionSlot<const uint8_t> ptrSlot(OnSurfaceUpdated);
 	ControllerInput->AttachOnSurfaceUpdated(ptrSlot);
@@ -114,7 +114,7 @@ void setup()
 	LoLaDriver.Debug(&Serial);
 #endif
 
-	LoLa.Start();
+	LoLaManager.Start();
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
 	ControllerInput->NotifyDataChanged();

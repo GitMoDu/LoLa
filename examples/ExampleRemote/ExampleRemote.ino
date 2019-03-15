@@ -39,7 +39,7 @@ Scheduler SchedulerBase, SchedulerHighPriority;
 
 ///Radio manager and driver.
 LoLaSi446xPacketDriver LoLaDriver(&SchedulerHighPriority);
-RemoteManager LoLa(&SchedulerBase, &LoLaDriver);
+RemoteManager LoLaManager(&SchedulerBase, &LoLaDriver);
 ///
 
 ///Communicated Data
@@ -103,19 +103,19 @@ void setup()
 	SchedulerBase.setHighPriorityScheduler(&SchedulerHighPriority);
 
 
-	if (!LoLa.Setup())
+	if (!LoLaManager.Setup())
 	{
 		Halt();
 	}
 
 	FunctionSlot<const LoLaLinkInfo::LinkStateEnum> funcSlot(OnLinkStatusUpdated);
-	LoLa.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
+	LoLaManager.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
 
-	if (LoLa.GetControllerSurface() == nullptr)
+	if (LoLaManager.GetControllerSurface() == nullptr)
 	{
 		Halt();
 	}
-	ControllerOutput = LoLa.GetControllerSurface();
+	ControllerOutput = LoLaManager.GetControllerSurface();
 
 	ControllerOutput->SetDirection(30000);
 	ControllerOutput->SetDirectionTrim(+120);
@@ -128,7 +128,7 @@ void setup()
 	LoLaDriver.Debug(&Serial);
 #endif
 
-	LoLa.Start();
+	LoLaManager.Start();
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
 	ControllerOutput->NotifyDataChanged();
