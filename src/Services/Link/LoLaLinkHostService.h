@@ -433,7 +433,6 @@ protected:
 		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			LatencyMeter.OnAckReceived(id);
 			if (header == LOLA_LINK_HEADER_SHORT_WITH_ACK &&
 				LinkingState == AwaitingLinkEnum::GotSharedKey &&
 				LinkInfo->GetSessionId() == id)
@@ -442,7 +441,6 @@ protected:
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
-			LatencyMeter.OnAckReceived(id);
 			if (LinkingState == LinkingStagesEnum::LinkProtocolSwitchOver &&
 				header == LOLA_LINK_HEADER_SHORT_WITH_ACK &&
 				LinkInfo->GetSessionId() == id)
