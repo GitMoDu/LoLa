@@ -11,9 +11,6 @@
 
 #include <LoLaCrypto\TinyCRC.h>
 
-#define LOLA_CRYPTO_TAG_BYTES_SIZE 1
-
-
 class LoLaCryptoEncoder
 {
 private:
@@ -54,66 +51,50 @@ public:
 	}
 
 	//Returns 8 bit MAC/CRC.
-	//CryptoEnabled: Use encryption tag(truncated).
-	//CryptoDisabled: Use CRC.
 	uint8_t Encode(uint8_t* message, const uint8_t messageLength)
 	{
 		if (CryptoEnable)
 		{
 			ResetCypherBlock();
 			Cypher.encrypt(message, message, messageLength);
-			Cypher.computeTag(TagHelper, LOLA_CRYPTO_TAG_BYTES_SIZE);
+		}
 
-			return TagHelper[0];
-		}
-		else
-		{
-			CalculatorCRC.Reset();
-			return CalculatorCRC.Update(message, messageLength);
-		}
+		CalculatorCRC.Reset();
+
+		return CalculatorCRC.Update(message, messageLength);
 	}
 
 	//Returns 8 bit MAC/CRC.
-	//CryptoEnabled: Use encryption tag(truncated).
-	//CryptoDisabled: Use CRC.
 	uint8_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
 	{
 		if (CryptoEnable)
 		{
 			ResetCypherBlock();
 			Cypher.encrypt(outputMessage, message, messageLength);
-			Cypher.computeTag(TagHelper, LOLA_CRYPTO_TAG_BYTES_SIZE);
-
-			return TagHelper[0];
 		}
 		else
 		{
 			memcpy(outputMessage, message, messageLength);
-			CalculatorCRC.Reset();
-			return CalculatorCRC.Update(message, messageLength);
 		}
+
+		CalculatorCRC.Reset();
+
+		return CalculatorCRC.Update(outputMessage, messageLength);
 	}
 
 	//Returns 8 bit MAC/CRC.
-	//CryptoEnabled: Use encryption tag(truncated).
-	//CryptoDisabled: Use CRC.
-	uint8_t TagHelper[LOLA_CRYPTO_TAG_BYTES_SIZE];
-
 	uint8_t Decode(uint8_t* message, const uint8_t messageLength)
 	{
+		CalculatorCRC.Reset();
+		CalculatorCRC.Update(message, messageLength);
+
 		if (CryptoEnable)
 		{
 			ResetCypherBlock();
 			Cypher.decrypt(message, message, messageLength);
-			Cypher.computeTag(TagHelper, LOLA_CRYPTO_TAG_BYTES_SIZE);
+		}
 
-			return TagHelper[0];
-		}
-		else
-		{
-			CalculatorCRC.Reset();
-			return CalculatorCRC.Update(message, messageLength);
-		}
+		return CalculatorCRC.GetCurrent();
 	}
 
 	void EncodeDirect(uint8_t* message, const uint8_t messageLength)
