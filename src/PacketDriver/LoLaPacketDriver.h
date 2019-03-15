@@ -224,7 +224,7 @@ private:
 
 		ReadReceived();
 
-		if (IncomingPacketSize < LOLA_PACKET_MIN_SIZE ||
+		if (IncomingPacketSize < LOLA_PACKET_MIN_PACKET_SIZE ||
 			IncomingPacketSize > LOLA_PACKET_MAX_PACKET_SIZE)
 		{
 			RestoreToReceiving();
