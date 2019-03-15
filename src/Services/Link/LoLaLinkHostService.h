@@ -153,7 +153,7 @@ protected:
 			//TODO: Solve key size issue
 			//TODO: Use authorization dataas token?
 			if (KeyExchanger.GenerateSharedKey() &&
-				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16))
+				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), LoLaCryptoKeyExchanger::KEY_CURVE_SIZE))
 			{
 				SetLinkingState(AwaitingLinkEnum::GotSharedKey);
 			}

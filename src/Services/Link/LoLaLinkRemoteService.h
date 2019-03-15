@@ -135,7 +135,7 @@ protected:
 			case AwaitingLinkEnum::ProcessingSharedKey:
 				//TODO: Solve key size issue
 				if (KeyExchanger.GenerateSharedKey() &&
-					GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), 16))
+					GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), LoLaCryptoKeyExchanger::KEY_CURVE_SIZE))
 				{
 					ResetLastSentTimeStamp();
 					SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
