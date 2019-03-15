@@ -157,7 +157,11 @@ public:
 
 	bool SetSecretKey(uint8_t * secretKey, const uint8_t keyLength)
 	{
-		if (keyLength < KeySize)
+		if (keyLength < KeySize + TokenSize)
+		{
+			return false;
+		}
+
 		Cypher.clear();
 
 		//HKey reduction, only use keySize bytes for key (16).
