@@ -188,7 +188,7 @@ public:
 #ifdef LOLA_USE_LATENCY_COMPENSATION
 		ETTM = ettm;
 #else
-		ETTM = 0;
+		ETTM = 1;
 #endif
 	}
 
