@@ -24,13 +24,10 @@
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS					10
 
 // Packet collision avoidance.
-#define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS/5)
+#define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS/4)
 
 
 ///Driver constants.
-#define ILOLA_DEFAULT_CHANNEL				0
-#define ILOLA_DEFAULT_TRANSMIT_POWER		10
-
 #define ILOLA_DEFAULT_MIN_RSSI				(int16_t(-100))
 
 #define ILOLA_INVALID_RSSI					((int16_t)INT16_MIN)
@@ -89,8 +86,8 @@ protected:
 
 	///Configurations
 	//From 0 to UINT8_MAX, limited by driver.
-	uint8_t CurrentTransmitPower = ILOLA_DEFAULT_TRANSMIT_POWER;
-	uint8_t CurrentChannel = ILOLA_DEFAULT_CHANNEL;
+	uint8_t CurrentTransmitPower = 0;
+	uint8_t CurrentChannel = 0;
 	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
 	///
 
