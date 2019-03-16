@@ -101,10 +101,15 @@ public:
 	}
 
 	//Returns 8 bit MAC/CRC.
-	uint8_t Decode(uint8_t* message, const uint8_t messageLength)
+	uint8_t Decode(uint8_t* message, const uint8_t messageLength, const uint8_t crc)
 	{
 		CalculatorCRC.Reset();
 		CalculatorCRC.Update(message, messageLength);
+
+		if (crc != CalculatorCRC.GetCurrent())
+		{
+			return false;
+		}
 
 		if (EncoderState == StageEnum::FullPower)
 		{
@@ -112,7 +117,7 @@ public:
 			Cypher.decrypt(message, message, messageLength);
 		}
 
-		return CalculatorCRC.GetCurrent();
+		return true;
 	}
 
 	void EncodeDirect(uint8_t* message, const uint8_t messageLength)

@@ -233,7 +233,7 @@ private:
 			return;//Invalid packet size;
 		}
 			
-		if (IncomingPacket.GetMACCRC() == CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSizeQuick(IncomingPacketSize)) &&
+		if (CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSizeQuick(IncomingPacketSize), IncomingPacket.GetMACCRC()) &&
 			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
 		{
 			//Packet received Ok, let's commit that info really quick.
