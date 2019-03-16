@@ -134,7 +134,7 @@ protected:
 			KeyExchanger.Setup() &&
 			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
 			ChannelManager.Setup(GetLoLa()) &&
-			TimedHopper.Setup(GetLoLa()->GetClockSource()))
+			TimedHopper.Setup(GetLoLa()->GetClockSource(), &ChannelManager))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 			CryptoToken = TimedHopper.GetTokenSource();
@@ -150,9 +150,6 @@ protected:
 
 				if (PowerBalancer.Setup(GetLoLa(), LinkInfo))
 				{
-#ifdef USE_FREQUENCY_HOP
-					//FrequencyHopper.SetCryptoSeedSource(&CryptoSeed);
-#endif
 					ClearSession();
 #ifdef DEBUG_LOLA
 					Serial.print(F("Local MAC: "));

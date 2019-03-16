@@ -22,13 +22,13 @@ private:
 	//Synced clock.
 	ClockSource* SyncedClock = nullptr;
 
+	//Channel manager.
+	LoLaLinkChannelManager* ChannelManager = nullptr;
+
 	//Crypto Encoder.
 	LoLaCryptoEncoder* Encoder = nullptr;
 
 	const uint32_t HopPeriod = LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS;
-
-	//Helper.
-	uint32_t TokenHelper = 0;
 
 public:
 	LoLaLinkTimedHopper(Scheduler* scheduler, ILoLa* loLa)
@@ -68,21 +68,23 @@ protected:
 	{
 		SetNextRunDelay(CryptoSeed.GetNextSwitchOverMillis());
 
-		TokenHelper = CryptoSeed.GetToken();
+		Encoder->SetToken(CryptoSeed.GetToken());
 
-		Encoder->SetToken(TokenHelper);
-#ifdef USE_FREQUENCY_HOP
-		//GetLoLa()->SetChannel(GetHopChannel());
+#ifdef LOLA_LINK_USE_FREQUENCY_HOP
+		//Use last 8 bits of crypto token to generate a pseudo-random channel distribution.
+		ChannelManager->SetNextHop((uint8_t)(Encoder->GetToken() & 0xFF));
 #endif
 		return true;
 	}
 
 public:
-	bool Setup(ClockSource* syncedClock)
+	bool Setup(ClockSource* syncedClock, LoLaLinkChannelManager* channelManager)
 	{
 		SyncedClock = syncedClock;
+		ChannelManager = channelManager;
 		Encoder = GetLoLa()->GetCryptoEncoder();
 		if (Encoder != nullptr &&
+			ChannelManager != nullptr &&
 			CryptoSeed.Setup(SyncedClock))
 		{
 			CryptoSeed.SetTOTPPeriod(HopPeriod);
