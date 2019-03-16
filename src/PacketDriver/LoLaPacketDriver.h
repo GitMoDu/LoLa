@@ -39,6 +39,7 @@ private:
 
 	uint8_t LastPower = 0;
 	uint8_t LastChannel = 0;
+	bool ChannelPending = false;
 
 	volatile DriverActiveStates DriverActiveState = DriverActiveStates::DriverDisabled;
 
@@ -127,6 +128,7 @@ protected:
 	{
 		LastChannel = 0xFF;
 		LastPower = 0;
+		ChannelPending = false;
 		RestoreToReceiving();
 	}
 
@@ -140,6 +142,7 @@ protected:
 			}
 			else
 			{
+				ChannelPending = true;
 				AddAsyncAction(DriverAsyncActions::ActionUpdateChannel, 0, true);
 			}
 		}
@@ -180,7 +183,8 @@ public:
 
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
-		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
+		if (DriverActiveState != DriverActiveStates::ReadyForAnything ||
+			ChannelPending)
 		{
 			RestoreToReceiving();
 			return false;
@@ -282,6 +286,7 @@ private:
 	void RestoreToReceiving()
 	{
 		LastChannel = CurrentChannel;
+		ChannelPending = false;
 		DriverActiveState = DriverActiveStates::ReadyForAnything;
 		EnableInterrupts();
 		SetToReceiving();
@@ -375,11 +380,13 @@ public:
 		if (LinkActive)
 		{
 			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
+				!ChannelPending &&
 				IsInSendSlot();
 		}
 		else
 		{
 			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
+				!ChannelPending &&
 				CoolAfterSend();
 		}
 	}
