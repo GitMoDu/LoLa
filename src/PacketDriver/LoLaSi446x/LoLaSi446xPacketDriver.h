@@ -37,17 +37,19 @@
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
 protected:
+	//Not working properly.
 	void DisableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
-		//Si446x_irq_off();//Not working.
+		//Si446x_irq_off();
 #endif
 	}
 
+	//Not working properly.
 	void EnableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
-		Si446x_irq_on(0xFF);
+		//Si446x_irq_on(0xFF);
 #endif
 	}
 

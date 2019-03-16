@@ -291,7 +291,6 @@ private:
 		LastChannel = CurrentChannel;
 		ChannelPending = false;
 		DriverActiveState = DriverActiveStates::ReadyForAnything;
-		EnableInterrupts();
 		SetToReceiving();
 	}
 
