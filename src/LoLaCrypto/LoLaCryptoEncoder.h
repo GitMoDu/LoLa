@@ -268,6 +268,16 @@ public:
 		return TokenSeed;
 	}
 
+	uint32_t GetToken()
+	{
+		for (uint8_t i = 0; i < TokenSize; i++)
+		{
+			ATUI.array[i] = TokenHolder[i];
+		}
+
+		return ATUI.uint;
+	}
+
 	void SetToken(const uint32_t token)
 	{
 		ATUI.uint = token;
