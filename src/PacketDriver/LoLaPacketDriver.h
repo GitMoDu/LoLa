@@ -36,6 +36,7 @@ private:
 
 	//Async helpers for values.
 	volatile uint8_t LastSentHeader = 0xFF;
+	uint8_t OutgoingHeaderHelper = 0;
 
 	uint8_t LastPower = 0;
 	uint8_t LastChannel = 0;
@@ -192,12 +193,14 @@ public:
 
 		DriverActiveState = DriverActiveStates::SendingOutgoing;
 
+		OutgoingHeaderHelper = transmitPacket->GetDataHeader();
+
 		OutgoingPacket.SetMACCRC(CryptoEncoder.Encode(transmitPacket->GetRawContent(), transmitPacket->GetDefinition()->GetContentSize(), OutgoingPacket.GetRawContent()));
 		OutgoingPacketSize = transmitPacket->GetDefinition()->GetTotalSize();
 
 		if (OutgoingPacketSize > 0 && Transmit())
 		{
-			OnTransmitted(transmitPacket->GetDataHeader());
+			OnTransmitted(OutgoingHeaderHelper);
 			DriverActiveState = DriverActiveStates::WaitingForTransmissionEnd;
 
 			return true;
