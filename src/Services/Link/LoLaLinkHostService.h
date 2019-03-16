@@ -430,11 +430,15 @@ protected:
 
 	void OnLinkAckReceived(const uint8_t header, const uint8_t id)
 	{
+		if (header != DefinitionShortWithAck.GetHeader())
+		{
+			return;
+		}
+
 		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-			if (header == LOLA_LINK_HEADER_SHORT_WITH_ACK &&
-				LinkingState == AwaitingLinkEnum::GotSharedKey &&
+			if (LinkingState == AwaitingLinkEnum::GotSharedKey &&
 				LinkInfo->GetSessionId() == id)
 			{
 				SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
@@ -442,7 +446,6 @@ protected:
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			if (LinkingState == LinkingStagesEnum::LinkProtocolSwitchOver &&
-				header == LOLA_LINK_HEADER_SHORT_WITH_ACK &&
 				LinkInfo->GetSessionId() == id)
 			{
 				SetLinkingState(LinkingStagesEnum::LinkingDone);
