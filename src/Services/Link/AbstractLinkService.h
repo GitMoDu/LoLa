@@ -12,14 +12,7 @@
 #include <LoLaCrypto\TinyCRC.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
-#include <LoLaCrypto\LoLaCryptoTokenSource.h>
 
-
-#include <Services\Link\LoLaLinkClockSyncer.h>
-#include <Services\Link\LoLaLinkPowerBalancer.h>
-#include <Services\Link\LoLaLinkChannelManager.h>
-
-#include <Services\Link\LoLaLinkTimedHopper.h>
 
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 #include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>

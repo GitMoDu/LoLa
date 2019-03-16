@@ -3,11 +3,14 @@
 #ifndef _LOLA_TIMED_HOPPER_h
 #define _LOLA_TIMED_HOPPER_h
 
-#include <LoLaCrypto\TinyCRC.h>
 #include <Services\ILoLaService.h>
-#include <ILoLa.h>
-#include <LoLaCrypto\ITokenSource.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
+
+#include <LoLaCrypto\LoLaCryptoTokenSource.h>
+#include <Services\Link\LoLaLinkChannelManager.h>
+
+
+#include <LoLaCrypto\TinyCRC.h>
 
 
 class LoLaLinkTimedHopper : public ILoLaService

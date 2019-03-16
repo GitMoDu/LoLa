@@ -3,12 +3,6 @@
 #ifndef _LOLALINKDEFINITIONS_h
 #define _LOLALINKDEFINITIONS_h
 
-#include <Packet\LoLaPacket.h>
-#include <Packet\LoLaPacketMap.h>
-
-#include <LoLaLinkInfo.h>
-#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
-
 //#define DEBUG_LOLA_LINK_CRYPTO
 
 #define LOLA_LINK_USE_ENCRYPTION
@@ -17,6 +11,13 @@
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS						60
 
 #define LOLA_LINK_PROTOCOL_VERSION							1 //N < 16
+
+#include <Packet\LoLaPacket.h>
+#include <Packet\LoLaPacketMap.h>
+
+#include <LoLaLinkInfo.h>
+#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
+
 
 // How long to stay on a channel/token. TODO: Reduce when clocksync is better.
 #define LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS	(uint32_t)(1000) 

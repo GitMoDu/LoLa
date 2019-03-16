@@ -11,7 +11,6 @@
 
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
-#include <LoLaCrypto\LoLaCryptoTokenSource.h>
 
 #include <Services\Link\LoLaLinkPowerBalancer.h>
 #include <Services\Link\LoLaLinkChannelManager.h>
