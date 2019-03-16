@@ -280,6 +280,7 @@ protected:
 		case LinkingStagesEnum::LinkProtocolSwitchOver:
 			ClockSyncer.SetSynced();
 			SetLinkingState(LinkingStagesEnum::LinkingDone);//Nothing to do here.
+			SetNextRunDelay(GetLoLa()->GetETTM());
 			break;
 		case LinkingStagesEnum::LinkingDone:
 			//All linking stages complete, we have a link.
