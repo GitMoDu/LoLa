@@ -24,14 +24,13 @@ private:
 	PingPacketDefinition				DefinitionPing;
 	LinkReportPacketDefinition			DefinitionReport;
 
+	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
 
+protected:
 	LinkShortPacketDefinition			DefinitionShort;
 	LinkShortWithAckPacketDefinition	DefinitionShortWithAck;
 	LinkLongPacketDefinition			DefinitionLong;
 
-	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
-
-protected:
 	union ArrayToUint32 {
 		byte array[4];
 		uint32_t uint;
