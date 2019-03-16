@@ -51,8 +51,8 @@ protected:
 
 
 public:
-	AbstractLinkService(Scheduler* scheduler, ILoLa* loLa)
-		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, loLa, &OutPacket)
+	AbstractLinkService(Scheduler* scheduler, ILoLaDriver* driver)
+		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, driver, &OutPacket)
 	{
 	}
 
@@ -145,12 +145,12 @@ protected:
 
 	uint32_t GetElapsedLastValidReceived()
 	{
-		return millis() - GetLoLa()->GetLastValidReceivedMillis();
+		return millis() - LoLaDriver->GetLastValidReceivedMillis();
 	}
 
 	uint32_t GetElapsedLastSent()
 	{
-		return millis() - GetLoLa()->GetLastValidSentMillis();
+		return millis() - LoLaDriver->GetLastValidSentMillis();
 	}
 
 	uint32_t GetElapsedSinceStateStart()

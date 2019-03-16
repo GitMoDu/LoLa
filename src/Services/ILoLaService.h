@@ -8,7 +8,7 @@
 
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
-#include <ILoLa.h>
+#include <ILoLaDriver.h>
 
 
 #define LOLA_SERVICE_DEFAULT_PERIOD_MILLIS 500
@@ -25,14 +25,17 @@ private:
 		Active
 	} ServiceState = Failed;
 
-	ILoLa* LoLa;
+
 	uint16_t DefaultPeriod = 0;
 
+protected:
+	ILoLaDriver* LoLaDriver;
+
 private:
-	void InitializeState(ILoLa* loLa)
+	void InitializeState(ILoLaDriver* driver)
 	{
-		LoLa = loLa;
-		if (LoLa != nullptr && LoLa->GetPacketMap() != nullptr)
+		LoLaDriver = driver;
+		if (LoLaDriver != nullptr && LoLaDriver->GetPacketMap() != nullptr)
 		{
 			ServiceState = Loading;
 		}
@@ -43,29 +46,24 @@ private:
 	}
 
 public:
-	ILoLaService(Scheduler* scheduler, const uint16_t defaultPeriod, ILoLa* loLa)
+	ILoLaService(Scheduler* scheduler, const uint16_t defaultPeriod, ILoLaDriver* driver)
 		: Task(0, TASK_FOREVER, scheduler, false)
 	{
 		DefaultPeriod = max(1, defaultPeriod);
-		InitializeState(loLa);
+		InitializeState(driver);
 	}
 
-	ILoLaService(Scheduler* scheduler, ILoLa* loLa)
+	ILoLaService(Scheduler* scheduler, ILoLaDriver* driver)
 		: Task(0, TASK_FOREVER, scheduler, false)
 	{
 		DefaultPeriod = LOLA_SERVICE_DEFAULT_PERIOD_MILLIS;
-		InitializeState(loLa);
+		InitializeState(driver);
 	}
 
 	// return true if run was "productive - this will disable sleep on the idle run for next pass
 	virtual bool Callback()
 	{
 		return false;
-	}
-
-	ILoLa * GetLoLa()
-	{
-		return LoLa;
 	}
 
 	void Enable()
@@ -81,7 +79,7 @@ public:
 
 	bool Init()
 	{
-		if (OnAddPacketMap(LoLa->GetPacketMap()) && Setup())
+		if (OnAddPacketMap(LoLaDriver->GetPacketMap()) && Setup())
 		{
 			return true;
 		}
@@ -101,7 +99,7 @@ public:
 		if (ServiceState != Failed)
 		{
 			ServiceState = Loading;
-			if (((ILoLa*)LoLa) != nullptr &&
+			if (((ILoLaDriver*)LoLaDriver) != nullptr &&
 				GetPacketMap() != nullptr &&
 				OnSetup())
 			{
@@ -164,7 +162,7 @@ public:
 protected:
 	virtual bool ShouldProcessReceived()
 	{
-		return IsSetupOk() && LoLa->HasLink();
+		return IsSetupOk() && LoLaDriver->HasLink();
 	}
 
 	virtual bool OnAddPacketMap(LoLaPacketMap* packetMap) { return true; }
@@ -198,22 +196,22 @@ protected:
 
 	LoLaPacketMap * GetPacketMap()
 	{
-		return LoLa->GetPacketMap();
+		return LoLaDriver->GetPacketMap();
 	}
 
 	inline bool AllowedSend()
 	{
-		return LoLa->AllowedSend();
+		return LoLaDriver->AllowedSend();
 	}
 
 	inline bool SendPacket(ILoLaPacket* outgoingPacket)
 	{
-		return LoLa->SendPacket(outgoingPacket);
+		return LoLaDriver->SendPacket(outgoingPacket);
 	}
 
 	inline uint32_t MillisSync()
 	{
-		return LoLa->GetSyncMillis();
+		return LoLaDriver->GetSyncMillis();
 	}
 };
 #endif

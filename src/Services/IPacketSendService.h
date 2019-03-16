@@ -66,8 +66,8 @@ protected:
 	}
 
 public:
-	IPacketSendService(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ILoLaPacket* packetHolder)
-		: ILoLaService(scheduler, period, loLa)
+	IPacketSendService(Scheduler* scheduler, const uint16_t period, ILoLaDriver* driver, ILoLaPacket* packetHolder)
+		: ILoLaService(scheduler, period, driver)
 	{
 		Packet = packetHolder;
 		Packet->ClearDefinition();

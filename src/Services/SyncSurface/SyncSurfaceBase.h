@@ -31,9 +31,9 @@ private:
 	TemplateLoLaPacket<LOLA_PACKET_MIN_PACKET_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
 
 public:
-	SyncSurfaceBase(Scheduler* scheduler, ILoLa* loLa, ITrackedSurface* trackedSurface,
+	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface,
 		SyncAbstractPacketDefinition* metaDefinition, SyncAbstractPacketDefinition* dataDefinition)
-		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, loLa, trackedSurface, &PacketHolder)
+		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder)
 	{
 		SyncMetaDefinition = metaDefinition;
 		DataPacketDefinition = dataDefinition;

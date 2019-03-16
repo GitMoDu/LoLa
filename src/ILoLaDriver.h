@@ -1,4 +1,4 @@
-// ILoLa.h
+// ILoLaDriver.h
 
 #ifndef _ILOLA_h
 #define _ILOLA_h
@@ -46,7 +46,7 @@
 ///
 
 
-class ILoLa
+class ILoLaDriver
 {
 protected:
 	struct InputInfoType
@@ -131,7 +131,7 @@ protected:
 
 
 public:
-	ILoLa() : PacketMap(), SyncedClock()
+	ILoLaDriver() : PacketMap(), SyncedClock()
 	{
 	}
 

@@ -52,8 +52,8 @@ protected:
 	virtual void OnStateUpdated(const AbstractSync::SyncStateEnum newState) {}
 
 public:
-	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLa* loLa, ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder)
-		: IPacketSendService(scheduler, period, loLa, packetHolder)
+	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLaDriver* driver, ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder)
+		: IPacketSendService(scheduler, period, driver, packetHolder)
 	{
 		TrackedSurface = trackedSurface;
 

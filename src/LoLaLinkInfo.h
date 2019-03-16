@@ -3,7 +3,7 @@
 #ifndef _LOLALINK_INFO_h
 #define _LOLALINK_INFO_h
 
-#include <ILoLa.h>
+#include <ILoLaDriver.h>
 #include <Callback.h>
 #include <RingBufCPP.h>
 #include <LoLaCrypto\PseudoMacGenerator.h>
@@ -29,7 +29,7 @@ public:
 private:
 	const uint8_t INVALID_SESSION = 0;
 
-	ILoLa * Driver = nullptr;
+	ILoLaDriver * Driver = nullptr;
 
 	LinkStateEnum LinkState = LinkStateEnum::Disabled;
 
@@ -140,7 +140,7 @@ public:
 		return SessionId;
 	}
 
-	void SetDriver(ILoLa* driver)
+	void SetDriver(ILoLaDriver* driver)
 	{
 		Driver = driver;
 	}

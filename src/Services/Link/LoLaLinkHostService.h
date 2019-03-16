@@ -39,12 +39,12 @@ private:
 	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
 
 public:
-	LoLaLinkHostService(Scheduler *scheduler, ILoLa* loLa)
-		: LoLaLinkService(scheduler, loLa)
+	LoLaLinkHostService(Scheduler *scheduler, ILoLaDriver* driver)
+		: LoLaLinkService(scheduler, driver)
 	{
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &HostClockSyncTransaction;
-		loLa->SetDuplexSlot(true);
+		driver->SetDuplexSlot(true);
 	}
 protected:
 #ifdef DEBUG_LOLA
@@ -122,7 +122,7 @@ protected:
 			//TODO: Filter accepted Id from known list.
 			if (true)
 			{
-				GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
+				LoLaDriver->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
 					LinkInfo->GetLocalId(), LinkInfo->GetPartnerId());
 				SubStateStart = millis();
 				SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
@@ -153,7 +153,7 @@ protected:
 			//TODO: Solve key size issue
 			//TODO: Use authorization dataas token?
 			if (KeyExchanger.GenerateSharedKey() &&
-				GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), LoLaCryptoKeyExchanger::KEY_CURVE_SIZE))
+				LoLaDriver->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), LoLaCryptoKeyExchanger::KEY_CURVE_SIZE))
 			{
 				SetLinkingState(AwaitingLinkEnum::GotSharedKey);
 			}
@@ -365,7 +365,7 @@ protected:
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
-				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
+				(int32_t)(ClockSyncer.GetMillisSynced(LoLaDriver->GetLastValidReceivedMillis()) - estimatedMillis));
 
 			switch (LinkingState)
 			{
@@ -391,7 +391,7 @@ protected:
 		if (LinkInfo->HasLink())
 		{
 			HostClockSyncTransaction.SetResult(requestId,
-				(int32_t)(ClockSyncer.GetMillisSynced(GetLoLa()->GetLastValidReceivedMillis()) - estimatedMillis));
+				(int32_t)(ClockSyncer.GetMillisSynced(LoLaDriver->GetLastValidReceivedMillis()) - estimatedMillis));
 			SetNextRunASAP();
 		}
 	}
@@ -475,7 +475,7 @@ private:
 	{
 		PrepareLinkProtocolSwitchOver();
 
-		GetLoLa()->GetCryptoEncoder()->EncodeDirect(OutPacket.GetPayload(), sizeof(uint32_t));
+		LoLaDriver->GetCryptoEncoder()->EncodeDirect(OutPacket.GetPayload(), sizeof(uint32_t));
 	}
 
 	void PrepareHostInfoSync()

@@ -29,12 +29,12 @@ private:
 	ClockSyncRequestTransaction RemoteClockSyncTransaction;
 
 public:
-	LoLaLinkRemoteService(Scheduler* scheduler, ILoLa* loLa)
-		: LoLaLinkService(scheduler, loLa)
+	LoLaLinkRemoteService(Scheduler* scheduler, ILoLaDriver* driver)
+		: LoLaLinkService(scheduler, driver)
 	{
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &RemoteClockSyncTransaction;
-		loLa->SetDuplexSlot(false);
+		driver->SetDuplexSlot(false);
 	}
 
 protected:
@@ -104,7 +104,7 @@ protected:
 				//TODO: Filter accepted hosts by Id.
 				if (true)
 				{
-					GetLoLa()->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
+					LoLaDriver->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
 						LinkInfo->GetPartnerId(), LinkInfo->GetLocalId());
 					ResetLastSentTimeStamp();
 					SubStateStart = millis();
@@ -135,7 +135,7 @@ protected:
 			case AwaitingLinkEnum::ProcessingSharedKey:
 				//TODO: Solve key size issue
 				if (KeyExchanger.GenerateSharedKey() &&
-					GetLoLa()->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), LoLaCryptoKeyExchanger::KEY_CURVE_SIZE))
+					LoLaDriver->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), LoLaCryptoKeyExchanger::KEY_CURVE_SIZE))
 				{
 					ResetLastSentTimeStamp();
 					SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
@@ -249,7 +249,7 @@ protected:
 			LinkInfo->GetSessionId() == sessionId)
 		{
 			///Quick decode for validation.
-			GetLoLa()->GetCryptoEncoder()->DecodeDirect(localId, sizeof(uint32_t), ATUI_R.array);
+			LoLaDriver->GetCryptoEncoder()->DecodeDirect(localId, sizeof(uint32_t), ATUI_R.array);
 
 			if (LinkInfo->GetLocalId() == ATUI_R.uint)
 			{
@@ -280,7 +280,7 @@ protected:
 		case LinkingStagesEnum::LinkProtocolSwitchOver:
 			ClockSyncer.SetSynced();
 			SetLinkingState(LinkingStagesEnum::LinkingDone);//Nothing to do here.
-			SetNextRunDelay(GetLoLa()->GetETTM());
+			SetNextRunDelay(LoLaDriver->GetETTM());
 			break;
 		case LinkingStagesEnum::LinkingDone:
 			//All linking stages complete, we have a link.

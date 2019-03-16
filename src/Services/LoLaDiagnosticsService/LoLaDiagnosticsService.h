@@ -19,9 +19,9 @@ private:
 	LoLaLinkInfo* LinkInfo = nullptr;
 
 public:
-	LoLaDiagnosticsService(Scheduler* scheduler, ILoLa* loLa, LoLaLinkInfo* linkInfo)
-		: ILoLaService(scheduler, LOLA_DIAGNOSTICS_SERVICE_POLL_PERIOD_MILLIS, loLa)
-		, LatencyService(scheduler, loLa)
+	LoLaDiagnosticsService(Scheduler* scheduler, ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
+		: ILoLaService(scheduler, LOLA_DIAGNOSTICS_SERVICE_POLL_PERIOD_MILLIS, driver)
+		, LatencyService(scheduler, driver)
 	{
 		LinkInfo = linkInfo;
 	}

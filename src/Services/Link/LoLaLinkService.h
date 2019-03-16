@@ -98,9 +98,9 @@ protected:
 
 
 public:
-	LoLaLinkService(Scheduler* scheduler, ILoLa* loLa)
-		: AbstractLinkService(scheduler, loLa)
-		, TimedHopper(scheduler, loLa)
+	LoLaLinkService(Scheduler* scheduler, ILoLaDriver* driver)
+		: AbstractLinkService(scheduler, driver)
+		, TimedHopper(scheduler, driver)
 #ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
 		, Diagnostics(scheduler, loLa, &LinkInfo)
 #endif
@@ -132,23 +132,23 @@ protected:
 			ClockSyncerPointer != nullptr &&
 			ServicesManager != nullptr &&
 			KeyExchanger.Setup() &&
-			ClockSyncerPointer->Setup(GetLoLa()->GetClockSource()) &&
-			ChannelManager.Setup(GetLoLa()) &&
-			TimedHopper.Setup(GetLoLa()->GetClockSource(), &ChannelManager))
+			ClockSyncerPointer->Setup(LoLaDriver->GetClockSource()) &&
+			ChannelManager.Setup(LoLaDriver) &&
+			TimedHopper.Setup(LoLaDriver->GetClockSource(), &ChannelManager))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 			CryptoToken = TimedHopper.GetTokenSource();
 
 			if (LinkInfo != nullptr && CryptoToken != nullptr)
 			{
-				LinkInfo->SetDriver(GetLoLa());
+				LinkInfo->SetDriver(LoLaDriver);
 				LinkInfo->Reset();
 				KeysLastGenerated = ILOLA_INVALID_MILLIS;
 
 				//Make sure to lazy load the local MAC on startup.
 				LinkInfo->GetLocalId();
 
-				if (PowerBalancer.Setup(GetLoLa(), LinkInfo))
+				if (PowerBalancer.Setup(LoLaDriver, LinkInfo))
 				{
 					ClearSession();
 #ifdef DEBUG_LOLA
@@ -334,7 +334,7 @@ protected:
 			LinkInfo->Reset();
 		}
 
-		GetLoLa()->GetCryptoEncoder()->Clear();
+		LoLaDriver->GetCryptoEncoder()->Clear();
 		CryptoToken->SetSeed(0);
 
 		KeyExchanger.ClearPartner();
@@ -371,19 +371,19 @@ protected:
 				ClearSession();
 				PowerBalancer.SetMaxPower();
 				ChannelManager.ResetChannel();
-				GetLoLa()->OnStart();
+				LoLaDriver->OnStart();
 				ServicesManager->NotifyServicesLinkUpdated(false);
 			}
 
 			switch (newState)
 			{
 			case LoLaLinkInfo::LinkStateEnum::Setup:
-				GetLoLa()->Enable();
+				LoLaDriver->Enable();
 				SetLinkingState(0);
 				ClearSession();
 				PowerBalancer.SetMaxPower();
 				ChannelManager.ResetChannel();
-				GetLoLa()->OnStart();
+				LoLaDriver->OnStart();
 				SetNextRunASAP();
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
@@ -398,14 +398,14 @@ protected:
 				SetLinkingState(0);
 				PowerBalancer.SetMaxPower();
 				ChannelManager.ResetChannel();
-				GetLoLa()->OnStart();
+				LoLaDriver->OnStart();
 				//Sleep time is set on Host/Remote virtual.
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
-				CryptoToken->SetSeed(GetLoLa()->GetCryptoEncoder()->GetSeed());
+				CryptoToken->SetSeed(LoLaDriver->GetCryptoEncoder()->GetSeed());
 #ifdef LOLA_LINK_USE_ENCRYPTION
-				GetLoLa()->GetCryptoEncoder()->SetEnabled();
+				LoLaDriver->GetCryptoEncoder()->SetEnabled();
 #endif
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
@@ -422,7 +422,7 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Linked:
 				LinkInfo->StampLinkStarted();
 				ClockSyncerPointer->StampSynced();
-				GetLoLa()->ResetStatistics();
+				LoLaDriver->ResetStatistics();
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA
 				Serial.println();
@@ -577,7 +577,7 @@ protected:
 		}
 
 		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
-		ATUI_S.uint = GetLoLa()->GetReceivedCount();
+		ATUI_S.uint = LoLaDriver->GetReceivedCount();
 		S_ArrayToPayload();
 	}
 
@@ -625,23 +625,23 @@ private:
 		serial->println(F(" %"));
 
 		serial->print(F("Sent: "));
-		serial->println(GetLoLa()->GetSentCount());
+		serial->println(LoLaDriver->GetSentCount());
 		serial->print(F("Partner Got: "));
 		serial->println(LinkInfo->GetPartnerReceivedCount());
 		serial->print(F("Lost: "));
-		serial->println(max(LinkInfo->GetPartnerReceivedCount(), GetLoLa()->GetSentCount()) - LinkInfo->GetPartnerReceivedCount());
+		serial->println(max(LinkInfo->GetPartnerReceivedCount(), LoLaDriver->GetSentCount()) - LinkInfo->GetPartnerReceivedCount());
 		serial->print(F("Received: "));
-		serial->println(GetLoLa()->GetReceivedCount());
+		serial->println(LoLaDriver->GetReceivedCount());
 		serial->print(F("Rejected: "));
-		serial->print(GetLoLa()->GetRejectedCount());
+		serial->print(LoLaDriver->GetRejectedCount());
 
 		serial->print(F(" ("));
-		if (GetLoLa()->GetReceivedCount() > 0)
+		if (LoLaDriver->GetReceivedCount() > 0)
 		{
-			serial->print((float)(GetLoLa()->GetRejectedCount() * 100) / (float)GetLoLa()->GetReceivedCount(), 2);
+			serial->print((float)(LoLaDriver->GetRejectedCount() * 100) / (float)LoLaDriver->GetReceivedCount(), 2);
 			serial->println(F(" %)"));
 		}
-		else if (GetLoLa()->GetRejectedCount() > 0)
+		else if (LoLaDriver->GetRejectedCount() > 0)
 		{
 			serial->println(F("100 %)"));
 		}
@@ -650,7 +650,7 @@ private:
 			serial->println(F("0 %)"));
 		}
 		serial->print(F("Timming Collision: "));
-		serial->println(GetLoLa()->GetTimingCollisionCount());
+		serial->println(LoLaDriver->GetTimingCollisionCount());
 
 		serial->print(F("ClockSync adjustments: "));
 		serial->println(LinkInfo->GetClockSyncAdjustments());
@@ -664,7 +664,7 @@ private:
 		KeyExchanger.Debug(&Serial);
 		Serial.println();
 		Serial.print(F("\tEncrypted with 128 bit cypher "));
-		GetLoLa()->GetCryptoEncoder()->Debug(&Serial);
+		LoLaDriver->GetCryptoEncoder()->Debug(&Serial);
 		Serial.println();
 		Serial.print(F("\tProtected with 32 bit TOTP @ "));
 		Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
@@ -683,7 +683,7 @@ private:
 		Serial.print((float)LinkInfo->GetRTT() / (float)2000, 2);
 		Serial.println(F(" ms"));
 		Serial.print(F("Latency compensation: "));
-		Serial.print(GetLoLa()->GetETTM());
+		Serial.print(LoLaDriver->GetETTM());
 		Serial.println(F(" ms"));
 	}
 #endif

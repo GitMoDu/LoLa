@@ -3,7 +3,7 @@
 #ifndef _LOLA_LINK_POWER_BALANCER_h
 #define _LOLA_LINK_POWER_BALANCER_h
 
-#include <ILoLa.h>
+#include <ILoLaDriver.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
 #define RADIO_POWER_BALANCER_UPDATE_PERIOD				(uint32_t)(500)
@@ -20,7 +20,7 @@ class LoLaLinkPowerBalancer
 {
 private:
 	LoLaLinkInfo* LinkInfo = nullptr;
-	ILoLa* LoLa = nullptr;
+	ILoLaDriver* LoLaDriver = nullptr;
 
 	uint8_t CurrentPartnerRSSI = 0;
 
@@ -32,20 +32,20 @@ private:
 public:
 	LoLaLinkPowerBalancer() {}
 
-	bool Setup(ILoLa* loLa, LoLaLinkInfo* linkInfo)
+	bool Setup(ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
 	{
-		LoLa = loLa;
+		LoLaDriver = driver;
 		LinkInfo = linkInfo;
 		TransmitPowerNormalized = 0;
 
 		LastUpdated = ILOLA_INVALID_MILLIS;
 
-		return LoLa != nullptr && LinkInfo != nullptr;
+		return LoLaDriver != nullptr && LinkInfo != nullptr;
 	}
 
 	bool Update()
 	{
-		if (millis() - LoLa->GetLastValidReceivedMillis() < LOLA_LINK_SERVICE_LINKED_MAX_PANIC &&
+		if (millis() - LoLaDriver->GetLastValidReceivedMillis() < LOLA_LINK_SERVICE_LINKED_MAX_PANIC &&
 			(LastUpdated == ILOLA_INVALID_MILLIS ||
 			(millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD)))
 		{
@@ -86,7 +86,7 @@ public:
 			if (NextTransmitPower != TransmitPowerNormalized)
 			{
 				TransmitPowerNormalized = NextTransmitPower;
-				LoLa->SetTransmitPower(TransmitPowerNormalized);
+				LoLaDriver->SetTransmitPower(TransmitPowerNormalized);
 
 				return true;
 			}
@@ -98,7 +98,7 @@ public:
 	void SetMaxPower()
 	{
 		TransmitPowerNormalized = RADIO_POWER_BALANCER_POWER_MAX;
-		LoLa->SetTransmitPower(TransmitPowerNormalized);
+		LoLaDriver->SetTransmitPower(TransmitPowerNormalized);
 	}
 };
 #endif

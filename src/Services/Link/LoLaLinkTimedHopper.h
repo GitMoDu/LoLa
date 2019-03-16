@@ -31,8 +31,8 @@ private:
 	const uint32_t HopPeriod = LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS;
 
 public:
-	LoLaLinkTimedHopper(Scheduler* scheduler, ILoLa* loLa)
-		: ILoLaService(scheduler, 0, loLa)
+	LoLaLinkTimedHopper(Scheduler* scheduler, ILoLaDriver* driver)
+		: ILoLaService(scheduler, 0, driver)
 	{
 
 	}
@@ -82,7 +82,7 @@ public:
 	{
 		SyncedClock = syncedClock;
 		ChannelManager = channelManager;
-		Encoder = GetLoLa()->GetCryptoEncoder();
+		Encoder = LoLaDriver->GetCryptoEncoder();
 		if (Encoder != nullptr &&
 			ChannelManager != nullptr &&
 			CryptoSeed.Setup(SyncedClock))

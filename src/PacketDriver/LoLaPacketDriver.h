@@ -3,14 +3,14 @@
 #ifndef _LOLAPACKETDRIVER_h
 #define _LOLAPACKETDRIVER_h
 
-#include <ILoLa.h>
+#include <ILoLaDriver.h>
 #include <Packet\LoLaPacketMap.h>
 
 #include <Services\LoLaServicesManager.h>
 #include <PacketDriver\AsyncActionCallback.h>
 
 
-class LoLaPacketDriver : public ILoLa
+class LoLaPacketDriver : public ILoLaDriver
 {
 private:
 	///Async Callback.
@@ -72,7 +72,7 @@ protected:
 	virtual void EnableInterrupts() {}
 
 public:
-	LoLaPacketDriver(Scheduler* scheduler) : ILoLa(), Services(), CallbackHandler(scheduler)
+	LoLaPacketDriver(Scheduler* scheduler) : ILoLaDriver(), Services(), CallbackHandler(scheduler)
 	{
 	}
 
@@ -397,7 +397,7 @@ public:
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
 	{
-		ILoLa::Debug(serial);
+		ILoLaDriver::Debug(serial);
 		Services.Debug(serial);
 	}
 #endif

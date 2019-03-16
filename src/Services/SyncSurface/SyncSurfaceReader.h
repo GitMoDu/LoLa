@@ -13,8 +13,8 @@ private:
 	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
 
 public:
-	SyncSurfaceReader(Scheduler* scheduler, ILoLa* loLa, ITrackedSurface* trackedSurface)
-		: SyncSurfaceBase(scheduler, loLa, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
+	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
+		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
 	{
 	}
 

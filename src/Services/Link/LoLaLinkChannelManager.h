@@ -3,41 +3,33 @@
 #ifndef _LOLA_LINK_CHANNEL_MANAGER_h
 #define _LOLA_LINK_CHANNEL_MANAGER_h
 
-#include <ILoLa.h>
+#include <ILoLaDriver.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
 class LoLaLinkChannelManager
 {
 private:
 	LoLaLinkInfo* LinkInfo = nullptr;
-	ILoLa* LoLa = nullptr;
+	ILoLaDriver* LoLaDriver = nullptr;
 
 public:
-	bool Setup(ILoLa* loLa)
-	{
-		LoLa = loLa;
-
-		return LoLa != nullptr;
-	}
-
 	void ResetChannel()
 	{
-		LoLa->SetChannel((LoLa->GetChannelMin() + LoLa->GetChannelMax()) / 2);
+		LoLaDriver->SetChannel((LoLaDriver->GetChannelMin() + LoLaDriver->GetChannelMax()) / 2);
 	}
 
 	//Hop index from 0 to UINT8_MAX
 	void SetNextHop(const uint8_t hopIndex)
 	{
-		LoLa->SetChannel((hopIndex % (LoLa->GetChannelMax() + 1 - LoLa->GetChannelMin()))
-			+ LoLa->GetChannelMin());
+		LoLaDriver->SetChannel((hopIndex % (LoLaDriver->GetChannelMax() + 1 - LoLaDriver->GetChannelMin()))
+			+ LoLaDriver->GetChannelMin());
 	}
 
-	bool Setup(ILoLa* loLa, LoLaLinkInfo* linkInfo)
+	bool Setup(ILoLaDriver* loLa)
 	{
-		LoLa = loLa;
-		LinkInfo = linkInfo;
+		LoLaDriver = loLa;
 
-		return LoLa != nullptr && LinkInfo != nullptr;
+		return LoLaDriver != nullptr;
 	}
 };
 #endif
