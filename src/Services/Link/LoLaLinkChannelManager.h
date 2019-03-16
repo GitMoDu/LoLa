@@ -12,43 +12,6 @@ private:
 	LoLaLinkInfo* LinkInfo = nullptr;
 	ILoLa* LoLa = nullptr;
 
-
-
-	//Helpers
-	//uint8_t HopIndex = 0;
-	TinyCrcModbus8 Hasher;
-
-	union ArrayToUint32 {
-		byte array[4];
-		uint32_t uint;
-	} HopSeed;
-
-	uint32_t HopIterator;
-
-private:
-
-
-	//bool UpdateLinkedChannel()
-	//{
-	//	return false;
-	//}
-
-	//uint8_t GetHopChannel()
-	//{
-	//	HopSeed.uint = (MillisSync() / HopPeriod);
-
-	//	//We could get the channel from a table, since we have an index.
-	//	//HopIndex = HopSeed.uint % HopCount;
-
-	//	//But better yet, we can use the synced clock and crypto seed
-	//	// to generate a pseudo-random channel distribution.
-	//	Hasher.Reset(TokenCachedHash);
-	//	Hasher.Update(HopSeed.array, 4);
-
-	//	return (Hasher.GetCurrent() % (LoLa->GetChannelMax() + 1 - LoLa->GetChannelMin()))
-	//		+ LoLa->GetChannelMin();
-	//}
-
 public:
 	bool Setup(ILoLa* loLa)
 	{
@@ -60,6 +23,13 @@ public:
 	void ResetChannel()
 	{
 		LoLa->SetChannel((LoLa->GetChannelMin() + LoLa->GetChannelMax()) / 2);
+	}
+
+	//Hop index from 0 to UINT8_MAX
+	void SetNextHop(const uint8_t hopIndex)
+	{
+		LoLa->SetChannel((hopIndex % (LoLa->GetChannelMax() + 1 - LoLa->GetChannelMin()))
+			+ LoLa->GetChannelMin());
 	}
 
 	bool Setup(ILoLa* loLa, LoLaLinkInfo* linkInfo)
