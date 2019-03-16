@@ -93,7 +93,7 @@ protected:
 				{
 					//Send an Hello to wake up potential hosts.
 					PrepareLinkDiscovery();
-					RequestSendPacket(true);
+					RequestSendPacket();
 				}
 				else
 				{
@@ -125,7 +125,7 @@ protected:
 				else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 				{
 					PreparePKCStartRequest();
-					RequestSendPacket(true);
+					RequestSendPacket();
 				}
 				else
 				{
@@ -155,7 +155,7 @@ protected:
 				else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
 				{
 					PreparePublicKeyPacket(LOLA_LINK_SUBHEADER_REMOTE_PUBLIC_KEY);
-					RequestSendPacket(true);
+					RequestSendPacket();
 				}
 				else
 				{
@@ -303,7 +303,7 @@ protected:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareRemoteInfoSync();
-				RequestSendPacket(true);
+				RequestSendPacket();
 			}
 			else
 			{
@@ -359,7 +359,7 @@ protected:
 			{
 				RemoteClockSyncTransaction.SetRequested();
 				PrepareClockSyncRequest(RemoteClockSyncTransaction.GetId());
-				RequestSendPacket(true);
+				RequestSendPacket();
 			}
 			else
 			{

@@ -111,7 +111,7 @@ protected:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD)
 			{
 				PrepareIdBroadcast();
-				RequestSendPacket(true);
+				RequestSendPacket();
 			}
 			else
 			{
@@ -142,7 +142,7 @@ protected:
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
 			{
 				PreparePublicKeyPacket(LOLA_LINK_SUBHEADER_HOST_PUBLIC_KEY);
-				RequestSendPacket(true);
+				RequestSendPacket();
 			}
 			else
 			{
@@ -172,7 +172,7 @@ protected:
 			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareCryptoStartRequest();
-				RequestSendPacket(true);
+				RequestSendPacket();
 			}
 			else
 			{
@@ -254,7 +254,7 @@ protected:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareLinkProtocolSwitchOver();
-				RequestSendPacket(true);
+				RequestSendPacket();
 			}
 			else
 			{
@@ -290,7 +290,7 @@ protected:
 				{
 					PingAcked = false;
 					PreparePing();
-					RequestSendPacket(true);
+					RequestSendPacket();
 				}
 				else
 				{
@@ -309,7 +309,7 @@ protected:
 				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 				{
 					PrepareInfoSyncRequest();
-					RequestSendPacket(true);
+					RequestSendPacket();
 				}
 				else
 				{
@@ -321,7 +321,7 @@ protected:
 			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareHostInfoSync();
-				RequestSendPacket(true);
+				RequestSendPacket();
 			}
 			else
 			{
@@ -351,7 +351,7 @@ protected:
 
 			PrepareClockSyncResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastError());
 			HostClockSyncTransaction.Reset();
-			RequestSendPacket(true);
+			RequestSendPacket();
 		}
 		else
 		{

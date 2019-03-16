@@ -201,17 +201,17 @@ protected:
 		return LoLa->GetPacketMap();
 	}
 
-	bool AllowedSend(const bool overridePermission = false)
+	inline bool AllowedSend()
 	{
-		return LoLa->AllowedSend(overridePermission);
+		return LoLa->AllowedSend();
 	}
 
-	bool SendPacket(ILoLaPacket* outgoingPacket)
+	inline bool SendPacket(ILoLaPacket* outgoingPacket)
 	{
 		return LoLa->SendPacket(outgoingPacket);
 	}
 
-	uint32_t MillisSync()
+	inline uint32_t MillisSync()
 	{
 		return LoLa->GetSyncMillis();
 	}

@@ -370,17 +370,16 @@ public:
 		//TODO: Can this be used as stable clock source?
 	}
 
-	bool AllowedSend(const bool override = false)
+	bool AllowedSend()
 	{
 		if (LinkActive)
 		{
 			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
-				(override || IsInSendSlot());
+				IsInSendSlot();
 		}
 		else
 		{
 			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
-				override &&
 				CoolAfterSend();
 		}
 	}
