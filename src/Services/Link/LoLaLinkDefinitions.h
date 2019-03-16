@@ -64,7 +64,7 @@
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT				5
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT				(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK		(sizeof(uint32_t))	//4 byte encoded Partner Id.
-#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG					(1 + max(LOLA_LINK_CRYPTO_KEY_MAX_SIZE, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.		
+#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG					(1 + max(LoLaCryptoKeyExchanger::KEY_MAX_SIZE, LOLA_LINK_INFO_MAC_LENGTH))  //1 byte Sub-header + biggest payload size.		
 
 #define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_PACKET_SIZE + LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
 

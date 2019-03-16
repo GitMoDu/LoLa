@@ -5,15 +5,13 @@
 
 #include <uECC.h>
 
-#define CRYPTO_ENTROPY_SOURCE_ANALOG_PIN	PB0
-
-#define LOLA_LINK_CRYPTO_KEY_MAX_SIZE		21 //Derived from selected curve.
-//#define LOLA_LINK_CRYPTO_SIGNATURE_LENGTH	(2 * LOLA_LINK_CRYPTO_KEY_LENGTH)
-
 class LoLaCryptoKeyExchanger
 {
 public:
+	static const uint8_t ENTROPY_SOURCE_ANALOG_PIN = PB0;
 	static const uint8_t KEY_CURVE_SIZE = 20; //160 bits take 20 bytes.
+	static const uint8_t KEY_MAX_SIZE = KEY_CURVE_SIZE + 1; //Enough for compressed public keys.
+	static const uint8_t SIGNATURE_LENGTH = (KEY_CURVE_SIZE * 2);
 
 private:
 	static int RNG(uint8_t *dest, unsigned size)
@@ -25,9 +23,9 @@ private:
 		while (size) {
 			val = 0;
 			for (unsigned i = 0; i < 8; ++i) {
-				int init = analogRead(CRYPTO_ENTROPY_SOURCE_ANALOG_PIN);
+				int init = analogRead(ENTROPY_SOURCE_ANALOG_PIN);
 				int count = 0;
-				while (analogRead(CRYPTO_ENTROPY_SOURCE_ANALOG_PIN) == init) {
+				while (analogRead(ENTROPY_SOURCE_ANALOG_PIN) == init) {
 					++count;
 				}
 
@@ -66,7 +64,7 @@ private:
 	uint8_t UncompressedKey[KEY_CURVE_SIZE * 2];
 
 public:
-	bool Setup(const uint8_t entropySourcePin = CRYPTO_ENTROPY_SOURCE_ANALOG_PIN)
+	bool Setup()
 	{
 		uECC_set_rng(&RNG);
 
