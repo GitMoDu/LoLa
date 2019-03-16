@@ -105,7 +105,7 @@ protected:
 
 	bool ProcessAckedPacket(ILoLaPacket* receivedPacket)
 	{
-		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
+		if (receivedPacket->GetDataHeader() == DefinitionPing.GetHeader())
 		{
 			switch (LinkInfo->GetLinkState())
 			{
@@ -123,7 +123,7 @@ protected:
 
 	void OnAckReceived(const uint8_t header, const uint8_t id)
 	{
-		if (header == LOLA_LINK_HEADER_PING_WITH_ACK)
+		if (header == DefinitionPing.GetHeader())
 		{
 			OnPingAckReceived(id);
 		}
