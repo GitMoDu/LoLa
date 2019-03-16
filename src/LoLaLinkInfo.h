@@ -8,10 +8,6 @@
 #include <RingBufCPP.h>
 #include <LoLaCrypto\PseudoMacGenerator.h>
 
-#define LOLA_LINK_INFO_MAC_LENGTH		8 //Following MAC-64, because why not?
-
-#define RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT			3
-
 
 class LoLaLinkInfo
 {

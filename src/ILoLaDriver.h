@@ -10,41 +10,7 @@
 #include <Packet\LoLaPacketMap.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 #include <ClockSource.h>
-
-
-
-#define LOLA_USE_LATENCY_COMPENSATION
-
-//#define LOLA_MOCK_RADIO
-//#define LOLA_MOCK_PACKET_LOSS
-
-
-// 100 High latency, high bandwitdh.
-// 10 Low latency, lower bandwidth.
-#define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS					10
-
-// Packet collision avoidance.
-#define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS/4)
-
-
-///Driver constants.
-#define ILOLA_DEFAULT_MIN_RSSI				(int16_t(-100))
-
-#define ILOLA_INVALID_RSSI					((int16_t)INT16_MIN)
-#define ILOLA_INVALID_RSSI_NORMALIZED		((uint8_t)0)
-#define ILOLA_INVALID_MILLIS				((uint32_t)UINT32_MAX)
-#define ILOLA_INVALID_MICROS				ILOLA_INVALID_MILLIS
-#define ILOLA_INVALID_LATENCY				((uint16_t)UINT16_MAX)
-
-#ifdef LOLA_MOCK_PACKET_LOSS
-#define MOCK_PACKET_LOSS_SOFT				8
-#define MOCK_PACKET_LOSS_HARD				12
-#define MOCK_PACKET_LOSS_SMOKE_SIGNALS		35
-#define MOCK_PACKET_LOSS_LINKING			MOCK_PACKET_LOSS_HARD
-#define MOCK_PACKET_LOSS_LINKED				MOCK_PACKET_LOSS_SMOKE_SIGNALS
-#endif
-///
-
+#include <LoLaDefinitions.h>
 
 class ILoLaDriver
 {
@@ -182,7 +148,7 @@ public:
 
 	void SetETTM(const uint8_t ettm)
 	{
-#ifdef LOLA_USE_LATENCY_COMPENSATION
+#ifdef LOLA_LINK_USE_LATENCY_COMPENSATION
 		ETTM = ettm;
 #else
 		ETTM = 1;

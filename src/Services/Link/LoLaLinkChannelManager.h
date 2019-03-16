@@ -23,6 +23,11 @@ public:
 	{
 		LoLaDriver->SetChannel((hopIndex % (LoLaDriver->GetChannelMax() + 1 - LoLaDriver->GetChannelMin()))
 			+ LoLaDriver->GetChannelMin());
+
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_FREQUENCY_HOP)
+		Serial.print(F("Hop: "));
+		Serial.println(LoLaDriver->GetChannel());
+#endif
 	}
 
 	bool Setup(ILoLaDriver* loLa)

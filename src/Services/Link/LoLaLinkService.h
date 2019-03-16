@@ -215,19 +215,8 @@ protected:
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
 			if (KeysLastGenerated == ILOLA_INVALID_MILLIS || millis() - KeysLastGenerated > LOLA_LINK_SERVICE_UNLINK_KEY_PAIR_LIFETIME)
 			{
-#ifdef DEBUG_LOLA_LINK_CRYPTO
-				uint32_t SharedKeyTime = micros();
-#endif
 				KeyExchanger.GenerateNewKeyPair();
 				KeysLastGenerated = millis();
-#ifdef DEBUG_LOLA
-#ifdef DEBUG_LOLA_LINK_CRYPTO
-				SharedKeyTime = micros() - SharedKeyTime;
-				Serial.print(F("Keys generation took "));
-				Serial.print(SharedKeyTime);
-				Serial.println(F(" us."));
-#endif
-#endif
 				SetNextRunASAP();
 			}
 			else

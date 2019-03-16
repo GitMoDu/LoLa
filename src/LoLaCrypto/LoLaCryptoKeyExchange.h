@@ -165,11 +165,21 @@ public:
 
 	bool GenerateNewKeyPair()
 	{
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_ENCRYPTION)
+			uint32_t SharedKeyTime = micros();
+#endif
 		if (uECC_make_key(UncompressedKey, PrivateKey, ECC_CURVE))
 		{
 			uECC_compress(UncompressedKey, LocalPublicKeyCompressed, ECC_CURVE);
 
 			PairingStage = PairingStageEnum::StageLocalKey;
+
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_ENCRYPTION)
+			SharedKeyTime = micros() - SharedKeyTime;
+			Serial.print(F("Keys generation took "));
+			Serial.print(SharedKeyTime);
+			Serial.println(F(" us."));
+#endif
 
 			return true;
 		}
@@ -179,6 +189,9 @@ public:
 
 	bool GenerateSharedKey()
 	{
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_ENCRYPTION)
+		uint32_t SharedKeyTime = micros();
+#endif
 		switch (PairingStage)
 		{
 		case PairingStageEnum::StagePartnerKey:
@@ -198,6 +211,13 @@ public:
 			uECC_decompress(LocalPublicKeyCompressed, UncompressedKey, ECC_CURVE);
 
 			PairingStage = PairingStageEnum::StageSharedKey;
+
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_ENCRYPTION)
+			SharedKeyTime = micros() - SharedKeyTime;
+			Serial.print(F("Shared key generation took "));
+			Serial.print(SharedKeyTime);
+			Serial.println(F(" us."));
+#endif
 		}
 
 		return PairingStage == PairingStageEnum::StageSharedKey;
