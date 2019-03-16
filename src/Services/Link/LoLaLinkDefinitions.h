@@ -109,7 +109,7 @@ enum LinkingStagesEnum : uint8_t
 	InfoSyncStage = 0,
 	ClockSyncStage = 1,
 	LinkProtocolSwitchOver = 2,
-	LinkingDone = 4
+	LinkingDone = 3
 };
 
 class PingPacketDefinition : public PacketDefinition

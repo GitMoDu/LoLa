@@ -234,7 +234,7 @@ protected:
 			LinkInfo->GetSessionId() == sessionId &&
 			LinkInfo->GetLocalId() == hostId)
 		{
-			SetLinkingState(LinkingStagesEnum::LinkingDone);
+			SetLinkingState(LinkingStagesEnum::LinkProtocolSwitchOver);
 
 			return true;
 		}
