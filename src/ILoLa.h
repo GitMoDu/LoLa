@@ -24,7 +24,7 @@
 #define ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS					10
 
 // Packet collision avoidance.
-#define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS/2)
+#define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS/5)
 
 
 ///Driver constants.
@@ -318,7 +318,7 @@ public:
 	//Packet driver implementation.
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
 	virtual bool Setup() { return true; }
-	virtual bool AllowedSend(const bool overridePermission = false) { return true; }
+	virtual bool AllowedSend() { return false; }
 	virtual void OnStart() {}
 	virtual void OnStop() {}
 	virtual void OnChannelUpdated() {}
