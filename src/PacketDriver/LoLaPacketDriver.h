@@ -430,7 +430,7 @@ private:
 		//Even spread of true and false across the DuplexPeriod
 		if (EvenSlot)
 		{
-			if (DuplexElapsed < (DuplexPeriodMillis / 2) &&
+			if ((DuplexElapsed < (DuplexPeriodMillis / 2)) &&
 				DuplexElapsed > 0)
 			{
 				return true;
@@ -438,7 +438,7 @@ private:
 		}
 		else
 		{
-			if (DuplexElapsed > (DuplexPeriodMillis / 2) &&
+			if ((DuplexElapsed > (DuplexPeriodMillis / 2)) &&
 				DuplexElapsed < DuplexPeriodMillis)
 			{
 				return true;
