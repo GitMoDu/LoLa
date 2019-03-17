@@ -191,7 +191,6 @@ public:
 		if (DriverActiveState != DriverActiveStates::ReadyForAnything ||
 			ChannelPending)
 		{
-			RestoreToReceiving();
 			return false;
 		}
 
@@ -210,7 +209,7 @@ public:
 			return true;
 		}
 
-		RestoreToReceiving();
+		DriverActiveState = DriverActiveStates::ReadyForAnything;
 
 		return false;
 	}
@@ -236,7 +235,7 @@ private:
 
 			return;//Invalid packet size;
 		}
-			
+
 		if (CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSizeQuick(IncomingPacketSize), IncomingPacket.GetMACCRC()) &&
 			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
 		{
