@@ -292,11 +292,11 @@ private:
 			{
 				DebugLinkStatistics(&Serial);
 
-				NextDebug = (LinkInfo->GetLinkDuration()/1000)*1000 + LOLA_LINK_DEBUG_UPDATE_MILLIS;
+				NextDebug = (LinkInfo->GetLinkDuration() / 1000) * 1000 + LOLA_LINK_DEBUG_UPDATE_MILLIS;
 
 				if (LinkInfo->GetLinkDuration() < LOLA_LINK_DEBUG_UPDATE_MILLIS)
 				{
-					NextDebug -= (LinkInfo->GetLinkDuration() / 1000)*1000;
+					NextDebug -= (LinkInfo->GetLinkDuration() / 1000) * 1000;
 				}
 			}
 		}
