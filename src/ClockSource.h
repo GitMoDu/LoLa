@@ -49,14 +49,6 @@ public:
 		return millis() + Offset;
 	}
 
-	uint32_t GetLastSyncElapsedMillis()
-	{
-		if (LastSetMillis != 0)
-		{
-			return millis() - LastSetMillis;
-		}
-		return UINT32_MAX;
-	}
 };
 
 #endif
