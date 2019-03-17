@@ -37,6 +37,7 @@ protected:
 		{
 		case SyncStateEnum::WaitingForServiceDiscovery:
 			UpdateSyncState(SyncStateEnum::Syncing);
+			TrackedSurface->SetDataGood(false);
 			break;
 		case SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->SetAll();
@@ -59,6 +60,13 @@ protected:
 			TrackedSurface->GetTracker()->ClearAll();
 			InvalidateLocalHash();
 			UpdateLocalHash();
+			if (!TrackedSurface->IsDataGood())
+			{
+				TrackedSurface->SetDataGood(true);
+			}
+			break;
+		case SyncStateEnum::Disabled:
+			TrackedSurface->SetDataGood(false);
 			break;
 		default:
 			break;
@@ -80,7 +88,7 @@ protected:
 			RequestSendPacket();
 		}
 		else
-		{			
+		{
 			SetNextRunDelay(ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD - GetElapsedSinceLastSent());
 		}
 	}
