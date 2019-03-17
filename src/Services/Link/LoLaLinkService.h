@@ -154,6 +154,20 @@ protected:
 					Serial.println();
 					Serial.print(F("\tId: "));
 					Serial.println(LinkInfo->GetLocalId());
+
+#ifdef LOLA_LINK_USE_ENCRYPTION
+					Serial.print(F("Link secured with 160 bit "));
+					KeyExchanger.Debug(&Serial);
+					Serial.println();
+					Serial.print(F("\tEncrypted with 128 bit cypher "));
+					LoLaDriver->GetCryptoEncoder()->Debug(&Serial);
+					Serial.println();
+					Serial.print(F("\tProtected with 32 bit TOTP @ "));
+					Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
+					Serial.println(F(" ms"));
+#else
+					Serial.print(F("Link unsecured."));
+#endif
 #endif
 					ResetStateStartTime();
 					SetNextRunASAP();
@@ -396,7 +410,7 @@ protected:
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
-				Serial.println(LinkInfo->GetPartnerId());
+				Serial.print(LinkInfo->GetPartnerId());
 				Serial.print(F("\tSession: "));
 				Serial.println(LinkInfo->GetSessionId());
 				Serial.print(F("PKC took "));
@@ -645,20 +659,8 @@ private:
 
 	void DebugLinkEstablished()
 	{
-#ifdef LOLA_LINK_USE_ENCRYPTION
-		Serial.print(F("Link secured with 160 bit "));
-		KeyExchanger.Debug(&Serial);
-		Serial.println();
-		Serial.print(F("\tEncrypted with 128 bit cypher "));
-		LoLaDriver->GetCryptoEncoder()->Debug(&Serial);
-		Serial.println();
-		Serial.print(F("\tProtected with 32 bit TOTP @ "));
-		Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
-		Serial.println(F(" ms"));
-#else
 		Serial.print(F("Linked: "));
 		Serial.println(MillisSync());
-#endif
 		Serial.print(F("Linking took "));
 		Serial.print(LinkingDuration);
 		Serial.println(F(" ms."));
