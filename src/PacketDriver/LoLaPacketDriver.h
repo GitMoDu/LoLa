@@ -426,8 +426,7 @@ private:
 
 	bool IsInReceiveSlot(const uint32_t receivedMillis)
 	{
-		//TODO: Remove ETTM parameter when Clock Sync accuracy is < 1 ms (currently it's < 3 ms).
-		DuplexElapsed = (GetSyncMillis(receivedMillis) + (uint32_t)ETTM) % DuplexPeriodMillis;
+		DuplexElapsed = GetSyncMillis(receivedMillis) % DuplexPeriodMillis;
 
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
@@ -450,7 +449,7 @@ private:
 
 	bool IsInSendSlot()
 	{
-		DuplexElapsed = (GetSyncMillis() + (uint32_t)ETTM) % DuplexPeriodMillis;
+		DuplexElapsed = (GetSyncMillis()) % DuplexPeriodMillis;
 
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
