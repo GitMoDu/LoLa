@@ -10,17 +10,16 @@
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacketMap.h>
 
-#define SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY		0
-#define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED		1
-
-#define SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY	2
-#define SYNC_SURFACE_META_SUB_HEADER_INVALIDATE_REQUEST		3
-
 class SyncSurfaceBase : public AbstractSync
 {
 private:
-	SyncAbstractPacketDefinition* SyncMetaDefinition = nullptr;
+	SyncAbstractPacketDefinition* SyncMetaDefinition =	nullptr;
 	SyncAbstractPacketDefinition* DataPacketDefinition = nullptr;
+
+	static const uint8_t SYNC_META_SUB_HEADER_SERVICE_DISCOVERY =		0;
+	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED =			1;
+	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY =	2;
+	static const uint8_t SYNC_META_SUB_HEADER_INVALIDATE_REQUEST =		3;
 
 	union ArrayToUint32 {
 		byte array[4];
@@ -38,7 +37,7 @@ public:
 		DataPacketDefinition = dataDefinition;
 #ifdef DEBUG_LOLA
 		SyncMetaDefinition->SetOwner(trackedSurface);
-		DataPacketDefinition->SetOwner(trackedSurface);		
+		DataPacketDefinition->SetOwner(trackedSurface);
 #endif
 	}
 
@@ -81,7 +80,7 @@ protected:
 			switch (incomingPacket->GetId())
 			{
 				//To Reader.
-			case SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED:
+			case SYNC_META_SUB_HEADER_UPDATE_FINISHED:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnUpdateFinishedReceived"));
 #endif
@@ -89,19 +88,19 @@ protected:
 				break;
 
 				//To Writer.
-			case SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY:
+			case SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnUpdateFinishedReplyReceived"));
 #endif
 				OnUpdateFinishedReplyReceived();
 				break;
-			case SYNC_SURFACE_META_SUB_HEADER_INVALIDATE_REQUEST:
+			case SYNC_META_SUB_HEADER_INVALIDATE_REQUEST:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnInvalidateReceived"));
 #endif
 				OnInvalidateRequestReceived();
 				break;
-			case SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY:
+			case SYNC_META_SUB_HEADER_SERVICE_DISCOVERY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnServiceDiscoveryReceived"));
 #endif
@@ -148,7 +147,7 @@ protected:
 	//Writer
 	void PrepareUpdateFinishedPacket()
 	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED);
+		PrepareMetaPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED);
 	}
 
 	bool PrepareBlockPacketHeader(const uint8_t index)
@@ -168,17 +167,17 @@ protected:
 	//Reader
 	void PrepareServiceDiscoveryPacket()
 	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_SERVICE_DISCOVERY);
+		PrepareMetaPacket(SYNC_META_SUB_HEADER_SERVICE_DISCOVERY);
 	}
 
 	void PrepareUpdateFinishedReplyPacket()
 	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
+		PrepareMetaPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
 	}
 
 	void PrepareInvalidateRequestPacket()
 	{
-		PrepareMetaPacket(SYNC_SURFACE_META_SUB_HEADER_INVALIDATE_REQUEST);
+		PrepareMetaPacket(SYNC_META_SUB_HEADER_INVALIDATE_REQUEST);
 	}
 };
 #endif
