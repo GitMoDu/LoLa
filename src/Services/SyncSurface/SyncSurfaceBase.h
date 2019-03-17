@@ -3,8 +3,7 @@
 #ifndef _SYNCSURFACEBASE_h
 #define _SYNCSURFACEBASE_h
 
-
-#include <Arduino.h>
+#include <LoLaDefinitions.h>
 #include <Services\SyncSurface\AbstractSync.h>
 #include <Services\SyncSurface\SyncPacketDefinitions.h>
 #include <Packet\LoLaPacket.h>
