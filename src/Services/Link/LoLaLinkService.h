@@ -549,9 +549,8 @@ protected:
 
 				//To Host.
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
-				ATUI_R.uint = receivedPacket->GetPayload()[1];
-				ATUI_R.uint += receivedPacket->GetPayload()[2] << 8;
-				OnHostInfoSyncReceived(receivedPacket->GetPayload()[0], (uint16_t)ATUI_R.uint);
+				OnHostInfoSyncReceived(receivedPacket->GetPayload()[0], 
+					(uint16_t)(receivedPacket->GetPayload()[1] + (receivedPacket->GetPayload()[2] << 8)));
 				break;
 
 				//To Remote.

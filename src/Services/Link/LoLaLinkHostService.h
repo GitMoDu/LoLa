@@ -474,7 +474,6 @@ private:
 	void PrepareCryptoStartRequest()
 	{
 		PrepareLinkProtocolSwitchOver();
-
 		LoLaDriver->GetCryptoEncoder()->EncodeDirect(OutPacket.GetPayload(), sizeof(uint32_t));
 	}
 
@@ -493,7 +492,7 @@ private:
 	void PrepareInfoSyncRequest()
 	{
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST);
-		for (uint8_t i = 1; i < DefinitionReport.GetPayloadSize(); i++)
+		for (uint8_t i = 0; i < DefinitionReport.GetPayloadSize(); i++)
 		{
 			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
 		}
