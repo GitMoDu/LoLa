@@ -84,7 +84,7 @@ public:
 		return SyncState == SyncStateEnum::Synced;
 	}
 
-	void SurfaceDataChangedEvent(const uint8_t param)
+	void SurfaceDataChangedEvent(const bool dataGood)
 	{
 		InvalidateLocalHash();
 
@@ -243,7 +243,7 @@ protected:
 	{
 		if (IPacketSendService::OnSetup() && TrackedSurface != nullptr)
 		{
-			MethodSlot<AbstractSync, const uint8_t> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
+			MethodSlot<AbstractSync, const bool> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
 			TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
 			return true;
 		}

@@ -17,7 +17,10 @@ class ITrackedSurface
 {
 private:
 	//Callback handler.
-	Signal<const uint8_t> OnSurfaceUpdatedCallback;
+	Signal<const bool> OnSurfaceUpdatedCallback;
+
+	//Data good to use status.
+	bool DataGood = false;
 
 	//CRC Calculator.
 	FastCRC8 CRC8;
@@ -27,7 +30,7 @@ private:
 protected:
 	inline void OnDataChanged()
 	{
-		OnSurfaceUpdatedCallback.fire(0);
+		OnSurfaceUpdatedCallback.fire(DataGood);
 	}
 
 public:
@@ -36,7 +39,17 @@ public:
 		LastCRC = 0;
 	}
 
-	void AttachOnSurfaceUpdated(const Slot<const uint8_t>& slot)
+	bool IsDataGood()
+	{
+		return DataGood;
+	}
+
+	void SetDataGood(const bool dataGood)
+	{
+		DataGood = dataGood;
+	}
+
+	void AttachOnSurfaceUpdated(const Slot<const bool>& slot)
 	{
 		OnSurfaceUpdatedCallback.attach(slot);
 	}
