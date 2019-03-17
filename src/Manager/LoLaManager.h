@@ -16,7 +16,7 @@
 class LoLaManager
 {
 protected:
-	LoLaPacketDriver * LoLa = nullptr;
+	LoLaPacketDriver * LoLaDriver = nullptr;
 
 protected:
 	virtual LoLaLinkService * GetLinkService() { return nullptr; }
@@ -29,12 +29,12 @@ protected:
 protected:
 	bool SetupServices()
 	{		
-		if (!GetLinkService()->SetServicesManager(LoLa->GetServices()))
+		if (!GetLinkService()->SetServicesManager(LoLaDriver->GetServices()))
 		{
 			return false;
 		}
 
-		if (!LoLa->GetServices()->Add(GetLinkService()))
+		if (!LoLaDriver->GetServices()->Add(GetLinkService()))
 		{
 			return false;
 		}
@@ -48,14 +48,14 @@ protected:
 	}
 
 public:
-	LoLaManager(LoLaPacketDriver* loLa)
+	LoLaManager(LoLaPacketDriver* driver)
 	{
-		LoLa = loLa;
+		LoLaDriver = driver;
 	}
 
 	LoLaLinkInfo* GetLinkInfo()
 	{
-		return LoLa->GetServices()->GetLinkInfo();
+		return LoLaDriver->GetServices()->GetLinkInfo();
 	}
 
 	void Start()
@@ -65,7 +65,7 @@ public:
 
 	void Stop()
 	{
-		LoLa->Disable();
+		LoLaDriver->Disable();
 		GetLinkService()->Disable();
 	}
 
@@ -73,7 +73,7 @@ public:
 	{
 		if (SetupServices())
 		{
-			return LoLa->Setup();
+			return LoLaDriver->Setup();
 		}
 
 		return false;
@@ -87,9 +87,9 @@ protected:
 	LoLaLinkHostService LinkService;
 
 public:
-	LoLaManagerHost(Scheduler* scheduler, LoLaPacketDriver* loLa)
-		: LoLaManager(loLa)
-		, LinkService(scheduler, loLa)
+	LoLaManagerHost(Scheduler* scheduler, LoLaPacketDriver* driver)
+		: LoLaManager(driver)
+		, LinkService(scheduler, driver)
 	{
 	}
 
@@ -104,9 +104,9 @@ protected:
 	LoLaLinkRemoteService LinkService;
 
 public:
-	LoLaManagerRemote(Scheduler* scheduler, LoLaPacketDriver* loLa)
-		: LoLaManager(loLa)
-		, LinkService(scheduler, loLa)
+	LoLaManagerRemote(Scheduler* scheduler, LoLaPacketDriver* driver)
+		: LoLaManager(driver)
+		, LinkService(scheduler, driver)
 	{
 	}
 
