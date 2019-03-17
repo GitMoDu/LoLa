@@ -3,8 +3,6 @@
 #ifndef _ILOLA_h
 #define _ILOLA_h
 
-#define DEBUG_LOLA
-
 #include <stdint.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
