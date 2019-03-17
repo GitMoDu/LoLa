@@ -287,12 +287,14 @@ private:
 		{
 			PrepareLinkReport(LinkInfo->GetPartnerLastReportElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD);
 			RequestSendPacket();
+			SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
 		}
 		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
 			PowerBalancer.SetMaxPower();
 			PreparePing(); 		//Send Panic Ping!
 			RequestSendPacket();
+			SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
 		}
 		else if (LinkInfo->GetLocalInfoUpdateRemotelyElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD)
 		{
