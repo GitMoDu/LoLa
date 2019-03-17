@@ -31,8 +31,8 @@ private:
 	//  40 =  15dBm	(32mW)
 	// 100 = 20dBm	(100mW) Requires Dual Antennae
 	// 127 = ABSOLUTE_MAX
-	static const uint8_t SI4463_TRANSMIT_POWER_MIN = 0;
-	static const uint8_t SI4463_TRANSMIT_POWER_MAX = 40;
+	static const uint8_t SI4463_TRANSMIT_POWER_MIN = 3;
+	static const uint8_t SI4463_TRANSMIT_POWER_MAX = 30;
 
 	//Received RSSI range.
 	static const int16_t SI4463_RSSI_MIN = -110;
