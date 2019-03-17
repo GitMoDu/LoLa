@@ -54,7 +54,7 @@ private:
 		Hasher.clear();
 		Hasher.update(seedBytes, length);
 
-		Hasher.finalize(ATUI.array, sizeof(uint32_t));	
+		Hasher.finalize(ATUI.array, sizeof(uint32_t));
 
 		TokenSeed = ATUI.uint;
 	}
@@ -161,7 +161,7 @@ public:
 
 		Cypher.clear();
 
-		//HKey reduction, only use keySize bytes for key (16).
+		//HKey reduction, only use keySize bytes for key.
 		for (uint8_t i = 0; i < KeySize; i++)
 		{
 			KeyHolder[i] = secretKey[i];
@@ -179,8 +179,8 @@ public:
 			return false;
 		}
 
-		//Update token seed from last 4 unused bytes of the key.
-		SetTokenSeed(&KeyHolder[keyLength - TokenSize], TokenSize);
+		//Update token seed from last unused bytes of the key.
+		SetTokenSeed(&KeyHolder[KeySize], keyLength - KeySize);
 
 		ResetCypherBlock();
 
