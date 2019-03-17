@@ -204,7 +204,7 @@ protected:
 #endif
 	}
 
-	void OnLinkInfoReportReceived(const uint8_t rssi, const uint32_t partnerReceivedCount)
+	void OnLinkInfoReportReceived(const uint8_t rssi, const uint8_t partnerReceivedCount)
 	{
 		if (LinkInfo->HasLink())
 		{
@@ -544,8 +544,7 @@ protected:
 			case LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY:
 				ReportPending = true;
 			case LOLA_LINK_SUBHEADER_LINK_REPORT:
-				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
-				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0], ATUI_R.uint);
+				OnLinkInfoReportReceived(receivedPacket->GetPayload()[0], receivedPacket->GetPayload()[1]);
 				break;
 
 				//To Host.
@@ -600,8 +599,7 @@ protected:
 		}
 
 		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
-		ATUI_S.uint = LoLaDriver->GetReceivedCount();
-		S_ArrayToPayload();
+		OutPacket.GetPayload()[1] = LoLaDriver->GetReceivedCount() % UINT8_MAX;
 	}
 
 
@@ -650,7 +648,7 @@ private:
 		serial->print(F("Sent: "));
 		serial->println(LoLaDriver->GetTransmitedCount());
 		serial->print(F("Lost: "));
-		serial->println(max(LinkInfo->GetPartnerReceivedCount(), LoLaDriver->GetSentCount()) - LinkInfo->GetPartnerReceivedCount());
+		serial->println(LinkInfo->GetLostCount());
 		serial->print(F("Received: "));
 		serial->println(LoLaDriver->GetReceivedCount());
 		serial->print(F("Rejected: "));

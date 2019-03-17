@@ -38,7 +38,7 @@ private:
 
 	RingBufCPP<uint8_t, RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT> PartnerRSSISamples;
 	uint32_t PartnerAverageRSSI = 0;
-	uint32_t PartnerReceivedCount = 0;
+	uint8_t PartnerReceivedCount = 0;
 
 	//Link session information.
 	uint8_t SessionId = INVALID_SESSION;
@@ -291,12 +291,17 @@ public:
 		PartnerRSSISamples.addForce(rssiNormalized);
 	}
 
-	uint32_t GetPartnerReceivedCount()
+	uint8_t GetLostCount()
+	{
+		return max(PartnerReceivedCount, (Driver->GetTransmitedCount() % UINT8_MAX)) - PartnerReceivedCount;
+	}
+
+	uint8_t GetPartnerReceivedCount()
 	{
 		return PartnerReceivedCount;
 	}
 
-	void SetPartnerReceivedCount(const uint32_t partnerReceivedCount)
+	void SetPartnerReceivedCount(const uint8_t partnerReceivedCount)
 	{
 		PartnerReceivedCount = partnerReceivedCount;
 	}
