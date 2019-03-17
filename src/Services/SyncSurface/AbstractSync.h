@@ -96,10 +96,7 @@ public:
 
 	void NotifyDataChanged()
 	{
-		if (TrackedSurface != nullptr)
-		{
-			TrackedSurface->NotifyDataChanged();
-		}
+		TrackedSurface->NotifyDataChanged();
 	}
 
 protected:
@@ -131,7 +128,7 @@ protected:
 		{
 			Serial.println(F("Hash mismatch"));
 		}
-		else 
+		else
 		{
 			Serial.println(F("Hash match"));
 		}
