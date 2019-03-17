@@ -169,6 +169,10 @@ protected:
 					Serial.print(F("Link unsecured."));
 #endif
 #endif
+
+#ifdef LOLA_LINK_ACTIVITY_LED
+					pinMode(LOLA_LINK_ACTIVITY_LED, OUTPUT);
+#endif
 					ResetStateStartTime();
 					SetNextRunASAP();
 
@@ -194,6 +198,10 @@ protected:
 		}
 
 		SetNextRunASAP();
+
+#ifdef LOLA_LINK_ACTIVITY_LED
+		digitalWrite(LOLA_LINK_ACTIVITY_LED, LOW);
+#endif
 	}
 
 	void OnLinkInfoReportReceived(const uint8_t rssi, const uint32_t partnerReceivedCount)
@@ -296,6 +304,16 @@ private:
 			OnKeepingLink();
 		}
 
+#ifdef LOLA_LINK_ACTIVITY_LED
+		if (!digitalRead(LOLA_LINK_ACTIVITY_LED))
+		{
+			if (millis() - LastSent > 10)
+			{
+				digitalWrite(LOLA_LINK_ACTIVITY_LED, HIGH);
+			}
+		}
+#endif
+
 #ifdef DEBUG_LOLA
 		if (LinkInfo->HasLink())
 		{
@@ -392,6 +410,9 @@ protected:
 				PowerBalancer.SetMaxPower();
 				ChannelManager.ResetChannel();
 				SetNextRunASAP();
+#ifdef LOLA_LINK_ACTIVITY_LED
+				digitalWrite(LOLA_LINK_ACTIVITY_LED, LOW);
+#endif
 				break;
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 				ClearSession();

@@ -5,6 +5,8 @@
 
 //#define DEBUG_LOLA
 
+#define LOLA_LINK_ACTIVITY_LED LED_BUILTIN
+
 //#define LOLA_MOCK_RADIO
 //#define LOLA_MOCK_PACKET_LOSS
 
