@@ -12,11 +12,6 @@
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
-
-#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
-#include <Services\LoLaDiagnosticsService\LoLaDiagnosticsService.h>
-#endif
-
 class AbstractLinkService : public IPacketSendService
 {
 private:

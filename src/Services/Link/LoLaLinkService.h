@@ -101,9 +101,6 @@ public:
 	LoLaLinkService(Scheduler* scheduler, ILoLaDriver* driver)
 		: AbstractLinkService(scheduler, driver)
 		, TimedHopper(scheduler, driver)
-#ifdef LOLA_LINK_DIAGNOSTICS_ENABLED
-		, Diagnostics(scheduler, loLa, &LinkInfo)
-#endif
 	{
 	}
 
