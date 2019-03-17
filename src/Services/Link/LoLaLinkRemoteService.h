@@ -68,7 +68,7 @@ protected:
 
 	void OnPreSend()
 	{
-		if (OutPacket.GetDataHeader() == LOLA_LINK_HEADER_SHORT &&
+		if (OutPacket.GetDataHeader() == DefinitionShort.GetHeader() &&
 			(OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_REQUEST ||
 				OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST))
 		{
