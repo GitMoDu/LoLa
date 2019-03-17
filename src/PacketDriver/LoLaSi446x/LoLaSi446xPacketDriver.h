@@ -115,7 +115,7 @@ protected:
 			Si446x_SERVICE();
 			Si446x_sleep();
 #ifdef DEBUG_LOLA
-			Serial.println(F("Si4463 Present"));
+			//Serial.println(F("Si4463 Present"));
 			//Serial.println(info.revBranch);
 			//Serial.println(info.revExternal);
 			//Serial.println(info.revInternal);
