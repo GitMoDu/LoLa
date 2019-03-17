@@ -11,6 +11,12 @@ class ILoLaPacket
 private:
 	PacketDefinition * Definition = nullptr;
 
+
+	union ArrayToUint16 {
+		byte array[sizeof(uint16_t)];
+		uint16_t uint;
+	} ATUI;
+
 public:
 	virtual uint8_t * GetRaw() { return nullptr; }
 	virtual uint8_t GetMaxSize() { return 0; }
@@ -36,14 +42,19 @@ public:
 		GetRaw()[LOLA_PACKET_ID_INDEX] = id;
 	}
 
-	uint8_t GetMACCRC()
+	uint16_t GetMACCRC()
 	{
-		return GetRaw()[LOLA_PACKET_MACCRC_INDEX];
+		ATUI.array[0] = GetRaw()[LOLA_PACKET_MACCRC_INDEX];
+		ATUI.array[1] = GetRaw()[LOLA_PACKET_MACCRC_INDEX+1];
+
+		return ATUI.uint;
 	}
 
-	void SetMACCRC(const uint8_t crcValue)
+	void SetMACCRC(const uint16_t crcValue)
 	{
-		GetRaw()[LOLA_PACKET_MACCRC_INDEX] = crcValue;
+		ATUI.uint = crcValue;
+		GetRaw()[LOLA_PACKET_MACCRC_INDEX] = ATUI.array[0];
+		GetRaw()[LOLA_PACKET_MACCRC_INDEX + 1] = ATUI.array[1];
 	}
 
 	uint8_t GetDataHeader()

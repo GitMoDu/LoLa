@@ -9,7 +9,8 @@
 #include <Acorn128.h>
 #include "utility/ProgMemUtil.h"
 
-#include <LoLaCrypto\TinyCRC.h>
+#include <FastCRC.h>
+
 
 #include <Crypto.h>
 #include <SHA256.h>
@@ -43,7 +44,7 @@ private:
 
 
 	///CRC validation.
-	TinyCrcModbus8 CalculatorCRC;
+	FastCRC16 CRC16;
 	///
 
 
@@ -67,7 +68,7 @@ public:
 	}
 
 	//Returns 8 bit MAC/CRC.
-	uint8_t Encode(uint8_t* message, const uint8_t messageLength)
+	uint16_t Encode(uint8_t* message, const uint8_t messageLength)
 	{
 		if (EncoderState == StageEnum::FullPower)
 		{
@@ -75,13 +76,11 @@ public:
 			Cypher.encrypt(message, message, messageLength);
 		}
 
-		CalculatorCRC.Reset();
-
-		return CalculatorCRC.Update(message, messageLength);
+		return CRC16.modbus(message, messageLength);
 	}
 
 	//Returns 8 bit MAC/CRC.
-	uint8_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
+	uint16_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
 	{
 		if (EncoderState == StageEnum::FullPower)
 		{
@@ -93,18 +92,13 @@ public:
 			memcpy(outputMessage, message, messageLength);
 		}
 
-		CalculatorCRC.Reset();
-
-		return CalculatorCRC.Update(outputMessage, messageLength);
+		return CRC16.modbus(outputMessage, messageLength);
 	}
 
 	//Returns 8 bit MAC/CRC.
-	uint8_t Decode(uint8_t* message, const uint8_t messageLength, const uint8_t crc)
+	uint8_t Decode(uint8_t* message, const uint8_t messageLength, const uint16_t crc)
 	{
-		CalculatorCRC.Reset();
-		CalculatorCRC.Update(message, messageLength);
-
-		if (crc != CalculatorCRC.GetCurrent())
+		if (crc != CRC16.modbus(message, messageLength))
 		{
 			return false;
 		}
