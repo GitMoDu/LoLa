@@ -5,7 +5,7 @@
 
 #include <BitTracker.h>
 #include <Callback.h>
-#include <LoLaCrypto\TinyCRC.h>
+#include <FastCRC.h>
 
 #define DEBUG_BIT_TRACKER
 
@@ -20,7 +20,8 @@ private:
 	Signal<const uint8_t> OnSurfaceUpdatedCallback;
 
 	//CRC Calculator.
-	TinyCrcModbus8 CalculatorCRC;
+	FastCRC8 CRC8;
+	uint8_t LastCRC = 0;
 	boolean HashNeedsUpdate = true;
 
 protected:
@@ -32,7 +33,7 @@ protected:
 public:
 	ITrackedSurface()
 	{
-		CalculatorCRC.Reset();
+		LastCRC = 0;
 	}
 
 	void AttachOnSurfaceUpdated(const Slot<const uint8_t>& slot)
@@ -50,12 +51,7 @@ public:
 		if (HashNeedsUpdate)
 		{
 			HashNeedsUpdate = false;
-			CalculatorCRC.Reset();
-
-			for (uint8_t i = 0; i < GetDataSize(); i++)
-			{
-				CalculatorCRC.Update(GetData()[i]);
-			}
+			LastCRC = CRC8.smbus(GetData(), GetDataSize());
 		}
 	}
 
@@ -66,7 +62,7 @@ public:
 
 	inline uint8_t GetHash()
 	{
-		return CalculatorCRC.GetCurrent();
+		return LastCRC;
 	}
 
 	inline uint8_t GetDataSize()

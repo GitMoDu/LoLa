@@ -3,10 +3,8 @@
 
 #include <Arduino.h>
 
-#include <LoLaCrypto\TinyCRC.h>
 
 #define UNIQUE_ID_MAX_LENGTH	16
-
 
 #if defined(ARDUINO_ARCH_STM32F1)
 //For STM32, unique ID is read straight from the IC.
@@ -15,7 +13,7 @@
 #elif defined(ARDUINO_ARCH_AVR)
 //For AVR Arduino: first UNIQUE_ID_MAX_LENGTH + 1 bytes of EEPROM are reserved for Serial Id.
 #include <EEPROM.h>
-
+#include <FastCRC.h>
 #else
 #error Platform not supported.
 #endif
@@ -27,7 +25,7 @@ private:
 	bool HasUUID = false;
 
 #if defined(ARDUINO_ARCH_AVR)
-	TinyCrcModbus8 CalculatorCRC;
+	FastCRC8 CRC8;
 #endif
 
 private:
@@ -74,14 +72,13 @@ public:
 	
 #ifdef ARDUINO_ARCH_AVR
 	bool ReadSerialFromEEPROM()
-	{
-		CalculatorCRC.Reset();
+	{		
 		for (uint8_t i = 0; i < UNIQUE_ID_MAX_LENGTH; i++) {
 			UUID[i] = EEPROM.read(i);
-			CalculatorCRC.Update(UUID[i]);
 		}
+		;
 
-		if (CalculatorCRC.GetCurrent() == EEPROM.read(UNIQUE_ID_MAX_LENGTH))
+		if (EEPROM.read(UNIQUE_ID_MAX_LENGTH) == CRC8.smbus(UUID, UNIQUE_ID_MAX_LENGTH))
 		{
 			return true;
 		}
@@ -106,12 +103,12 @@ public:
 				HasUUID = false;
 				return;
 			}
-			CalculatorCRC.Update(UUID[i]);
 		}
-		
-		EEPROM.write(UNIQUE_ID_MAX_LENGTH, CalculatorCRC.GetCurrent());
 
-		if (CalculatorCRC.GetCurrent() != EEPROM.read(UNIQUE_ID_MAX_LENGTH))//Make sure the data is there.
+		uint8_t LastCrc = CRC8.smbus(UUID, UNIQUE_ID_MAX_LENGTH);
+		EEPROM.write(UNIQUE_ID_MAX_LENGTH, LastCrc);
+
+		if (LastCrc != EEPROM.read(UNIQUE_ID_MAX_LENGTH))//Make sure the data is there.
 		{
 			//ERROR, ERROR, unable to save id.
 			HasUUID = false;

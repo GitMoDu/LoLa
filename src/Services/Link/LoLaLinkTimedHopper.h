@@ -10,8 +10,6 @@
 #include <Services\Link\LoLaLinkChannelManager.h>
 
 
-#include <LoLaCrypto\TinyCRC.h>
-
 
 class LoLaLinkTimedHopper : public ILoLaService
 {

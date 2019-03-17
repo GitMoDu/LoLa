@@ -9,7 +9,6 @@
 #include <Services\LoLaServicesManager.h>
 #include <LoLaLinkInfo.h>
 
-#include <LoLaCrypto\TinyCRC.h>
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 

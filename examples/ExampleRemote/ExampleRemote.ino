@@ -6,6 +6,8 @@
 * Ringbuffer: https://github.com/wizard97/Embedded_RingBuf_CPP
 * Generic Callbacks: https://github.com/tomstewart89/Callback
 * OO TaskScheduler: https://github.com/arkhipenko/TaskScheduler
+* FastCRC with added STM32F1 support: GitMoDu/FastCRC https://github.com/GitMoDu/FastCRC
+*	forked from FrankBoesing/FastCRC https://github.com/FrankBoesing/FastCRC
 * Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git
 * Micro Elyptic Curve Cryptography: https://github.com/kmackay/micro-ecc
 * Crypto Library for Ascon128: https://github.com/rweather/arduinolibs

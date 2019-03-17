@@ -24,8 +24,8 @@ Generic Callbacks: https://github.com/tomstewart89/Callback
 
 OO TaskScheduler: https://github.com/arkhipenko/TaskScheduler
 
-Fast CRC calculator: https://github.com/FrankBoesing/FastCRC.git
-Tiny CRC calculator fork: https://github.com/GitMoDu/TinyCRC
+FastCRC with added STM32F1 support: GitMoDu/FastCRC https://github.com/GitMoDu/FastCRC
+    forked from FrankBoesing/FastCRC https://github.com/FrankBoesing/FastCRC
 
 Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git
 

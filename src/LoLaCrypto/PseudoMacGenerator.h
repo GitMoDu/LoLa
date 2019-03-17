@@ -4,8 +4,8 @@
 #define _PSEUDOMACGENERATOR_h
 
 #include <stdint.h>
-#include <LoLaCrypto\TinyCRC.h>
 #include <LoLaCrypto\UniqueIdProvider.h>
+#include <FastCRC.h>
 
 template<const uint8_t MACLength>
 class LoLaMAC
@@ -15,7 +15,7 @@ private:
 	uint32_t MACHash = 0;
 	bool Cached = false;
 
-	TinyCrcModbus8 CRC;
+	FastCRC8 CRC8;
 
 	///Unique Id
 	UniqueIdProvider IdProvider;
@@ -24,21 +24,23 @@ private:
 private:
 	void UpdateMAC()
 	{
-		CRC.Reset();
-
 		for (uint8_t i = 0; i < (MACLength - 1); i++)
 		{
-			CRC.Update(IdProvider.GetUUIDPointer()[i]);
-			MAC[i] = CRC.GetCurrent();
+			if (i == 0)
+			{
+				MAC[i] = CRC8.smbus(&IdProvider.GetUUIDPointer()[i], sizeof(uint8_t));
+			}
+			else
+			{
+				MAC[i] = CRC8.smbus_upd(&IdProvider.GetUUIDPointer()[i], sizeof(uint8_t));
+			}
 		}
 
 		//Use remaining entropy of ID by hashing the last unused bytes
 		// into the last byte of the MAC.
 		if (MACLength < IdProvider.GetUUIDLength())
 		{
-			CRC.Reset();
-			CRC.Update(&IdProvider.GetUUIDPointer()[MACLength - 1], IdProvider.GetUUIDLength() - MACLength - 1);
-			MAC[MACLength - 1] = CRC.GetCurrent();
+			MAC[MACLength - 1] = CRC8.smbus(&IdProvider.GetUUIDPointer()[MACLength - 1], IdProvider.GetUUIDLength() - MACLength - 1);
 		}
 		else
 		{
@@ -50,16 +52,10 @@ private:
 
 	inline void UpdateMACHash()
 	{
-		//TODO: Upgrade to real 32 bit hash
-		CRC.Reset();
-		CRC.Update(MAC, 0);
-		MACHash = CRC.GetCurrent();
-		CRC.Update(MAC, 1);
-		MACHash += CRC.GetCurrent() << 8;
-		CRC.Update(MAC, 2);
-		MACHash += CRC.GetCurrent() << 16;
-		CRC.Update(MAC, 3);
-		MACHash += CRC.GetCurrent() << 24;		
+		MACHash = CRC8.smbus(&MAC[0], sizeof(uint8_t));
+		MACHash += CRC8.smbus_upd(&MAC[1], sizeof(uint8_t)) << 8;
+		MACHash += CRC8.smbus_upd(&MAC[2], sizeof(uint8_t)) << 16;
+		MACHash += CRC8.smbus_upd(&MAC[3], sizeof(uint8_t)) << 24;
 	}
 
 	inline void LazyLoad()
