@@ -87,9 +87,9 @@ protected:
 	LoLaLinkHostService LinkService;
 
 public:
-	LoLaManagerHost(Scheduler* scheduler, LoLaPacketDriver* driver)
+	LoLaManagerHost(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* driver)
 		: LoLaManager(driver)
-		, LinkService(scheduler, driver)
+		, LinkService(servicesScheduler, driverScheduler, driver)
 	{
 	}
 
@@ -104,9 +104,9 @@ protected:
 	LoLaLinkRemoteService LinkService;
 
 public:
-	LoLaManagerRemote(Scheduler* scheduler, LoLaPacketDriver* driver)
+	LoLaManagerRemote(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* driver)
 		: LoLaManager(driver)
-		, LinkService(scheduler, driver)
+		, LinkService(servicesScheduler, driverScheduler, driver)
 	{
 	}
 

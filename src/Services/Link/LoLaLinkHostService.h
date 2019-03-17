@@ -39,8 +39,8 @@ private:
 	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
 
 public:
-	LoLaLinkHostService(Scheduler *scheduler, ILoLaDriver* driver)
-		: LoLaLinkService(scheduler, driver)
+	LoLaLinkHostService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
+		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
 	{
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &HostClockSyncTransaction;

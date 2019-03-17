@@ -29,8 +29,8 @@ private:
 	ClockSyncRequestTransaction RemoteClockSyncTransaction;
 
 public:
-	LoLaLinkRemoteService(Scheduler* scheduler, ILoLaDriver* driver)
-		: LoLaLinkService(scheduler, driver)
+	LoLaLinkRemoteService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
+		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
 	{
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &RemoteClockSyncTransaction;

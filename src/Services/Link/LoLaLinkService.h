@@ -98,9 +98,9 @@ protected:
 
 
 public:
-	LoLaLinkService(Scheduler* scheduler, ILoLaDriver* driver)
-		: AbstractLinkService(scheduler, driver)
-		, TimedHopper(scheduler, driver)
+	LoLaLinkService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
+		: AbstractLinkService(servicesScheduler, driver)
+		, TimedHopper(driverScheduler, driver)
 	{
 	}
 

@@ -22,6 +22,7 @@
 
 
 #define _TASK_OO_CALLBACKS
+#define _TASK_PRIORITY          // Support for layered scheduling priority
 #include <TaskScheduler.h>
 
 #include <Callback.h>
@@ -30,12 +31,12 @@
 
 
 ///Process scheduler.
-Scheduler SchedulerBase;
+Scheduler SchedulerBase, SchedulerHighPriority;
 ///
 
 ///Radio manager and driver.
-LoLaSi446xPacketDriver LoLaDriver(&SchedulerBase);
-HostManager LoLaManager(&SchedulerBase, &LoLaDriver);
+LoLaSi446xPacketDriver LoLaDriver(&SchedulerHighPriority);
+HostManager LoLaManager(&SchedulerBase, &SchedulerHighPriority, &LoLaDriver);
 ///
 
 ///Communicated Data
@@ -93,6 +94,8 @@ void setup()
 	delay(1000);
 	Serial.println(F("Example Host"));
 #endif	
+
+	SchedulerBase.setHighPriorityScheduler(&SchedulerHighPriority);
 
 
 	if (!LoLaManager.Setup())

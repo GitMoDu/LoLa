@@ -25,9 +25,9 @@ protected:
 	}
 
 public:
-	HostManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
-		: LoLaManagerHost(scheduler, loLa)
-		, Reader(scheduler, loLa, &Controller)
+	HostManager(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* loLa)
+		: LoLaManagerHost(servicesScheduler, driverScheduler, loLa)
+		, Reader(servicesScheduler, loLa, &Controller)
 	{
 	}
 

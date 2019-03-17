@@ -25,9 +25,9 @@ protected:
 	}
 
 public:
-	RemoteManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
-		: LoLaManagerRemote(scheduler, loLa)
-		, Writer(scheduler, loLa, &Controller)
+	RemoteManager(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* loLa)
+		: LoLaManagerRemote(servicesScheduler, driverScheduler, loLa)
+		, Writer(servicesScheduler, loLa, &Controller)
 	{
 	}
 

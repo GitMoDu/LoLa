@@ -41,7 +41,7 @@ Scheduler SchedulerBase, SchedulerHighPriority;
 
 ///Radio manager and driver.
 LoLaSi446xPacketDriver LoLaDriver(&SchedulerHighPriority);
-RemoteManager LoLaManager(&SchedulerBase, &LoLaDriver);
+RemoteManager LoLaManager(&SchedulerBase, &SchedulerHighPriority, &LoLaDriver);
 ///
 
 ///Communicated Data
