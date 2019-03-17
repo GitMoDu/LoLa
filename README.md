@@ -52,6 +52,8 @@ The packets definitions and payload are defined in a very minimalistic way with 
 
 Async Driver for Si4463 [WORKING]: The radio IC this project is based around, but not limited to. Performs the packet processing in the main loop, instead of hogging the interrupt.
 
+Message Authentication Code [WORKING]: 16 bit Modbus CRC, completely replaces the raw hardware CRC. With crypto enable, uses MAC-then-Encrypt.
+
 Acknowledged Packets with Id [WORKING]: carrying only the original packet's header and optional id. Currently only used for establishing a link, as the Ack packets ignore the collision-avoidance setup. This way we can accuratelly measure total system latency before the link is ready.
 
 Latency Compensation for Link[WORKING]: Using the measured latency, we use the estimated transmission time to optimize time dependent values.
@@ -74,9 +76,10 @@ Link management [WORKING]: Link service establishes a link and fires events when
 
 Transmit Power Balancer[WORKING]: with the link up, the end-points are continuosly updated on the RSSI of the partner, and adjusts the output power conservatively.
 
-Simulated Packet Loss for Testing[WORKING]: This feature allows us to test the system in simulated bad conditions.
+Channel Hopping[IN PROGRESS]: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. Currently it's using a fixed channel (average between min and max channels).
+When linked, we use the TOTP mechanism to generate a pseudo-random channel hopping.
 
-Link diagnostics [WORKING]: Measures link properties: Latency, RSSI, Remote RSSI. Not included in Link by default, only used for diagnose and debug the radio IC.
+Simulated Packet Loss for Testing[IN PROGRESS]: This feature allows us to test the system in simulated bad conditions. Was reverted during last merge, needs to be reimplemented.
 
 
 # Implemented services
@@ -99,11 +102,9 @@ It's quite a memory hog (around 1.5 kB for the example projects with only 2 sync
 
 
 # Future : 
+
 Improved Time Source[IN PROGRESS]: current version is working but should be considered a fallback. GPS based time sources or an external time keeping device should be preferred. RTC is also an option on STM32F1.
 
-Message Authentication Code [IN PROGRESS]: While crypto is not enabled, a simple 1 byte CRC is used. With crypto enabled, the CRC is calculated from the crypto block tag, truncated to 1 byte (currently encryption tag is 16 bytes).
-
-Channel Hopping[IN PROGRESS]: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. During link time, we can use the same time-base mechanism of the TOTP to generate a pseudo-random channel hopping. Maybe include a white-list of usable channels, which could itself be self-updating. Current version collides with packet operations on the driver and wipes the FIFO, needs improvement to work with short time frames. Waiting for async radio driver.
 
 
 # Deprecated:
