@@ -15,11 +15,17 @@ class ILoLaDriver
 protected:
 	struct InputInfoType
 	{
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+		volatile uint32_t Micros = ILOLA_INVALID_MICROS;
+#endif
 		volatile uint32_t Millis = ILOLA_INVALID_MILLIS;
 		volatile int16_t RSSI = ILOLA_INVALID_RSSI;
 
 		void Clear()
 		{
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+			Micros = ILOLA_INVALID_MICROS;
+#endif			
 			Millis = ILOLA_INVALID_MILLIS;
 			RSSI = ILOLA_INVALID_RSSI;
 		}
@@ -27,10 +33,16 @@ protected:
 
 	struct OutputInfoType
 	{
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+		volatile uint32_t Micros = ILOLA_INVALID_MICROS;
+#endif
 		volatile uint32_t Millis = ILOLA_INVALID_MILLIS;
 
 		void Clear()
 		{
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+			Micros = ILOLA_INVALID_MICROS;
+#endif
 			Millis = ILOLA_INVALID_MILLIS;
 		}
 	};
@@ -232,6 +244,18 @@ public:
 	{
 		return LastValidSentInfo.Millis;
 	}
+
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+	uint32_t GetLastValidReceivedMicros()
+	{
+		return LastValidReceivedInfo.Micros;
+	}
+
+	uint32_t GetLastValidSentMicros()
+	{
+		return LastValidSentInfo.Micros;
+	}
+#endif
 
 	int16_t GetLastValidRSSI()
 	{

@@ -118,6 +118,9 @@ private:
 
 	inline void OnTransmitted(const uint8_t header)
 	{
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+		LastSentInfo.Micros = micros();
+#endif
 		LastSentInfo.Millis = millis();
 		LastSentHeader = header;
 		LastChannel = CurrentChannel;
@@ -238,6 +241,9 @@ private:
 			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
 		{
 			//Packet received Ok, let's commit that info really quick.
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+			LastValidReceivedInfo.Micros = LastReceivedInfo.Micros;
+#endif
 			LastValidReceivedInfo.Millis = LastReceivedInfo.Millis;
 			LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
 			ReceivedCount++;
@@ -300,6 +306,9 @@ public:
 	//When RF detects incoming packet.
 	void OnIncoming(const int16_t rssi)
 	{
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+		LastReceivedInfo.Micros = micros();
+#endif
 		LastReceivedInfo.Millis = millis();
 		LastReceivedInfo.RSSI = rssi;
 
@@ -361,6 +370,9 @@ public:
 		}
 #endif
 
+#ifdef LOLA_LINK_USE_MICROS_TRACKING
+		LastValidSentInfo.Micros = LastSentInfo.Micros;
+#endif
 		LastValidSentInfo.Millis = LastSentInfo.Millis;
 		TransmitedCount++;
 		AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, LastSentHeader);
