@@ -21,7 +21,7 @@ private:
 protected:
 	bool OnSetupServices()
 	{
-		return LoLa->GetServices()->Add(&Writer);
+		return LoLaDriver->GetServices()->Add(&Writer);
 	}
 
 public:

@@ -123,7 +123,7 @@ void setup()
 	ControllerOutput->SetDirectionTrim(+120);
 	ControllerOutput->SetPropulsion(31999);
 	ControllerOutput->SetPropulsionTrim(-99);
-	FunctionSlot<const uint8_t> ptrSlot(OnSurfaceUpdated);
+	FunctionSlot<const bool> ptrSlot(OnSurfaceUpdated);
 	ControllerOutput->AttachOnSurfaceUpdated(ptrSlot);
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
@@ -137,10 +137,11 @@ void setup()
 #endif
 }
 
-void OnSurfaceUpdated(const uint8_t param)
+void OnSurfaceUpdated(const bool dataGood)
 {
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	ControllerOutput->Debug(&Serial);
+	if(dataGood)
+		ControllerOutput->Debug(&Serial);
 #endif
 }
 

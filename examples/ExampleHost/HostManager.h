@@ -21,7 +21,7 @@ private:
 protected:
 	bool OnSetupServices()
 	{
-		return LoLa->GetServices()->Add(&Reader);
+		return LoLaDriver->GetServices()->Add(&Reader);
 	}
 
 public:

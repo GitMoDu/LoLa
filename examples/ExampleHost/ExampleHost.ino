@@ -109,7 +109,7 @@ void setup()
 	}
 	ControllerInput = LoLaManager.GetControllerSurface();
 
-	FunctionSlot<const uint8_t> ptrSlot(OnSurfaceUpdated);
+	FunctionSlot<const bool> ptrSlot(OnSurfaceUpdated);
 	ControllerInput->AttachOnSurfaceUpdated(ptrSlot);
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
@@ -123,10 +123,11 @@ void setup()
 #endif
 }
 
-void OnSurfaceUpdated(const uint8_t param)
+void OnSurfaceUpdated(const bool dataGood)
 {
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	ControllerInput->Debug(&Serial);
+	if (dataGood)
+		ControllerInput->Debug(&Serial);
 #endif
 }
 
