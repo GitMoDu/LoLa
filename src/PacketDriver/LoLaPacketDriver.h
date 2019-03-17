@@ -312,19 +312,22 @@ public:
 		LastReceivedInfo.Millis = millis();
 		LastReceivedInfo.RSSI = rssi;
 
-		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
+		if (DriverActiveState == DriverActiveStates::ReadyForAnything)
 		{
+			DriverActiveState = DriverActiveStates::BlockedForIncoming;
+
+			if (LinkActive && !IsInReceiveSlot())
+			{
+				TimingCollisionCount++;
+			}
+		}
+		else
+		{
+			DriverActiveState = DriverActiveStates::BlockedForIncoming;
 #ifdef DEBUG_LOLA
 			Serial.println(F("Bad state OnIncoming"));
 #endif
 		}
-
-		if (LinkActive && !IsInReceiveSlot())
-		{
-			TimingCollisionCount++;
-		}
-
-		DriverActiveState = DriverActiveStates::BlockedForIncoming;
 	}
 
 	//When RF has packet to read, copy content into receive buffer.
