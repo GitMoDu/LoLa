@@ -269,7 +269,10 @@ private:
 					AckPacket.GetPayload()[0] = IncomingPacket.GetDefinition()->GetHeader();
 					AckPacket.SetId(IncomingPacket.GetId());
 					DriverActiveState = DriverActiveStates::SendingAck;
-					SendPacket(&AckPacket);
+					if (SendPacket(&AckPacket))
+					{
+						EnableInterrupts();
+					}
 				}
 				else
 				{
