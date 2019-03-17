@@ -56,10 +56,10 @@ protected:
 	InputInfoType LastValidReceivedInfo;
 	OutputInfoType LastValidSentInfo;
 
-	uint32_t TransmitedCount = 0;
-	uint32_t ReceivedCount = 0;
-	uint32_t RejectedCount = 0;
-	uint32_t TimingCollisionCount = 0;
+	uint64_t TransmitedCount = 0;
+	uint64_t ReceivedCount = 0;
+	uint64_t RejectedCount = 0;
+	uint64_t TimingCollisionCount = 0;
 	///
 
 	///Configurations
@@ -105,8 +105,6 @@ protected:
 		SendingAck,
 		WaitingForTransmissionEnd
 	};
-
-
 
 public:
 	ILoLaDriver() : PacketMap(), SyncedClock()
@@ -215,22 +213,22 @@ public:
 		return SyncedClock.GetSyncMillis();
 	}
 
-	uint32_t GetReceivedCount()
+	uint64_t GetReceivedCount()
 	{
 		return ReceivedCount;
 	}
 
-	uint32_t GetRejectedCount()
+	uint64_t GetRejectedCount()
 	{
 		return RejectedCount;
 	}
 
-	uint32_t GetTransmitedCount()
+	uint64_t GetTransmitedCount()
 	{
 		return TransmitedCount;
 	}
 
-	uint32_t GetTimingCollisionCount()
+	uint64_t GetTimingCollisionCount()
 	{
 		return TimingCollisionCount;
 	}
