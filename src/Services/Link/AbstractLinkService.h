@@ -16,11 +16,12 @@ class AbstractLinkService : public IPacketSendService
 {
 private:
 	PingPacketDefinition				DefinitionPing;
-	LinkReportPacketDefinition			DefinitionReport;
 
 	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
 
 protected:
+	LinkReportPacketDefinition			DefinitionReport;
+
 	LinkShortPacketDefinition			DefinitionShort;
 	LinkShortWithAckPacketDefinition	DefinitionShortWithAck;
 	LinkLongPacketDefinition			DefinitionLong;
@@ -193,15 +194,12 @@ protected:
 		return IsSetupOk();
 	}
 
-
-
 	///Packet builders.
 	void PreparePing()
 	{
 		OutPacket.SetDefinition(&DefinitionPing);
 		OutPacket.SetId(random(0, UINT8_MAX));
 	}
-
 
 	inline void PrepareReportPacket(const uint8_t subHeader)
 	{

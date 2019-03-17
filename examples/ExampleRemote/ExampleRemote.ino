@@ -140,7 +140,7 @@ void setup()
 void OnSurfaceUpdated(const bool dataGood)
 {
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	if(dataGood)
+	if (dataGood)
 		ControllerOutput->Debug(&Serial);
 #endif
 }

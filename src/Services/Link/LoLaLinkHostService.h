@@ -484,7 +484,7 @@ private:
 		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
 		OutPacket.GetPayload()[1] = LinkInfo->GetRTT() & 0xFF; //MSB 16 bit unsigned.
 		OutPacket.GetPayload()[2] = (LinkInfo->GetRTT() >> 8) & 0xFF;
-		for (uint8_t i = 3; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
+		for (uint8_t i = 3; i < DefinitionReport.GetPayloadSize(); i++)
 		{
 			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
 		}
@@ -493,7 +493,7 @@ private:
 	void PrepareInfoSyncRequest()
 	{
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST);
-		for (uint8_t i = 3; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
+		for (uint8_t i = 1; i < DefinitionReport.GetPayloadSize(); i++)
 		{
 			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
 		}

@@ -462,11 +462,10 @@ private:
 		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
 
 		//TODO: Maybe use data slot for quick reconnect token?
-
-		OutPacket.GetPayload()[1] = UINT8_MAX; //Padding
-		OutPacket.GetPayload()[2] = UINT8_MAX; //Padding
-		OutPacket.GetPayload()[3] = UINT8_MAX; //Padding
-		OutPacket.GetPayload()[4] = UINT8_MAX; //Padding
+		for (uint8_t i = 1; i < DefinitionShort.GetPayloadSize(); i++)
+		{
+			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
+		}
 	}
 
 	void PreparePKCStartRequest()
@@ -480,7 +479,7 @@ private:
 	{
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE);
 		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
-		for (uint8_t i = 1; i < LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; i++)
+		for (uint8_t i = 1; i < DefinitionReport.GetPayloadSize(); i++)
 		{
 			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
 		}
