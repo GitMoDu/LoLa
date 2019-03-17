@@ -25,7 +25,7 @@
 
 #define LOLA_PACKET_MIN_PACKET_SIZE				(LOLA_PACKET_PAYLOAD_INDEX)	//CRC + Header + Id.
 
-#define LOLA_PACKET_MAX_PACKET_SIZE				32
+#define LOLA_PACKET_MAX_PACKET_SIZE				33 + LOLA_PACKET_MIN_PACKET_SIZE //Enough for a 32 byte payload. 
 
 class PacketDefinition
 {
