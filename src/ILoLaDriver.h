@@ -225,7 +225,7 @@ public:
 		return RejectedCount;
 	}
 
-	uint32_t GetSentCount()
+	uint32_t GetTransmitedCount()
 	{
 		return TransmitedCount;
 	}

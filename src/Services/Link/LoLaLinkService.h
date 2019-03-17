@@ -648,9 +648,7 @@ private:
 		serial->println(F(" %"));
 
 		serial->print(F("Sent: "));
-		serial->println(LoLaDriver->GetSentCount());
-		serial->print(F("Partner Got: "));
-		serial->println(LinkInfo->GetPartnerReceivedCount());
+		serial->println(LoLaDriver->GetTransmitedCount());
 		serial->print(F("Lost: "));
 		serial->println(max(LinkInfo->GetPartnerReceivedCount(), LoLaDriver->GetSentCount()) - LinkInfo->GetPartnerReceivedCount());
 		serial->print(F("Received: "));
