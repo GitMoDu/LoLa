@@ -205,6 +205,11 @@ public:
 			0, UINT8_MAX);
 	}
 
+	uint32_t GetSyncMillis(const uint32_t sourceMillis)
+	{
+		return SyncedClock.GetSyncMillis(sourceMillis);
+	}
+
 	uint32_t GetSyncMillis()
 	{
 		return SyncedClock.GetSyncMillis();

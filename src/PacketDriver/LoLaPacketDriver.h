@@ -240,6 +240,12 @@ private:
 		if (CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSizeQuick(IncomingPacketSize), IncomingPacket.GetMACCRC()) &&
 			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
 		{
+			//Check for packet collisions.
+			if (LinkActive && !IsInReceiveSlot(LastReceivedInfo.Millis))
+			{
+				TimingCollisionCount++;
+			}
+
 			//Packet received Ok, let's commit that info really quick.
 #ifdef LOLA_LINK_USE_MICROS_TRACKING
 			LastValidReceivedInfo.Micros = LastReceivedInfo.Micros;
@@ -315,11 +321,6 @@ public:
 		if (DriverActiveState == DriverActiveStates::ReadyForAnything)
 		{
 			DriverActiveState = DriverActiveStates::BlockedForIncoming;
-
-			if (LinkActive && !IsInReceiveSlot())
-			{
-				TimingCollisionCount++;
-			}
 		}
 		else
 		{
@@ -423,12 +424,12 @@ private:
 		return LastSentInfo.Millis == ILOLA_INVALID_MILLIS || millis() - LastSentInfo.Millis > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
 	}
 
-	bool IsInReceiveSlot()
+	bool IsInReceiveSlot(const uint32_t receivedMillis)
 	{
 		//TODO: Remove ETTM parameter when Clock Sync accuracy is < 1 ms (currently it's < 3 ms).
-		DuplexElapsed = (GetSyncMillis() + (uint32_t)ETTM) % DuplexPeriodMillis;
+		DuplexElapsed = (GetSyncMillis(receivedMillis) + (uint32_t)ETTM) % DuplexPeriodMillis;
 
-		//Even spread of true and false across the DuplexPeriod
+		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
 		{
 			if (DuplexElapsed >= (DuplexPeriodMillis / 2))
@@ -451,7 +452,7 @@ private:
 	{
 		DuplexElapsed = (GetSyncMillis() + (uint32_t)ETTM) % DuplexPeriodMillis;
 
-		//Even spread of true and false across the DuplexPeriod
+		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
 		{
 			if ((DuplexElapsed < ((DuplexPeriodMillis / 2) - ETTM)) &&
