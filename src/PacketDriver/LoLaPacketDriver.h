@@ -323,7 +323,7 @@ public:
 		}
 		else
 		{
-			DriverActiveState = DriverActiveStates::BlockedForIncoming;
+			DriverActiveState = DriverActiveStates::ReadyForAnything;
 #ifdef DEBUG_LOLA
 			Serial.println(F("Bad state OnIncoming"));
 #endif
