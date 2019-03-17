@@ -36,7 +36,12 @@
 
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS						60
 
+#ifdef LOLA_LINK_USE_FREQUENCY_HOP
+#define LOLA_LINK_PROTOCOL_VERSION							2
+#else
 #define LOLA_LINK_PROTOCOL_VERSION							1 //N < 16
+#endif
+
 
 
 // 100 High latency, high bandwitdh.
