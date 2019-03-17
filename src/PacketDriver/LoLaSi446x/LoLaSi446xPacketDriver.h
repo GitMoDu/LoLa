@@ -12,30 +12,32 @@
 #include <Si446x.h>
 #endif
 
-//Expected part number.
-#define PART_NUMBER_SI4463X 17507
-
-//Channel to listen to (0 - 26).
-#define SI4463_CHANNEL_MIN 0
-#define SI4463_CHANNEL_MAX 26
-
-//Power range.
-//   0 = -32dBm	(<1uW)
-//   7 =  0dBm	(1mW)
-//  12 =  5dBm	(3.2mW)
-//  22 =  10dBm	(10mW)
-//  40 =  15dBm	(32mW)
-// 100 = 20dBm	(100mW) Requires Dual Antennae
-// 127 = ABSOLUTE_MAX
-#define SI4463_TRANSMIT_POWER_MIN	0
-#define SI4463_TRANSMIT_POWER_MAX	40
-
-//Received RSSI range.
-#define SI4463_RSSI_MIN (int16_t(-110))
-#define SI4463_RSSI_MAX (int16_t(-50))
-
 class LoLaSi446xPacketDriver : public LoLaPacketDriver
 {
+private:
+	//Expected part number.
+	static const uint16_t PART_NUMBER_SI4463X = 17507;
+
+
+	//Channel to listen to (0 - 26).
+	static const uint8_t SI4463_CHANNEL_MIN = 0;
+	static const uint8_t SI4463_CHANNEL_MAX = 26;
+
+	//Power range.
+	//   0 = -32dBm	(<1uW)
+	//   7 =  0dBm	(1mW)
+	//  12 =  5dBm	(3.2mW)
+	//  22 =  10dBm	(10mW)
+	//  40 =  15dBm	(32mW)
+	// 100 = 20dBm	(100mW) Requires Dual Antennae
+	// 127 = ABSOLUTE_MAX
+	static const uint8_t SI4463_TRANSMIT_POWER_MIN = 0;
+	static const uint8_t SI4463_TRANSMIT_POWER_MAX = 40;
+
+	//Received RSSI range.
+	static const int16_t SI4463_RSSI_MIN = -110;
+	static const int16_t SI4463_RSSI_MAX = -50;
+
 protected:
 	//Not working properly.
 	void DisableInterrupts()
