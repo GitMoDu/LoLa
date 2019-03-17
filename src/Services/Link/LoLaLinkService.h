@@ -309,7 +309,7 @@ private:
 #ifdef LOLA_LINK_ACTIVITY_LED
 		if (!digitalRead(LOLA_LINK_ACTIVITY_LED))
 		{
-			if (millis() - LastSent > 10)
+			if (millis() - LastSent > 25)
 			{
 				digitalWrite(LOLA_LINK_ACTIVITY_LED, HIGH);
 			}
