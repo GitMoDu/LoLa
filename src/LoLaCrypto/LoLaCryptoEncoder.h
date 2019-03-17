@@ -24,8 +24,6 @@ private:
 		FullPower
 	} EncoderState = StageEnum::AllClear;
 
-	//bool CryptoEnable = false;
-
 	Ascon128 Cypher;
 	SHA256 Hasher;
 
