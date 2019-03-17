@@ -86,6 +86,7 @@ private:
 	{
 		ActionGrunt.Action = action;
 		ActionGrunt.Value = value;
+
 		CallbackHandler.AppendToQueue(ActionGrunt, easeRetry);
 	}
 
@@ -117,7 +118,7 @@ private:
 
 	inline void OnTransmitted(const uint8_t header)
 	{
-		LastSentInfo.Time = millis();
+		LastSentInfo.Millis = millis();
 		LastSentHeader = header;
 		LastChannel = CurrentChannel;
 		OnTransmitPowerUpdated();
@@ -237,7 +238,7 @@ private:
 			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
 		{
 			//Packet received Ok, let's commit that info really quick.
-			LastValidReceivedInfo.Time = LastReceivedInfo.Time;
+			LastValidReceivedInfo.Millis = LastReceivedInfo.Millis;
 			LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
 			ReceivedCount++;
 
@@ -299,7 +300,7 @@ public:
 	//When RF detects incoming packet.
 	void OnIncoming(const int16_t rssi)
 	{
-		LastReceivedInfo.Time = millis();
+		LastReceivedInfo.Millis = millis();
 		LastReceivedInfo.RSSI = rssi;
 
 		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
@@ -360,7 +361,7 @@ public:
 		}
 #endif
 
-		LastValidSentInfo.Time = LastSentInfo.Time;
+		LastValidSentInfo.Millis = LastSentInfo.Millis;
 		TransmitedCount++;
 		AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, LastSentHeader);
 		LastSentHeader = 0xFF;
@@ -404,7 +405,7 @@ public:
 private:
 	inline bool CoolAfterSend()
 	{
-		return LastSentInfo.Time == ILOLA_INVALID_MILLIS || millis() - LastSentInfo.Time > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
+		return LastSentInfo.Millis == ILOLA_INVALID_MILLIS || millis() - LastSentInfo.Millis > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
 	}
 
 	bool IsInReceiveSlot()

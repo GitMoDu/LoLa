@@ -15,25 +15,27 @@ class ILoLaDriver
 protected:
 	struct InputInfoType
 	{
-		volatile uint32_t Time = ILOLA_INVALID_MILLIS;
+		volatile uint32_t Millis = ILOLA_INVALID_MILLIS;
 		volatile int16_t RSSI = ILOLA_INVALID_RSSI;
 
 		void Clear()
 		{
-			Time = ILOLA_INVALID_MILLIS;
+			Millis = ILOLA_INVALID_MILLIS;
 			RSSI = ILOLA_INVALID_RSSI;
 		}
 	};
 
 	struct OutputInfoType
 	{
-		volatile uint32_t Time = ILOLA_INVALID_MILLIS;
+		volatile uint32_t Millis = ILOLA_INVALID_MILLIS;
 
 		void Clear()
 		{
-			Time = ILOLA_INVALID_MILLIS;
+			Millis = ILOLA_INVALID_MILLIS;
 		}
 	};
+
+	volatile uint8_t LastSentHeader = 0xff;
 
 	///Statistics
 	InputInfoType LastReceivedInfo;
@@ -223,12 +225,12 @@ public:
 
 	uint32_t GetLastValidReceivedMillis()
 	{
-		return LastValidReceivedInfo.Time;
+		return LastValidReceivedInfo.Millis;
 	}
 
 	uint32_t GetLastValidSentMillis()
 	{
-		return LastValidSentInfo.Time;
+		return LastValidSentInfo.Millis;
 	}
 
 	int16_t GetLastValidRSSI()
