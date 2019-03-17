@@ -188,8 +188,9 @@ public:
 
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
-		if (DriverActiveState != DriverActiveStates::ReadyForAnything ||
-			ChannelPending)
+		if (ChannelPending ||
+			(DriverActiveState != DriverActiveStates::ReadyForAnything &&
+				DriverActiveState != DriverActiveStates::SendingAck))
 		{
 			return false;
 		}
@@ -267,7 +268,7 @@ private:
 					AckPacket.SetDefinition(AckDefinition);
 					AckPacket.GetPayload()[0] = IncomingPacket.GetDefinition()->GetHeader();
 					AckPacket.SetId(IncomingPacket.GetId());
-					DriverActiveState = DriverActiveStates::ReadyForAnything;
+					DriverActiveState = DriverActiveStates::SendingAck;
 					SendPacket(&AckPacket);
 				}
 				else
