@@ -11,8 +11,6 @@
 #define LOLA_LINK_USE_ENCRYPTION
 //#define DEBUG_LINK_ENCRYPTION
 
-#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
-
 #define LOLA_LINK_USE_FREQUENCY_HOP
 //#define DEBUG_LINK_FREQUENCY_HOP
 

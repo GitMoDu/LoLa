@@ -70,23 +70,6 @@ public:
 		return PartnerId;
 	}
 
-	//TODO: Implement on Link.
-	/*bool LocalMACMatch(uint8_t * mac)
-	{
-		return LocalMacGenerator.Match(mac);
-	}
-
-	bool RemoteMACPartnerMatch(uint8_t * remoteMAC)
-	{
-		if (!PartnerMACPresent)
-		{
-			return false;
-		}
-
-		return LocalMacGenerator.Match(PartnerMAC, remoteMAC);
-	}
-	*/
-
 	uint8_t* GetLocalMAC()
 	{
 		return LocalMacGenerator.GetMACPointer();

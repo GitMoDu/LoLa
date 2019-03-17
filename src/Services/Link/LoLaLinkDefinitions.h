@@ -6,6 +6,8 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 
+#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
+
 #include <LoLaLinkInfo.h>
 #include <LoLaDefinitions.h>
 ///
