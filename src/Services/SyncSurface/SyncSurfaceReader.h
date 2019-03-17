@@ -63,6 +63,7 @@ protected:
 			if (!TrackedSurface->IsDataGood())
 			{
 				TrackedSurface->SetDataGood(true);
+				NotifyDataChanged();
 			}
 			break;
 		case SyncStateEnum::Disabled:
