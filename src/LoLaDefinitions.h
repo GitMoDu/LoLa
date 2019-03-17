@@ -14,10 +14,21 @@
 #define LOLA_LINK_ENTROPY_SOURCE_ANALOG_PIN					PA0 //Free analog pin.
 //#define DEBUG_LINK_ENCRYPTION
 
-#define LOLA_LINK_USE_FREQUENCY_HOP
+//#define LOLA_LINK_USE_FREQUENCY_HOP
 //#define DEBUG_LINK_FREQUENCY_HOP
 
 //#define SI446x_DRIVER_OVERCLOCK
+
+#define LOLA_PACKET_MAP_TOTAL_SIZE							20 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
+
+//Reserved [0;1] for Ack.
+#define PACKET_DEFINITION_ACK_HEADER						0x00
+
+//Reserved [1;5] for Link service.
+#define PACKET_DEFINITION_LINK_START_HEADER					(PACKET_DEFINITION_ACK_HEADER + 1)
+
+//User services range start.
+#define PACKET_DEFINITION_USER_HEADERS_START				(PACKET_DEFINITION_LINK_START_HEADER + 5)
 
 #define LOLA_LINK_DEBUG_UPDATE_SECONDS						60
 

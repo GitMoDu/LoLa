@@ -4,6 +4,8 @@
 #define _PACKETDEFINITION_h
 
 #include <stdint.h>
+#include <LoLaDefinitions.h>
+
 
 ///Configurations for packets.
 #define PACKET_DEFINITION_MASK_CUSTOM_5			B00000001
