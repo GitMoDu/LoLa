@@ -8,7 +8,6 @@
 class LoLaCryptoKeyExchanger
 {
 public:
-	static const uint8_t ENTROPY_SOURCE_ANALOG_PIN = PB0;
 	static const uint8_t KEY_CURVE_SIZE = 20; //160 bits take 20 bytes.
 	static const uint8_t KEY_MAX_SIZE = KEY_CURVE_SIZE + 1; //Enough for compressed public keys.
 	static const uint8_t SIGNATURE_LENGTH = (KEY_CURVE_SIZE * 2);
@@ -23,9 +22,9 @@ private:
 		while (size) {
 			val = 0;
 			for (unsigned i = 0; i < 8; ++i) {
-				int init = analogRead(ENTROPY_SOURCE_ANALOG_PIN);
+				int init = analogRead(LOLA_LINK_ENTROPY_SOURCE_ANALOG_PIN);
 				int count = 0;
-				while (analogRead(ENTROPY_SOURCE_ANALOG_PIN) == init) {
+				while (analogRead(LOLA_LINK_ENTROPY_SOURCE_ANALOG_PIN) == init) {
 					++count;
 				}
 
