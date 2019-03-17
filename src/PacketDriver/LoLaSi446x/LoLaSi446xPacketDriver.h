@@ -49,7 +49,7 @@ protected:
 	void EnableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
-		//Si446x_irq_on(0xFF);
+		Si446x_irq_on(0xFF);
 #endif
 	}
 
