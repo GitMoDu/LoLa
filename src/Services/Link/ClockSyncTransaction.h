@@ -106,10 +106,10 @@ public:
 		return Stage == TransactionStage::ResultIn;
 	}
 
-	void SetResult(const uint8_t requestId, const int32_t resultError)
+	void SetResult(const uint8_t requestId, const int32_t estimationError)
 	{
 		Id = requestId;
-		Result = resultError;
+		Result = estimationError;
 		Stage = TransactionStage::ResultIn;
 	}
 
