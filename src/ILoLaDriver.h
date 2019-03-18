@@ -15,35 +15,24 @@ class ILoLaDriver
 protected:
 	struct InputInfoType
 	{
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
 		volatile uint32_t Micros = ILOLA_INVALID_MICROS;
-#endif
-		volatile uint32_t Millis = ILOLA_INVALID_MILLIS;
 		volatile int16_t RSSI = ILOLA_INVALID_RSSI;
 
 		void Clear()
 		{
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
+
 			Micros = ILOLA_INVALID_MICROS;
-#endif			
-			Millis = ILOLA_INVALID_MILLIS;
 			RSSI = ILOLA_INVALID_RSSI;
 		}
 	};
 
 	struct OutputInfoType
 	{
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
 		volatile uint32_t Micros = ILOLA_INVALID_MICROS;
-#endif
-		volatile uint32_t Millis = ILOLA_INVALID_MILLIS;
 
 		void Clear()
 		{
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
 			Micros = ILOLA_INVALID_MICROS;
-#endif
-			Millis = ILOLA_INVALID_MILLIS;
 		}
 	};
 
@@ -66,7 +55,9 @@ protected:
 	//From 0 to UINT8_MAX, limited by driver.
 	uint8_t CurrentTransmitPower = 0;
 	uint8_t CurrentChannel = 0;
-	const uint8_t DuplexPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
+	const uint32_t DuplexPeriodMicros = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * (uint32_t)1000;
+	const uint32_t HaldDuplexPeriodMicros = DuplexPeriodMicros / 2;
+	const uint32_t BackOffPeriodMicros = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS * (uint32_t)1000;
 	///
 
 	///Link Status.
@@ -91,7 +82,7 @@ protected:
 	///
 
 	///For use of estimated latency features
-	uint8_t ETTM = 0;//Estimated transmission time in millis.
+	uint32_t ETTM = 0;//Estimated transmission time in microseconds.
 	///
 
 	enum DriverActiveStates :uint8_t
@@ -151,17 +142,17 @@ public:
 	}
 #endif
 
-	uint8_t GetETTM()
+	uint32_t GetETTM()
 	{
 		return ETTM;
 	}
 
-	void SetETTM(const uint8_t ettm)
+	void SetETTM(const uint32_t ettmMicros)
 	{
 #ifdef LOLA_LINK_USE_LATENCY_COMPENSATION
-		ETTM = ettm;
+		ETTM = ettmMicros;
 #else
-		ETTM = 1;
+		ETTM = LOLA_LINK_DEFAULT_LATENCY_COMPENSATION_MILLIS * (uint32_t)1000;
 #endif
 	}
 
@@ -203,15 +194,7 @@ public:
 			0, UINT8_MAX);
 	}
 
-	uint32_t GetSyncMillis(const uint32_t sourceMillis)
-	{
-		return SyncedClock.GetSyncMillis(sourceMillis);
-	}
 
-	uint32_t GetSyncMillis()
-	{
-		return SyncedClock.GetSyncMillis();
-	}
 
 	uint64_t GetReceivedCount()
 	{
@@ -238,17 +221,30 @@ public:
 		return LastReceivedInfo.RSSI;
 	}
 
-	uint32_t GetLastValidReceivedMillis()
+	uint32_t GetElapsedMillisLastValidReceived()
 	{
-		return LastValidReceivedInfo.Millis;
+		if (LastValidReceivedInfo.Micros == ILOLA_INVALID_MICROS)
+		{
+			return ILOLA_INVALID_MICROS;
+		}
+		else
+		{
+			return (micros() - LastValidReceivedInfo.Micros) / 1000;
+		}
 	}
 
-	uint32_t GetLastValidSentMillis()
+	uint32_t GetElapsedMillisLastValidSent()
 	{
-		return LastValidSentInfo.Millis;
+		if (LastValidSentInfo.Micros == ILOLA_INVALID_MICROS)
+		{
+			return ILOLA_INVALID_MICROS;
+		}
+		else
+		{
+			return (micros() - LastValidSentInfo.Micros) / 1000;
+		}
 	}
 
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
 	uint32_t GetLastValidReceivedMicros()
 	{
 		return LastValidReceivedInfo.Micros;
@@ -258,7 +254,6 @@ public:
 	{
 		return LastValidSentInfo.Micros;
 	}
-#endif
 
 	int16_t GetLastValidRSSI()
 	{

@@ -29,7 +29,7 @@ private:
 
 	LinkStateEnum LinkState = LinkStateEnum::Disabled;
 
-	uint16_t RTT = ILOLA_INVALID_LATENCY;
+	uint32_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
 
 	//Real time update tracking.
@@ -95,8 +95,8 @@ public:
 	bool HasPartnerId()
 	{
 		return PartnerId;
-	}	
-	
+	}
+
 	bool SetSessionId(const uint8_t sessionId)
 	{
 		SessionId = sessionId;
@@ -137,8 +137,8 @@ public:
 	void StampPartnerInfoUpdated()
 	{
 		PartnerInfoLastUpdated = millis();
-	}	
-	
+	}
+
 	void StampLocalInfoLastUpdatedRemotely()
 	{
 		PartnerInfoLastUpdatedRemotely = millis();
@@ -168,9 +168,9 @@ public:
 	{
 		SessionId = INVALID_SESSION;
 		PartnerIdPresent = false;
-		
+
 		LinkStarted = ILOLA_INVALID_MILLIS;
-		
+
 		RTT = ILOLA_INVALID_LATENCY;
 		while (!PartnerRSSISamples.isEmpty())
 		{
@@ -214,12 +214,12 @@ public:
 		return RTT != ILOLA_INVALID_LATENCY;
 	}
 
-	void SetRTT(const uint16_t rtt)
+	void SetRTT(const uint32_t rttMicros)
 	{
-		RTT = rtt;
+		RTT = rttMicros;
 		if (Driver != nullptr)
 		{
-			Driver->SetETTM((uint8_t)round((float)RTT / (float)2000));
+			Driver->SetETTM((uint32_t)round((float)RTT / (float)2));
 		}
 	}
 

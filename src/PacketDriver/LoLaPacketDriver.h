@@ -118,10 +118,7 @@ private:
 
 	inline void OnTransmitted(const uint8_t header)
 	{
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
 		LastSentInfo.Micros = micros();
-#endif
-		LastSentInfo.Millis = millis();
 		LastSentHeader = header;
 		LastChannel = CurrentChannel;
 		OnTransmitPowerUpdated();
@@ -240,19 +237,17 @@ private:
 		if (CryptoEncoder.Decode(IncomingPacket.GetRawContent(), PacketDefinition::GetContentSizeQuick(IncomingPacketSize), IncomingPacket.GetMACCRC()) &&
 			IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
 		{
+			//Packet received Ok, let's commit that info really quick.
+			LastValidReceivedInfo.Micros = LastReceivedInfo.Micros;
+			LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
+			ReceivedCount++;
+
 			//Check for packet collisions.
-			if (LinkActive && !IsInReceiveSlot(LastReceivedInfo.Millis))
+			if (LinkActive && !IsInReceiveSlot(LastValidReceivedInfo.Micros))
 			{
 				TimingCollisionCount++;
 			}
 
-			//Packet received Ok, let's commit that info really quick.
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
-			LastValidReceivedInfo.Micros = LastReceivedInfo.Micros;
-#endif
-			LastValidReceivedInfo.Millis = LastReceivedInfo.Millis;
-			LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
-			ReceivedCount++;
 
 			//Is Ack packet.
 			if (IncomingPacket.GetDefinition()->IsAck())
@@ -315,10 +310,7 @@ public:
 	//When RF detects incoming packet.
 	void OnIncoming(const int16_t rssi)
 	{
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
 		LastReceivedInfo.Micros = micros();
-#endif
-		LastReceivedInfo.Millis = millis();
 		LastReceivedInfo.RSSI = rssi;
 
 		if (DriverActiveState == DriverActiveStates::ReadyForAnything)
@@ -377,10 +369,7 @@ public:
 		}
 #endif
 
-#ifdef LOLA_LINK_USE_MICROS_TRACKING
 		LastValidSentInfo.Micros = LastSentInfo.Micros;
-#endif
-		LastValidSentInfo.Millis = LastSentInfo.Millis;
 		TransmitedCount++;
 		AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, LastSentHeader);
 		LastSentHeader = 0xFF;
@@ -424,24 +413,24 @@ public:
 private:
 	inline bool CoolAfterSend()
 	{
-		return LastSentInfo.Millis == ILOLA_INVALID_MILLIS || millis() - LastSentInfo.Millis > LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
+		return LastSentInfo.Micros == ILOLA_INVALID_MICROS || (micros() - LastSentInfo.Micros) > BackOffPeriodMicros;
 	}
 
-	bool IsInReceiveSlot(const uint32_t receivedMillis)
-	{
-		DuplexElapsed = GetSyncMillis(receivedMillis) % DuplexPeriodMillis;
+	bool IsInReceiveSlot(const uint32_t receivedMicros)
+	{		
+		DuplexElapsed = SyncedClock.GetSyncMicros(receivedMicros) % DuplexPeriodMicros;
 
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
 		{
-			if (DuplexElapsed >= (DuplexPeriodMillis / 2))
+			if (DuplexElapsed >= HaldDuplexPeriodMicros)
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if (DuplexElapsed <= (DuplexPeriodMillis / 2))
+			if (DuplexElapsed <= HaldDuplexPeriodMicros)
 			{
 				return true;
 			}
@@ -452,21 +441,20 @@ private:
 
 	bool IsInSendSlot()
 	{
-		DuplexElapsed = (GetSyncMillis()) % DuplexPeriodMillis;
+		DuplexElapsed = SyncedClock.GetSyncMicros() % DuplexPeriodMicros;
 
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
 		{
-			if ((DuplexElapsed < ((DuplexPeriodMillis / 2) - ETTM)) &&
-				DuplexElapsed >= 0)
+			if (DuplexElapsed < (HaldDuplexPeriodMicros - ETTM))
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if ((DuplexElapsed >= (DuplexPeriodMillis / 2)) &&
-				DuplexElapsed < (DuplexPeriodMillis - ETTM))
+			if ((DuplexElapsed >= HaldDuplexPeriodMicros) &&
+				DuplexElapsed < (DuplexPeriodMicros - ETTM))
 			{
 				return true;
 			}

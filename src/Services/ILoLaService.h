@@ -208,10 +208,5 @@ protected:
 	{
 		return LoLaDriver->SendPacket(outgoingPacket);
 	}
-
-	inline uint32_t MillisSync()
-	{
-		return LoLaDriver->GetSyncMillis();
-	}
 };
 #endif
