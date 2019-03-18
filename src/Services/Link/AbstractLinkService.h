@@ -138,16 +138,6 @@ protected:
 		StateStartTime = millis();
 	}
 
-	uint32_t GetElapsedLastValidReceived()
-	{
-		return millis() - LoLaDriver->GetLastValidReceivedMillis();
-	}
-
-	uint32_t GetElapsedLastSent()
-	{
-		return millis() - LoLaDriver->GetLastValidSentMillis();
-	}
-
 	uint32_t GetElapsedSinceStateStart()
 	{
 		if (StateStartTime == ILOLA_INVALID_MILLIS)
