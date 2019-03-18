@@ -11,7 +11,7 @@
 class LoLaCryptoTokenSource : public ITokenSource
 {
 private:
-	uint32_t TOTPPeriod = ILOLA_INVALID_MILLIS;
+	uint32_t TOTPPeriodMillis = ILOLA_INVALID_MILLIS;
 	uint32_t TOTPSeed = 0;
 
 	ClockSource* SyncedClock = nullptr;
@@ -22,7 +22,7 @@ private:
 public:
 	void SetTOTPPeriod(const uint32_t totpPeriodMillis)
 	{
-		TOTPPeriod = totpPeriodMillis;
+		TOTPPeriodMillis = totpPeriodMillis;
 	}
 
 	bool Setup(ClockSource* syncedClock)
@@ -39,14 +39,14 @@ public:
 
 	uint32_t GetToken()
 	{
-		return (SyncedClock->GetSyncMillis() / TOTPPeriod) ^ TOTPSeed;
+		return ((SyncedClock->GetSyncMicros() / (uint32_t)1000) / TOTPPeriodMillis) ^ TOTPSeed;
 	}
 
 	uint32_t GetNextSwitchOverMillis()
 	{
-		SwitchOverHelper = SyncedClock->GetSyncMillis();
+		SwitchOverHelper = SyncedClock->GetSyncMicros() / (uint32_t)1000;
 
-		return (((SwitchOverHelper + TOTPPeriod) / TOTPPeriod)*TOTPPeriod) - SwitchOverHelper;
+		return (((SwitchOverHelper + TOTPPeriodMillis) / TOTPPeriodMillis)*TOTPPeriodMillis) - SwitchOverHelper;
 	}
 };
 #endif
