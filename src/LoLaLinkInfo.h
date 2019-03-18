@@ -30,7 +30,7 @@ private:
 	LinkStateEnum LinkState = LinkStateEnum::Disabled;
 
 	uint32_t RTT = ILOLA_INVALID_LATENCY;
-	uint32_t LinkStarted = ILOLA_INVALID_MILLIS;
+	uint32_t LinkStartedMicros = ILOLA_INVALID_MICROS;
 
 	//Real time update tracking.
 	uint32_t PartnerInfoLastUpdated = ILOLA_INVALID_MILLIS;
@@ -169,7 +169,7 @@ public:
 		SessionId = INVALID_SESSION;
 		PartnerIdPresent = false;
 
-		LinkStarted = ILOLA_INVALID_MILLIS;
+		LinkStartedMicros = ILOLA_INVALID_MICROS;
 
 		RTT = ILOLA_INVALID_LATENCY;
 		while (!PartnerRSSISamples.isEmpty())
@@ -242,9 +242,9 @@ public:
 
 	uint32_t GetLinkDuration()
 	{
-		if (HasLink() && LinkStarted != ILOLA_INVALID_MILLIS)
+		if (HasLink() && LinkStartedMicros != ILOLA_INVALID_MICROS)
 		{
-			return Driver->GetSyncMillis() - LinkStarted;
+			return  Driver->GetClockSource()->GetSyncMicros() - LinkStartedMicros;
 		}
 		else
 		{
@@ -256,7 +256,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			LinkStarted = Driver->GetSyncMillis();
+			LinkStartedMicros = Driver->GetClockSource()->GetSyncMicros();
 			Driver->SetLinkStatus(true);
 		}
 	}
@@ -316,38 +316,38 @@ public:
 		return 0;//Unknown.
 	}
 
-	uint32_t GetLastActivityElapsed()
+	uint32_t GetLastActivityElapsedMillis()
 	{
 		if (Driver != nullptr)
 		{
-			if (Driver->GetLastValidSentMillis() >= Driver->GetLastValidReceivedMillis())
+			if (Driver->GetElapsedMillisLastValidSent() >= Driver->GetElapsedMillisLastValidReceived())
 			{
-				return millis() - Driver->GetLastValidSentMillis();
+				return Driver->GetElapsedMillisLastValidSent();
 			}
 			else
 			{
-				return millis() - Driver->GetLastValidReceivedMillis();
+				return Driver->GetElapsedMillisLastValidReceived();
 			}
 		}
-		return ILOLA_INVALID_MILLIS;
+		return ILOLA_INVALID_MICROS;
 	}
 
-	uint32_t GetLastSentElapsed()
+	uint32_t GetLastValidSentElapsed()
 	{
-		if (Driver != nullptr && Driver->GetLastValidSentMillis() != ILOLA_INVALID_MILLIS)
+		if (Driver != nullptr)
 		{
-			return millis() - Driver->GetLastValidSentMillis();
+			return Driver->GetElapsedMillisLastValidSent();
 		}
-		return ILOLA_INVALID_MILLIS;
+		return ILOLA_INVALID_MICROS;
 	}
 
 	uint32_t GetLastReceivedElapsed()
 	{
-		if (Driver != nullptr && Driver->GetLastValidReceivedMillis() != ILOLA_INVALID_MILLIS)
+		if (Driver != nullptr)
 		{
-			return millis() - Driver->GetLastValidReceivedMillis();
+			return millis() - Driver->GetElapsedMillisLastValidReceived();
 		}
-		return ILOLA_INVALID_MILLIS;
+		return ILOLA_INVALID_MICROS;
 	}
 
 	uint8_t GetTransmitPowerNormalized()
