@@ -189,7 +189,7 @@ protected:
 	{
 		LastSent = millis();
 
-		if (header == LOLA_LINK_HEADER_REPORT &&
+		if (header == DefinitionReport.GetHeader() &&
 			LinkInfo->HasLink() &&
 			ReportPending)
 		{
