@@ -8,8 +8,7 @@
 class ClockSource
 {
 private:
-	uint32_t Offset = 0;
-	uint32_t LastSetMillis = 0;
+	uint32_t OffsetMicros = 0;
 
 public:
 	ClockSource()
@@ -19,36 +18,28 @@ public:
 
 	void Reset()
 	{
-		Offset = 0;
-		LastSetMillis = 0;
+		OffsetMicros = 0;
 	}
 
 	void SetRandom()
 	{
-		Offset = (uint32_t)random(INT32_MAX);
+		OffsetMicros = (uint32_t)random(INT32_MAX);
 	}
 
-	void SetMillis(const uint32_t timeMillis)
+	void AddOffsetMicros(const int32_t offset)
 	{
-		LastSetMillis = millis();
-		Offset = timeMillis - LastSetMillis;
+		OffsetMicros = OffsetMicros + offset;
 	}
 
-	void AddOffset(const int32_t offset)
+	uint32_t GetSyncMicros()
 	{
-		Offset = Offset + offset;
+		return micros() + OffsetMicros;
 	}
 
-	uint32_t GetSyncMillis(const uint32_t sourceMillis)
+	uint32_t GetSyncMicros(const uint32_t sourceMicros)
 	{
-		return sourceMillis + Offset;
+		return sourceMicros + OffsetMicros;
 	}
-
-	uint32_t GetSyncMillis()
-	{
-		return millis() + Offset;
-	}
-
 };
 
 #endif
