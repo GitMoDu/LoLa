@@ -42,7 +42,7 @@ protected:
 
 	LoLaLinkInfo* LinkInfo = nullptr;
 
-	volatile uint32_t LastSent = ILOLA_INVALID_MILLIS;
+	volatile uint32_t LastSentMillis = ILOLA_INVALID_MILLIS;
 
 
 public:
@@ -138,7 +138,7 @@ protected:
 		StateStartTime = millis();
 	}
 
-	uint32_t GetElapsedSinceStateStart()
+	uint32_t GetElapsedMillisSinceStateStart()
 	{
 		if (StateStartTime == ILOLA_INVALID_MILLIS)
 		{
@@ -150,26 +150,26 @@ protected:
 		}
 	}
 
-	uint32_t GetElapsedSinceLastSent()
+	uint32_t GetElapsedMillisSinceLastSent()
 	{
-		if (LastSent == ILOLA_INVALID_MILLIS)
+		if (LastSentMillis == ILOLA_INVALID_MILLIS)
 		{
-			return LastSent;
+			return ILOLA_INVALID_MILLIS;
 		}
 		else
 		{
-			return millis() - LastSent;
+			return millis() - LastSentMillis;
 		}
 	}
 
 	void ResetLastSentTimeStamp()
 	{
-		LastSent = ILOLA_INVALID_MILLIS;
+		LastSentMillis = ILOLA_INVALID_MILLIS;
 	}
 
 	void TimeStampLastSent()
 	{
-		LastSent = millis();
+		LastSentMillis = millis();
 	}
 
 #ifdef DEBUG_LOLA
