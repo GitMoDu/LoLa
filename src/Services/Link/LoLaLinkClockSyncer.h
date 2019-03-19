@@ -16,8 +16,7 @@ protected:
 	uint8_t SyncGoodCount = 0;
 	uint32_t LastSynced = ILOLA_INVALID_MILLIS;
 
-	static const int32_t MAX_TUNE_ERROR_MICROS = 30;
-	static const int16_t LOLA_CLOCK_SYNC_TUNE_STEP_MICROS = MAX_TUNE_ERROR_MICROS /10;
+	static const int32_t MAX_TUNE_ERROR_MICROS = 10;
 
 protected:
 	virtual void OnReset() {}
@@ -109,37 +108,26 @@ public:
 	{
 		if (abs(estimationErrorMicros) < MAX_TUNE_ERROR_MICROS)
 		{
-			Serial.println(F("Clock Good +"));
 			StampSyncGood();
 		}
 
-		Serial.print(F("Estimation error: "));
-		Serial.println(estimationErrorMicros);
 		AddOffsetMicros(estimationErrorMicros);
 	}
 
 	/*
-		Returns false if more tune is needed.
+		Returns true if clock is ok.
 	*/
 	bool OnTuneErrorReceived(const int32_t estimationErrorMicros)
 	{
-		if (estimationErrorMicros > 0)
-		{
-			Serial.println(F("CLock +"));
-			AddOffsetMicros(LOLA_CLOCK_SYNC_TUNE_STEP_MICROS);
-		}
-		else
-		{
-			Serial.println(F("CLock -"));
-			AddOffsetMicros(-LOLA_CLOCK_SYNC_TUNE_STEP_MICROS);
-		}
+		AddOffsetMicros(estimationErrorMicros);
 
 		if (abs(estimationErrorMicros) < MAX_TUNE_ERROR_MICROS)
 		{
-			Serial.println(F("Clock Tune Good +"));
+			StampSyncGood();
 			StampSynced();
+
 			return true;
-		}
+		}		
 
 		return false;
 	}
@@ -168,7 +156,7 @@ public:
 
 	bool IsSynced()
 	{
-		return SyncGoodCount >= LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES;
+		return SyncGoodCount > LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES;
 	}
 
 	void SetReadyForEstimation()
@@ -188,15 +176,12 @@ public:
 		LastError = estimationError;
 		if (abs(LastError) < MAX_TUNE_ERROR_MICROS)
 		{
-			Serial.println(F("Clock Good +"));
 			LastGoodEstimation = millis();
 			StampSyncGood();
 		}
 		else if (!IsSynced())
 		{
 			//Only reset the sync good count when syncing.
-			Serial.println(F("Clock Good 0"));
-
 			SyncGoodCount = 0;
 		}
 	}
