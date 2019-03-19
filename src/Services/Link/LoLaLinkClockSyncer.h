@@ -7,20 +7,6 @@
 #include <Services\Link\ClockSyncTransaction.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
-
-//#define CLOCK_SYNC_GOOD_ENOUGH_COUNT						2
-
-//#define CLOCK_SYNC_TUNE_ELAPSED_MILLIS						(uint32_t)5000
-#define LOLA_CLOCK_SYNC_MAX_TUNE_ERROR							(int32_t)100
-
-#define LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR				(int8_t)4
-#define LOLA_CLOCK_SYNC_TUNE_RATIO							(int8_t)3
-
-#define LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX				(INT8_MAX - LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
-#define LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN				(INT8_MIN + LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
-#define LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR			(LOLA_CLOCK_SYNC_TUNE_RATIO * LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR)
-
-
 class LoLaLinkClockSyncer
 {
 private:
@@ -29,6 +15,9 @@ private:
 protected:
 	uint8_t SyncGoodCount = 0;
 	uint32_t LastSynced = ILOLA_INVALID_MILLIS;
+
+	static const int32_t MAX_TUNE_ERROR_MICROS = 30;
+	static const int16_t LOLA_CLOCK_SYNC_TUNE_STEP_MICROS = MAX_TUNE_ERROR_MICROS /10;
 
 protected:
 	virtual void OnReset() {}
@@ -42,11 +31,11 @@ protected:
 		}
 	}
 
-	inline void AddOffset(const int32_t offset)
+	inline void AddOffsetMicros(const int32_t offset)
 	{
 		if (SyncedClock != nullptr)
 		{
-			SyncedClock->AddOffset(offset);
+			SyncedClock->AddOffsetMicros(offset);
 		}
 	}
 
@@ -71,16 +60,6 @@ public:
 		LastSynced = millis();
 	}
 
-	uint32_t GetMillisSynced(const uint32_t sourceMillis)
-	{
-		if (SyncedClock != nullptr)
-		{
-			return SyncedClock->GetSyncMillis(sourceMillis);
-		}
-
-		return 0;
-	}
-
 	void Reset()
 	{
 		SyncGoodCount = 0;
@@ -98,13 +77,10 @@ class LinkRemoteClockSyncer : public LoLaLinkClockSyncer
 private:
 	boolean HostSynced = false;
 
-	int8_t ClockTuneAccumulator = 0;
-
 protected:
 	void OnReset()
 	{
 		HostSynced = false;
-		ClockTuneAccumulator = 0;
 	}
 
 public:
@@ -116,13 +92,12 @@ public:
 	bool IsTimeToTune()
 	{
 		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD));
-	}	
+	}
 
 	void SetSynced()
 	{
 		HostSynced = true;
 		StampSynced();
-		ClockTuneAccumulator = 0;
 	}
 
 	bool HasEstimation()
@@ -130,79 +105,56 @@ public:
 		return SyncGoodCount > 0;
 	}
 
-	void OnEstimationErrorReceived(const int32_t estimationError)
+	void OnEstimationErrorReceived(const int32_t estimationErrorMicros)
 	{
-		if (estimationError == 0)
+		if (abs(estimationErrorMicros) < MAX_TUNE_ERROR_MICROS)
 		{
+			Serial.println(F("Clock Good +"));
 			StampSyncGood();
-			ClockTuneAccumulator = 0;
 		}
-		else
-		{
-			AddOffset(estimationError);
-		}
+
+		Serial.print(F("Estimation error: "));
+		Serial.println(estimationErrorMicros);
+		AddOffsetMicros(estimationErrorMicros);
 	}
 
 	/*
-	Returns false if tune was needed.
+		Returns false if more tune is needed.
 	*/
-	bool OnTuneErrorReceived(const int32_t estimationError)
+	bool OnTuneErrorReceived(const int32_t estimationErrorMicros)
 	{
-		uint8_t Result = false;
-		if (abs(estimationError) > LOLA_CLOCK_SYNC_MAX_TUNE_ERROR)
+		if (estimationErrorMicros > 0)
 		{
-			//TODO: Break connection on threshold value.
+			Serial.println(F("CLock +"));
+			AddOffsetMicros(LOLA_CLOCK_SYNC_TUNE_STEP_MICROS);
 		}
 		else
 		{
-			if (estimationError == 0)
-			{
-				ClockTuneAccumulator = 0;
-				StampSynced();
-				Result = true;
-			}
-			else if (estimationError > 0)
-			{
-				if (ClockTuneAccumulator < LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX)
-				{
-					ClockTuneAccumulator += LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
-				}
-				else
-				{
-					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MAX / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
-					ClockTuneAccumulator = 0;
-				}
-			}
-			else
-			{
-				if (ClockTuneAccumulator > LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN)
-				{
-					ClockTuneAccumulator -= LOLA_CLOCK_SYNC_TUNE_ALIASING_FACTOR;
-				}
-				else
-				{
-					AddOffset(LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_MIN / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
-					ClockTuneAccumulator = 0;
-				}
-			}
-
-			AddOffset(ClockTuneAccumulator / LOLA_CLOCK_SYNC_TUNE_ACCUMULATOR_DIVISOR);
+			Serial.println(F("CLock -"));
+			AddOffsetMicros(-LOLA_CLOCK_SYNC_TUNE_STEP_MICROS);
 		}
 
-		return Result;
+		if (abs(estimationErrorMicros) < MAX_TUNE_ERROR_MICROS)
+		{
+			Serial.println(F("Clock Tune Good +"));
+			StampSynced();
+			return true;
+		}
+
+		return false;
 	}
 };
 
 class LinkHostClockSyncer : public LoLaLinkClockSyncer
 {
 private:
-	uint32_t LastEstimation = ILOLA_INVALID_MILLIS;
+	uint32_t LastGoodEstimation = ILOLA_INVALID_MILLIS;
 	int32_t LastError = INT32_MAX;
 
 protected:
 	void OnReset()
 	{
-		LastEstimation = ILOLA_INVALID_MILLIS;
+		LastGoodEstimation = ILOLA_INVALID_MILLIS;
 		LastError = UINT32_MAX;
 
 		SetRandom();
@@ -221,27 +173,30 @@ public:
 
 	void SetReadyForEstimation()
 	{
-		LastEstimation = ILOLA_INVALID_MILLIS;
+		LastGoodEstimation = ILOLA_INVALID_MILLIS;
 	}
 
 	bool IsTimeToTune()
 	{
 		return IsSynced() && LastSynced != ILOLA_INVALID_MILLIS &&
-			(LastEstimation == ILOLA_INVALID_MILLIS ||
-			(millis() - LastEstimation) > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD);
+			(LastGoodEstimation == ILOLA_INVALID_MILLIS ||
+			(millis() - LastGoodEstimation) > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD);
 	}
 
 	void OnEstimationReceived(const int32_t estimationError)
 	{
-		LastEstimation = millis();
 		LastError = estimationError;
-		if (LastError == 0)
+		if (abs(LastError) < MAX_TUNE_ERROR_MICROS)
 		{
+			Serial.println(F("Clock Good +"));
+			LastGoodEstimation = millis();
 			StampSyncGood();
 		}
 		else if (!IsSynced())
 		{
 			//Only reset the sync good count when syncing.
+			Serial.println(F("Clock Good 0"));
+
 			SyncGoodCount = 0;
 		}
 	}
