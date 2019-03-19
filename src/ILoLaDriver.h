@@ -142,7 +142,7 @@ public:
 	}
 #endif
 
-	uint32_t GetETTM()
+	uint32_t GetETTMMicros()
 	{
 		return ETTM;
 	}

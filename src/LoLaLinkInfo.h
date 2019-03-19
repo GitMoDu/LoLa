@@ -240,11 +240,11 @@ public:
 		}
 	}
 
-	uint32_t GetLinkDuration()
+	uint32_t GetLinkDurationMillis()
 	{
 		if (HasLink() && LinkStartedMicros != ILOLA_INVALID_MICROS)
 		{
-			return  Driver->GetClockSource()->GetSyncMicros() - LinkStartedMicros;
+			return (Driver->GetClockSource()->GetSyncMicros() - LinkStartedMicros)/1000;
 		}
 		else
 		{
