@@ -68,7 +68,6 @@ public:
 
 public:
 	virtual bool IsSynced() { return false; }
-	virtual bool IsTimeToTune() { return false; };
 };
 
 class LinkRemoteClockSyncer : public LoLaLinkClockSyncer
@@ -91,6 +90,14 @@ public:
 	bool IsTimeToTune()
 	{
 		return LastSynced == ILOLA_INVALID_MILLIS || ((millis() - LastSynced) > (LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD));
+	}
+
+	void SetReadyForEstimation()
+	{
+		if (IsSynced())
+		{
+			LastSynced = millis() - LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD;
+		}
 	}
 
 	void SetSynced()
@@ -136,13 +143,11 @@ public:
 class LinkHostClockSyncer : public LoLaLinkClockSyncer
 {
 private:
-	uint32_t LastGoodEstimation = ILOLA_INVALID_MILLIS;
 	int32_t LastError = INT32_MAX;
 
 protected:
 	void OnReset()
 	{
-		LastGoodEstimation = ILOLA_INVALID_MILLIS;
 		LastError = UINT32_MAX;
 
 		SetRandom();
@@ -159,24 +164,11 @@ public:
 		return SyncGoodCount > LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES;
 	}
 
-	void SetReadyForEstimation()
-	{
-		LastGoodEstimation = ILOLA_INVALID_MILLIS;
-	}
-
-	bool IsTimeToTune()
-	{
-		return IsSynced() && LastSynced != ILOLA_INVALID_MILLIS &&
-			(LastGoodEstimation == ILOLA_INVALID_MILLIS ||
-			(millis() - LastGoodEstimation) > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD);
-	}
-
 	void OnEstimationReceived(const int32_t estimationError)
 	{
 		LastError = estimationError;
 		if (abs(LastError) < MAX_TUNE_ERROR_MICROS)
 		{
-			LastGoodEstimation = millis();
 			StampSyncGood();
 		}
 		else if (!IsSynced())
