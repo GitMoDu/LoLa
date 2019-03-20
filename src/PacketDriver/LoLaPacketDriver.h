@@ -284,10 +284,9 @@ private:
 		}
 		else
 		{
+			//Failed to read incoming packet.
 			RejectedCount++;
-			RestoreToReceiving();
-
-			return;//Failed to read incoming packet.
+			RestoreToReceiving();			
 		}
 	}
 
