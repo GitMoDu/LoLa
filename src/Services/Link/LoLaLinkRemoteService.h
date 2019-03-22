@@ -81,7 +81,7 @@ protected:
 
 	bool OnAwaitingLink()
 	{
-		if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_REMOTE_MAX_BEFORE_SLEEP)
+		if (GetElapsedMillisSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_REMOTE_MAX_BEFORE_SLEEP)
 		{
 			return false;
 		}
@@ -90,7 +90,7 @@ protected:
 			switch (LinkingState)
 			{
 			case AwaitingLinkEnum::SearchingForHost:
-				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_REMOTE_SEARCH_PERIOD)
+				if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_REMOTE_SEARCH_PERIOD)
 				{
 					//Send an Hello to wake up potential hosts.
 					PrepareLinkDiscovery();
@@ -123,7 +123,7 @@ protected:
 					ClearSession();
 					SetLinkingState(AwaitingLinkEnum::SearchingForHost);
 				}
-				else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+				else if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 				{
 					PreparePKCStartRequest();
 					RequestSendPacket();
@@ -153,7 +153,7 @@ protected:
 					ClearSession();
 					SetLinkingState(AwaitingLinkEnum::SearchingForHost);
 				}
-				else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
+				else if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
 				{
 					PreparePublicKeyPacket(LOLA_LINK_SUBHEADER_REMOTE_PUBLIC_KEY);
 					RequestSendPacket();
@@ -302,7 +302,7 @@ protected:
 			break;
 		case InfoSyncStagesEnum::SendingRemoteInfo:
 			//First move is done by remote, sending our update until we receive host's.
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareRemoteInfoSync();
 				RequestSendPacket();
@@ -311,7 +311,7 @@ protected:
 			{
 				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
-			break; 
+			break;
 		case InfoSyncStagesEnum::InfoSyncDone:
 			return true;
 		default:

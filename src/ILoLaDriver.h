@@ -194,8 +194,6 @@ public:
 			0, UINT8_MAX);
 	}
 
-
-
 	uint64_t GetReceivedCount()
 	{
 		return ReceivedCount;

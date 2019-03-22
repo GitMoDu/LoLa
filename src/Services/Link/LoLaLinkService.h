@@ -187,7 +187,7 @@ protected:
 
 	void OnSendOk(const uint8_t header, const uint32_t sendDuration)
 	{
-		LastSent = millis();
+		LastSentMillis = millis();
 
 		if (header == DefinitionReport.GetHeader() &&
 			LinkInfo->HasLink() &&
@@ -250,7 +250,7 @@ protected:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
-			if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
+			if (GetElapsedMillisSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			}
@@ -260,7 +260,7 @@ protected:
 			}
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
-			if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT)
+			if (LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT)
 			{
 				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			}
@@ -289,12 +289,18 @@ private:
 			RequestSendPacket();
 			SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
 		}
-		else if (GetElapsedLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
+		else if (LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
-			PowerBalancer.SetMaxPower();
-			PreparePing(); 		//Send Panic Ping!
-			RequestSendPacket();
-			SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
+			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_REMOTE_SEARCH_PERIOD)
+			{
+				PowerBalancer.SetMaxPower();
+				PrepareLinkReport(true);
+				RequestSendPacket();
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			}
 		}
 		else if (LinkInfo->GetLocalInfoUpdateRemotelyElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD)
 		{
@@ -309,7 +315,7 @@ private:
 #ifdef LOLA_LINK_ACTIVITY_LED
 		if (!digitalRead(LOLA_LINK_ACTIVITY_LED))
 		{
-			if (millis() - LastSent > 25)
+			if (millis() - LastSentMillis > 50)
 			{
 				digitalWrite(LOLA_LINK_ACTIVITY_LED, HIGH);
 			}
@@ -319,15 +325,15 @@ private:
 #ifdef DEBUG_LOLA
 		if (LinkInfo->HasLink())
 		{
-			if (LinkInfo->GetLinkDuration() >= NextDebug)
+			if (LinkInfo->GetLinkDurationMillis() >= NextDebug)
 			{
 				DebugLinkStatistics(&Serial);
 
-				NextDebug = (LinkInfo->GetLinkDuration() / 1000) * 1000 + LOLA_LINK_DEBUG_UPDATE_MILLIS;
+				NextDebug = (LinkInfo->GetLinkDurationMillis() / 1000) * 1000 + LOLA_LINK_DEBUG_UPDATE_MILLIS;
 
-				if (LinkInfo->GetLinkDuration() < LOLA_LINK_DEBUG_UPDATE_MILLIS)
+				if (LinkInfo->GetLinkDurationMillis() < LOLA_LINK_DEBUG_UPDATE_MILLIS)
 				{
-					NextDebug -= (LinkInfo->GetLinkDuration() / 1000) * 1000;
+					NextDebug -= (LinkInfo->GetLinkDurationMillis() / 1000) * 1000;
 				}
 			}
 		}
@@ -364,7 +370,7 @@ protected:
 		OnClearSession();
 
 #ifdef DEBUG_LOLA
-		NextDebug = LinkInfo->GetLinkDuration() + 10000;
+		NextDebug = LinkInfo->GetLinkDurationMillis() + 10000;
 #endif
 	}
 
@@ -375,7 +381,7 @@ protected:
 #ifdef DEBUG_LOLA
 			if (newState == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
-				LinkingDuration = GetElapsedSinceStateStart();
+				LinkingDuration = GetElapsedMillisSinceStateStart();
 			}
 #endif
 			ResetStateStartTime();
@@ -612,7 +618,7 @@ private:
 
 		serial->print(F("UpTime: "));
 
-		uint32_t AliveSeconds = (LinkInfo->GetLinkDuration() / 1000L);
+		uint32_t AliveSeconds = (LinkInfo->GetLinkDurationMillis() / 1000L);
 
 		if (AliveSeconds / 86400 > 0)
 		{
@@ -678,7 +684,7 @@ private:
 	void DebugLinkEstablished()
 	{
 		Serial.print(F("Linked: "));
-		Serial.println(MillisSync());
+		Serial.println(LoLaDriver->GetClockSource()->GetSyncMicros()/1000);
 		Serial.print(F("Linking took "));
 		Serial.print(LinkingDuration);
 		Serial.println(F(" ms."));

@@ -94,7 +94,7 @@ protected:
 	///PKC region.
 	bool OnAwaitingLink()
 	{
-		if (GetElapsedSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_HOST_MAX_BEFORE_SLEEP)
+		if (GetElapsedMillisSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_HOST_MAX_BEFORE_SLEEP)
 		{
 			return false;
 		}
@@ -107,7 +107,7 @@ protected:
 				SessionLastStarted = millis();
 			}
 
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD)
+			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD)
 			{
 				PrepareIdBroadcast();
 				RequestSendPacket();
@@ -138,7 +138,7 @@ protected:
 				ClearSession();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
+			else if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
 			{
 				PreparePublicKeyPacket(LOLA_LINK_SUBHEADER_HOST_PUBLIC_KEY);
 				RequestSendPacket();
@@ -150,7 +150,7 @@ protected:
 			break;
 		case AwaitingLinkEnum::ProcessingPKC:
 			//TODO: Solve key size issue
-			//TODO: Use authorization dataas token?
+			//TODO: Use authorization data as token?
 			if (KeyExchanger.GenerateSharedKey() &&
 				LoLaDriver->GetCryptoEncoder()->SetSecretKey(KeyExchanger.GetSharedKeyPointer(), LoLaCryptoKeyExchanger::KEY_CURVE_SIZE))
 			{
@@ -168,7 +168,7 @@ protected:
 				ClearSession();
 				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
 			}
-			else if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			else if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareCryptoStartRequest();
 				RequestSendPacket();
@@ -250,7 +250,7 @@ protected:
 			break;
 		case LinkingStagesEnum::LinkProtocolSwitchOver:
 			//We transition forward when we receive the Ack.
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareLinkProtocolSwitchOver();
 				RequestSendPacket();
@@ -285,7 +285,7 @@ protected:
 			}
 			else
 			{	//If we don't have enough latency samples, we make more.
-				if (PingAcked || GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MAX)
+				if (PingAcked || GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MAX)
 				{
 					PingAcked = false;
 					PreparePing();
@@ -303,21 +303,18 @@ protected:
 				InfoSyncStage = InfoSyncStagesEnum::SendingHostInfo;
 				SetNextRunASAP();
 			}
+			else if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			{
+				PrepareInfoSyncRequest();
+				RequestSendPacket();
+			}
 			else
 			{
-				if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
-				{
-					PrepareInfoSyncRequest();
-					RequestSendPacket();
-				}
-				else
-				{
-					SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-				}
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 			break;
 		case InfoSyncStagesEnum::SendingHostInfo:
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
+			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
 				PrepareHostInfoSync();
 				RequestSendPacket();
