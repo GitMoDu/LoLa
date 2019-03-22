@@ -72,8 +72,8 @@ protected:
 	//Linked packets.
 	virtual void OnRemoteInfoSyncReceived(const uint8_t rssi) {}
 	virtual void OnHostInfoSyncRequestReceived() {}
-	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
-	virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis) {}
+	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros) {}
+	virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros) {}
 	///
 
 	///Remote packet handling.
@@ -83,8 +83,8 @@ protected:
 
 	//Linked packets.
 	virtual void OnHostInfoSyncReceived(const uint8_t rssi, const uint16_t rtt) {}
-	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
-	virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError) {}
+	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros) {}
+	virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros) {}
 	///
 
 	//Internal housekeeping.
@@ -695,8 +695,8 @@ private:
 		Serial.print((float)LinkInfo->GetRTT() / (float)2000, 2);
 		Serial.println(F(" ms"));
 		Serial.print(F("Latency compensation: "));
-		Serial.print(LoLaDriver->GetETTM());
-		Serial.println(F(" ms"));
+		Serial.print(LoLaDriver->GetETTMMicros());
+		Serial.println(F(" us"));
 	}
 #endif
 

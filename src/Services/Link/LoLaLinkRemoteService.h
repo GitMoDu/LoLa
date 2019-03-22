@@ -74,7 +74,7 @@ protected:
 				OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST))
 		{
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
-			ATUI_S.uint = MillisSync();
+			ATUI_S.uint = LoLaDriver->GetClockSource()->GetSyncMicros();
 			S_ArrayToPayload();
 		}
 	}
@@ -281,7 +281,7 @@ protected:
 		case LinkingStagesEnum::LinkProtocolSwitchOver:
 			ClockSyncer.SetSynced();
 			SetLinkingState(LinkingStagesEnum::LinkingDone);//Nothing to do here.
-			SetNextRunDelay(LoLaDriver->GetETTM());
+			SetNextRunDelay(LoLaDriver->GetETTMMicros()/(uint32_t)1000);
 			break;
 		case LinkingStagesEnum::LinkingDone:
 			//All linking stages complete, we have a link.
@@ -354,19 +354,15 @@ protected:
 			RemoteClockSyncTransaction.Reset();
 			SetNextRunASAP();
 		}
-		if (!RemoteClockSyncTransaction.IsRequested() || !RemoteClockSyncTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME))
+		if ((!RemoteClockSyncTransaction.IsRequested() ||
+			!RemoteClockSyncTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME)) &&
+			GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 		{
 			RemoteClockSyncTransaction.Reset();
-			if (GetElapsedSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
-			{
-				RemoteClockSyncTransaction.SetRequested();
-				PrepareClockSyncRequest(RemoteClockSyncTransaction.GetId());
-				RequestSendPacket();
-			}
-			else
-			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			}
+
+			RemoteClockSyncTransaction.SetRequested();
+			PrepareClockSyncRequest(RemoteClockSyncTransaction.GetId());
+			RequestSendPacket();
 		}
 		else
 		{
@@ -374,15 +370,15 @@ protected:
 		}
 	}
 
-	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedError)
+	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage &&
 			RemoteClockSyncTransaction.IsRequested() &&
-			RemoteClockSyncTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME) 
+			RemoteClockSyncTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME)
 			)
 		{
-			if (RemoteClockSyncTransaction.SetResult(requestId, estimatedError))
+			if (RemoteClockSyncTransaction.SetResult(requestId, estimatedErrorMicros))
 			{
 				SetNextRunASAP();
 			}
@@ -403,19 +399,13 @@ protected:
 			RemoteClockSyncTransaction.Reset();
 			SetNextRunASAP();
 		}
-		else if (ClockSyncer.IsTimeToTune())
+		else if (ClockSyncer.IsTimeToTune() && !RemoteClockSyncTransaction.IsRequested())
 		{
-			if (!RemoteClockSyncTransaction.IsRequested())
-			{
-				RemoteClockSyncTransaction.Reset();
-				RemoteClockSyncTransaction.SetRequested();
-				PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
-				RequestSendPacket();
-			}
-			else
-			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			}
+			RemoteClockSyncTransaction.Reset();
+			RemoteClockSyncTransaction.SetRequested();
+			PrepareClockSyncTuneRequest(RemoteClockSyncTransaction.GetId());
+			RequestSendPacket();
+
 		}
 		else
 		{

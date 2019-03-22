@@ -356,12 +356,12 @@ protected:
 	}
 
 	///Clock Sync.
-	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
+	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
 			HostClockSyncTransaction.SetResult(requestId,
-				(int32_t)(ClockSyncer.GetMillisSynced(LoLaDriver->GetLastValidReceivedMillis()) - estimatedMillis));
+				(int32_t)(LoLaDriver->GetClockSource()->GetSyncMicros(LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros));
 
 			switch (LinkingState)
 			{
@@ -382,12 +382,12 @@ protected:
 		}
 	}
 
-	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMillis)
+	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros)
 	{
 		if (LinkInfo->HasLink())
 		{
 			HostClockSyncTransaction.SetResult(requestId,
-				(int32_t)(ClockSyncer.GetMillisSynced(LoLaDriver->GetLastValidReceivedMillis()) - estimatedMillis));
+				(int32_t)(LoLaDriver->GetClockSource()->GetSyncMicros(LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros));
 			SetNextRunASAP();
 		}
 	}
@@ -494,10 +494,10 @@ private:
 		}
 	}
 
-	void PrepareClockSyncResponse(const uint8_t requestId, const int32_t estimationError)
+	void PrepareClockSyncResponse(const uint8_t requestId, const int32_t estimationErrorMicros)
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REPLY);
-		ATUI_S.iint = estimationError;
+		ATUI_S.iint = estimationErrorMicros;
 		S_ArrayToPayload();
 	}
 
