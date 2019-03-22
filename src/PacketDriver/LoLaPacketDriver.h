@@ -206,8 +206,10 @@ public:
 
 			return true;
 		}
-
-		DriverActiveState = DriverActiveStates::ReadyForAnything;
+		else
+		{
+			DriverActiveState = DriverActiveStates::ReadyForAnything;
+		}
 
 		return false;
 	}
