@@ -179,6 +179,7 @@ protected:
 #endif
 		LastSentHeader = 0xFF;
 		RestoreToReceiving();
+		EnableInterrupts();
 	}
 
 public:
@@ -235,6 +236,7 @@ private:
 		if (DriverActiveState != DriverActiveStates::AwaitingProcessing)
 		{
 			RestoreToReceiving();
+			EnableInterrupts();
 
 			return;
 		}
@@ -247,6 +249,7 @@ private:
 			IncomingPacketSize > LOLA_PACKET_MAX_PACKET_SIZE)
 		{
 			RestoreToReceiving();
+			EnableInterrupts();
 
 			return;//Invalid packet size;
 		}
@@ -271,6 +274,7 @@ private:
 			{
 				Services.ProcessAck(&IncomingPacket);
 				RestoreToReceiving();
+				EnableInterrupts();
 			}
 			else if (IncomingPacket.GetDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
 			{
@@ -281,18 +285,24 @@ private:
 					AckPacket.GetPayload()[0] = IncomingPacket.GetDefinition()->GetHeader();
 					AckPacket.SetId(IncomingPacket.GetId());
 					DriverActiveState = DriverActiveStates::SendingAck;
-					if (!SendPacket(&AckPacket))
+					if (SendPacket(&AckPacket))
+					{
+						EnableInterrupts();
+					}
+					else
 					{
 #ifdef DEBUG_LOLA
 						Serial.println(F("Send Ack failed."));
 #endif						
 						RestoreToReceiving();
+						EnableInterrupts();
 					}
 				}
 				else
 				{
 					//NACK.
 					RestoreToReceiving();
+					EnableInterrupts();
 				}
 			}
 			else
@@ -300,6 +310,7 @@ private:
 				//Process packet directly, no Ack.
 				Services.ProcessPacket(&IncomingPacket);
 				RestoreToReceiving();
+				EnableInterrupts();
 			}
 		}
 		else
@@ -307,6 +318,7 @@ private:
 			//Failed to read incoming packet.
 			RejectedCount++;
 			RestoreToReceiving();
+			EnableInterrupts();
 		}
 	}
 
@@ -348,10 +360,9 @@ public:
 	//When RF has packet to read, copy content into receive buffer.
 	void OnReceiveBegin(const uint8_t length, const int16_t rssi)
 	{
-		//DisableInterrupts();	//Not working properly.
-
 		if (DriverActiveState == DriverActiveStates::BlockedForIncoming)
 		{
+			DisableInterrupts();
 			DriverActiveState = DriverActiveStates::AwaitingProcessing;
 			IncomingPacketSize = length;
 			LastReceivedInfo.RSSI = min(rssi, LastReceivedInfo.RSSI);

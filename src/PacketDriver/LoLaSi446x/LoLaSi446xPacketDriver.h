@@ -38,12 +38,15 @@ private:
 	static const int16_t SI4463_RSSI_MIN = -110;
 	static const int16_t SI4463_RSSI_MAX = -50;
 
+	//Interrupt handling helper.
+	volatile uint8_t InterruptStatus = 0xFF;
+
 protected:
 
 	void DisableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
-		Si446x_irq_off();
+		InterruptStatus = Si446x_irq_off();
 #endif
 	}
 
@@ -51,7 +54,7 @@ protected:
 	void EnableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
-		Si446x_irq_on(0xFF);
+		Si446x_irq_on(InterruptStatus);
 #endif
 	}
 
