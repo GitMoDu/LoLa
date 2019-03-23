@@ -82,6 +82,7 @@ protected:
 
 	void OnLinkLost()
 	{
+		Encoder->SetToken(0);
 		Disable();
 	}
 
