@@ -37,6 +37,11 @@ public:
 		TOTPSeed = seed;
 	}
 
+	uint32_t GetSeed()
+	{
+		return TOTPSeed;
+	}
+
 	uint32_t GetToken()
 	{
 		return ((SyncedClock->GetSyncMicros() / (uint32_t)1000) / TOTPPeriodMillis) ^ TOTPSeed;

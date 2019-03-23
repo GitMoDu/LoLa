@@ -162,9 +162,11 @@ protected:
 					Serial.print(F("\tEncrypted with 128 bit cypher "));
 					LoLaDriver->GetCryptoEncoder()->Debug(&Serial);
 					Serial.println();
+#ifdef LOLA_LINK_USE_TOKEN_HOP
 					Serial.print(F("\tProtected with 32 bit TOTP @ "));
 					Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
 					Serial.println(F(" ms"));
+#endif
 #else
 					Serial.println(F("Link unsecured."));
 #endif

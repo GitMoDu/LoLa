@@ -75,7 +75,13 @@ protected:
 		if (IsSetupOk())
 		{
 			Enable();
-			SetCurrent();
+			Encoder->SetToken(CryptoSeed.GetSeed());
+#ifdef DEBUG_LOLA
+#ifdef LOLA_LINK_USE_TOKEN_HOP
+			Serial.print(F("Hop Seed: "));
+			Serial.println(CryptoSeed.GetSeed());
+#endif
+#endif
 			SetNextRunDelay(CryptoSeed.GetNextSwitchOverMillis());
 		}
 	}
@@ -98,7 +104,10 @@ protected:
 private:
 	void SetCurrent()
 	{
+#ifdef LOLA_LINK_USE_TOKEN_HOP
 		Encoder->SetToken(CryptoSeed.GetToken());
+#endif
+
 
 #ifdef LOLA_LINK_USE_FREQUENCY_HOP
 		//Use last 8 bits of crypto token to generate a pseudo-random channel distribution.
