@@ -223,7 +223,7 @@ public:
 	{
 		if (LastValidReceivedInfo.Micros == ILOLA_INVALID_MICROS)
 		{
-			return ILOLA_INVALID_MICROS;
+			return ILOLA_INVALID_MILLIS;
 		}
 		else
 		{
@@ -235,7 +235,7 @@ public:
 	{
 		if (LastValidSentInfo.Micros == ILOLA_INVALID_MICROS)
 		{
-			return ILOLA_INVALID_MICROS;
+			return ILOLA_INVALID_MILLIS;
 		}
 		else
 		{

@@ -329,7 +329,7 @@ public:
 				return Driver->GetElapsedMillisLastValidReceived();
 			}
 		}
-		return ILOLA_INVALID_MICROS;
+		return ILOLA_INVALID_MILLIS;
 	}
 
 	uint32_t GetLastValidSentElapsed()
@@ -338,7 +338,7 @@ public:
 		{
 			return Driver->GetElapsedMillisLastValidSent();
 		}
-		return ILOLA_INVALID_MICROS;
+		return ILOLA_INVALID_MILLIS;
 	}
 
 	uint32_t GetLastReceivedElapsed()
@@ -347,7 +347,7 @@ public:
 		{
 			return millis() - Driver->GetElapsedMillisLastValidReceived();
 		}
-		return ILOLA_INVALID_MICROS;
+		return ILOLA_INVALID_MILLIS;
 	}
 
 	uint8_t GetTransmitPowerNormalized()
