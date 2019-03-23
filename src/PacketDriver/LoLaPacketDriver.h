@@ -417,8 +417,8 @@ public:
 
 		if (LinkActive)
 		{
-			return GetElapsedMillisLastValidSent() >= BackOffPeriodLinkedMillis &&
-				IsInSendSlot();
+			return IsInSendSlot() &&
+				(GetElapsedMillisLastValidSent() >= BackOffPeriodLinkedMillis);
 		}
 		else
 		{
@@ -442,14 +442,14 @@ private:
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
 		{
-			if (DuplexElapsed >= HaldDuplexPeriodMicros)
+			if (DuplexElapsed >= HalfDuplexPeriodMicros)
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if (DuplexElapsed <= HaldDuplexPeriodMicros)
+			if (DuplexElapsed <= HalfDuplexPeriodMicros)
 			{
 				return true;
 			}
@@ -465,15 +465,15 @@ private:
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
 		{
-			if (DuplexElapsed < (HaldDuplexPeriodMicros - ETTM))
+			if (DuplexElapsed <= (HalfDuplexPeriodMicros - ETTM))
 			{
 				return true;
 			}
 		}
 		else
 		{
-			if ((DuplexElapsed >= HaldDuplexPeriodMicros) &&
-				DuplexElapsed < (DuplexPeriodMicros - ETTM))
+			if ((DuplexElapsed >= HalfDuplexPeriodMicros) &&
+				DuplexElapsed <= (DuplexPeriodMicros - ETTM))
 			{
 				return true;
 			}
