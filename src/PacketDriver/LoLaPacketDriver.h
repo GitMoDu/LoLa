@@ -83,10 +83,10 @@ public:
 	}
 
 private:
-	void AddAsyncAction(const uint8_t action, const uint8_t value, const bool easeRetry = false)
+	void AddAsyncAction(const uint8_t action, const bool easeRetry = false, const uint8_t value1 = 0)
 	{
 		ActionGrunt.Action = action;
-		ActionGrunt.Value = value;
+		ActionGrunt.Value = value1;
 
 		CallbackHandler.AppendToQueue(ActionGrunt, easeRetry);
 	}
@@ -149,7 +149,7 @@ protected:
 			else
 			{
 				ChannelPending = true;
-				AddAsyncAction(DriverAsyncActions::ActionUpdateChannel, 0, true);
+				AddAsyncAction(DriverAsyncActions::ActionUpdateChannel, true);
 			}
 		}
 	}
@@ -166,7 +166,7 @@ protected:
 			}
 			else
 			{
-				AddAsyncAction(DriverAsyncActions::ActionUpdatePower, 0, true);
+				AddAsyncAction(DriverAsyncActions::ActionUpdatePower, true);
 			}
 		}
 	}
@@ -199,7 +199,8 @@ public:
 
 	bool SendPacket(ILoLaPacket* transmitPacket)
 	{
-		if (ChannelPending ||
+		if (transmitPacket->GetDefinition() == nullptr ||
+			ChannelPending ||
 			(DriverActiveState != DriverActiveStates::ReadyForAnything &&
 				DriverActiveState != DriverActiveStates::SendingAck))
 		{
@@ -222,7 +223,7 @@ public:
 		}
 		else
 		{
-			DriverActiveState = DriverActiveStates::ReadyForAnything;
+			AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, true);
 		}
 
 		return false;
@@ -355,15 +356,15 @@ public:
 			IncomingPacketSize = length;
 			LastReceivedInfo.RSSI = min(rssi, LastReceivedInfo.RSSI);
 
-			AddAsyncAction(DriverAsyncActions::ActionProcessIncomingPacket, 0);
+			AddAsyncAction(DriverAsyncActions::ActionProcessIncomingPacket);
 		}
 		else
 		{
-			AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, 0);
 #ifdef DEBUG_LOLA
 			Serial.print(F("Badstate OnReceiveBegin: "));
 			Serial.println(DriverActiveState);
 #endif
+			AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, true);
 		}
 	}
 
@@ -377,29 +378,32 @@ public:
 			Serial.println(DriverActiveState);
 		}
 #endif
-		AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, 0);
+		AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, true);
 	}
 
 	void OnSentOk()
 	{
-#ifdef DEBUG_LOLA
-		if (DriverActiveState != DriverActiveStates::WaitingForTransmissionEnd)
+		if (DriverActiveState == DriverActiveStates::WaitingForTransmissionEnd)
 		{
+			LastValidSentInfo.Micros = LastSentInfo.Micros;
+			TransmitedCount++;
+			AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, false, LastSentHeader);
+			LastSentHeader = 0xFF;
+		}
+		else
+		{
+#ifdef DEBUG_LOLA
 			Serial.print(F("Bad state OnSentOk: "));
 			Serial.println(DriverActiveState);
-		}
 #endif
-
-		LastValidSentInfo.Micros = LastSentInfo.Micros;
-		TransmitedCount++;
-		AddAsyncAction(DriverAsyncActions::ActionProcessSentOk, LastSentHeader);
-		LastSentHeader = 0xFF;
+			AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, true);
+		}
 	}
 
 	void OnBatteryAlarm()
 	{
 		//TODO: Store statistics, maybe set-up a callback?
-		AddAsyncAction(DriverAsyncActions::ActionProcessBatteryAlarm, 0);
+		AddAsyncAction(DriverAsyncActions::ActionProcessBatteryAlarm);
 	}
 
 	void OnWakeUpTimer()
