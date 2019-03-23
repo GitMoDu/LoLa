@@ -297,7 +297,7 @@ private:
 				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
 			}
 		}
-		else if (LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
+		else if (LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_PERIOD_INTERVENTION)
 		{
 			if (!ReportPending)
 			{
