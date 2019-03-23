@@ -20,6 +20,7 @@ private:
 		ActionProcessSentOk = 1,
 		ActionUpdatePower = 2,
 		ActionUpdateChannel = 3,
+		ActionAsyncRestore = 4,
 		ActionProcessBatteryAlarm = 0xff
 	};
 	class ActionCallbackClass
@@ -111,6 +112,9 @@ private:
 		case DriverAsyncActions::ActionUpdateChannel:
 			OnChannelUpdated();
 			break;
+		case DriverAsyncActions::ActionAsyncRestore:
+			OnAsyncRestore();
+			break;
 		default:
 			break;
 		}
@@ -165,6 +169,16 @@ protected:
 				AddAsyncAction(DriverAsyncActions::ActionUpdatePower, 0, true);
 			}
 		}
+	}
+
+	void OnAsyncRestore()
+	{
+#ifdef DEBUG_LOLA
+		Serial.print(F("RestoreToReceiving: "));
+		Serial.println(DriverActiveState);
+#endif
+		LastSentHeader = 0xFF;
+		RestoreToReceiving();
 	}
 
 public:
