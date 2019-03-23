@@ -45,20 +45,25 @@ public:
 
 	bool Update()
 	{
-		if (millis() - LoLaDriver->GetElapsedMillisLastValidReceived() < LOLA_LINK_SERVICE_LINKED_MAX_PANIC &&
-			(LastUpdated == ILOLA_INVALID_MILLIS ||
-			(millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD)))
+		if (LastUpdated == ILOLA_INVALID_MILLIS || 
+			LoLaDriver->GetElapsedMillisLastValidReceived() >= LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
+			LastUpdated = millis();
+			SetMaxPower();
+		}
+		else if (millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD)
+		{
+			LastUpdated = millis();
+
 			CurrentPartnerRSSI = LinkInfo->GetPartnerRSSINormalized();
 
-			LastUpdated = millis();
 
 			NextTransmitPower = TransmitPowerNormalized;
 
 			if ((CurrentPartnerRSSI > RADIO_POWER_BALANCER_RSSI_TARGET) &&
 				(NextTransmitPower > RADIO_POWER_BALANCER_POWER_MIN))
 			{
-				//Down
+				//Down.
 				if (CurrentPartnerRSSI > (RADIO_POWER_BALANCER_RSSI_TARGET + RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN))
 				{
 					NextTransmitPower = max(RADIO_POWER_BALANCER_POWER_MIN, NextTransmitPower - RADIO_POWER_BALANCER_ADJUST_DOWN_LONG);
