@@ -402,7 +402,6 @@ protected:
 #endif
 				//Notify all link dependent services to stop.
 				ClearSession();
-				PowerBalancer.SetMaxPower();
 				ChannelManager.ResetChannel();
 				LoLaDriver->OnStart();
 				ServicesManager->NotifyServicesLinkUpdated(false);
@@ -414,7 +413,6 @@ protected:
 				LoLaDriver->Enable();
 				SetLinkingState(0);
 				ClearSession();
-				PowerBalancer.SetMaxPower();
 				ChannelManager.ResetChannel();
 				LoLaDriver->OnStart();
 				SetNextRunASAP();
@@ -432,7 +430,6 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 				ClearSession();
 				SetLinkingState(0);
-				PowerBalancer.SetMaxPower();
 				ChannelManager.ResetChannel();
 				LoLaDriver->OnStart();
 				//Sleep time is set on Host/Remote virtual.
@@ -448,7 +445,6 @@ protected:
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 					break;
 				}
-				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
 				Serial.print(LinkInfo->GetPartnerId());
@@ -464,7 +460,6 @@ protected:
 				LinkInfo->StampLinkStarted();
 				ClockSyncerPointer->StampSynced();
 				LoLaDriver->ResetStatistics();
-				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA
 				Serial.println();
 				DebugLinkEstablished();
