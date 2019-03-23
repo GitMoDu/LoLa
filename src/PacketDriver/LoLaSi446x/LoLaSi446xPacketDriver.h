@@ -39,11 +39,11 @@ private:
 	static const int16_t SI4463_RSSI_MAX = -50;
 
 protected:
-	//Not working properly.
+
 	void DisableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
-		//Si446x_irq_off();
+		Si446x_irq_off();
 #endif
 	}
 
