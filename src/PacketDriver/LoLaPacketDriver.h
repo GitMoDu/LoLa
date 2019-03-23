@@ -179,7 +179,6 @@ protected:
 #endif
 		LastSentHeader = 0xFF;
 		RestoreToReceiving();
-		EnableInterrupts();
 	}
 
 public:
