@@ -350,8 +350,7 @@ protected:
 		if (HostClockSyncTransaction.IsResultReady())
 		{
 			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
-
-			PrepareClockSyncResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastErrorMicros());
+			PrepareClockSyncResponse(HostClockSyncTransaction.GetId(), HostClockSyncTransaction.GetResult());
 			HostClockSyncTransaction.Reset();
 			RequestSendPacket();
 		}
@@ -408,8 +407,7 @@ protected:
 			}
 
 			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
-
-			PrepareClockSyncTuneResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastErrorMicros());
+			PrepareClockSyncTuneResponse(HostClockSyncTransaction.GetId(), HostClockSyncTransaction.GetResult());
 			HostClockSyncTransaction.Reset();
 			RequestSendPacket();
 		}

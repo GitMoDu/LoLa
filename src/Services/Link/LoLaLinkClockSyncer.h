@@ -142,23 +142,13 @@ public:
 
 class LinkHostClockSyncer : public LoLaLinkClockSyncer
 {
-private:
-	int32_t LastErrorMicros = INT32_MAX;
-
 protected:
 	void OnReset()
 	{
-		LastErrorMicros = INT32_MAX;
-
 		SetRandom();
 	}
 
 public:
-	int32_t GetLastErrorMicros()
-	{
-		return LastErrorMicros;
-	}
-
 	bool IsSynced()
 	{
 		return SyncGoodCount > LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES;
@@ -166,8 +156,7 @@ public:
 
 	void OnEstimationReceived(const int32_t estimationErrorMicros)
 	{
-		LastErrorMicros = estimationErrorMicros;
-		if (abs(LastErrorMicros) < MAX_TUNE_ERROR_MICROS)
+		if (abs(estimationErrorMicros) < MAX_TUNE_ERROR_MICROS)
 		{
 			StampSyncGood();
 		}
