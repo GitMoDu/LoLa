@@ -166,7 +166,7 @@ protected:
 					Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
 					Serial.println(F(" ms"));
 #else
-					Serial.print(F("Link unsecured."));
+					Serial.println(F("Link unsecured."));
 #endif
 #endif
 
@@ -637,6 +637,10 @@ private:
 			serial->print('0');
 		serial->println((AliveSeconds % 3600) % 60);
 
+		serial->print(F("ClockSync: "));
+		serial->println(LoLaDriver->GetClockSource()->GetSyncMicros()/1000);
+
+
 		serial->print(F("Transmit Power: "));
 		serial->print((float)(((LinkInfo->GetTransmitPowerNormalized() * 100) / UINT8_MAX)), 0);
 		serial->println(F(" %"));
@@ -682,16 +686,13 @@ private:
 	void DebugLinkEstablished()
 	{
 		Serial.print(F("Linked: "));
-		Serial.println(LoLaDriver->GetClockSource()->GetSyncMicros()/1000);
+		Serial.println(LoLaDriver->GetClockSource()->GetSyncMicros() / 1000);
 		Serial.print(F("Linking took "));
 		Serial.print(LinkingDuration);
 		Serial.println(F(" ms."));
 		Serial.print(F("Round Trip Time: "));
 		Serial.print(LinkInfo->GetRTT());
 		Serial.println(F(" us"));
-		Serial.print(F("Estimated Latency: "));
-		Serial.print((float)LinkInfo->GetRTT() / (float)2000, 2);
-		Serial.println(F(" ms"));
 		Serial.print(F("Latency compensation: "));
 		Serial.print(LoLaDriver->GetETTMMicros());
 		Serial.println(F(" us"));
