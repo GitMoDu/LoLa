@@ -417,12 +417,12 @@ public:
 
 		if (LinkActive)
 		{
-			return GetElapsedMillisLastValidSent() > BackOffPeriodLinkedMillis &&
+			return GetElapsedMillisLastValidSent() >= BackOffPeriodLinkedMillis &&
 				IsInSendSlot();
 		}
 		else
 		{
-			return (GetElapsedMillisLastValidSent() > BackOffPeriodUnlinkedMillis);
+			return GetElapsedMillisLastValidSent() >= BackOffPeriodUnlinkedMillis;
 		}
 	}
 
