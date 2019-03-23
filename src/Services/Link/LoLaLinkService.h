@@ -438,7 +438,14 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
 				CryptoToken->SetSeed(LoLaDriver->GetCryptoEncoder()->GetSeed());
-				LoLaDriver->GetCryptoEncoder()->SetEnabled();
+				if (!LoLaDriver->GetCryptoEncoder()->SetEnabled())
+				{
+#ifdef DEBUG_LOLA				
+					Serial.println(F("Failed to start Crypto."));
+#endif
+					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
+					break;
+				}
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));
