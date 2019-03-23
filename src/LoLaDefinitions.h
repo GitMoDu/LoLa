@@ -51,6 +51,7 @@
 
 // Packet collision avoidance.
 #define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS/4)
+#define LOLA_LINK_LINKED_BACK_OFF_DURATION_MILLIS			(1) //Reduce congested duplex.
 
 #define LOLA_LINK_INFO_MAC_LENGTH							8 //Following MAC-64, because why not?
 
