@@ -81,7 +81,7 @@ public:
 
 	bool IsFresh(const uint32_t lifetimeMillis)
 	{
-		return millis() - LastRequested < lifetimeMillis;
+		return (millis() - LastRequested) < lifetimeMillis;
 	}
 
 	bool IsResultWaiting()
