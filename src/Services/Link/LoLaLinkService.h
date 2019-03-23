@@ -285,17 +285,22 @@ private:
 		}
 		else if (ReportPending) //Priority update, to keep link info up to date.
 		{
-			PrepareLinkReport(LinkInfo->GetPartnerLastReportElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD);
-			RequestSendPacket();
-			SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
+			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD)
+			{
+				PrepareLinkReport(LinkInfo->GetPartnerLastReportElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD);
+				RequestSendPacket();
+			}
+			else
+			{
+				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
+			}
 		}
 		else if (LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
-			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_REMOTE_SEARCH_PERIOD)
+			if (!ReportPending)
 			{
-				PowerBalancer.SetMaxPower();
-				PrepareLinkReport(true);
-				RequestSendPacket();
+				ReportPending = true; //Send link info update, deferred.
+				SetNextRunASAP();
 			}
 			else
 			{
@@ -305,7 +310,7 @@ private:
 		else if (LinkInfo->GetLocalInfoUpdateRemotelyElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD)
 		{
 			ReportPending = true; //Send link info update, deferred.
-			SetNextRunASAP();
+			SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
 		}
 		else
 		{
@@ -553,7 +558,7 @@ protected:
 
 				//To Host.
 			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
-				OnHostInfoSyncReceived(receivedPacket->GetPayload()[0], 
+				OnHostInfoSyncReceived(receivedPacket->GetPayload()[0],
 					(uint16_t)(receivedPacket->GetPayload()[1] + (receivedPacket->GetPayload()[2] << 8)));
 				break;
 
