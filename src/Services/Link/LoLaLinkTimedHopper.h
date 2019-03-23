@@ -35,6 +35,28 @@ public:
 
 	}
 
+	bool Setup(ClockSource* syncedClock, LoLaLinkChannelManager* channelManager)
+	{
+		SyncedClock = syncedClock;
+		ChannelManager = channelManager;
+		Encoder = LoLaDriver->GetCryptoEncoder();
+		if (Encoder != nullptr &&
+			ChannelManager != nullptr &&
+			CryptoSeed.Setup(SyncedClock))
+		{
+			CryptoSeed.SetTOTPPeriod(HopPeriod);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	ITokenSource* GetTokenSource()
+	{
+		return &CryptoSeed;
+	}
+
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -66,36 +88,21 @@ protected:
 	{
 		SetNextRunDelay(CryptoSeed.GetNextSwitchOverMillis());
 
+		SetCurrent();
+
+		return true;
+	}
+
+private:
+	void SetCurrent()
+	{
 		Encoder->SetToken(CryptoSeed.GetToken());
 
 #ifdef LOLA_LINK_USE_FREQUENCY_HOP
 		//Use last 8 bits of crypto token to generate a pseudo-random channel distribution.
 		ChannelManager->SetNextHop((uint8_t)(Encoder->GetToken() & 0xFF));
 #endif
-		return true;
 	}
 
-public:
-	bool Setup(ClockSource* syncedClock, LoLaLinkChannelManager* channelManager)
-	{
-		SyncedClock = syncedClock;
-		ChannelManager = channelManager;
-		Encoder = LoLaDriver->GetCryptoEncoder();
-		if (Encoder != nullptr &&
-			ChannelManager != nullptr &&
-			CryptoSeed.Setup(SyncedClock))
-		{
-			CryptoSeed.SetTOTPPeriod(HopPeriod);
-
-			return true;
-		}
-
-		return false;
-	}
-
-	ITokenSource* GetTokenSource()
-	{
-		return &CryptoSeed;
-	}
 };
 #endif
