@@ -154,17 +154,20 @@ public:
 		return SyncGoodCount > LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES;
 	}
 
-	void OnEstimationReceived(const int32_t estimationErrorMicros)
+	bool OnEstimationReceived(const int32_t estimationErrorMicros)
 	{
 		if (abs(estimationErrorMicros) < MAX_TUNE_ERROR_MICROS)
 		{
 			StampSyncGood();
+			return true;
 		}
 		else if (!IsSynced())
 		{
 			//Only reset the sync good count when syncing.
 			SyncGoodCount = 0;
 		}
+
+		return false;
 	}
 };
 

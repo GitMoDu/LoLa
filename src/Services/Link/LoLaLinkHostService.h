@@ -401,12 +401,10 @@ protected:
 	{
 		if (HostClockSyncTransaction.IsResultReady())
 		{
-			if (HostClockSyncTransaction.GetResult() != 0)
+			if (!ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult()))
 			{
 				LinkInfo->StampClockSyncAdjustment();
 			}
-
-			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
 			PrepareClockSyncTuneResponse(HostClockSyncTransaction.GetId(), HostClockSyncTransaction.GetResult());
 			HostClockSyncTransaction.Reset();
 			RequestSendPacket();
