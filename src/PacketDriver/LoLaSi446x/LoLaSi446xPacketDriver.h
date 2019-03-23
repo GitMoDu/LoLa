@@ -70,7 +70,7 @@ protected:
 		delayMicroseconds(500);
 		return true;
 #else
-		return Si446x_TX(OutgoingPacket.GetRaw(), OutgoingPacketSize, CurrentChannel, SI446X_STATE_RX);
+		return Si446x_TX(OutgoingPacket.GetRaw(), OutgoingPacketSize, CurrentChannel, SI446X_STATE_SLEEP);
 #endif
 	}
 
