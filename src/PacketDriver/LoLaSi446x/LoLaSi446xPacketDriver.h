@@ -50,7 +50,6 @@ protected:
 #endif
 	}
 
-	//Not working properly.
 	void EnableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
