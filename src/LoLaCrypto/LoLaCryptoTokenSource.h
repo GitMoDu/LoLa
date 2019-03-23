@@ -51,7 +51,7 @@ public:
 	{
 		SwitchOverHelper = SyncedClock->GetSyncMicros() / (uint32_t)1000;
 
-		return (((SwitchOverHelper + TOTPPeriodMillis) / TOTPPeriodMillis)*TOTPPeriodMillis) - SwitchOverHelper;
+		return TOTPPeriodMillis - (SwitchOverHelper % TOTPPeriodMillis);
 	}
 };
 #endif
