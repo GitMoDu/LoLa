@@ -75,6 +75,7 @@ protected:
 		if (IsSetupOk())
 		{
 			Enable();
+			SetCurrent();
 			SetNextRunDelay(CryptoSeed.GetNextSwitchOverMillis());
 		}
 	}
