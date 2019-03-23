@@ -389,17 +389,20 @@ public:
 
 	bool AllowedSend()
 	{
+		if (DriverActiveState != DriverActiveStates::ReadyForAnything ||
+			ChannelPending)
+		{
+			return false;
+		}
+
 		if (LinkActive)
 		{
-			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
-				!ChannelPending &&
+			return GetElapsedMillisLastValidSent() > BackOffPeriodLinkedMillis &&
 				IsInSendSlot();
 		}
 		else
 		{
-			return DriverActiveState == DriverActiveStates::ReadyForAnything &&
-				!ChannelPending &&
-				CoolAfterSend();
+			return (GetElapsedMillisLastValidSent() > BackOffPeriodUnlinkedMillis);
 		}
 	}
 
@@ -412,13 +415,8 @@ public:
 #endif
 
 private:
-	inline bool CoolAfterSend()
-	{
-		return LastSentInfo.Micros == ILOLA_INVALID_MICROS || (micros() - LastSentInfo.Micros) > BackOffPeriodMicros;
-	}
-
 	bool IsInReceiveSlot(const uint32_t receivedMicros)
-	{		
+	{
 		DuplexElapsed = SyncedClock.GetSyncMicros(receivedMicros) % DuplexPeriodMicros;
 
 		//Even spread of true and false across the DuplexPeriod.

@@ -57,7 +57,8 @@ protected:
 	uint8_t CurrentChannel = 0;
 	const uint32_t DuplexPeriodMicros = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * (uint32_t)1000;
 	const uint32_t HaldDuplexPeriodMicros = DuplexPeriodMicros / 2;
-	const uint32_t BackOffPeriodMicros = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS * (uint32_t)1000;
+	const uint32_t BackOffPeriodUnlinkedMillis = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
+	const uint32_t BackOffPeriodLinkedMillis = LOLA_LINK_LINKED_BACK_OFF_DURATION_MILLIS;
 	///
 
 	///Link Status.
