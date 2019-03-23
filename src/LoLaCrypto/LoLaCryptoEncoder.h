@@ -128,9 +128,15 @@ public:
 	{
 		EncoderState = StageEnum::AllClear;
 
-		for (uint8_t i = 0; i < sizeof(TokenHolder); i++)
+		for (uint8_t i = 0; i < TokenSize; i++)
 		{
 			TokenHolder[i] = 0;
+		}
+
+		for (uint8_t i = 0; i < KeySize; i++)
+		{
+			KeyHolder[i] = 0;
+			IVHolder[i] = 0;
 		}
 
 		TokenSeed = 0;
