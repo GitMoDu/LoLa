@@ -244,7 +244,7 @@ public:
 	{
 		if (HasLink() && LinkStartedMicros != ILOLA_INVALID_MICROS)
 		{
-			return (Driver->GetClockSource()->GetSyncMicros() - LinkStartedMicros)/1000;
+			return (Driver->GetClockSource()->GetSyncMicros() - LinkStartedMicros) / 1000;
 		}
 		else
 		{
@@ -320,7 +320,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			if (Driver->GetElapsedMillisLastValidSent() >= Driver->GetElapsedMillisLastValidReceived())
+			if (Driver->GetElapsedMillisLastValidSent() < Driver->GetElapsedMillisLastValidReceived())
 			{
 				return Driver->GetElapsedMillisLastValidSent();
 			}
@@ -332,7 +332,7 @@ public:
 		return ILOLA_INVALID_MILLIS;
 	}
 
-	uint32_t GetLastValidSentElapsed()
+	uint32_t GetElapsedMillisLastValidSent()
 	{
 		if (Driver != nullptr)
 		{
@@ -341,7 +341,7 @@ public:
 		return ILOLA_INVALID_MILLIS;
 	}
 
-	uint32_t GetLastReceivedElapsed()
+	uint32_t GetElapsedMillisLastValidReceived()
 	{
 		if (Driver != nullptr)
 		{
