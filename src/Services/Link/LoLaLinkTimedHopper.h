@@ -40,7 +40,8 @@ public:
 		SyncedClock = syncedClock;
 		ChannelManager = channelManager;
 		Encoder = LoLaDriver->GetCryptoEncoder();
-		if (Encoder != nullptr &&
+		if (SyncedClock != nullptr &&
+			Encoder != nullptr &&
 			ChannelManager != nullptr &&
 			CryptoSeed.Setup(SyncedClock))
 		{
