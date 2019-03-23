@@ -219,7 +219,7 @@ public:
 		RTT = rttMicros;
 		if (Driver != nullptr)
 		{
-			Driver->SetETTM((uint32_t)round((float)RTT / (float)2));
+			Driver->SetETTM((RTT * 8)/ 20); //Transmission takes a lot longer than receiving.
 		}
 	}
 
