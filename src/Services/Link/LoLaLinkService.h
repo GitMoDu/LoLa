@@ -433,9 +433,7 @@ protected:
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
 				CryptoToken->SetSeed(LoLaDriver->GetCryptoEncoder()->GetSeed());
-#ifdef LOLA_LINK_USE_ENCRYPTION
 				LoLaDriver->GetCryptoEncoder()->SetEnabled();
-#endif
 				PowerBalancer.SetMaxPower();
 #ifdef DEBUG_LOLA				
 				Serial.print(F("Linking to Id: "));

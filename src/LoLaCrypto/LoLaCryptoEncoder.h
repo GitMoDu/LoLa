@@ -138,6 +138,7 @@ public:
 
 	bool SetEnabled()
 	{
+#ifdef LOLA_LINK_USE_ENCRYPTION
 		if (EncoderState == StageEnum::AllReady)
 		{
 			EncoderState = StageEnum::FullPower;
@@ -150,6 +151,9 @@ public:
 		}
 
 		return false;
+#else
+		return true;
+#endif
 	}
 
 	bool SetSecretKey(uint8_t * secretKey, const uint8_t keyLength)
