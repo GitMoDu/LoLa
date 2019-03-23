@@ -280,9 +280,12 @@ private:
 					AckPacket.GetPayload()[0] = IncomingPacket.GetDefinition()->GetHeader();
 					AckPacket.SetId(IncomingPacket.GetId());
 					DriverActiveState = DriverActiveStates::SendingAck;
-					if (SendPacket(&AckPacket))
+					if (!SendPacket(&AckPacket))
 					{
-						EnableInterrupts();
+#ifdef DEBUG_LOLA
+						Serial.println(F("Send Ack failed."));
+#endif						
+						RestoreToReceiving();
 					}
 				}
 				else
