@@ -91,6 +91,12 @@ protected:
 		SessionLastStarted = ILOLA_INVALID_MILLIS;
 	}
 
+	inline void RestartAwaitingLink() 
+	{
+		SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
+		SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
+	}
+
 	///PKC region.
 	bool OnAwaitingLink()
 	{
@@ -129,14 +135,14 @@ protected:
 			else
 			{
 				LinkInfo->ClearRemoteId();
-				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
+				RestartAwaitingLink();
 			}
 			break;
 		case AwaitingLinkEnum::SendingPublicKey:
 			if (millis() - SubStateStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKC_CANCEL)
 			{
 				ClearSession();
-				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
+				RestartAwaitingLink();
 			}
 			else if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD)
 			{
@@ -159,14 +165,14 @@ protected:
 			else
 			{
 				ClearSession();
-				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
+				RestartAwaitingLink();
 			}
 			break;
 		case AwaitingLinkEnum::GotSharedKey:
 			if (millis() - SubStateStart > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKC_CANCEL)
 			{
 				ClearSession();
-				SetLinkingState(AwaitingLinkEnum::BroadcastingOpenSession);
+				RestartAwaitingLink();
 			}
 			else if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD)
 			{
