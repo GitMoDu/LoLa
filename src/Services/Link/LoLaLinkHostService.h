@@ -351,7 +351,7 @@ protected:
 		{
 			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
 
-			PrepareClockSyncResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastError());
+			PrepareClockSyncResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastErrorMicros());
 			HostClockSyncTransaction.Reset();
 			RequestSendPacket();
 		}
@@ -409,7 +409,7 @@ protected:
 
 			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
 
-			PrepareClockSyncTuneResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastError());
+			PrepareClockSyncTuneResponse(HostClockSyncTransaction.GetId(), ClockSyncer.GetLastErrorMicros());
 			HostClockSyncTransaction.Reset();
 			RequestSendPacket();
 		}
