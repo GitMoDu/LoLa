@@ -305,7 +305,7 @@ private:
 		{
 			//Failed to read incoming packet.
 			RejectedCount++;
-			RestoreToReceiving();			
+			RestoreToReceiving();
 		}
 	}
 
@@ -335,19 +335,19 @@ public:
 		{
 			DriverActiveState = DriverActiveStates::BlockedForIncoming;
 		}
+#ifdef DEBUG_LOLA
 		else
 		{
-			DriverActiveState = DriverActiveStates::ReadyForAnything;
-#ifdef DEBUG_LOLA
-			Serial.println(F("Bad state OnIncoming"));
-#endif
+			Serial.print(F("Badstate OnIncoming: "));
+			Serial.println(DriverActiveState);
 		}
+#endif
 	}
 
 	//When RF has packet to read, copy content into receive buffer.
 	void OnReceiveBegin(const uint8_t length, const int16_t rssi)
 	{
-		DisableInterrupts();
+		//DisableInterrupts();	//Not working properly.
 
 		if (DriverActiveState == DriverActiveStates::BlockedForIncoming)
 		{
@@ -359,10 +359,11 @@ public:
 		}
 		else
 		{
+			AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, 0);
 #ifdef DEBUG_LOLA
-			Serial.println(F("Badstate OnReceiveBegin"));
+			Serial.print(F("Badstate OnReceiveBegin: "));
+			Serial.println(DriverActiveState);
 #endif
-			RestoreToReceiving();
 		}
 	}
 
@@ -372,10 +373,11 @@ public:
 #ifdef DEBUG_LOLA
 		if (DriverActiveState != DriverActiveStates::BlockedForIncoming)
 		{
-			Serial.println(F("Bad state OnReceivedFail"));
+			Serial.print(F("Bad state OnReceivedFail: "));
+			Serial.println(DriverActiveState);
 		}
 #endif
-		RestoreToReceiving();
+		AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, 0);
 	}
 
 	void OnSentOk()
@@ -383,7 +385,8 @@ public:
 #ifdef DEBUG_LOLA
 		if (DriverActiveState != DriverActiveStates::WaitingForTransmissionEnd)
 		{
-			Serial.println(F("Bad state OnSentOk"));
+			Serial.print(F("Bad state OnSentOk: "));
+			Serial.println(DriverActiveState);
 		}
 #endif
 
