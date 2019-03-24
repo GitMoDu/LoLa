@@ -7,7 +7,7 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
-#include <ILoLaClockSource.h>
+#include <LoLaClock\ILoLaClockSource.h>
 #include <LoLaDefinitions.h>
 
 class ILoLaDriver

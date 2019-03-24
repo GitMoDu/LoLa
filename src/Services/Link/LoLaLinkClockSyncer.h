@@ -3,7 +3,7 @@
 #ifndef _LOLALINKCLOCKSYNCER_h
 #define _LOLALINKCLOCKSYNCER_h
 
-#include <ILoLaClockSource.h>
+#include <LoLaClock\ILoLaClockSource.h>
 #include <Services\Link\ClockSyncTransaction.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 

@@ -4,7 +4,7 @@
 #define _LOLACRYPTOTOKENSOURCE_h
 
 #include <Services\Link\LoLaLinkDefinitions.h>
-#include <ILoLaClockSource.h>
+#include <LoLaClock\ILoLaClockSource.h>
 #include <LoLaCrypto\ITokenSource.h>
 
 
