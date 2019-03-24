@@ -15,6 +15,9 @@ protected:
 	virtual uint32_t GetCurrentsMicros() { return micros(); }
 
 public:
+	virtual void Start() {};
+
+public:
 	ILoLaClockSource()
 	{
 		Reset();

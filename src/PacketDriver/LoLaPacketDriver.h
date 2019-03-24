@@ -132,6 +132,7 @@ private:
 protected:
 	void OnStart()
 	{
+		SyncedClock.Start();
 		LastChannel = 0xFF;
 		LastPower = 0;
 		ChannelPending = false;
