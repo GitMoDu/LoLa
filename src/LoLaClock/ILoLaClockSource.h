@@ -4,6 +4,7 @@
 #define _ILOLA_CLOCKSOURCE_h
 
 #include <stdint.h>
+#include <Arduino.h>
 
 class ILoLaClockSource
 {
