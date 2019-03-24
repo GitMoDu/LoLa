@@ -4,7 +4,7 @@
 #define _LOLA_TIMED_HOPPER_h
 
 #include <Services\ILoLaService.h>
-#include <ILoLaClockSource.h>
+#include <LoLaClock\ILoLaClockSource.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
 #include <LoLaCrypto\LoLaCryptoTokenSource.h>
