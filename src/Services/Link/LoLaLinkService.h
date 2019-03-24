@@ -131,7 +131,7 @@ protected:
 			KeyExchanger.Setup() &&
 			ClockSyncerPointer->Setup(LoLaDriver->GetClockSource()) &&
 			ChannelManager.Setup(LoLaDriver) &&
-			TimedHopper.Setup(LoLaDriver->GetClockSource(), &ChannelManager))
+			TimedHopper.Setup(&ChannelManager))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 			CryptoToken = TimedHopper.GetTokenSource();
