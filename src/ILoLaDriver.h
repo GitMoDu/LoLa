@@ -8,6 +8,7 @@
 #include <Packet\LoLaPacketMap.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 #include <LoLaClock\ILoLaClockSource.h>
+#include <LoLaClock\RTCClockSource.h>
 #include <LoLaDefinitions.h>
 
 class ILoLaDriver
@@ -75,7 +76,11 @@ protected:
 	///
 
 	///Synced clock
+#ifdef LOLA_LINK_USE_RTC_CLOCK_SOURCE
+	RTCClockSource SyncedClock;
+#else
 	ILoLaClockSource SyncedClock;
+#endif
 	///
 
 	///Crypto
