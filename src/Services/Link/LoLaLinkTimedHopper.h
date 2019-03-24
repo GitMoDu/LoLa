@@ -11,6 +11,63 @@
 #include <Services\Link\LoLaLinkChannelManager.h>
 
 
+class LoLaTimeDebugTask : public Task
+{
+private:
+	//Synced clock.
+	ILoLaClockSource* SyncedClock = nullptr;
+
+	LoLaCryptoTokenSource*	CryptoSeed = nullptr;
+
+	const uint32_t TestPeriodMillis = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS;
+	const uint32_t TestHalfPeriodMillis = TestPeriodMillis / 2;
+	const uint8_t OutputPin = PB12;
+
+public:
+	LoLaTimeDebugTask(Scheduler* scheduler)
+		: Task(0, TASK_FOREVER, scheduler, false)
+	{
+
+	}
+
+	bool Setup(ILoLaClockSource* syncedClock, LoLaCryptoTokenSource* cryptoSeed)
+	{
+		SyncedClock = syncedClock;
+		CryptoSeed = cryptoSeed;
+		if (SyncedClock != nullptr && CryptoSeed != nullptr)
+		{
+			pinMode(OutputPin, OUTPUT);
+			return true;
+		}
+
+		return false;
+	}
+
+	void OnLinkEstablished()
+	{
+		enable();
+
+		//Task::delay(CryptoSeed->GetNextSwitchOverMillis());
+	}
+
+	void OnLinkLost()
+	{
+		disable();
+	}
+
+protected:
+
+	bool Callback()
+	{
+		digitalWrite(OutputPin, HIGH);
+
+		//Task::delay(CryptoSeed->GetNextSwitchOverMillis());
+
+		digitalWrite(OutputPin, LOW);
+
+		return true;
+	}
+};
 
 class LoLaLinkTimedHopper : public ILoLaService
 {
@@ -29,6 +86,8 @@ private:
 
 	const uint32_t HopPeriod = LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS;
 
+	const uint8_t OutputPin = PB12;
+
 public:
 	LoLaLinkTimedHopper(Scheduler* scheduler, ILoLaDriver* driver)
 		: ILoLaService(scheduler, 0, driver)
@@ -36,16 +95,18 @@ public:
 
 	}
 
-	bool Setup(ILoLaClockSource* syncedClock, LoLaLinkChannelManager* channelManager)
+	bool Setup(LoLaLinkChannelManager* channelManager)
 	{
-		SyncedClock = syncedClock;
 		ChannelManager = channelManager;
+		SyncedClock = LoLaDriver->GetClockSource();
 		Encoder = LoLaDriver->GetCryptoEncoder();
 		if (SyncedClock != nullptr &&
 			Encoder != nullptr &&
 			ChannelManager != nullptr)
 		{
 			CryptoSeed.SetTOTPPeriod(HopPeriod);
+
+			pinMode(OutputPin, OUTPUT);
 
 			return true;
 		}
@@ -71,48 +132,46 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
+
 	void OnLinkEstablished()
 	{
 		if (IsSetupOk())
 		{
-			Enable();
-			Encoder->SetToken(CryptoSeed.GetSeed());
-#ifdef DEBUG_LOLA
 #ifdef LOLA_LINK_USE_TOKEN_HOP
-			Serial.print(F("Hop Seed: "));
-			Serial.println(CryptoSeed.GetSeed());
+			Encoder->SetToken(CryptoSeed.GetToken());
+#else
+			Encoder->SetToken(CryptoSeed.GetSeed());
 #endif
-#endif
-			SetNextRunDelay(CryptoSeed.GetNextSwitchOverMillis());
+			Enable();
+			SetNextRunASAP();
 		}
 	}
 
 	void OnLinkLost()
 	{
-		Encoder->SetToken(0);
 		Disable();
 	}
 
 	bool Callback()
 	{
-		SetNextRunDelay(CryptoSeed.GetNextSwitchOverMillis());
-
-		SetCurrent();
+		digitalWrite(OutputPin, HIGH);
+		SetCurrent(CryptoSeed.GetToken(SyncedClock->GetSyncMicros() / (uint32_t)1000));
+		SetNextRunDelay(HopPeriod - ((SyncedClock->GetSyncMicros() / (uint32_t)1000) % HopPeriod));
+		digitalWrite(OutputPin, LOW);
 
 		return true;
 	}
 
 private:
-	void SetCurrent()
+	void SetCurrent(const uint32_t token)
 	{
 #ifdef LOLA_LINK_USE_TOKEN_HOP
-		Encoder->SetToken(CryptoSeed.GetToken());
+		Encoder->SetToken(token);
 #endif
-
 
 #ifdef LOLA_LINK_USE_FREQUENCY_HOP
 		//Use last 8 bits of crypto token to generate a pseudo-random channel distribution.
-		ChannelManager->SetNextHop((uint8_t)(Encoder->GetToken() & 0xFF));
+		ChannelManager->SetNextHop((uint8_t)(token & 0xFF));
 #endif
 	}
 
