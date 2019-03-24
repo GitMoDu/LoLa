@@ -43,8 +43,7 @@ public:
 		Encoder = LoLaDriver->GetCryptoEncoder();
 		if (SyncedClock != nullptr &&
 			Encoder != nullptr &&
-			ChannelManager != nullptr &&
-			CryptoSeed.Setup(SyncedClock))
+			ChannelManager != nullptr)
 		{
 			CryptoSeed.SetTOTPPeriod(HopPeriod);
 

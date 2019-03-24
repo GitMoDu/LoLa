@@ -14,19 +14,10 @@ private:
 	uint32_t TOTPPeriodMillis = ILOLA_INVALID_MILLIS;
 	uint32_t TOTPSeed = 0;
 
-	ILoLaClockSource* SyncedClock = nullptr;
-
 public:
 	void SetTOTPPeriod(const uint32_t totpPeriodMillis)
 	{
 		TOTPPeriodMillis = totpPeriodMillis;
-	}
-
-	bool Setup(ILoLaClockSource* syncedClock)
-	{
-		SyncedClock = syncedClock;
-
-		return SyncedClock != nullptr;
 	}
 
 	void SetSeed(const uint32_t seed)
@@ -39,14 +30,9 @@ public:
 		return TOTPSeed;
 	}
 
-	uint32_t GetToken()
+	uint32_t GetToken(const uint32_t syncMillis)
 	{
-		return ((SyncedClock->GetSyncMicros() / (uint32_t)1000) / TOTPPeriodMillis) ^ TOTPSeed;
-	}
-
-	uint32_t GetNextSwitchOverMillis()
-	{
-		return TOTPPeriodMillis - ((SyncedClock->GetSyncMicros() / (uint32_t)1000) % TOTPPeriodMillis);
+		return (syncMillis / TOTPPeriodMillis) ^ TOTPSeed;
 	}
 };
 #endif
