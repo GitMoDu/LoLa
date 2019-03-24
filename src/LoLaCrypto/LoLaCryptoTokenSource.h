@@ -4,7 +4,7 @@
 #define _LOLACRYPTOTOKENSOURCE_h
 
 #include <Services\Link\LoLaLinkDefinitions.h>
-#include <ClockSource.h>
+#include <ILoLaClockSource.h>
 #include <LoLaCrypto\ITokenSource.h>
 
 
@@ -14,10 +14,7 @@ private:
 	uint32_t TOTPPeriodMillis = ILOLA_INVALID_MILLIS;
 	uint32_t TOTPSeed = 0;
 
-	ClockSource* SyncedClock = nullptr;
-
-	//Helper.
-	uint32_t SwitchOverHelper = 0;
+	ILoLaClockSource* SyncedClock = nullptr;
 
 public:
 	void SetTOTPPeriod(const uint32_t totpPeriodMillis)
@@ -25,7 +22,7 @@ public:
 		TOTPPeriodMillis = totpPeriodMillis;
 	}
 
-	bool Setup(ClockSource* syncedClock)
+	bool Setup(ILoLaClockSource* syncedClock)
 	{
 		SyncedClock = syncedClock;
 
@@ -49,9 +46,7 @@ public:
 
 	uint32_t GetNextSwitchOverMillis()
 	{
-		SwitchOverHelper = SyncedClock->GetSyncMicros() / (uint32_t)1000;
-
-		return TOTPPeriodMillis - (SwitchOverHelper % TOTPPeriodMillis);
+		return TOTPPeriodMillis - ((SyncedClock->GetSyncMicros() / (uint32_t)1000) % TOTPPeriodMillis);
 	}
 };
 #endif

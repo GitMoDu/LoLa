@@ -7,7 +7,7 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
-#include <ClockSource.h>
+#include <ILoLaClockSource.h>
 #include <LoLaDefinitions.h>
 
 class ILoLaDriver
@@ -75,7 +75,7 @@ protected:
 	///
 
 	///Synced clock
-	ClockSource SyncedClock;
+	ILoLaClockSource SyncedClock;
 	///
 
 	///Crypto
@@ -183,7 +183,7 @@ public:
 		ResetStatistics();
 	}
 
-	ClockSource* GetClockSource()
+	ILoLaClockSource* GetClockSource()
 	{
 		return &SyncedClock;
 	}

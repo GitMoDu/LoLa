@@ -4,6 +4,7 @@
 #define _LOLA_TIMED_HOPPER_h
 
 #include <Services\ILoLaService.h>
+#include <ILoLaClockSource.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
 #include <LoLaCrypto\LoLaCryptoTokenSource.h>
@@ -18,7 +19,7 @@ private:
 	LoLaCryptoTokenSource	CryptoSeed;
 
 	//Synced clock.
-	ClockSource* SyncedClock = nullptr;
+	ILoLaClockSource* SyncedClock = nullptr;
 
 	//Channel manager.
 	LoLaLinkChannelManager* ChannelManager = nullptr;
@@ -35,7 +36,7 @@ public:
 
 	}
 
-	bool Setup(ClockSource* syncedClock, LoLaLinkChannelManager* channelManager)
+	bool Setup(ILoLaClockSource* syncedClock, LoLaLinkChannelManager* channelManager)
 	{
 		SyncedClock = syncedClock;
 		ChannelManager = channelManager;

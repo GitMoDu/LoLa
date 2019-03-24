@@ -1,17 +1,20 @@
-// ClockSource.h
+// ILoLaClockSource.h
 
-#ifndef _CLOCKSOURCE_h
-#define _CLOCKSOURCE_h
+#ifndef _ILOLA_CLOCKSOURCE_h
+#define _ILOLA_CLOCKSOURCE_h
 
 #include <stdint.h>
 
-class ClockSource
+class ILoLaClockSource
 {
 private:
 	uint32_t OffsetMicros = 0;
 
+protected:
+	virtual uint32_t GetCurrentsMicros() { return micros(); }
+
 public:
-	ClockSource()
+	ILoLaClockSource()
 	{
 		Reset();
 	}
@@ -33,7 +36,7 @@ public:
 
 	uint32_t GetSyncMicros()
 	{
-		return micros() + OffsetMicros;
+		return GetCurrentsMicros() + OffsetMicros;
 	}
 
 	uint32_t GetSyncMicros(const uint32_t sourceMicros)

@@ -3,20 +3,20 @@
 #ifndef _LOLALINKCLOCKSYNCER_h
 #define _LOLALINKCLOCKSYNCER_h
 
-#include <ClockSource.h>
+#include <ILoLaClockSource.h>
 #include <Services\Link\ClockSyncTransaction.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
 class LoLaLinkClockSyncer
 {
 private:
-	ClockSource * SyncedClock = nullptr;
+	ILoLaClockSource * SyncedClock = nullptr;
 
 protected:
 	uint8_t SyncGoodCount = 0;
 	uint32_t LastSynced = ILOLA_INVALID_MILLIS;
 
-	static const int32_t MAX_TUNE_ERROR_MICROS = 10;
+	static const int32_t MAX_TUNE_ERROR_MICROS = 100;
 
 protected:
 	virtual void OnReset() {}
@@ -47,7 +47,7 @@ protected:
 	}
 
 public:
-	bool Setup(ClockSource * syncedClock)
+	bool Setup(ILoLaClockSource * syncedClock)
 	{
 		SyncedClock = syncedClock;
 

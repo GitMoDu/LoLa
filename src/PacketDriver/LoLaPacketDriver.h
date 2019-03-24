@@ -350,7 +350,7 @@ public:
 #ifdef DEBUG_LOLA
 		else
 		{
-			Serial.print(F("Badstate OnIncoming: "));
+			Serial.print(F("Bad state OnIncoming: "));
 			Serial.println(DriverActiveState);
 		}
 #endif
@@ -371,7 +371,7 @@ public:
 		else
 		{
 #ifdef DEBUG_LOLA
-			Serial.print(F("Badstate OnReceiveBegin: "));
+			Serial.print(F("Bad state OnReceiveBegin: "));
 			Serial.println(DriverActiveState);
 #endif
 			AddAsyncAction(DriverAsyncActions::ActionAsyncRestore, true);
