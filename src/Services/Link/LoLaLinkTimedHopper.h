@@ -137,9 +137,7 @@ protected:
 	{
 		if (IsSetupOk())
 		{
-#ifdef LOLA_LINK_USE_TOKEN_HOP
-			Encoder->SetToken(CryptoSeed.GetToken());
-#else
+#ifndef LOLA_LINK_USE_TOKEN_HOP
 			Encoder->SetToken(CryptoSeed.GetSeed());
 #endif
 			Enable();
@@ -155,14 +153,19 @@ protected:
 	bool Callback()
 	{
 		digitalWrite(OutputPin, HIGH);
-		SetCurrent(CryptoSeed.GetToken(SyncedClock->GetSyncMicros() / (uint32_t)1000));
-		SetNextRunDelay(HopPeriod - ((SyncedClock->GetSyncMicros() / (uint32_t)1000) % HopPeriod));
+		SetCurrent(CryptoSeed.GetToken(GetSyncMillis()));
+		SetNextRunDelay(HopPeriod - (GetSyncMillis() % HopPeriod));
 		digitalWrite(OutputPin, LOW);
 
 		return true;
 	}
 
 private:
+	inline uint32_t GetSyncMillis()
+	{
+		return SyncedClock->GetSyncMicros() / (uint32_t)1000;
+	}
+
 	void SetCurrent(const uint32_t token)
 	{
 #ifdef LOLA_LINK_USE_TOKEN_HOP
