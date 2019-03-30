@@ -56,6 +56,7 @@ protected:
 	//From 0 to UINT8_MAX, limited by driver.
 	uint8_t CurrentTransmitPower = 0;
 	uint8_t CurrentChannel = 0;
+	uint8_t TransmitPowerNormalized = 0;
 	const uint32_t DuplexPeriodMicros = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * (uint32_t)1000;
 	const uint32_t HalfDuplexPeriodMicros = DuplexPeriodMicros / 2;
 	const uint32_t BackOffPeriodUnlinkedMillis = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
@@ -266,12 +267,13 @@ public:
 
 	uint8_t GetTransmitPowerNormalized()
 	{
-		return map(CurrentTransmitPower, GetTransmitPowerMin(), GetTransmitPowerMax(), 0, UINT8_MAX);
+		return TransmitPowerNormalized;
 	}
 
 	void SetTransmitPower(const uint8_t transmitPowerNormalized)
 	{
-		CurrentTransmitPower = map(transmitPowerNormalized, 0, UINT8_MAX, GetTransmitPowerMin(), GetTransmitPowerMax());
+		TransmitPowerNormalized = transmitPowerNormalized;
+		CurrentTransmitPower = map(TransmitPowerNormalized, 0, UINT8_MAX, GetTransmitPowerMin(), GetTransmitPowerMax());
 
 		OnTransmitPowerUpdated();
 	}
