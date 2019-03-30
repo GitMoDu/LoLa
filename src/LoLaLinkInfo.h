@@ -345,7 +345,7 @@ public:
 	{
 		if (Driver != nullptr)
 		{
-			return millis() - Driver->GetElapsedMillisLastValidReceived();
+			return Driver->GetElapsedMillisLastValidReceived();
 		}
 		return ILOLA_INVALID_MILLIS;
 	}
