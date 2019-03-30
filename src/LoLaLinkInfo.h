@@ -30,7 +30,7 @@ private:
 	LinkStateEnum LinkState = LinkStateEnum::Disabled;
 
 	uint32_t RTT = ILOLA_INVALID_LATENCY;
-	uint32_t LinkStartedMicros = ILOLA_INVALID_MICROS;
+	uint32_t LinkStartedSeconds = 0;
 
 	//Real time update tracking.
 	uint32_t PartnerInfoLastUpdated = ILOLA_INVALID_MILLIS;
@@ -169,7 +169,7 @@ public:
 		SessionId = INVALID_SESSION;
 		PartnerIdPresent = false;
 
-		LinkStartedMicros = ILOLA_INVALID_MICROS;
+		LinkStartedSeconds = 0;
 
 		RTT = ILOLA_INVALID_LATENCY;
 		while (!PartnerRSSISamples.isEmpty())
@@ -240,11 +240,11 @@ public:
 		}
 	}
 
-	uint32_t GetLinkDurationMillis()
+	uint32_t GetLinkDurationSeconds()
 	{
-		if (HasLink() && LinkStartedMicros != ILOLA_INVALID_MICROS)
+		if (HasLink())
 		{
-			return (Driver->GetClockSource()->GetSyncMicros() - LinkStartedMicros) / 1000;
+			return (Driver->GetClockSource()->GetTimeSeconds() - LinkStartedSeconds);
 		}
 		else
 		{
