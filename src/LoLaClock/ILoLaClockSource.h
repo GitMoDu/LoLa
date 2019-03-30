@@ -16,6 +16,7 @@ protected:
 
 public:
 	virtual void Start() {};
+	virtual uint32_t GetTimeSeconds() { return millis() / 1000; }
 
 public:
 	ILoLaClockSource()
