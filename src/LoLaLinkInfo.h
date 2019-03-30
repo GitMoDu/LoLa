@@ -356,6 +356,27 @@ public:
 		return 0;//Unknown.
 	}
 
+	//Public getters.
+	uint64_t GetReceivedCount()
+	{
+		return Driver->GetReceivedCount();
+	}
+
+	uint64_t GetRejectedCount()
+	{
+		return Driver->GetRejectedCount();
+	}
+
+	uint64_t GetTransmitedCount()
+	{
+		return Driver->GetTransmitedCount();
+	}
+
+	uint64_t GetTimingCollisionCount()
+	{
+		return Driver->GetTimingCollisionCount();
+	}
+
 #ifdef DEBUG_LOLA
 	void PrintMac(Stream* serial)
 	{
