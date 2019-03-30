@@ -21,4 +21,5 @@ RTCClockSource::RTCClockSource()
 void RTCClockSource::Attach()
 {
 	RTC.attachSecondsInterrupt(OnRTCInterrupt);
+	LastSeconds = (uint32_t)RTC.getTime();
 }
