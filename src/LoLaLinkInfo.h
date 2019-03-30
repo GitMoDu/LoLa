@@ -254,11 +254,8 @@ public:
 
 	void StampLinkStarted()
 	{
-		if (Driver != nullptr)
-		{
-			LinkStartedMicros = Driver->GetClockSource()->GetSyncMicros();
-			Driver->SetLinkStatus(true);
-		}
+		LinkStartedSeconds = Driver->GetClockSource()->GetTimeSeconds();
+		Driver->SetLinkStatus(true);
 	}
 
 	bool HasPartnerRSSI()
