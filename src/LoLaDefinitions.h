@@ -23,8 +23,6 @@
 //#define DEBUG_LINK_FREQUENCY_HOP
 
 
-//#define SI446x_DRIVER_OVERCLOCK
-
 #define LOLA_PACKET_MAP_TOTAL_SIZE							20 //255 //Reduce this to the highest header value in the mapping, to reduce memory usage.
 
 //Reserved [0;1] for Ack.
