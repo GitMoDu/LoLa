@@ -13,7 +13,7 @@ private:
 	RTClock RTC;
 
 	uint32_t LastTick = 0;
-	uint32_t LastTime = 0;
+	uint32_t LastSeconds = 0;
 
 	const rtc_clk_src ClockSourceType = RTCSEL_LSI;
 
@@ -25,14 +25,20 @@ private:
 private:
 	inline uint32_t GetBaseRTC()
 	{
-		return (LastTime * ((uint32_t)1000000));
+		//Use last 16 bits of seconds as rolling seconds source.
+		return ((LastSeconds & 0xFFFF) * ((uint32_t)1000000));
 	}
 
 protected:
-	//uint32_t GetCurrentsMicros() { return GetBaseRTC() + (micros() - LastTick); }
+	uint32_t GetCurrentsMicros() { return GetBaseRTC() + (micros() - LastTick); }
 
 public:
 	RTCClockSource();
+
+	uint32_t GetTimeSeconds()
+	{
+		return LastSeconds;
+	}
 
 	void Start()
 	{
@@ -42,13 +48,13 @@ public:
 			Attach();
 		}
 		LastTick = 0;
-		LastTime = 0;
+		LastSeconds = 0;
 	}
 
 	void OnInterrupt()
 	{
 		LastTick = micros();
-		LastTime++;
+		LastSeconds++;
 	}
 };
 #endif
