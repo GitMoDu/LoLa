@@ -26,8 +26,6 @@ protected:
 
 private:
 	uint32_t NextDebug = 0;
-#define LOLA_LINK_DEBUG_UPDATE_MILLIS					((uint32_t)1000*(uint32_t)LOLA_LINK_DEBUG_UPDATE_SECONDS)
-
 #else
 private:
 #endif
@@ -332,16 +330,11 @@ private:
 #ifdef DEBUG_LOLA
 		if (LinkInfo->HasLink())
 		{
-			if (LinkInfo->GetLinkDurationMillis() >= NextDebug)
+			if (LinkInfo->GetLinkDurationSeconds() >= NextDebug)
 			{
 				DebugLinkStatistics(&Serial);
 
-				NextDebug = (LinkInfo->GetLinkDurationMillis() / 1000) * 1000 + LOLA_LINK_DEBUG_UPDATE_MILLIS;
-
-				if (LinkInfo->GetLinkDurationMillis() < LOLA_LINK_DEBUG_UPDATE_MILLIS)
-				{
-					NextDebug -= (LinkInfo->GetLinkDurationMillis() / 1000) * 1000;
-				}
+				NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
 			}
 		}
 #endif
@@ -377,7 +370,7 @@ protected:
 		OnClearSession();
 
 #ifdef DEBUG_LOLA
-		NextDebug = LinkInfo->GetLinkDurationMillis() + 10000;
+		NextDebug = LinkInfo->GetLinkDurationSeconds() + 10;
 #endif
 	}
 
@@ -625,7 +618,7 @@ private:
 
 		serial->print(F("UpTime: "));
 
-		uint32_t AliveSeconds = (LinkInfo->GetLinkDurationMillis() / 1000L);
+		uint32_t AliveSeconds = LinkInfo->GetLinkDurationSeconds();
 
 		if (AliveSeconds / 86400 > 0)
 		{
