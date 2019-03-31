@@ -485,7 +485,7 @@ private:
 
 	bool IsInSendSlot()
 	{
-		DuplexElapsed = SyncedClock.GetSyncMicros() % DuplexPeriodMicros;
+		DuplexElapsed = (SyncedClock.GetSyncMicros() + ETTM) % DuplexPeriodMicros;
 
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
