@@ -86,8 +86,6 @@ private:
 
 	const uint32_t HopPeriod = LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS;
 
-	const uint8_t OutputPin = PB12;
-
 public:
 	LoLaLinkTimedHopper(Scheduler* scheduler, ILoLaDriver* driver)
 		: ILoLaService(scheduler, 0, driver)
@@ -105,8 +103,6 @@ public:
 			ChannelManager != nullptr)
 		{
 			CryptoSeed.SetTOTPPeriod(HopPeriod);
-
-			pinMode(OutputPin, OUTPUT);
 
 			return true;
 		}
@@ -152,10 +148,8 @@ protected:
 
 	bool Callback()
 	{
-		digitalWrite(OutputPin, HIGH);
 		SetCurrent(CryptoSeed.GetToken(GetSyncMillis()));
 		SetNextRunDelay(HopPeriod - (GetSyncMillis() % HopPeriod));
-		digitalWrite(OutputPin, LOW);
 
 		return true;
 	}
@@ -177,6 +171,5 @@ private:
 		ChannelManager->SetNextHop((uint8_t)(token & 0xFF));
 #endif
 	}
-
 };
 #endif
