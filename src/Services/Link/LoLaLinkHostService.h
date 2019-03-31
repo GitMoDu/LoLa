@@ -41,6 +41,8 @@ private:
 public:
 	LoLaLinkHostService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
 		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
+		, ClockSyncer()
+		, HostClockSyncTransaction()	
 	{
 		ClockSyncerPointer = &ClockSyncer;
 		ClockSyncTransaction = &HostClockSyncTransaction;

@@ -99,6 +99,9 @@ public:
 	LoLaLinkService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
 		: AbstractLinkService(servicesScheduler, driver)
 		, TimedHopper(driverScheduler, driver)
+		, ChannelManager()
+		, PowerBalancer()
+		, KeyExchanger()
 	{
 	}
 

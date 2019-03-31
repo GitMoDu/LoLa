@@ -63,6 +63,8 @@ private:
 	uint8_t UncompressedKey[KEY_CURVE_SIZE * 2];
 
 public:
+	LoLaCryptoKeyExchanger() {}
+
 	bool Setup()
 	{
 		uECC_set_rng(&RNG);

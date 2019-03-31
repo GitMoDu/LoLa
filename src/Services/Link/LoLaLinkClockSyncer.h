@@ -47,6 +47,8 @@ protected:
 	}
 
 public:
+	LoLaLinkClockSyncer() {}
+
 	bool Setup(ILoLaClockSource * syncedClock)
 	{
 		SyncedClock = syncedClock;
@@ -82,6 +84,8 @@ protected:
 	}
 
 public:
+	LinkRemoteClockSyncer() : LoLaLinkClockSyncer()	{}
+
 	bool IsSynced()
 	{
 		return HasEstimation() && HostSynced;
@@ -149,6 +153,8 @@ protected:
 	}
 
 public:
+	LinkHostClockSyncer() : LoLaLinkClockSyncer() {}
+
 	bool IsSynced()
 	{
 		return SyncGoodCount > LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES;

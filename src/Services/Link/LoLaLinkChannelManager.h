@@ -13,6 +13,8 @@ private:
 	ILoLaDriver* LoLaDriver = nullptr;
 
 public:
+	LoLaLinkChannelManager() {}
+
 	void ResetChannel()
 	{
 		LoLaDriver->SetChannel((LoLaDriver->GetChannelMin() + LoLaDriver->GetChannelMax()) / 2);
