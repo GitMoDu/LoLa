@@ -263,7 +263,7 @@ private:
 			ReceivedCount++;
 
 			//Check for packet collisions.
-			if (LinkActive && !IsInReceiveSlot(LastValidReceivedInfo.Micros))
+			if (IsReceiveCollision(LastValidReceivedInfo.Micros - micros()))
 			{
 				TimingCollisionCount++;
 			}
@@ -450,9 +450,19 @@ public:
 #endif
 
 private:
-	bool IsInReceiveSlot(const uint32_t receivedMicros)
+	bool IsReceiveCollision(const int32_t offsetMicros)
 	{
-		DuplexElapsed = SyncedClock.GetSyncMicros(receivedMicros) % DuplexPeriodMicros;
+		if (LinkActive &&
+			(abs(offsetMicros) > LOLA_LINK_COLLISION_SLOT_RANGE_MICROS) ||
+			(!IsInReceiveSlot(offsetMicros)))
+		{
+			TimingCollisionCount++;
+		}
+	}
+
+	bool IsInReceiveSlot(const int32_t offsetMicros)
+	{
+		DuplexElapsed = (SyncedClock.GetSyncMicros() + offsetMicros) % DuplexPeriodMicros;
 
 		//Even spread of true and false across the DuplexPeriod.
 		if (EvenSlot)
