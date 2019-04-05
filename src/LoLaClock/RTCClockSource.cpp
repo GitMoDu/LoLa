@@ -12,7 +12,7 @@ static void OnRTCInterrupt()
 }
 
 ////////////////
-RTCClockSource::RTCClockSource() 
+RTCClockSource::RTCClockSource()
 	: RTC(RTCSEL_LSI), ILoLaClockSource()
 {
 	StaticRTC = this;
@@ -21,5 +21,24 @@ RTCClockSource::RTCClockSource()
 void RTCClockSource::Attach()
 {
 	RTC.attachSecondsInterrupt(OnRTCInterrupt);
-	LastSeconds = (uint32_t)RTC.getTime();
+}
+
+void RTCClockSource::Start()
+{
+	if (!Attached)
+	{
+		Attached = true;
+		Attach();
+		SetTimeSeconds(RTC.getTime());
+	}
+}
+
+uint32_t RTCClockSource::GetUTCSeconds() 
+{ 
+	return RTC.getTime();
+}
+
+void RTCClockSource::OnInterrupt()
+{
+	Tick();
 }
