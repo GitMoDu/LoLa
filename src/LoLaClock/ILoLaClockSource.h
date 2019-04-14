@@ -6,125 +6,170 @@
 #include <stdint.h>
 #include <Arduino.h>
 
-#define LOLA_CLOCK_SOURCE_MILLIS
+
 
 class ILoLaClockSource
 {
-private:
-	uint32_t Seconds = 0;
-	uint32_t LastTick = 0;
+public:
+	static const uint32_t ONE_SECOND_MICROS = 1000000;
+	static const uint32_t ONE_SECOND = 1;
 
+private:
+	uint32_t OffsetSeconds = 0;
 	int32_t OffsetMicros = 0;
+	uint32_t DeferredOffsetMicros = 0;
 
 	int32_t DriftCompensationMicros = 0;
 
-	static const uint32_t OneSecondMicros = 1000000;
-	static const int32_t MaxOffsetMicros = OneSecondMicros;
-	static const int32_t MaxDriftMicros = 100000;
-	static const uint32_t OneSecond = 1;
+	static const int32_t MAX_OFFSET_MICROS = ONE_SECOND_MICROS;
+	static const int32_t MAX_DRIFT_MICROS = 200000;
 
-	uint32_t TickHelper = 0;
+	uint32_t LastTick = 0;
 
+	bool Attached = false;
 
-private:
-	inline uint32_t GetElapsedMicros()
-	{
-		TickHelper = micros();
-
-		return TickHelper - min(TickHelper, LastTick);
-	}
+	//Helper.
+	uint32_t OffsetChunk = 0;
 
 protected:
-	void Tick()
+	virtual uint32_t GetMicros()
 	{
-		LastTick = micros();
-		Seconds++;
-		AddOffsetMicros(DriftCompensationMicros);
+		return micros();
 	}
 
-public:
-	virtual void Start() {}
-	virtual uint32_t GetUTCSeconds() { return Seconds; }
+	virtual void Attach() {	}
+	virtual void OnDriftUpdated(const int32_t driftMicros) {}
+
+	virtual uint32_t GetUTCSeconds() { return millis() / 1000; }
+	virtual void SetUTCSeconds(const uint32_t secondsUTC) {}
 
 public:
 	ILoLaClockSource()
 	{
 		Reset();
+		Attached = false;
 	}
 
-	uint32_t GetTimeSeconds()
+	void Tick()
 	{
-		return Seconds + ((GetElapsedMicros() + OffsetMicros) / OneSecondMicros);
+		LastTick = GetMicros();
+		AddOffsetMicros(ONE_SECOND_MICROS + DriftCompensationMicros - DeferredOffsetMicros);
+		DeferredOffsetMicros = 0;
+	}
+
+	void Start()
+	{
+		if (!Attached)
+		{
+			Attached = true;
+			Attach();
+		}
 	}
 
 	void Reset()
 	{
-		Seconds = 0;
+		OffsetSeconds = 0;
 		OffsetMicros = 0;
-		LastTick = micros();
+		DriftCompensationMicros = 0;
+		DeferredOffsetMicros = 0;
+		LastTick = GetMicros();
 	}
 
-	void SetTimeSeconds(const uint32_t timeSeconds) 
+	void SetUTC(const uint32_t secondsUTC)
 	{
-		Seconds = timeSeconds;
+		SetUTCSeconds(secondsUTC);
+		LastTick = GetMicros();
 		OffsetMicros = 0;
-		LastTick = micros();
+		DeferredOffsetMicros = 0;
+
+		//TODO: Readjust OffsetSeconds to keep sync seconds aligned.
+	}
+
+	uint32_t GetUTC()
+	{
+		return GetUTCSeconds();
+	}
+
+	uint32_t GetSyncSeconds()
+	{
+		asm volatile("nop"); //allow interrupt to fire
+		asm volatile("nop");
+
+		return OffsetSeconds +
+			((GetElapsedMicros() + OffsetMicros) / ONE_SECOND_MICROS);
+	}
+
+	void SetSyncSeconds(const uint32_t syncSeconds)
+	{
+		OffsetSeconds = syncSeconds;
+		OffsetMicros = 0;
+		DeferredOffsetMicros = 0;
+		LastTick = GetMicros();
 	}
 
 	void SetRandom()
 	{
-		Seconds = random(INT32_MAX);
-		OffsetMicros = 0;
-		LastTick = micros();
-	}
-
-	void ClearOffsetMicros()
-	{
-		OffsetMicros = 0;
-	}
-
-	int32_t GetOffsetMicros()
-	{
-		return OffsetMicros;
+		OffsetSeconds = random(INT32_MAX);
+		OffsetMicros = random(INT32_MAX);
+		LastTick = GetMicros();
 	}
 
 	void AddOffsetMicros(const int32_t offset)
 	{
-		OffsetMicros += offset;
-
-		while (abs(OffsetMicros) >= MaxOffsetMicros)
+		if (offset >= 0)
 		{
-			if (OffsetMicros >= MaxOffsetMicros)
+			OffsetMicros += offset - OffsetChunk;
+
+			while (OffsetMicros > ONE_SECOND_MICROS)
 			{
-				OffsetMicros -= OneSecondMicros;
-				Seconds += OneSecond;
-			}
-			else if (abs(OffsetMicros) <= MaxOffsetMicros)
-			{
-				OffsetMicros += OneSecondMicros;
-				Seconds -= OneSecond;
+				OffsetSeconds++;
+				LastTick = GetMicros();
+				OffsetMicros -= ONE_SECOND_MICROS;
 			}
 		}
+		else
+		{
+			DeferredOffsetMicros = min(DeferredOffsetMicros - offset, ONE_SECOND_MICROS);
+		}
+	}
+
+	void SetDriftCompensationMicros(const int32_t driftMicros)
+	{
+		DriftCompensationMicros = constrain(driftMicros, -MAX_DRIFT_MICROS, MAX_DRIFT_MICROS);
+		OnDriftUpdated(DriftCompensationMicros);
+	}
+
+	int32_t GetDriftCompensationMicros()
+	{
+		return DriftCompensationMicros;
 	}
 
 	void AddDriftCompensationMicros(const int32_t driftMicros)
 	{
-		DriftCompensationMicros += constrain(driftMicros, -MaxDriftMicros, MaxDriftMicros);
+		DriftCompensationMicros = constrain(DriftCompensationMicros + driftMicros, -MAX_DRIFT_MICROS, MAX_DRIFT_MICROS);
+		OnDriftUpdated(DriftCompensationMicros);
+	}
 
-		DriftCompensationMicros = constrain(DriftCompensationMicros, -MaxDriftMicros, MaxDriftMicros);
-		Serial.print(F("Adjusted drift: "));
-		Serial.println(DriftCompensationMicros);
+	uint32_t GetSyncMicrosFull()
+	{
+		asm volatile("nop"); //allow interrupt to fire
+		asm volatile("nop");
+
+		return (OffsetSeconds*ONE_SECOND_MICROS) + GetElapsedMicros() + OffsetMicros - DeferredOffsetMicros;
 	}
 
 	uint32_t GetSyncMicros()
 	{
-		return GetPrunedSecondsInMicros() + GetElapsedMicros() + OffsetMicros;
+		asm volatile("nop"); //allow interrupt to fire
+		asm volatile("nop");
+
+		return (OffsetSeconds*ONE_SECOND_MICROS) + GetElapsedMicros() + OffsetMicros;
 	}
 
 private:
-	uint32_t GetPrunedSecondsInMicros()
+	inline uint32_t GetElapsedMicros()
 	{
-		return (Seconds) * OneSecondMicros;
+		return GetMicros() - LastTick;
 	}
 };
 
