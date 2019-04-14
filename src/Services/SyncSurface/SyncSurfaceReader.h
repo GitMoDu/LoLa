@@ -12,6 +12,8 @@ private:
 	SyncMetaPacketDefinition<BasePacketHeader> SyncMetaDefinition;
 	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
 
+	uint32_t LastUpdateReceived = ILOLA_INVALID_MILLIS;
+
 public:
 	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
 		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
@@ -47,6 +49,8 @@ protected:
 		default:
 			break;
 		}
+
+		LastUpdateReceived = millis();
 	}
 
 	void OnStateUpdated(const AbstractSync::SyncStateEnum newState)
@@ -54,6 +58,7 @@ protected:
 		switch (newState)
 		{
 		case SyncStateEnum::Syncing:
+			LastUpdateReceived = ILOLA_INVALID_MILLIS;
 			TrackedSurface->GetTracker()->SetAll();
 			break;
 		case SyncStateEnum::Synced:
@@ -66,7 +71,7 @@ protected:
 				NotifyDataChanged();
 			}
 			break;
-		case SyncStateEnum::Disabled:
+		case SyncStateEnum::Disabled:			
 			TrackedSurface->SetDataGood(false);
 			break;
 		default:
@@ -96,7 +101,25 @@ protected:
 
 	void OnSyncActive()
 	{
-		SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
+		if (LastUpdateReceived != ILOLA_INVALID_MILLIS && millis() - LastUpdateReceived > ABSTRACT_SURFACE_RECEIVE_FAILED_PERIDO)
+		{
+			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
+			{
+				PrepareInvalidateRequestPacket();
+				RequestSendPacket();
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+				Serial.println(F("Surface Reader Recovery!"));
+#endif
+			}
+			else
+			{
+				SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+			}
+		}
+		else
+		{
+			SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
+		}
 	}
 
 	void OnUpdateFinishedReceived()
