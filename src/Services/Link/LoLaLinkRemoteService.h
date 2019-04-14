@@ -63,7 +63,6 @@ protected:
 			InfoSyncStage = InfoSyncStagesEnum::AwaitingHostRequest;
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
-			ClockSyncer.SetReadyForEstimation();
 			break;
 		default:
 			break;

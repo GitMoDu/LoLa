@@ -39,8 +39,6 @@ private:
 	//Session lifetime.
 	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
 
-	//Helper.
-	uint32_t ElapsedMicrosSinceReceivedHelper;
 
 public:
 	LoLaLinkHostService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
@@ -409,9 +407,7 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
-			ElapsedMicrosSinceReceivedHelper = micros() - LoLaDriver->GetLastValidReceivedMicros();
-
-			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + ElapsedMicrosSinceReceivedHelper - estimatedMicros);
+			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + (micros() - LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros);
 			SetNextRunASAP();
 
 			switch (LinkingState)
@@ -435,11 +431,9 @@ protected:
 
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros)
 	{
-		ElapsedMicrosSinceReceivedHelper = micros() - LoLaDriver->GetLastValidReceivedMicros();
-
 		if (LinkInfo->HasLink())
 		{
-			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + ElapsedMicrosSinceReceivedHelper - estimatedMicros);
+			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + (micros() - LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros);
 			SetNextRunASAP();
 		}
 	}

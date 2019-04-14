@@ -42,13 +42,13 @@ protected:
 		}
 	}
 
-	//void SetDriftCompensationMicros(const int32_t drift)
-	//{
-	//	if (SyncedClock != nullptr)
-	//	{
-	//		SyncedClock->SetDriftCompensationMicros(drift);
-	//	}
-	//}
+	void SetDriftCompensationMicros(const int32_t drift)
+	{
+		if (SyncedClock != nullptr)
+		{
+			SyncedClock->SetDriftCompensationMicros(drift);
+		}
+	}
 
 	void AddDriftCompensationMicros(const int32_t drift)
 	{
@@ -170,6 +170,39 @@ public:
 		SampleGrunt.ErrorMicros = estimationErrorMicros;
 		LastTuneReceivedMillis = millis();
 
+		AddOffsetMicros(SampleGrunt.ErrorMicros);
+
+		if (abs(SampleGrunt.ErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+		{
+			LastGreatSync = millis();
+			TuneErrorStatistics.AddTuneSample(SampleGrunt);
+			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 100)));
+			TuneDiscard = 0;
+		}
+		else if (abs(SampleGrunt.ErrorMicros) < MAX_TUNE_ERROR_MICROS &&
+			abs(TuneErrorStatistics.GetAverageError()) < MAX_TUNE_ERROR_MICROS)
+		{
+			TuneErrorStatistics.AddTuneSample(SampleGrunt);			
+			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 120)));
+			LastGreatSync = ILOLA_INVALID_MILLIS;
+		}
+		else if (abs(TuneErrorStatistics.GetAverageError()) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS &&
+			TuneErrorStatistics.GetWeightedAverageDurationMillis() > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD &&
+			TuneDiscard < MAX_TUNE_DISCARD_COUNT)
+		{
+			TuneDiscard++;
+			if (LastGreatSync != ILOLA_INVALID_MILLIS)
+			{
+				LastGreatSync = min(millis(), LastGreatSync + SampleGrunt.PeriodMillis);
+			}
+		}
+		else
+		{			
+			TuneErrorStatistics.AddTuneSample(SampleGrunt);
+			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetAverageError() / (int64_t)(45)));
+			LastGreatSync = ILOLA_INVALID_MILLIS;
+		}
+
 		Serial.print("EPeriod: ");
 		Serial.println(SampleGrunt.PeriodMillis);
 		Serial.print("Error: ");
@@ -178,44 +211,12 @@ public:
 		Serial.println(TuneErrorStatistics.GetAverageError());
 		Serial.print("AWError: ");
 		Serial.println(TuneErrorStatistics.GetWeightedAverageError());
-
-
-		AddOffsetMicros(SampleGrunt.ErrorMicros);
-
-		if (abs(SampleGrunt.ErrorMicros) < MAX_FINE_TUNE_ERROR_MICROS)
-		{
-			LastGreatSync = millis();
-			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(int64_t)(10 + TuneErrorStatistics.GetWeightedAverageDurationMillis() / 1000)));
-			TuneDiscard = 0;
-		}
-		else if (abs(SampleGrunt.ErrorMicros) < MAX_TUNE_ERROR_MICROS)
-		{
-			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(5 + TuneErrorStatistics.GetWeightedAverageDurationMillis() / 1000)));
-			LastGreatSync = ILOLA_INVALID_MILLIS;
-		}
-		else if (TuneErrorStatistics.GetAverageError() < MAX_TUNE_ERROR_MICROS &&
-			TuneErrorStatistics.GetWeightedAverageDurationMillis() > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD &&
-			TuneDiscard < MAX_TUNE_DISCARD_COUNT)
-		{
-			Serial.println("______Skipped a sample drift.__________");
-			TuneDiscard++;
-		}
-		else
-		{			
-			
-			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 1000)));
-			LastGreatSync = ILOLA_INVALID_MILLIS;
-		}
-
 		Serial.print("Estimated drift: ");
 		Serial.println(SyncedClock->GetDriftCompensationMicros());
 		Serial.print("ClockSync Quality: ");
 		Serial.println(GetNormalizedClockQuality());
 
-		if (abs(estimationErrorMicros) < MAX_FINE_TUNE_ERROR_MICROS)
+		if (abs(estimationErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
 		{
 			StampSyncGood();
 			StampSynced();
@@ -232,7 +233,7 @@ public:
 	uint8_t GetNormalizedClockQuality()
 	{
 		if(LastGreatSync == ILOLA_INVALID_MILLIS ||
-			TuneErrorStatistics.GetAverageError() > MAX_FINE_TUNE_ERROR_MICROS ||
+			TuneErrorStatistics.GetAverageError() > LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS ||
 			TuneErrorStatistics.GetWeightedAverageDurationMillis() < LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD )
 		{
 			return 0;
