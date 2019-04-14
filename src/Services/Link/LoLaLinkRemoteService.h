@@ -35,7 +35,6 @@ public:
 		, RemoteClockSyncTransaction()
 	{
 		ClockSyncerPointer = &ClockSyncer;
-		ClockSyncTransaction = &RemoteClockSyncTransaction;
 		driver->SetDuplexSlot(false);
 	}
 

@@ -45,7 +45,6 @@ public:
 		, HostClockSyncTransaction()	
 	{
 		ClockSyncerPointer = &ClockSyncer;
-		ClockSyncTransaction = &HostClockSyncTransaction;
 		driver->SetDuplexSlot(true);
 	}
 protected:
