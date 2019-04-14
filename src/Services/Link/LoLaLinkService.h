@@ -50,7 +50,6 @@ protected:
 
 	//Synced Clock.
 	LoLaLinkClockSyncer* ClockSyncerPointer = nullptr;
-	IClockSyncTransaction* ClockSyncTransaction = nullptr;
 
 	//Shared Sub state helpers.
 	uint32_t SubStateStart = ILOLA_INVALID_MILLIS;
@@ -123,7 +122,6 @@ protected:
 	bool OnSetup()
 	{
 		if (IPacketSendService::OnSetup() &&
-			ClockSyncTransaction != nullptr &&
 			ClockSyncerPointer != nullptr &&
 			ServicesManager != nullptr &&
 			KeyExchanger.Setup() &&
@@ -347,11 +345,6 @@ protected:
 		if (ClockSyncerPointer != nullptr)
 		{
 			ClockSyncerPointer->Reset();
-		}
-
-		if (ClockSyncTransaction != nullptr)
-		{
-			ClockSyncTransaction->Reset();
 		}
 
 		if (LinkInfo != nullptr)
