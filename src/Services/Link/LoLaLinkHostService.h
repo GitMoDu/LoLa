@@ -39,6 +39,9 @@ private:
 	//Session lifetime.
 	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
 
+	//Helper.
+	uint32_t ElapsedMicrosSinceReceivedHelper;
+
 public:
 	LoLaLinkHostService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
 		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
@@ -432,10 +435,11 @@ protected:
 
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros)
 	{
+		ElapsedMicrosSinceReceivedHelper = micros() - LoLaDriver->GetLastValidReceivedMicros();
+
 		if (LinkInfo->HasLink())
 		{
-			HostClockSyncTransaction.SetResult(requestId,
-				(int32_t)(LoLaDriver->GetClockSource()->GetSyncMicros(LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros));
+			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + ElapsedMicrosSinceReceivedHelper - estimatedMicros);
 			SetNextRunASAP();
 		}
 	}
