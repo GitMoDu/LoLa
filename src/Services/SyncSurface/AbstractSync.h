@@ -8,18 +8,20 @@
 #include <Arduino.h>
 #include <Services\IPacketSendService.h>
 #include <Services\SyncSurface\ITrackedSurface.h>
+#include <Callback.h>
 
 #define ABSTRACT_SURFACE_DEFAULT_HASH 0
 
 #define ABSTRACT_SURFACE_MAX_ELAPSED_NO_DISCOVERY_MILLIS	(uint32_t)500
 
 #define ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS			(uint32_t)1
-#define ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS			(uint32_t)200
+#define ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS			(uint32_t)100
 
 #define ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD		(uint32_t)50
 #define ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS		(uint32_t)0
 #define ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS	(uint32_t)20
 #define ABSTRACT_SURFACE_SEND_FAILED_RETRY_PERIDO			(uint32_t)100
+#define ABSTRACT_SURFACE_RECEIVE_FAILED_PERIDO				(ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS*4)
 
 
 class AbstractSync : public IPacketSendService
@@ -262,7 +264,17 @@ protected:
 			OnSyncActive();
 			break;
 		case SyncStateEnum::Synced:
-			SetNextRunLong();
+			if (GetSurface()->GetTracker()->HasSet())
+			{
+				UpdateSyncState(SyncStateEnum::Syncing);
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+				Serial.println(F("Abstract Sync Recovery!"));
+#endif
+			}
+			else
+			{
+				SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
+			}
 			break;
 		case SyncStateEnum::Disabled:
 		default:
