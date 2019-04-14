@@ -297,8 +297,8 @@ protected:
 			break;
 		case LinkingStagesEnum::LinkProtocolSwitchOver:
 			ClockSyncer.SetSynced();
-			SetLinkingState(LinkingStagesEnum::LinkingDone);//Nothing to do here.
-			SetNextRunDelay(LoLaDriver->GetETTMMicros()/(uint32_t)1000);
+			SetLinkingState(LinkingStagesEnum::LinkingDone);
+			SetNextRunDelay(LoLaDriver->GetETTMMicros() / (uint32_t)1000);//No point in switching to linked, before the host has had a chance to receive the ack.
 			break;
 		case LinkingStagesEnum::LinkingDone:
 			//All linking stages complete, we have a link.
