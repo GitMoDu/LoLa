@@ -2,35 +2,30 @@
 
 #include <LoLaClock\RTCClockSource.h>
 
-
-
 RTCClockSource* StaticRTC = nullptr;
 
-static void OnRTCInterrupt()
+static void StaticRTCInterrupt()
 {
-	StaticRTC->OnInterrupt();
+	StaticRTC->Tick();
+}
+
+static void StaticTimerInterrupt()
+{
+	StaticRTC->TimerInterrupt();
 }
 
 ////////////////
 RTCClockSource::RTCClockSource()
-	: RTC(RTCSEL_LSI), ILoLaClockSource()
+	: RTC(RTCSEL_LSI), LoLaTimerClockSource()
 {
 	StaticRTC = this;
 }
 
 void RTCClockSource::Attach()
 {
-	RTC.attachSecondsInterrupt(OnRTCInterrupt);
-}
-
-void RTCClockSource::Start()
-{
-	if (!Attached)
-	{
-		Attached = true;
-		Attach();
-		SetTimeSeconds(RTC.getTime());
-	}
+	LoLaTimerClockSource::Attach();
+	RTC.attachSecondsInterrupt(StaticRTCInterrupt);//TODO: Move to TimerSource.cpp
+	Timer1.attachInterrupt(0, StaticTimerInterrupt);
 }
 
 uint32_t RTCClockSource::GetUTCSeconds() 
@@ -38,7 +33,9 @@ uint32_t RTCClockSource::GetUTCSeconds()
 	return RTC.getTime();
 }
 
-void RTCClockSource::OnInterrupt()
+void RTCClockSource::SetUTCSeconds(const uint32_t secondsUTC)
 {
-	Tick();
+	RTC.setTime((time_t)secondsUTC);
 }
+
+
