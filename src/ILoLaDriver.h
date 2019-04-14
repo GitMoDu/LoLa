@@ -105,7 +105,7 @@ protected:
 	};
 
 public:
-	ILoLaDriver() : PacketMap(), SyncedClock()
+	ILoLaDriver() : PacketMap(), CryptoEncoder(), SyncedClock()
 	{
 	}
 

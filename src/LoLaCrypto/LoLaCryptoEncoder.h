@@ -45,6 +45,8 @@ private:
 
 	///CRC validation.
 	FastCRC16 CRC16;
+#define DataCRC( data, length ) CRC16.modbus(data, length)
+
 	///
 
 
@@ -60,6 +62,10 @@ private:
 	}
 
 public:
+	LoLaCryptoEncoder()
+	{
+	}
+
 	inline void ResetCypherBlock()
 	{
 		Cypher.setKey(KeyHolder, sizeof(KeyHolder));
@@ -76,7 +82,7 @@ public:
 			Cypher.encrypt(message, message, messageLength);
 		}
 
-		return CRC16.modbus(message, messageLength);
+		return DataCRC(message, messageLength);
 	}
 
 	//Returns 8 bit MAC/CRC.
@@ -92,13 +98,13 @@ public:
 			memcpy(outputMessage, message, messageLength);
 		}
 
-		return CRC16.modbus(outputMessage, messageLength);
+		return DataCRC(outputMessage, messageLength);
 	}
 
 	//Returns 8 bit MAC/CRC.
 	uint8_t Decode(uint8_t* message, const uint8_t messageLength, const uint16_t crc)
 	{
-		if (crc != CRC16.modbus(message, messageLength))
+		if (crc != DataCRC(message, messageLength))
 		{
 			return false;
 		}
