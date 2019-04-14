@@ -25,11 +25,9 @@ protected:
 	uint32_t PKCDuration = 0;
 
 private:
-	uint32_t NextDebug = 0;
-#else
-private:
+	LinkDebugTask DebugTask;
 #endif
-
+private:
 	//Sub-services.
 	LoLaLinkTimedHopper TimedHopper;
 
@@ -98,6 +96,9 @@ public:
 		, ChannelManager()
 		, PowerBalancer()
 		, KeyExchanger()
+#ifdef DEBUG_LOLA
+		, DebugTask(servicesScheduler)
+#endif
 	{
 	}
 
@@ -144,6 +145,9 @@ protected:
 				{
 					ClearSession();
 #ifdef DEBUG_LOLA
+
+					DebugTask.Setup(LoLaDriver, LinkInfo);
+
 					Serial.print(F("Local MAC: "));
 					LinkInfo->PrintMac(&Serial);
 					Serial.println();
@@ -313,28 +317,6 @@ private:
 		{
 			OnKeepingLink();
 		}
-
-#ifdef LOLA_LINK_ACTIVITY_LED
-		if (!digitalRead(LOLA_LINK_ACTIVITY_LED))
-		{
-			if (millis() - LastSentMillis > 50)
-			{
-				digitalWrite(LOLA_LINK_ACTIVITY_LED, HIGH);
-			}
-		}
-#endif
-
-#ifdef DEBUG_LOLA
-		if (LinkInfo->HasLink())
-		{
-			if (LinkInfo->GetLinkDurationSeconds() >= NextDebug)
-			{
-				DebugLinkStatistics(&Serial);
-
-				NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
-			}
-		}
-#endif
 	}
 
 protected:
@@ -360,10 +342,6 @@ protected:
 		InfoSyncStage = 0;
 
 		OnClearSession();
-
-#ifdef DEBUG_LOLA
-		NextDebug = LinkInfo->GetLinkDurationSeconds() + 10;
-#endif
 	}
 
 	void UpdateLinkState(const LoLaLinkInfo::LinkStateEnum newState)
@@ -374,6 +352,7 @@ protected:
 			if (newState == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
 				LinkingDuration = GetElapsedMillisSinceStateStart();
+				DebugTask.OnLinkOn();
 			}
 #endif
 			ResetStateStartTime();
@@ -383,7 +362,7 @@ protected:
 			if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
 #ifdef DEBUG_LOLA
-				DebugLinkStatistics(&Serial);
+				DebugTask.OnLinkOff();
 #endif
 				//Notify all link dependent services to stop.
 				ClearSession();
@@ -599,16 +578,95 @@ protected:
 		OutPacket.GetPayload()[1] = LoLaDriver->GetReceivedCount() % UINT8_MAX;
 	}
 
+#ifdef DEBUG_LOLA
+private:
+
+
+	void DebugLinkEstablished()
+	{
+		Serial.print(F("Linked: "));
+		Serial.println(LoLaDriver->GetClockSource()->GetSyncSeconds());
+		Serial.print(F(" @ SyncMicros: "));
+		Serial.println(LoLaDriver->GetClockSource()->GetSyncMicros());
+		Serial.print(F("Linking took "));
+		Serial.print(LinkingDuration);
+		Serial.println(F(" ms."));
+		Serial.print(F("Round Trip Time: "));
+		Serial.print(LinkInfo->GetRTT());
+		Serial.println(F(" us"));
+		Serial.print(F("Latency compensation: "));
+		Serial.print(LoLaDriver->GetETTMMicros());
+		Serial.println(F(" us"));
+	}
+#endif
+};
 
 #ifdef DEBUG_LOLA
+class LinkDebugTask : Task
+{
+private:
+	uint32_t NextDebug = 0;
+
+	LoLaLinkInfo* LinkInfo = nullptr;
+	ILoLaDriver* LoLaDriver = nullptr;
+
+public:
+	LinkDebugTask(Scheduler* scheduler)
+		: Task(10, TASK_FOREVER, scheduler, false)
+	{
+	}
+
+	bool Setup(ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
+	{
+		LinkInfo = linkInfo;
+		LoLaDriver = driver;
+	}
+
+	void OnLinkOn()
+	{
+		enable();
+		NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
+	}
+
+	void OnLinkOff()
+	{
+		disable();
+		DebugLinkStatistics(&Serial);
+	}
+
+	bool OnEnable()
+	{
+		return LinkInfo != nullptr && LoLaDriver != nullptr;
+	}
+
+	bool Callback()
+	{
+#ifdef LOLA_LINK_ACTIVITY_LED
+		if (!digitalRead(LOLA_LINK_ACTIVITY_LED))
+		{
+			if (millis() - LastSentMillis > 50)
+			{
+				digitalWrite(LOLA_LINK_ACTIVITY_LED, HIGH);
+			}
+		}
+#endif
+
+		if (LinkInfo->GetLinkDurationSeconds() >= NextDebug)
+		{
+			DebugLinkStatistics(&Serial);
+
+			NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
+			return true;
+		}
+
+		return false;
+	}
+
 private:
 	void DebugLinkStatistics(Stream* serial)
 	{
 		serial->println();
 		serial->println(F("Link Info"));
-
-
-		serial->print(F("UpTime: "));
 
 		uint32_t AliveSeconds = LinkInfo->GetLinkDurationSeconds();
 
@@ -632,7 +690,9 @@ private:
 		serial->println((AliveSeconds % 3600) % 60);
 
 		serial->print(F("ClockSync: "));
-		serial->println(LoLaDriver->GetClockSource()->GetSyncMicros()/1000);
+		serial->println(LoLaDriver->GetClockSource()->GetSyncSeconds());
+		serial->print(F(" @ Offset: "));
+		serial->println(LoLaDriver->GetClockSource()->GetSyncMicros());
 
 
 		serial->print(F("Transmit Power: "));
@@ -676,22 +736,9 @@ private:
 		serial->println(LinkInfo->GetClockSyncAdjustments());
 		serial->println();
 	}
-
-	void DebugLinkEstablished()
-	{
-		Serial.print(F("Linked: "));
-		Serial.println(LoLaDriver->GetClockSource()->GetSyncMicros() / 1000);
-		Serial.print(F("Linking took "));
-		Serial.print(LinkingDuration);
-		Serial.println(F(" ms."));
-		Serial.print(F("Round Trip Time: "));
-		Serial.print(LinkInfo->GetRTT());
-		Serial.println(F(" us"));
-		Serial.print(F("Latency compensation: "));
-		Serial.print(LoLaDriver->GetETTMMicros());
-		Serial.println(F(" us"));
-	}
+};
 #endif
 
-};
+
+
 #endif
