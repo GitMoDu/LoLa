@@ -26,12 +26,10 @@ private:
 	{
 		Done = 0,
 		SendingPacket = 1,
-		WaitingForSentOk = 2,
-		SentOk = 3,
+		WaitingForSendOk = 2,
+		SendOk = 3,
 		SendFailed = 4,
-		WaitingForAck = 5,
-		AckOk = 6,
-		AckFailed = 7
+		WaitingForAck = 5
 	} SendStatus = SendStatusEnum::Done;
 
 	uint8_t SendFailures = 0;
@@ -56,7 +54,7 @@ protected:
 	virtual void OnService() { SetNextRunDelay(LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS); }
 	virtual void OnSendTimedOut() { SetNextRunASAP(); }
 	virtual void OnSendDelayed() { }
-	virtual void OnSendRetrying() { }
+	virtual void OnSendRetrying() { SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS); }
 	virtual void OnPreSend() { }
 	virtual bool OnEnable() { return true; }
 	virtual void OnDisable() { }
@@ -77,10 +75,10 @@ public:
 	{
 		if (HasSendPendingInternal() &&
 			Packet->GetDataHeader() == header &&
-			SendStatus == SendStatusEnum::WaitingForSentOk)
+			SendStatus == SendStatusEnum::WaitingForSendOk)
 		{
 			//Notify sent Ok will be fired, as soon as the service runs.
-			SendStatus = SendStatusEnum::SentOk;
+			SendStatus = SendStatusEnum::SendOk;
 			SetNextRunASAP();
 			return true;
 		}
@@ -122,7 +120,7 @@ public:
 			//SendPacket is quite time consuming.
 			if (SendPacket(Packet))
 			{
-				SendStatus = SendStatusEnum::WaitingForSentOk;
+				SendStatus = SendStatusEnum::WaitingForSendOk;
 				SetNextRunDelay(SendTimeOutDuration - constrain(millis() - SendStartMillis, 0, SendTimeOutDuration));
 			}
 			else
@@ -135,16 +133,15 @@ public:
 				}
 				else
 				{
-					SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
 					OnSendRetrying();
 				}
 			}
 			break;
-		case SendStatusEnum::WaitingForSentOk:
+		case SendStatusEnum::WaitingForSendOk:
 			SendStatus = SendStatusEnum::SendFailed;
 			SetNextRunASAP();
 			break;
-		case SendStatusEnum::SentOk:
+		case SendStatusEnum::SendOk:
 			OnSendOk(Packet->GetDataHeader(), millis() - SendStartMillis);
 			if (Packet->GetDefinition()->HasACK())
 			{
@@ -161,14 +158,6 @@ public:
 			ClearSendRequest();
 			break;
 		case SendStatusEnum::WaitingForAck:
-			SendStatus = SendStatusEnum::AckFailed;
-			SetNextRunASAP();
-			break;
-		case SendStatusEnum::AckOk:
-			OnAckReceived(Packet->GetDataHeader(), Packet->GetId());
-			ClearSendRequest();
-			break;
-		case SendStatusEnum::AckFailed:
 			OnAckFailed(Packet->GetDataHeader(), Packet->GetId());
 			ClearSendRequest();
 			break;
@@ -214,19 +203,13 @@ public:
 	bool ProcessAck(const uint8_t header, const uint8_t id)
 	{
 		//Make sure we eat out own packets.
-		if (Packet->GetDataHeader() == header)
+		if (HasSendPendingInternal() && Packet->GetDataHeader() == header)
 		{
 			if (SendStatus == SendStatusEnum::WaitingForAck &&
-				HasSendPendingInternal())
+				Packet->GetId() == id)
 			{
-				if (Packet->GetId() != id)
-				{
-					return false;
-				}
-
-				//Notify Ack received will be fired, as soon as the service runs.
-				SendStatus = SendStatusEnum::AckOk;
-				SetNextRunASAP();
+				OnAckReceived(header, id);
+				ClearSendRequest();
 			}
 
 			return true;
