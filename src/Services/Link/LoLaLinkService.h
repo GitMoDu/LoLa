@@ -39,9 +39,6 @@ private:
 	//Power balancer.
 	LoLaLinkPowerBalancer PowerBalancer;
 
-	//Crypto Token.
-	ITokenSource* CryptoToken = nullptr;
-
 	//Link report tracking.
 	bool ReportPending = false;
 
@@ -135,9 +132,8 @@ protected:
 			TimedHopper.Setup(&ChannelManager))
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
-			CryptoToken = TimedHopper.GetTokenSource();
 
-			if (LinkInfo != nullptr && CryptoToken != nullptr)
+			if (LinkInfo != nullptr && TimedHopper.GetTokenSource() != nullptr)
 			{
 				LinkInfo->SetDriver(LoLaDriver);
 				LinkInfo->Reset();
@@ -364,7 +360,7 @@ protected:
 		}
 
 		LoLaDriver->GetCryptoEncoder()->Clear();
-		CryptoToken->SetSeed(0);
+		TimedHopper.GetTokenSource()->SetSeed(0);
 
 		KeyExchanger.ClearPartner();
 
@@ -432,7 +428,7 @@ protected:
 				break;
 			case LoLaLinkInfo::LinkStateEnum::Linking:
 				SetLinkingState(0);
-				CryptoToken->SetSeed(LoLaDriver->GetCryptoEncoder()->GetSeed());
+				TimedHopper.GetTokenSource()->SetSeed(LoLaDriver->GetCryptoEncoder()->GetSeed());
 				if (!LoLaDriver->GetCryptoEncoder()->SetEnabled())
 				{
 #ifdef DEBUG_LOLA				
