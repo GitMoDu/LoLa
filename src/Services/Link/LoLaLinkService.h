@@ -17,6 +17,144 @@
 
 #include <Services\Link\LoLaLinkTimedHopper.h>
 
+#ifdef DEBUG_LOLA
+class LinkDebugTask : Task
+{
+private:
+	uint32_t NextDebug = 0;
+
+	LoLaLinkInfo* LinkInfo = nullptr;
+	ILoLaDriver* LoLaDriver = nullptr;
+
+public:
+	LinkDebugTask(Scheduler* scheduler)
+		: Task(10, TASK_FOREVER, scheduler, false)
+	{
+	}
+
+	bool Setup(ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
+	{
+		LinkInfo = linkInfo;
+		LoLaDriver = driver;
+	}
+
+	void OnLinkOn()
+	{
+		enable();
+		NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
+	}
+
+	void OnLinkOff()
+	{
+		disable();
+		DebugLinkStatistics(&Serial);
+	}
+
+	bool OnEnable()
+	{
+		return LinkInfo != nullptr && LoLaDriver != nullptr;
+	}
+
+	bool Callback()
+	{
+#ifdef LOLA_LINK_ACTIVITY_LED
+		if (!digitalRead(LOLA_LINK_ACTIVITY_LED))
+		{
+			if (millis() - LastSentMillis > 50)
+			{
+				digitalWrite(LOLA_LINK_ACTIVITY_LED, HIGH);
+			}
+		}
+#endif
+
+		if (LinkInfo->GetLinkDurationSeconds() >= NextDebug)
+		{
+			DebugLinkStatistics(&Serial);
+
+			NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
+			return true;
+		}
+
+		return false;
+	}
+
+private:
+	void DebugLinkStatistics(Stream* serial)
+	{
+		serial->println();
+		serial->println(F("Link Info"));
+
+		uint32_t AliveSeconds = LinkInfo->GetLinkDurationSeconds();
+
+		if (AliveSeconds / 86400 > 0)
+		{
+			serial->print(AliveSeconds / 86400);
+			serial->print(F("d "));
+			AliveSeconds = AliveSeconds % 86400;
+		}
+
+		if (AliveSeconds / 3600 < 10)
+			serial->print('0');
+		serial->print(AliveSeconds / 3600);
+		serial->print(':');
+		if ((AliveSeconds % 3600) / 60 < 10)
+			serial->print('0');
+		serial->print((AliveSeconds % 3600) / 60);
+		serial->print(':');
+		if ((AliveSeconds % 3600) % 60 < 10)
+			serial->print('0');
+		serial->println((AliveSeconds % 3600) % 60);
+
+		serial->print(F("ClockSync: "));
+		serial->println(LoLaDriver->GetClockSource()->GetSyncSeconds());
+		serial->print(F(" @ Offset: "));
+		serial->println(LoLaDriver->GetClockSource()->GetSyncMicros());
+
+
+		serial->print(F("Transmit Power: "));
+		serial->print((float)(((LinkInfo->GetTransmitPowerNormalized() * 100) / UINT8_MAX)), 0);
+		serial->println(F(" %"));
+
+		serial->print(F("RSSI: "));
+		serial->print((float)(((LinkInfo->GetRSSINormalized() * 100) / UINT8_MAX)), 0);
+		serial->println(F(" %"));
+		serial->print(F("RSSI Partner: "));
+		serial->print((float)(((LinkInfo->GetPartnerRSSINormalized() * 100) / UINT8_MAX)), 0);
+		serial->println(F(" %"));
+
+		serial->print(F("Sent: "));
+		serial->println(LoLaDriver->GetTransmitedCount());
+		serial->print(F("Lost: "));
+		serial->println(LinkInfo->GetLostCount());
+		serial->print(F("Received: "));
+		serial->println(LoLaDriver->GetReceivedCount());
+		serial->print(F("Rejected: "));
+		serial->print(LoLaDriver->GetRejectedCount());
+
+		serial->print(F(" ("));
+		if (LoLaDriver->GetReceivedCount() > 0)
+		{
+			serial->print((float)(LoLaDriver->GetRejectedCount() * 100) / (float)LoLaDriver->GetReceivedCount(), 2);
+			serial->println(F(" %)"));
+		}
+		else if (LoLaDriver->GetRejectedCount() > 0)
+		{
+			serial->println(F("100 %)"));
+		}
+		else
+		{
+			serial->println(F("0 %)"));
+		}
+		serial->print(F("Timming Collision: "));
+		serial->println(LoLaDriver->GetTimingCollisionCount());
+
+		serial->print(F("ClockSync adjustments: "));
+		serial->println(LinkInfo->GetClockSyncAdjustments());
+		serial->println();
+	}
+};
+#endif
+
 class LoLaLinkService : public AbstractLinkService
 {
 #ifdef DEBUG_LOLA
@@ -54,7 +192,13 @@ protected:
 	uint8_t LinkingState = 0;
 	uint8_t InfoSyncStage = 0;
 
+
 protected:
+
+	///Internal housekeeping.
+	virtual void OnClearSession() {}
+	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
+
 	///Host packet handling.
 	//Unlinked packets.
 	virtual void OnLinkDiscoveryReceived() {}
@@ -65,6 +209,7 @@ protected:
 	virtual void OnRemoteInfoSyncReceived(const uint8_t rssi) {}
 	virtual void OnHostInfoSyncRequestReceived() {}
 	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros) {}
+	virtual void OnClockUTCRequestReceived(const uint8_t requestId) {}
 	virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros) {}
 	///
 
@@ -76,12 +221,9 @@ protected:
 	//Linked packets.
 	virtual void OnHostInfoSyncReceived(const uint8_t rssi, const uint16_t rtt) {}
 	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros) {}
+	virtual void OnClockUTCResponseReceived(const uint8_t requestId, const uint32_t secondsUTC) {}
 	virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros) {}
 	///
-
-	//Internal housekeeping.
-	virtual void OnClearSession() {};
-	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
 
 	//Runtime handlers.
 	virtual void OnLinking() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
@@ -471,15 +613,24 @@ protected:
 				///
 
 				///Linking Packets
+				//To Host
 			case LOLA_LINK_SUBHEADER_NTP_REQUEST:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnClockSyncRequestReceived(receivedPacket->GetId(), ATUI_R.uint);
+				break;
+			case LOLA_LINK_SUBHEADER_UTC_REQUEST:
+				OnClockUTCRequestReceived(receivedPacket->GetId());
 				break;
 
 				//To Remote.
 			case LOLA_LINK_SUBHEADER_NTP_REPLY:
 				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
 				OnClockSyncResponseReceived(receivedPacket->GetId(), ATUI_R.iint);
+				break;
+
+			case LOLA_LINK_SUBHEADER_UTC_REPLY:
+				ArrayToR_Array(&receivedPacket->GetPayload()[1]);
+				OnClockUTCResponseReceived(receivedPacket->GetId(), ATUI_R.uint);
 				break;
 				///
 
@@ -600,145 +751,4 @@ private:
 	}
 #endif
 };
-
-#ifdef DEBUG_LOLA
-class LinkDebugTask : Task
-{
-private:
-	uint32_t NextDebug = 0;
-
-	LoLaLinkInfo* LinkInfo = nullptr;
-	ILoLaDriver* LoLaDriver = nullptr;
-
-public:
-	LinkDebugTask(Scheduler* scheduler)
-		: Task(10, TASK_FOREVER, scheduler, false)
-	{
-	}
-
-	bool Setup(ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
-	{
-		LinkInfo = linkInfo;
-		LoLaDriver = driver;
-	}
-
-	void OnLinkOn()
-	{
-		enable();
-		NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
-	}
-
-	void OnLinkOff()
-	{
-		disable();
-		DebugLinkStatistics(&Serial);
-	}
-
-	bool OnEnable()
-	{
-		return LinkInfo != nullptr && LoLaDriver != nullptr;
-	}
-
-	bool Callback()
-	{
-#ifdef LOLA_LINK_ACTIVITY_LED
-		if (!digitalRead(LOLA_LINK_ACTIVITY_LED))
-		{
-			if (millis() - LastSentMillis > 50)
-			{
-				digitalWrite(LOLA_LINK_ACTIVITY_LED, HIGH);
-			}
-		}
-#endif
-
-		if (LinkInfo->GetLinkDurationSeconds() >= NextDebug)
-		{
-			DebugLinkStatistics(&Serial);
-
-			NextDebug = LinkInfo->GetLinkDurationSeconds() + LOLA_LINK_DEBUG_UPDATE_SECONDS;
-			return true;
-		}
-
-		return false;
-	}
-
-private:
-	void DebugLinkStatistics(Stream* serial)
-	{
-		serial->println();
-		serial->println(F("Link Info"));
-
-		uint32_t AliveSeconds = LinkInfo->GetLinkDurationSeconds();
-
-		if (AliveSeconds / 86400 > 0)
-		{
-			serial->print(AliveSeconds / 86400);
-			serial->print(F("d "));
-			AliveSeconds = AliveSeconds % 86400;
-		}
-
-		if (AliveSeconds / 3600 < 10)
-			serial->print('0');
-		serial->print(AliveSeconds / 3600);
-		serial->print(':');
-		if ((AliveSeconds % 3600) / 60 < 10)
-			serial->print('0');
-		serial->print((AliveSeconds % 3600) / 60);
-		serial->print(':');
-		if ((AliveSeconds % 3600) % 60 < 10)
-			serial->print('0');
-		serial->println((AliveSeconds % 3600) % 60);
-
-		serial->print(F("ClockSync: "));
-		serial->println(LoLaDriver->GetClockSource()->GetSyncSeconds());
-		serial->print(F(" @ Offset: "));
-		serial->println(LoLaDriver->GetClockSource()->GetSyncMicros());
-
-
-		serial->print(F("Transmit Power: "));
-		serial->print((float)(((LinkInfo->GetTransmitPowerNormalized() * 100) / UINT8_MAX)), 0);
-		serial->println(F(" %"));
-
-		serial->print(F("RSSI: "));
-		serial->print((float)(((LinkInfo->GetRSSINormalized() * 100) / UINT8_MAX)), 0);
-		serial->println(F(" %"));
-		serial->print(F("RSSI Partner: "));
-		serial->print((float)(((LinkInfo->GetPartnerRSSINormalized() * 100) / UINT8_MAX)), 0);
-		serial->println(F(" %"));
-
-		serial->print(F("Sent: "));
-		serial->println(LoLaDriver->GetTransmitedCount());
-		serial->print(F("Lost: "));
-		serial->println(LinkInfo->GetLostCount());
-		serial->print(F("Received: "));
-		serial->println(LoLaDriver->GetReceivedCount());
-		serial->print(F("Rejected: "));
-		serial->print(LoLaDriver->GetRejectedCount());
-
-		serial->print(F(" ("));
-		if (LoLaDriver->GetReceivedCount() > 0)
-		{
-			serial->print((float)(LoLaDriver->GetRejectedCount() * 100) / (float)LoLaDriver->GetReceivedCount(), 2);
-			serial->println(F(" %)"));
-		}
-		else if (LoLaDriver->GetRejectedCount() > 0)
-		{
-			serial->println(F("100 %)"));
-		}
-		else
-		{
-			serial->println(F("0 %)"));
-		}
-		serial->print(F("Timming Collision: "));
-		serial->println(LoLaDriver->GetTimingCollisionCount());
-
-		serial->print(F("ClockSync adjustments: "));
-		serial->println(LinkInfo->GetClockSyncAdjustments());
-		serial->println();
-	}
-};
-#endif
-
-
-
 #endif
