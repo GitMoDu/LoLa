@@ -29,6 +29,101 @@ public:
 	}
 };
 
+class ClockSecondsRequestTransaction : public IClockSyncTransaction
+{
+private:
+	enum TransactionStage : uint8_t
+	{
+		Requested = 1,
+		ResultIn = 2,
+		SecondsDone = 3
+	};
+
+	uint32_t Result = 0;
+	uint32_t ResultMillisStamp = 0;
+	uint32_t LastRequested = 0;
+
+public:
+	void Reset()
+	{
+		Id = 0;
+		Stage = 0;
+		ResultMillisStamp = 0;
+		LastRequested = 0;
+	}
+
+	bool SetResult(const uint8_t requestId, const uint32_t resultUTC)
+	{
+		if (Stage == TransactionStage::Requested && Id == requestId)
+		{
+			Result = resultUTC;
+			ResultMillisStamp = millis();
+			Stage = TransactionStage::ResultIn;
+			return true;
+		}
+
+		return false;
+	}
+
+	uint32_t GetResult()
+	{
+		return Result + ((millis() - ResultMillisStamp) / 1000);
+	}
+
+	bool IsRequested()
+	{
+		return Stage == TransactionStage::Requested;
+	}
+
+	bool IsResultWaiting()
+	{
+		return Stage == TransactionStage::ResultIn;
+	}
+
+	bool IsDone()
+	{
+		return Stage == TransactionStage::SecondsDone;
+	}
+
+	bool IsFresh(const uint32_t lifetimeMillis)
+	{
+		return (millis() - LastRequested) < lifetimeMillis;
+	}
+
+	void SetRequested()
+	{
+		Stage = TransactionStage::Requested;
+		Id = random(0, UINT8_MAX);
+		LastRequested = millis();
+	}
+
+	void SetDone()
+	{
+		Stage = TransactionStage::SecondsDone;
+	}
+};
+
+class ClockSecondsResponseTransaction : public IClockSyncTransaction
+{
+private:
+	enum TransactionStage : uint8_t
+	{
+		Requested = 1
+	};
+
+public:
+	bool IsRequested()
+	{
+		return Stage == TransactionStage::Requested;
+	}
+
+	void SetRequested(const uint8_t requestId)
+	{
+		Id = requestId;
+		Stage = TransactionStage::Requested;
+	}
+};
+
 class ClockSyncRequestTransaction : public IClockSyncTransaction
 {
 private:
