@@ -244,7 +244,7 @@ public:
 	{
 		if (HasLink())
 		{
-			return (Driver->GetClockSource()->GetTimeSeconds() - LinkStartedSeconds);
+			return (Driver->GetClockSource()->GetSyncSeconds() - LinkStartedSeconds);
 		}
 		else
 		{
@@ -254,7 +254,7 @@ public:
 
 	void StampLinkStarted()
 	{
-		LinkStartedSeconds = Driver->GetClockSource()->GetTimeSeconds();
+		LinkStartedSeconds = Driver->GetClockSource()->GetSyncSeconds();
 		Driver->SetLinkStatus(true);
 	}
 

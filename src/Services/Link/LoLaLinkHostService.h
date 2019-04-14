@@ -29,6 +29,7 @@ private:
 	};
 
 	LinkHostClockSyncer ClockSyncer;
+	ClockSecondsResponseTransaction HostClockSecondsTransaction;
 	ClockSyncResponseTransaction HostClockSyncTransaction;
 
 	//Latency measurement.
@@ -42,6 +43,7 @@ public:
 	LoLaLinkHostService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
 		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
 		, ClockSyncer()
+		, HostClockSecondsTransaction()
 		, HostClockSyncTransaction()	
 	{
 		ClockSyncerPointer = &ClockSyncer;
@@ -54,6 +56,16 @@ protected:
 		serial->print(F("Link Host"));
 	}
 #endif // DEBUG_LOLA
+
+	void OnClearSession()
+	{
+		LatencyMeter.Reset();
+		HostClockSyncTransaction.Reset();
+		HostClockSecondsTransaction.Reset();
+		ClockSyncer.Reset();
+
+		SessionLastStarted = ILOLA_INVALID_MILLIS;
+	}
 
 	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
 	{
@@ -84,12 +96,6 @@ protected:
 		{
 			LatencyMeter.OnAckPacketSent(OutPacket.GetId());
 		}
-	}
-
-	void OnClearSession()
-	{
-		LatencyMeter.Reset();
-		SessionLastStarted = ILOLA_INVALID_MILLIS;
 	}
 
 	inline void RestartAwaitingLink() 
@@ -348,7 +354,13 @@ protected:
 
 	void OnClockSync()
 	{
-		if (HostClockSyncTransaction.IsResultReady())
+		if (HostClockSecondsTransaction.IsRequested())
+		{
+			PrepareClockUTCResponse(HostClockSecondsTransaction.GetId(), LoLaDriver->GetClockSource()->GetSyncSeconds());
+			HostClockSecondsTransaction.Reset();
+			RequestSendPacket();
+		}
+		else if (HostClockSyncTransaction.IsResultReady())
 		{
 			ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult());
 			PrepareClockSyncResponse(HostClockSyncTransaction.GetId(), HostClockSyncTransaction.GetResult());
@@ -362,12 +374,42 @@ protected:
 	}
 
 	///Clock Sync.
+	void OnClockUTCRequestReceived(const uint8_t requestId)
+	{
+		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
+		{
+			switch (LinkingState)
+			{
+			case LinkingStagesEnum::InfoSyncStage:
+				if (LatencyMeter.GetSampleCount() >= LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES &&
+					LinkInfo->HasPartnerRSSI())
+				{
+					HostClockSecondsTransaction.SetRequested(requestId);
+					SetLinkingState(LinkingStagesEnum::ClockSyncStage);
+				}
+				break;
+			case LinkingStagesEnum::ClockSyncStage:
+				if (HostClockSyncTransaction.IsClear())
+				{
+					HostClockSecondsTransaction.SetRequested(requestId);
+					SetNextRunASAP();
+				}
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+
 	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros)
 	{
 		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
 		{
-			HostClockSyncTransaction.SetResult(requestId,
-				(int32_t)(LoLaDriver->GetClockSource()->GetSyncMicros(LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros));
+			ElapsedMicrosSinceReceivedHelper = micros() - LoLaDriver->GetLastValidReceivedMicros();
+
+			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + ElapsedMicrosSinceReceivedHelper - estimatedMicros);
+			SetNextRunASAP();
 
 			switch (LinkingState)
 			{
@@ -497,6 +539,15 @@ private:
 		}
 	}
 
+	void PrepareClockUTCResponse(const uint8_t requestId, const uint32_t secondsUTC)
+	{
+		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_UTC_REPLY);
+		ATUI_S.uint = secondsUTC;
+		S_ArrayToPayload();
+		Serial.print("Sent UTC: ");
+		Serial.println(ATUI_S.uint);
+
+	}
 	void PrepareClockSyncResponse(const uint8_t requestId, const int32_t estimationErrorMicros)
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REPLY);
