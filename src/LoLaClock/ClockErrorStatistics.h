@@ -42,37 +42,6 @@ public:
 
 	uint8_t Count = 0;
 
-private:
-	inline void UpdateStatistics()
-	{
-		if (NeedsUpdate)
-		{
-			Count = 0;
-			MaxErrorMicros = 0;
-			AverageErrorMicros = 0;
-			AverageWeightedErrorMicros = 0;
-			WeightedTotalPeriodMillis = 0;
-			while (Count < TuneErrorSamples.numElements())
-			{
-				Grunt = *TuneErrorSamples.peek(Count);
-				AverageErrorMicros += Grunt.ErrorMicros;
-				AverageWeightedErrorMicros += (int64_t)Grunt.ErrorMicros * (int64_t)(Grunt.PeriodMillis);
-				WeightedTotalPeriodMillis += Grunt.PeriodMillis;
-
-				if (abs(Grunt.ErrorMicros) > MaxErrorMicros)
-				{
-					MaxErrorMicros = abs(Grunt.ErrorMicros);
-				}
-				Count++;
-			}
-
-			AverageErrorMicros /= Count;
-			AverageWeightedErrorMicros = (int32_t)((int64_t)AverageWeightedErrorMicros / (int64_t)WeightedTotalPeriodMillis);
-
-			NeedsUpdate = false;
-		}
-	}
-
 public:
 	void AddTuneSample(const int32_t errorMicros, const uint32_t periodMillis)
 	{
@@ -81,6 +50,11 @@ public:
 
 		TuneErrorSamples.addForce(Grunt);
 		NeedsUpdate = true;
+	}
+
+	bool HasEnoughSamples()
+	{
+		return TuneErrorSamples.numElements() > (ERROR_SAMPLE_COUNT / 2);
 	}
 
 	void AddTuneSample(const ClockErrorSample errorSample)
@@ -138,6 +112,38 @@ public:
 			TuneErrorSamples.pull();
 		}
 		AverageErrorMicros = 0;
+	}
+
+
+private:
+	inline void UpdateStatistics()
+	{
+		if (NeedsUpdate)
+		{
+			Count = 0;
+			MaxErrorMicros = 0;
+			AverageErrorMicros = 0;
+			AverageWeightedErrorMicros = 0;
+			WeightedTotalPeriodMillis = 0;
+			while (Count < TuneErrorSamples.numElements())
+			{
+				Grunt = *TuneErrorSamples.peek(Count);
+				AverageErrorMicros += Grunt.ErrorMicros;
+				AverageWeightedErrorMicros += (int64_t)Grunt.ErrorMicros * (int64_t)(Grunt.PeriodMillis);
+				WeightedTotalPeriodMillis += Grunt.PeriodMillis;
+
+				if (abs(Grunt.ErrorMicros) > MaxErrorMicros)
+				{
+					MaxErrorMicros = abs(Grunt.ErrorMicros);
+				}
+				Count++;
+			}
+
+			AverageErrorMicros /= Count;
+			AverageWeightedErrorMicros = (int32_t)((int64_t)AverageWeightedErrorMicros / (int64_t)WeightedTotalPeriodMillis);
+
+			NeedsUpdate = false;
+		}
 	}
 };
 
