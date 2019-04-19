@@ -150,9 +150,6 @@ public:
 			StampSyncGood();
 		}
 
-		Serial.print("Error: ");
-		Serial.println(estimationErrorMicros);
-
 		AddOffsetMicros(estimationErrorMicros);
 	}
 
@@ -203,6 +200,7 @@ public:
 			LastGreatSync = ILOLA_INVALID_MILLIS;
 		}
 
+#ifdef LOLA_DEBUG_CLOCK_SYNC
 		Serial.print("EPeriod: ");
 		Serial.println(SampleGrunt.PeriodMillis);
 		Serial.print("Error: ");
@@ -215,7 +213,7 @@ public:
 		Serial.println(SyncedClock->GetDriftCompensationMicros());
 		Serial.print("ClockSync Quality: ");
 		Serial.println(GetNormalizedClockQuality());
-
+#endif
 		if (abs(estimationErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
 		{
 			StampSyncGood();

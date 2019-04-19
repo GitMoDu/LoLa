@@ -429,8 +429,6 @@ protected:
 		{
 			if (RemoteClockSyncTransaction.SetResult(requestId, estimatedErrorMicros))
 			{
-				Serial.print(F(" @ Got: "));
-				Serial.println(estimatedErrorMicros);
 				SetNextRunASAP();
 			}
 		}

@@ -542,10 +542,8 @@ private:
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_UTC_REPLY);
 		ATUI_S.uint = secondsUTC;
 		S_ArrayToPayload();
-		Serial.print("Sent UTC: ");
-		Serial.println(ATUI_S.uint);
-
 	}
+
 	void PrepareClockSyncResponse(const uint8_t requestId, const int32_t estimationErrorMicros)
 	{
 		PrepareShortPacket(requestId, LOLA_LINK_SUBHEADER_NTP_REPLY);
