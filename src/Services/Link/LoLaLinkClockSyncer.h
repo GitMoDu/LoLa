@@ -173,14 +173,14 @@ public:
 		{
 			LastGreatSync = millis();
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 100)));
+			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 100)));
 			TuneDiscard = 0;
 		}
 		else if (abs(SampleGrunt.ErrorMicros) < MAX_TUNE_ERROR_MICROS &&
 			abs(TuneErrorStatistics.GetAverageError()) < MAX_TUNE_ERROR_MICROS)
 		{
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);			
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 120)));
+			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 200)));
 			LastGreatSync = ILOLA_INVALID_MILLIS;
 		}
 		else if (abs(TuneErrorStatistics.GetAverageError()) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS &&
@@ -196,7 +196,7 @@ public:
 		else
 		{			
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetAverageError() / (int64_t)(45)));
+			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetAverageError() / (int64_t)(35)));
 			LastGreatSync = ILOLA_INVALID_MILLIS;
 		}
 
