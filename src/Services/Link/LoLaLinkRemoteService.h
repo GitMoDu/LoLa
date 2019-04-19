@@ -63,6 +63,8 @@ protected:
 			InfoSyncStage = InfoSyncStagesEnum::AwaitingHostRequest;
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linked:
+			//TODO: Restore value from flash.
+			ClockSyncer.SetStartingDrift(-25000);
 			break;
 		default:
 			break;
