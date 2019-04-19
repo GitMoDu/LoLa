@@ -126,7 +126,7 @@ public:
 
 	void SetStartingDrift(const int32_t driftErrorMicros)
 	{
-		AddDriftCompensationMicros(driftErrorMicros);
+		SetDriftCompensationMicros(driftErrorMicros);
 	}
 
 	void SetSynced()
