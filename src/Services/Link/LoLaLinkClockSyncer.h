@@ -124,6 +124,11 @@ public:
 			((millis() - LastSynced) > (LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD)));
 	}
 
+	void SetStartingDrift(const int32_t driftErrorMicros)
+	{
+		AddDriftCompensationMicros(driftErrorMicros);
+	}
+
 	void SetSynced()
 	{
 		HostSynced = true;
