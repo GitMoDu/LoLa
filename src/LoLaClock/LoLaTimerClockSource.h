@@ -7,12 +7,12 @@
 #include <LoLaClock\ILolaClockSource.h>
 #include <libmaple/systick.h>
 
+#define timer_ratio(a) ((a*6)/5) //1.2 Times gives around 200 milliseconds of max error.
 
 class LoLaTimerClockSource : public ILoLaClockSource
 {
 private:
-	static const uint32_t ROLL_OVER_PERIOD_FACTOR = 2;
-	static const uint32_t ROLL_OVER_PERIOD = ONE_SECOND_MICROS * ROLL_OVER_PERIOD_FACTOR;
+	static const uint32_t ROLL_OVER_PERIOD = timer_ratio(ONE_SECOND_MICROS);
 
 	uint32_t TimerOverFlow = 1;
 
@@ -38,7 +38,7 @@ protected:
 
 	void OnDriftUpdated(const int32_t driftMicros)
 	{
-		SetTimer(ROLL_OVER_PERIOD + (driftMicros * ROLL_OVER_PERIOD_FACTOR));
+		SetTimer(ROLL_OVER_PERIOD + timer_ratio(driftMicros));
 	}
 
 	virtual void Attach()
