@@ -9,11 +9,6 @@ static void StaticRTCInterrupt()
 	StaticRTC->Tick();
 }
 
-static void StaticTimerInterrupt()
-{
-	StaticRTC->TimerInterrupt();
-}
-
 ////////////////
 RTCClockSource::RTCClockSource()
 	: RTC(RTCSEL_LSI), LoLaTimerClockSource()
@@ -24,8 +19,7 @@ RTCClockSource::RTCClockSource()
 void RTCClockSource::Attach()
 {
 	LoLaTimerClockSource::Attach();
-	RTC.attachSecondsInterrupt(StaticRTCInterrupt);//TODO: Move to TimerSource.cpp
-	Timer1.attachInterrupt(0, StaticTimerInterrupt);
+	RTC.attachSecondsInterrupt(StaticRTCInterrupt);
 }
 
 uint32_t RTCClockSource::GetUTCSeconds() 
