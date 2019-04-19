@@ -6,8 +6,6 @@
 #include <stdint.h>
 #include <Arduino.h>
 
-
-
 class ILoLaClockSource
 {
 public:
@@ -24,17 +22,23 @@ private:
 	static const int32_t MAX_OFFSET_MICROS = ONE_SECOND_MICROS;
 	static const int32_t MAX_DRIFT_MICROS = 200000;
 
-	uint32_t LastTick = 0;
-
 	bool Attached = false;
 
 	//Helper.
 	uint32_t OffsetChunk = 0;
 
 protected:
-	virtual uint32_t GetMicros()
+	uint32_t LastTick = 0;
+
+protected:
+	virtual uint32_t GetTick()
 	{
 		return micros();
+	}
+
+	virtual uint32_t GetElapsedMicros()
+	{
+		return GetTick() - LastTick;
 	}
 
 	virtual void Attach() {	}
@@ -52,7 +56,7 @@ public:
 
 	void Tick()
 	{
-		LastTick = GetMicros();
+		LastTick = GetTick();
 		AddOffsetMicros(ONE_SECOND_MICROS + DriftCompensationMicros - DeferredOffsetMicros);
 		DeferredOffsetMicros = 0;
 	}
@@ -72,17 +76,15 @@ public:
 		OffsetMicros = 0;
 		DriftCompensationMicros = 0;
 		DeferredOffsetMicros = 0;
-		LastTick = GetMicros();
+		LastTick = GetTick();
 	}
 
 	void SetUTC(const uint32_t secondsUTC)
 	{
 		SetUTCSeconds(secondsUTC);
-		LastTick = GetMicros();
+		LastTick = GetTick();
 		OffsetMicros = 0;
 		DeferredOffsetMicros = 0;
-
-		//TODO: Readjust OffsetSeconds to keep sync seconds aligned.
 	}
 
 	uint32_t GetUTC()
@@ -104,14 +106,14 @@ public:
 		OffsetSeconds = syncSeconds;
 		OffsetMicros = 0;
 		DeferredOffsetMicros = 0;
-		LastTick = GetMicros();
+		LastTick = GetTick();
 	}
 
 	void SetRandom()
 	{
 		OffsetSeconds = random(INT32_MAX);
 		OffsetMicros = random(INT32_MAX);
-		LastTick = GetMicros();
+		LastTick = GetTick();
 	}
 
 	void AddOffsetMicros(const int32_t offset)
@@ -123,7 +125,6 @@ public:
 			while (OffsetMicros > ONE_SECOND_MICROS)
 			{
 				OffsetSeconds++;
-				LastTick = GetMicros();
 				OffsetMicros -= ONE_SECOND_MICROS;
 			}
 		}
@@ -155,7 +156,7 @@ public:
 		asm volatile("nop"); //allow interrupt to fire
 		asm volatile("nop");
 
-		return (OffsetSeconds*ONE_SECOND_MICROS) + GetElapsedMicros() + OffsetMicros - DeferredOffsetMicros;
+		return (OffsetSeconds * ONE_SECOND_MICROS) + GetElapsedMicros() + OffsetMicros - DeferredOffsetMicros;
 	}
 
 	uint32_t GetSyncMicros()
@@ -163,13 +164,7 @@ public:
 		asm volatile("nop"); //allow interrupt to fire
 		asm volatile("nop");
 
-		return (OffsetSeconds*ONE_SECOND_MICROS) + GetElapsedMicros() + OffsetMicros;
-	}
-
-private:
-	inline uint32_t GetElapsedMicros()
-	{
-		return GetMicros() - LastTick;
+		return (OffsetSeconds * ONE_SECOND_MICROS) + GetElapsedMicros() + OffsetMicros;
 	}
 };
 
