@@ -180,6 +180,7 @@ public:
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);
 			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 100)));
 			TuneDiscard = 0;
+			//TODO: Store partner clock drift for future.
 		}
 		else if (abs(SampleGrunt.ErrorMicros) < MAX_TUNE_ERROR_MICROS &&
 			abs(TuneErrorStatistics.GetAverageError()) < MAX_TUNE_ERROR_MICROS)
