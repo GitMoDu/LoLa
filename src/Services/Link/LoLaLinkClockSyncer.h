@@ -169,7 +169,12 @@ public:
 
 		AddOffsetMicros(SampleGrunt.ErrorMicros);
 
-		if (abs(SampleGrunt.ErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+		if (!TuneErrorStatistics.HasEnoughSamples())
+		{
+			TuneErrorStatistics.AddTuneSample(SampleGrunt);
+			LastGreatSync = ILOLA_INVALID_MILLIS;
+		}
+		else if (abs(SampleGrunt.ErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
 		{
 			LastGreatSync = millis();
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);
