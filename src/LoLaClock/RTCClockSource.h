@@ -10,7 +10,7 @@ class RTCClockSource : public LoLaTimerClockSource
 {
 private:
 	RTClock RTC;
-	const rtc_clk_src ClockSourceType = RTCSEL_LSI;
+	const rtc_clk_src ClockSourceType = RTCSEL_LSE;
 
 protected:
 	void Attach();
