@@ -268,13 +268,11 @@ private:
 				TimingCollisionCount++;
 			}
 
-
 			//Is Ack packet.
 			if (IncomingPacket.GetDefinition()->IsAck())
 			{
 				Services.ProcessAck(&IncomingPacket);
 				RestoreToReceiving();
-				EnableInterrupts();
 			}
 			else if (IncomingPacket.GetDefinition()->HasACK())//If packet has ack, do service validation before sending Ack.
 			{
@@ -285,24 +283,18 @@ private:
 					AckPacket.GetPayload()[0] = IncomingPacket.GetDefinition()->GetHeader();
 					AckPacket.SetId(IncomingPacket.GetId());
 					DriverActiveState = DriverActiveStates::SendingAck;
-					if (SendPacket(&AckPacket))
-					{
-						EnableInterrupts();
-					}
-					else
+					if (!SendPacket(&AckPacket))
 					{
 #ifdef DEBUG_LOLA
 						Serial.println(F("Send Ack failed."));
 #endif						
 						RestoreToReceiving();
-						EnableInterrupts();
 					}
 				}
 				else
 				{
 					//NACK.
 					RestoreToReceiving();
-					EnableInterrupts();
 				}
 			}
 			else
@@ -310,7 +302,6 @@ private:
 				//Process packet directly, no Ack.
 				Services.ProcessPacket(&IncomingPacket);
 				RestoreToReceiving();
-				EnableInterrupts();
 			}
 		}
 		else
@@ -318,8 +309,9 @@ private:
 			//Failed to read incoming packet.
 			RejectedCount++;
 			RestoreToReceiving();
-			EnableInterrupts();
 		}
+
+		EnableInterrupts();
 	}
 
 	void ProcessSent(const uint8_t header)
