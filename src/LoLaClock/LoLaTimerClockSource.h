@@ -38,7 +38,6 @@ protected:
 
 	void OnDriftUpdated(const int32_t driftMicros)
 	{
-		SetTimer(ROLL_OVER_PERIOD + timer_ratio(driftMicros));
 	}
 
 	virtual void Attach()
