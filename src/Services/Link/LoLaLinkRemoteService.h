@@ -84,7 +84,7 @@ protected:
 			}
 			else if (OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST)
 			{
-				ATUI_S.uint = LoLaDriver->GetClockSource()->GetSyncMicros()
+				ATUI_S.uint = LoLaDriver->GetClockSource()->GetSyncMicrosFull()
 					+ LoLaDriver->GetETTMMicros();
 				S_ArrayToPayload();
 			}
