@@ -9,6 +9,11 @@ static void StaticRTCInterrupt()
 	StaticRTC->Tick();
 }
 
+static void StaticTimerInterrupt()
+{
+	StaticRTC->TimerInterrupt();
+}
+
 ////////////////
 RTCClockSource::RTCClockSource()
 	: RTC(RTCSEL_LSI), LoLaTimerClockSource()
@@ -20,10 +25,11 @@ void RTCClockSource::Attach()
 {
 	LoLaTimerClockSource::Attach();
 	RTC.attachSecondsInterrupt(StaticRTCInterrupt);
+	MicrosTimer->attachInterrupt(0, StaticTimerInterrupt);
 }
 
-uint32_t RTCClockSource::GetUTCSeconds() 
-{ 
+uint32_t RTCClockSource::GetUTCSeconds()
+{
 	return RTC.getTime();
 }
 

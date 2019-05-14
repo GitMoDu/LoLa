@@ -24,8 +24,6 @@ private:
 
 	bool Attached = false;
 
-	//Helper.
-	uint32_t OffsetChunk = 0;
 
 protected:
 	uint32_t LastTick = 0;
@@ -36,17 +34,17 @@ protected:
 		return micros();
 	}
 
-	virtual uint32_t GetElapsedMicros()
-	{
-		return GetTick() - LastTick;
-	}
-
 	virtual void Attach() {	}
 	virtual void OnDriftUpdated(const int32_t driftMicros) {}
 
 	virtual uint32_t GetUTCSeconds() { return millis() / 1000; }
 	virtual void SetUTCSeconds(const uint32_t secondsUTC) {}
 
+private:
+	inline uint32_t GetElapsedMicros()
+	{
+		return GetTick() - LastTick;
+	}
 public:
 	ILoLaClockSource()
 	{
@@ -113,6 +111,7 @@ public:
 	{
 		OffsetSeconds = random(INT32_MAX);
 		OffsetMicros = random(INT32_MAX);
+		DeferredOffsetMicros = 0; 
 		LastTick = GetTick();
 	}
 
@@ -120,7 +119,7 @@ public:
 	{
 		if (offset >= 0)
 		{
-			OffsetMicros += offset - OffsetChunk;
+			OffsetMicros += offset;
 
 			while (OffsetMicros > ONE_SECOND_MICROS)
 			{
