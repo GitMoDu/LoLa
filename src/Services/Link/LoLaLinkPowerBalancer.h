@@ -6,15 +6,6 @@
 #include <ILoLaDriver.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
-#define RADIO_POWER_BALANCER_UPDATE_PERIOD				(uint32_t)(500)
-#define RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN			(uint8_t)(15)
-#define RADIO_POWER_BALANCER_ADJUST_UP_LONG				(uint8_t)(20)
-#define RADIO_POWER_BALANCER_ADJUST_DOWN_LONG			(uint8_t)(10)
-#define RADIO_POWER_BALANCER_POWER_MIN					(uint8_t)(13) // ~5% 
-#define RADIO_POWER_BALANCER_POWER_MAX					100//(uint8_t)(UINT8_MAX)
-#define RADIO_POWER_BALANCER_RSSI_TARGET				(uint8_t)(140)
-
-
 
 class LoLaLinkPowerBalancer
 {
