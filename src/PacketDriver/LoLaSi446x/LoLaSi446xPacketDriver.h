@@ -39,10 +39,10 @@ private:
 	static const int16_t SI4463_RSSI_MAX = -80;
 
 	//Interrupt handling helper.
-	volatile uint8_t InterruptStatus = 0xFF;
+	static const uint8_t INVALID_INTERRUPT = UINT8_MAX;
+	volatile uint8_t InterruptStatus = INVALID_INTERRUPT;
 
 protected:
-
 	void DisableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
@@ -53,7 +53,11 @@ protected:
 	void EnableInterrupts()
 	{
 #ifndef LOLA_MOCK_RADIO
-		Si446x_irq_on(InterruptStatus);
+		if (InterruptStatus != INVALID_INTERRUPT)
+		{
+			Si446x_irq_on(InterruptStatus);
+			InterruptStatus = INVALID_INTERRUPT;
+		}
 #endif
 	}
 
