@@ -12,18 +12,23 @@
 class LoLaLinkClockSyncer
 {
 protected:
-	ILoLaClockSource * SyncedClock = nullptr;
+	ILoLaClockSource* SyncedClock = nullptr;
 
 	uint8_t SyncGoodCount = 0;
 	uint32_t LastSynced = ILOLA_INVALID_MILLIS;
 
 	static const int32_t MAX_TUNE_ERROR_MICROS = 10000;
-	static const int32_t MAX_FINE_TUNE_ERROR_MICROS = 1001;
-	static const uint8_t MAX_TUNE_DISCARD_COUNT = 2;
+	//static const int32_t MAX_FINE_TUNE_ERROR_MICROS = 1001;
+	static const uint8_t MAX_TUNE_DISCARD_COUNT = 1;
 
 	static const int32_t DRIFT_REFERENCE_PERIOD_MILLIS = 60000;
 
-	
+#ifdef LOLA_DEBUG_CLOCK_SYNC
+	bool FirstLine = true;
+#endif
+
+
+
 
 protected:
 	void StampSyncGood()
@@ -61,7 +66,7 @@ protected:
 public:
 	LoLaLinkClockSyncer() {}
 
-	bool Setup(ILoLaClockSource * syncedClock)
+	bool Setup(ILoLaClockSource* syncedClock)
 	{
 		SyncedClock = syncedClock;
 
@@ -74,20 +79,26 @@ public:
 	}
 
 public:
-	virtual bool IsSynced() { return false; }
 	virtual void Reset()
 	{
 		SyncGoodCount = 0;
 		LastSynced = ILOLA_INVALID_MILLIS;
+		FirstLine = true;
 	}
 };
 
 class LinkRemoteClockSyncer : public LoLaLinkClockSyncer
 {
 private:
-	boolean HostSynced = false;
+	enum RemoteSyncEnum : uint8_t
+	{
+		NoHostSync = 0,
+		HasFirstSync = 1,
+		NeedsHostTunning = 2,
+		HostSynced = 3
+	} Status = RemoteSyncEnum::NoHostSync;
+
 	uint32_t LastTuneReceivedMillis = ILOLA_INVALID_MILLIS;
-	uint32_t LastGreatSync = ILOLA_INVALID_MILLIS;
 
 	static const uint8_t TUNE_ERROR_SAMPLES_COUNT = 5;
 
@@ -96,32 +107,83 @@ private:
 	uint8_t TuneDiscard = 0;
 	ClockErrorSample SampleGrunt;
 
+private:
+	inline void UpdateDrift()
+	{
+		if (abs(TuneErrorStatistics.GetAverageError()) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+		{
+			if (abs(SampleGrunt.ErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+			{
+				AddDriftCompensationMicros((int64_t)TuneErrorStatistics.GetAverageError() / ((int64_t)21));
+			}
+			else
+			{
+				AddDriftCompensationMicros((int64_t)TuneErrorStatistics.GetAverageError() / ((int64_t)16));
+			}
+		}
+		else
+		{
+			AddDriftCompensationMicros((int64_t)SampleGrunt.ErrorMicros / ((int64_t)9));
+		}
+	}
+
 public:
 	LinkRemoteClockSyncer() : LoLaLinkClockSyncer() {}
 
-	bool IsSynced()
-	{
-		return HasEstimation() && HostSynced;
-	}
-
 	void Reset()
 	{
+		Status = RemoteSyncEnum::NoHostSync;
+
 		SyncGoodCount = 0;
 		TuneDiscard = MAX_TUNE_DISCARD_COUNT;
 		LastSynced = ILOLA_INVALID_MILLIS;
 		LastTuneReceivedMillis = ILOLA_INVALID_MILLIS;
-		LastGreatSync = ILOLA_INVALID_MILLIS;
-		HostSynced = false;
 		TuneErrorStatistics.Reset();
 	}
 
 	bool IsTimeToTune()
 	{
-		return (LastTuneReceivedMillis == ILOLA_INVALID_MILLIS || (millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_MIN_PERIOD))
-			&&
-			((LastGreatSync == ILOLA_INVALID_MILLIS) ||
-			(LastSynced == ILOLA_INVALID_MILLIS) ||
-			((millis() - LastSynced) > (LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD)));
+		if (LastSynced == ILOLA_INVALID_MILLIS ||
+			LastTuneReceivedMillis == ILOLA_INVALID_MILLIS)
+		{
+			return true;
+		}
+		else
+		{
+			switch (Status)
+			{
+			case RemoteSyncEnum::HasFirstSync:
+				return (millis() - LastSynced > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_FAST_PERIOD) &&
+					(millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_FAST_PERIOD);
+				break;
+			case RemoteSyncEnum::NeedsHostTunning:
+				if (TuneDiscard > 0)
+				{
+					return millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_FAST_PERIOD;
+				}
+				else if (TuneErrorStatistics.HasEnoughSamples())
+				{
+					if (TuneErrorStatistics.HasFullSamples() &&
+						TuneErrorStatistics.GetMaxErrorMicros() < LOLA_LINK_SERVICE_LINKED_CLOCK_GREAT_ERROR_MICROS)
+					{
+						return millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD;
+					}
+					else
+					{
+						return millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_MIN_PERIOD;
+					}
+				}
+				else
+				{
+					return millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_FAST_PERIOD;
+				}
+				break;
+			case RemoteSyncEnum::HostSynced:
+				return true;
+			default:
+				return true;
+			}
+		}
 	}
 
 	void SetStartingDrift(const int32_t driftErrorMicros)
@@ -131,11 +193,14 @@ public:
 
 	void SetSynced()
 	{
-		HostSynced = true;
+		Status = RemoteSyncEnum::HasFirstSync;
 		StampSynced();
 		LastTuneReceivedMillis = millis();
-		LastGreatSync = ILOLA_INVALID_MILLIS;
+		//LastGreatSync = ILOLA_INVALID_MILLIS;
 		TuneDiscard = MAX_TUNE_DISCARD_COUNT;
+#ifdef LOLA_DEBUG_CLOCK_SYNC
+		FirstLine = true;
+#endif
 	}
 
 	bool HasEstimation()
@@ -165,93 +230,142 @@ public:
 	{
 		if (LastTuneReceivedMillis == ILOLA_INVALID_MILLIS)
 		{
-			LastTuneReceivedMillis = millis() - 1;
-		}
-
-		SampleGrunt.PeriodMillis  =	(estimationErrorMicros, millis() - LastTuneReceivedMillis);
-		SampleGrunt.ErrorMicros = estimationErrorMicros;
-		LastTuneReceivedMillis = millis();
-
-		AddOffsetMicros(SampleGrunt.ErrorMicros);
-
-		if (!TuneErrorStatistics.HasEnoughSamples())
-		{
-			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			LastGreatSync = ILOLA_INVALID_MILLIS;
-		}
-		else if (abs(SampleGrunt.ErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
-		{
-			LastGreatSync = millis();
-			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 100)));
-			TuneDiscard = 0;
-			//TODO: Store partner clock drift for future.
-		}
-		else if (abs(SampleGrunt.ErrorMicros) < MAX_TUNE_ERROR_MICROS &&
-			abs(TuneErrorStatistics.GetAverageError()) < MAX_TUNE_ERROR_MICROS)
-		{
-			TuneErrorStatistics.AddTuneSample(SampleGrunt);			
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 200)));
-			LastGreatSync = ILOLA_INVALID_MILLIS;
-		}
-		else if (abs(TuneErrorStatistics.GetAverageError()) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS &&
-			TuneErrorStatistics.GetWeightedAverageDurationMillis() > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD &&
-			TuneDiscard < MAX_TUNE_DISCARD_COUNT)
-		{
-			TuneDiscard++;
-			if (LastGreatSync != ILOLA_INVALID_MILLIS)
-			{
-				LastGreatSync = min(millis(), LastGreatSync + SampleGrunt.PeriodMillis);
-			}
+			SampleGrunt.Set(estimationErrorMicros, millis() - LastSynced);
 		}
 		else
-		{			
-			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetAverageError() / (int64_t)(35)));
-			LastGreatSync = ILOLA_INVALID_MILLIS;
+		{
+			SampleGrunt.Set(estimationErrorMicros, millis() - LastTuneReceivedMillis);
+		}
+		LastTuneReceivedMillis = millis();
+
+
+		//Sample storing and discarding.
+		switch (Status)
+		{
+		case RemoteSyncEnum::NoHostSync:
+			Serial.print("NoHostSync");
+			break;
+		case RemoteSyncEnum::HasFirstSync:
+			AddOffsetMicros(estimationErrorMicros);
+			if (abs(estimationErrorMicros) < LOLA_LINK_SERVICE_LINKED_SAMPLE_DISCARD_MICROS)
+			{
+				TuneErrorStatistics.AddTuneSample(SampleGrunt);
+				TuneDiscard = 0;
+			}
+			else if (TuneDiscard < MAX_TUNE_DISCARD_COUNT)
+			{
+				TuneDiscard++;
+			}
+			break;
+		case RemoteSyncEnum::NeedsHostTunning:
+			//Discard offset?
+			if (TuneErrorStatistics.HasFullSamples() &&
+				abs(TuneErrorStatistics.GetAverageError()) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS &&
+				abs(estimationErrorMicros) > LOLA_LINK_SERVICE_LINKED_CLOCK_DISCARD_ERROR_MICROS &&
+				TuneDiscard < MAX_TUNE_DISCARD_COUNT)
+			{
+				TuneDiscard++;
+			}
+			else
+			{
+				AddOffsetMicros(estimationErrorMicros);
+				if (abs(estimationErrorMicros) < LOLA_LINK_SERVICE_LINKED_SAMPLE_DISCARD_MICROS)
+				{
+					TuneErrorStatistics.AddTuneSample(SampleGrunt);
+					TuneDiscard = 0;
+				}
+			}
+			UpdateDrift();
+			break;
+		case RemoteSyncEnum::HostSynced:
+			break;
+		default:
+			break;
 		}
 
 #ifdef LOLA_DEBUG_CLOCK_SYNC
-		Serial.print("EPeriod: ");
-		Serial.println(SampleGrunt.PeriodMillis);
-		Serial.print("Error: ");
-		Serial.println(SampleGrunt.ErrorMicros);
-		Serial.print("Average Error: ");
-		Serial.println(TuneErrorStatistics.GetAverageError());
-		Serial.print("AWError: ");
-		Serial.println(TuneErrorStatistics.GetWeightedAverageError());
-		Serial.print("Estimated drift: ");
-		Serial.println(SyncedClock->GetDriftCompensationMicros());
-		Serial.print("ClockSync Quality: ");
-		Serial.println(GetNormalizedClockQuality());
-#endif
-		if (abs(estimationErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+		static const char Separator = '\t';
+		if (FirstLine)
 		{
-			StampSyncGood();
-			StampSynced();
-			
-			return true;
-		}
-		else
-		{
-			return false;
+			FirstLine = false;
+			Serial.print("Timestamp");
+			Serial.print(Separator);
+			Serial.print("Clock Error u");
+			Serial.print(Separator);
+			Serial.print("Error u/s");
+			Serial.print(Separator);
+			Serial.print("Avg Error m/s");
+			Serial.print(Separator);
+			Serial.print("Drift");
+			Serial.print(Separator);
+			Serial.print("Quality");
+			Serial.println();
 		}
 
+		Serial.print((millis() - LastSynced));
+		Serial.print(Separator);
+		Serial.print(estimationErrorMicros);
+		Serial.print(Separator);
+		Serial.print(SampleGrunt.ErrorMicros);
+		Serial.print(Separator);
+		Serial.print(TuneErrorStatistics.GetAverageError());
+		Serial.print(Separator);
+		Serial.print(SyncedClock->GetDriftCompensationMicros());
+		Serial.print(Separator);
+		Serial.print(GetNormalizedClockQuality());
+		Serial.println();
+#endif
+
+
+
+		switch (Status)
+		{
+			//case RemoteSyncEnum::NoHostSync:
+			//	break;
+		case RemoteSyncEnum::HasFirstSync:
+			if (abs(SampleGrunt.ErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_DISCARD_ERROR_MICROS &&
+				TuneErrorStatistics.HasEnoughSamples())
+			{
+				//Serial.println("Promoted to NeedsHostTunning");
+				Status = RemoteSyncEnum::NeedsHostTunning;
+			}
+			break;
+		case RemoteSyncEnum::NeedsHostTunning:
+			/*if (TuneErrorStatistics.HasEnoughSamples() &&
+				abs(TuneErrorStatistics.GetAverageError()) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+			{
+				Status = RemoteSyncEnum::HostSynced;
+			}*/
+			break;
+		case RemoteSyncEnum::HostSynced:
+			if (!TuneErrorStatistics.HasEnoughSamples() &&
+				abs(TuneErrorStatistics.GetAverageError()) > LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+			{
+				Status = RemoteSyncEnum::NeedsHostTunning;
+			}
+			break;
+		default:
+			break;
+		}
+
+		if (abs(estimationErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	uint8_t GetNormalizedClockQuality()
 	{
-		if(LastGreatSync == ILOLA_INVALID_MILLIS ||
-			TuneErrorStatistics.GetAverageError() > LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS ||
-			TuneErrorStatistics.GetWeightedAverageDurationMillis() < LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD )
+		if (Status != RemoteSyncEnum::HostSynced ||
+			TuneErrorStatistics.GetAverageError() > LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
 		{
 			return 0;
 		}
 		else
 		{
-			return (map(min(millis() - LastGreatSync, DRIFT_REFERENCE_PERIOD_MILLIS), 0, DRIFT_REFERENCE_PERIOD_MILLIS, 0, UINT8_MAX) +
-				TuneErrorStatistics.GetNormalizedClockErrorQuality())
-				/ 2;
+			return TuneErrorStatistics.GetNormalizedClockErrorQuality();
 		}
 	}
 };
@@ -276,6 +390,26 @@ public:
 
 	bool OnEstimationReceived(const int32_t estimationErrorMicros)
 	{
+		if (IsSynced())
+		{
+#ifdef LOLA_DEBUG_CLOCK_SYNC
+			static const char Separator = '\t';
+			if (FirstLine)
+			{
+				FirstLine = false;
+				Serial.print("Timestamp");
+				Serial.print(Separator);
+				Serial.print("Clock Error u");
+				Serial.println();
+			}
+
+			Serial.print((millis() - LastSynced));
+			Serial.print(Separator);
+			Serial.print(estimationErrorMicros);
+			Serial.println();
+#endif
+		}
+
 		if (abs(estimationErrorMicros) < MAX_TUNE_ERROR_MICROS)
 		{
 			StampSyncGood();
