@@ -5,6 +5,7 @@
 
 #include <LoLaDefinitions.h>
 #include <LoLaClock\ILolaClockSource.h>
+#include <LoLaClock\FreeRunningTimer.h>
 #include <libmaple/systick.h>
 
 #define timer_ratio(a) ((a*10)/1) //1.2 Times gives around 200 milliseconds of max error.
@@ -39,7 +40,8 @@ protected:
 
 	void OnDriftUpdated(const int32_t driftMicros)
 	{
-		MicrosPerTimerIncrement = ((ROLL_OVER_PERIOD + timer_ratio(driftMicros)) / TimerOverFlow);
+		//TODO: Slow down timer proportionally.
+		//MicrosPerTimerIncrement = ((ROLL_OVER_PERIOD + timer_ratio(driftMicros)) / TimerOverFlow);
 	}
 
 	virtual void Attach()
