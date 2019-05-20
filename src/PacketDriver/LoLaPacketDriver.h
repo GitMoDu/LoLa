@@ -119,7 +119,7 @@ private:
 
 	inline void OnTransmitted(const uint8_t header)
 	{
-		LastSentInfo.Micros = micros();
+		LastSentInfo.Micros = GetMicros();
 		LastSentHeader = header;
 		LastChannel = CurrentChannel;
 		OnTransmitPowerUpdated();
@@ -260,7 +260,7 @@ private:
 			ReceivedCount++;
 
 			//Check for packet collisions.
-			if (IsReceiveCollision(LastValidReceivedInfo.Micros - micros()))
+			if (IsReceiveCollision(LastValidReceivedInfo.Micros - GetMicros()))
 			{
 				TimingCollisionCount++;
 			}
@@ -330,7 +330,7 @@ public:
 	//When RF detects incoming packet.
 	void OnIncoming(const int16_t rssi)
 	{
-		LastReceivedInfo.Micros = micros();
+		LastReceivedInfo.Micros = GetMicros();
 		LastReceivedInfo.RSSI = rssi;
 
 		if (DriverActiveState == DriverActiveStates::ReadyForAnything)

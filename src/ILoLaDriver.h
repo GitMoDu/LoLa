@@ -234,7 +234,7 @@ public:
 		}
 		else
 		{
-			return (micros() - LastValidReceivedInfo.Micros) / 1000;
+			return (GetMicros() - LastValidReceivedInfo.Micros) / 1000;
 		}
 	}
 
@@ -246,7 +246,7 @@ public:
 		}
 		else
 		{
-			return (micros() - LastValidSentInfo.Micros) / 1000;
+			return (GetMicros() - LastValidSentInfo.Micros) / 1000;
 		}
 	}
 
@@ -295,6 +295,11 @@ public:
 	LoLaPacketMap * GetPacketMap()
 	{
 		return &PacketMap;
+	}
+
+	inline uint32_t GetMicros()
+	{
+		return micros();
 	}
 
 protected:
