@@ -57,7 +57,7 @@ public:
 		return TuneErrorSamples.numElements() > (ERROR_SAMPLE_COUNT / 2);
 	}
 
-	void AddTuneSample(const ClockErrorSample errorSample)
+	void AddTuneSample(const ClockErrorSample &errorSample)
 	{
 		TuneErrorSamples.addForce(errorSample);
 		NeedsUpdate = true;
