@@ -449,7 +449,10 @@ private:
 			(!IsInReceiveSlot(offsetMicros)))
 		{
 			TimingCollisionCount++;
+			return true;
 		}
+
+		return false;
 	}
 
 	bool IsInReceiveSlot(const int32_t offsetMicros)
