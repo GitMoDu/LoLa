@@ -83,12 +83,9 @@ public:
 	}
 
 private:
-	void AddAsyncAction(const uint8_t action, const bool easeRetry = false, const uint8_t value1 = 0)
+	inline void AddAsyncAction(const uint8_t action, const bool easeRetry, const uint8_t value = 0)
 	{
-		ActionGrunt.Action = action;
-		ActionGrunt.Value = value1;
-
-		CallbackHandler.AppendToQueue(ActionGrunt, easeRetry);
+		CallbackHandler.AppendToQueue(action, easeRetry, value);
 	}
 
 	void OnAsyncAction(ActionCallbackClass action)

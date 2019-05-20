@@ -31,7 +31,15 @@ public:
 		ActionEvent.attach(slot);
 	}
 
-	void AppendToQueue(ActionType action, const bool easeNextEvent)
+	void AppendToQueue(const uint8_t action, const bool easeNextEvent, const uint8_t value = 0)
+	{
+		Grunt.Action = action;
+		Grunt.Value = value;
+
+		AppendToQueue(Grunt, easeNextEvent);
+	}
+
+	void AppendToQueue(const &ActionType action, const bool easeNextEvent)
 	{
 		EventQueue.addForce(action);
 		enable();
