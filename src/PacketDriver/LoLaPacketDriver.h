@@ -83,7 +83,7 @@ public:
 	}
 
 private:
-	inline void AddAsyncAction(const uint8_t action, const bool easeRetry, const uint8_t value = 0)
+	inline void AddAsyncAction(const uint8_t action, const bool easeRetry = false, const uint8_t value = 0)
 	{
 		CallbackHandler.AppendToQueue(action, easeRetry, value);
 	}

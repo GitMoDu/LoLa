@@ -39,7 +39,7 @@ public:
 		AppendToQueue(Grunt, easeNextEvent);
 	}
 
-	void AppendToQueue(const &ActionType action, const bool easeNextEvent)
+	void AppendToQueue(const ActionType& action, const bool easeNextEvent)
 	{
 		EventQueue.addForce(action);
 		enable();
