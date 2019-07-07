@@ -337,13 +337,18 @@ public:
 		{
 			DriverActiveState = DriverActiveStates::BlockedForIncoming;
 		}
-#ifdef DEBUG_LOLA
 		else
 		{
+#ifdef DEBUG_LOLA
 			Serial.print(F("Bad state OnIncoming: "));
 			Serial.println(DriverActiveState);
-		}
 #endif
+			if (DriverActiveState == DriverActiveStates::SendingOutgoing || 
+				DriverActiveState == DriverActiveStates::WaitingForTransmissionEnd)
+			{
+				TimingCollisionCount++;
+			}
+		}
 	}
 
 	//When RF has packet to read, copy content into receive buffer.
