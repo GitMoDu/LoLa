@@ -3,7 +3,7 @@
 #ifndef _ABSTRACTSURFACE_h
 #define _ABSTRACTSURFACE_h
 
-#define LOLA_SYNC_FULL_DEBUG
+//#define LOLA_SYNC_FULL_DEBUG
 
 #include <Arduino.h>
 #include <Services\IPacketSendService.h>
