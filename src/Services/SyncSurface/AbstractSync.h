@@ -3,7 +3,7 @@
 #ifndef _ABSTRACTSURFACE_h
 #define _ABSTRACTSURFACE_h
 
-//#define LOLA_SYNC_FULL_DEBUG
+#define LOLA_SYNC_FULL_DEBUG
 
 #include <Arduino.h>
 #include <Services\IPacketSendService.h>
@@ -200,7 +200,7 @@ protected:
 			Enable(); //Make sure we are running.
 
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			Serial.print(GetLoLa()->GetMillisSync());
+			Serial.print(LoLaDriver->GetMicros());
 			Serial.print(F(": Updated State to "));
 #endif
 
@@ -208,18 +208,21 @@ protected:
 			{
 			case SyncStateEnum::WaitingForServiceDiscovery:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("WaitingForServiceDiscovery"));
+				Serial.print(LoLaDriver->GetMicros());
+				Serial.println(F(": WaitingForServiceDiscovery"));
 #endif
 				break;
 			case SyncStateEnum::Syncing:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("FullSync"));
+				Serial.print(LoLaDriver->GetMicros());
+				Serial.println(F(": FullSync"));
 #endif
 				InvalidateLocalHash();
 				break;
 			case SyncStateEnum::Synced:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("Synced"));
+				Serial.print(LoLaDriver->GetMicros());
+				Serial.println(F(": Synced"));
 #endif
 				InvalidateLocalHash();
 				break;
