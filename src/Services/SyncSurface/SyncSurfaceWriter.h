@@ -222,21 +222,18 @@ private:
 			{
 			case SyncWriterState::UpdatingBlocks:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(LoLaDriver->GetMicros());
-				Serial.println(F(": UpdatingBlocks"));
+				Serial.println(F("UpdatingBlocks"));
 #endif
 				break;
 			case SyncWriterState::SendingBlock:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(LoLaDriver->GetMicros());
-				Serial.println(F(": SendingBlock"));
+				Serial.println(F("SendingBlock"));
 #endif
 				InvalidateRemoteHash();
 				break;
 			case SyncWriterState::SendingFinished:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(LoLaDriver->GetMicros());
-				Serial.println(F(": SendingFinished"));
+				Serial.println(F("SendingFinished"));
 #endif
 				break;
 			default:

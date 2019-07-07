@@ -3,7 +3,7 @@
 #ifndef _ABSTRACTSURFACE_h
 #define _ABSTRACTSURFACE_h
 
-//#define LOLA_SYNC_FULL_DEBUG
+#define LOLA_SYNC_FULL_DEBUG
 
 #include <Arduino.h>
 #include <Services\IPacketSendService.h>
@@ -121,6 +121,8 @@ protected:
 
 	bool HashesMatch()
 	{
+		UpdateLocalHash();
+
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 		if (!HasRemoteHash())
 		{
@@ -208,21 +210,18 @@ protected:
 			{
 			case SyncStateEnum::WaitingForServiceDiscovery:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(LoLaDriver->GetMicros());
-				Serial.println(F(": WaitingForServiceDiscovery"));
+				Serial.println(F("WaitingForServiceDiscovery"));
 #endif
 				break;
 			case SyncStateEnum::Syncing:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(LoLaDriver->GetMicros());
-				Serial.println(F(": FullSync"));
+				Serial.println(F("FullSync"));
 #endif
 				InvalidateLocalHash();
 				break;
 			case SyncStateEnum::Synced:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.print(LoLaDriver->GetMicros());
-				Serial.println(F(": Synced"));
+				Serial.println(F("Synced"));
 #endif
 				InvalidateLocalHash();
 				break;
