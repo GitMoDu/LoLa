@@ -232,6 +232,10 @@ private:
 	{
 		if (DriverActiveState != DriverActiveStates::AwaitingProcessing)
 		{
+#ifdef DEBUG_LOLA
+			Serial.println(F("Incoming Rejected."));
+#endif		
+			RejectedCount++;
 			RestoreToReceiving();
 			EnableInterrupts();
 
