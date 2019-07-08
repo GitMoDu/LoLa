@@ -93,10 +93,10 @@ public:
 
 public:
 #ifdef DEBUG_BIT_TRACKER
-	void Debug(Stream * serial)
+	void Debug(Stream* serial)
 	{
 		serial->print(F("|"));
-		for (uint8_t i = 0; i < (GetBlockCount()*SYNC_SURFACE_BLOCK_SIZE); i++)
+		for (uint8_t i = 0; i < (GetBlockCount() * SYNC_SURFACE_BLOCK_SIZE); i++)
 		{
 			serial->print(GetData()[i]);
 			serial->print(F("|"));
@@ -104,7 +104,7 @@ public:
 		serial->println();
 	}
 
-	virtual void PrintName(Stream * serial)
+	virtual void PrintName(Stream* serial)
 	{
 		serial->print(F("ItrackedSurface"));
 	}
