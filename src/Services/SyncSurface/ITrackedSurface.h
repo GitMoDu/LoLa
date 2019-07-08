@@ -22,10 +22,12 @@ private:
 	//Data good to use status.
 	bool DataGood = false;
 
-	//CRC Calculator.
-	FastCRC8 CRC8;
 	uint8_t LastCRC = 0;
 	boolean HashNeedsUpdate = true;
+
+protected:
+	//CRC Calculator.
+	FastCRC8 CRC8;
 
 protected:
 	inline void OnDataChanged()
