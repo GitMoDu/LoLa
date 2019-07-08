@@ -128,6 +128,15 @@ protected:
 		OnDataChanged();
 	}
 
+protected:
+	union ArrayToUint64 {
+		byte array[sizeof(uint64_t)];
+		uint64_t uint64;
+		uint32_t uint32;
+		uint16_t uint16;
+	} ATUI;
+
+
 public:
 	TemplateTrackedSurface() : ITrackedSurface()
 	{
@@ -194,22 +203,59 @@ public:
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
-		return GetData()[IndexOffsetGrunt] +
-			((uint16_t)GetData()[IndexOffsetGrunt + 1] << 8) +
-			((uint32_t)GetData()[IndexOffsetGrunt + 2] << 16) +
-			((uint32_t)GetData()[IndexOffsetGrunt + 3] << 24);
+		ATUI.array[0] = GetData()[IndexOffsetGrunt + 0];
+		ATUI.array[1] = GetData()[IndexOffsetGrunt + 1];
+		ATUI.array[2] = GetData()[IndexOffsetGrunt + 2];
+		ATUI.array[3] = GetData()[IndexOffsetGrunt + 3];
+
+		return ATUI.uint32;
 	}
 
 	inline void Set32(const uint32_t value, const uint8_t blockIndex)
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
-		GetData()[IndexOffsetGrunt] = value & 0x00FF;
-		GetData()[IndexOffsetGrunt + 1] = value >> 8;
-		GetData()[IndexOffsetGrunt + 2] = value >> 16;
-		GetData()[IndexOffsetGrunt + 3] = value >> 24;
+		ATUI.uint32 = value;
+		GetData()[IndexOffsetGrunt + 0] = ATUI.array[0];
+		GetData()[IndexOffsetGrunt + 1] = ATUI.array[1];
+		GetData()[IndexOffsetGrunt + 2] = ATUI.array[2];
+		GetData()[IndexOffsetGrunt + 3] = ATUI.array[3];
 
 		InvalidateBlock(blockIndex);
+	}
+
+	inline uint64_t Get64(const uint8_t blockIndex)
+	{
+		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+
+		ATUI.array[0] = GetData()[IndexOffsetGrunt + 0];
+		ATUI.array[1] = GetData()[IndexOffsetGrunt + 1];
+		ATUI.array[2] = GetData()[IndexOffsetGrunt + 2];
+		ATUI.array[3] = GetData()[IndexOffsetGrunt + 3];
+		ATUI.array[4] = GetData()[IndexOffsetGrunt + 4];
+		ATUI.array[5] = GetData()[IndexOffsetGrunt + 5];
+		ATUI.array[6] = GetData()[IndexOffsetGrunt + 6];
+		ATUI.array[7] = GetData()[IndexOffsetGrunt + 7];
+
+		return ATUI.uint64;
+	}
+
+	inline void Set64(const uint64_t value, const uint8_t blockIndex)
+	{
+		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+
+		ATUI.uint64 = value;
+		GetData()[IndexOffsetGrunt + 0] = ATUI.array[0];
+		GetData()[IndexOffsetGrunt + 1] = ATUI.array[1];
+		GetData()[IndexOffsetGrunt + 2] = ATUI.array[2];
+		GetData()[IndexOffsetGrunt + 3] = ATUI.array[3];
+		GetData()[IndexOffsetGrunt + 4] = ATUI.array[4];
+		GetData()[IndexOffsetGrunt + 5] = ATUI.array[5];
+		GetData()[IndexOffsetGrunt + 6] = ATUI.array[6];
+		GetData()[IndexOffsetGrunt + 7] = ATUI.array[7];
+
+		InvalidateBlock(blockIndex);
+		InvalidateBlock(blockIndex + 1);
 	}
 };
 #endif
