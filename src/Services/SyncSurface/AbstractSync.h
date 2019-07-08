@@ -47,6 +47,7 @@ protected:
 
 protected:
 	virtual void OnWaitingForServiceDiscovery() {}
+	virtual uint8_t GetSurfaceId() { return 0; }
 	virtual void OnSyncActive() {}
 
 	virtual void OnSurfaceDataChanged() {}
