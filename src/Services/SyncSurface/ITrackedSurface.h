@@ -121,7 +121,7 @@ private:
 	TemplateBitTracker<BlockCount> Tracker;
 	uint8_t Data[BlockCount * SYNC_SURFACE_BLOCK_SIZE];
 
-private:
+protected:
 	void InvalidateBlock(const uint8_t blockIndex)
 	{
 		Tracker.SetBit(blockIndex);
@@ -139,12 +139,12 @@ public:
 	}
 
 	uint8_t* GetData()
-	{ 
+	{
 		return Data;
 	}
 
 	IBitTracker* GetTracker()
-	{ 
+	{
 		return &Tracker;
 	}
 
