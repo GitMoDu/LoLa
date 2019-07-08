@@ -48,7 +48,7 @@ protected:
 	virtual void OnSyncFinishedReceived() {}
 
 	//Writer
-	virtual void OnServiceDiscoveryReceived() {}
+	virtual void OnServiceDiscoveryReceived(const uint8_t surfaceId) {}
 	virtual void OnUpdateFinishedReplyReceived() {}
 	virtual void OnInvalidateRequestReceived() {}
 
@@ -75,7 +75,7 @@ protected:
 		}
 		else if (incomingPacket->GetDataHeader() == SyncMetaDefinition->GetHeader())
 		{
-			SetRemoteHash(incomingPacket->GetPayload()[0]);
+			
 
 			switch (incomingPacket->GetId())
 			{
@@ -84,6 +84,7 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnUpdateFinishedReceived"));
 #endif
+				SetRemoteHash(incomingPacket->GetPayload()[0]);
 				OnUpdateFinishedReceived();
 				break;
 
@@ -92,19 +93,21 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnUpdateFinishedReplyReceived"));
 #endif
+				SetRemoteHash(incomingPacket->GetPayload()[0]);
 				OnUpdateFinishedReplyReceived();
 				break;
 			case SYNC_META_SUB_HEADER_INVALIDATE_REQUEST:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnInvalidateReceived"));
 #endif
+				SetRemoteHash(incomingPacket->GetPayload()[0]);
 				OnInvalidateRequestReceived();
 				break;
 			case SYNC_META_SUB_HEADER_SERVICE_DISCOVERY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("OnServiceDiscoveryReceived"));
 #endif
-				OnServiceDiscoveryReceived();
+				OnServiceDiscoveryReceived(incomingPacket->GetPayload()[0]);
 				break;
 			default:
 				break;
@@ -136,7 +139,7 @@ protected:
 		}
 	}
 
-	void PrepareMetaPacket(const uint8_t subHeader)
+	inline void PrepareMetaHashPacket(const uint8_t subHeader)
 	{
 		Packet->SetDefinition(SyncMetaDefinition);
 		Packet->SetId(subHeader);
@@ -144,10 +147,17 @@ protected:
 		Packet->GetPayload()[0] = GetLocalHash();
 	}
 
+	inline void PrepareMetaPacket(const uint8_t subHeader, const uint8_t hash)
+	{
+		Packet->SetDefinition(SyncMetaDefinition);
+		Packet->SetId(subHeader);
+		Packet->GetPayload()[0] = hash;
+	}
+
 	//Writer
 	void PrepareUpdateFinishedPacket()
 	{
-		PrepareMetaPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED);
+		PrepareMetaHashPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED);
 	}
 
 	bool PrepareBlockPacketHeader(const uint8_t index)
@@ -165,19 +175,19 @@ protected:
 	}
 
 	//Reader
-	void PrepareServiceDiscoveryPacket()
+	inline void PrepareServiceDiscoveryPacket()
 	{
-		PrepareMetaPacket(SYNC_META_SUB_HEADER_SERVICE_DISCOVERY);
+		PrepareMetaPacket(SYNC_META_SUB_HEADER_SERVICE_DISCOVERY, GetSurfaceId());
 	}
 
-	void PrepareUpdateFinishedReplyPacket()
+	inline void PrepareUpdateFinishedReplyPacket()
 	{
-		PrepareMetaPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
+		PrepareMetaHashPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
 	}
 
-	void PrepareInvalidateRequestPacket()
+	inline void PrepareInvalidateRequestPacket()
 	{
-		PrepareMetaPacket(SYNC_META_SUB_HEADER_INVALIDATE_REQUEST);
+		PrepareMetaHashPacket(SYNC_META_SUB_HEADER_INVALIDATE_REQUEST);
 	}
 };
 #endif

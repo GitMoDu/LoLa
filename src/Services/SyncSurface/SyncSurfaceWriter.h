@@ -63,8 +63,17 @@ protected:
 		}
 	}
 
-	void OnServiceDiscoveryReceived()
+	void OnServiceDiscoveryReceived(const uint8_t surfaceId)
 	{
+		if (surfaceId != GetSurfaceId())
+		{
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+			Serial.println(F("Surface Version mismatch"));
+#endif // DEBUG_LOLA
+
+			return;
+		}
+
 		switch (SyncState)
 		{
 		case SyncStateEnum::Syncing:
