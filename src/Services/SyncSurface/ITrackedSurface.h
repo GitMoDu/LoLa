@@ -160,13 +160,13 @@ public:
 
 	//Helper methods.
 	//offset [0:3]
-	inline uint8_t Get8(const uint8_t blockIndex, const uint8_t offset = 0)
+	inline uint8_t Get8(const uint8_t blockIndex, const uint8_t offset)
 	{
 		return GetData()[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset];
 	}
 
 	//offset [0:3]
-	inline void Set8(const uint8_t value, const uint8_t blockIndex, const uint8_t offset = 0)
+	inline void Set8(const uint8_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
 		GetData()[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset] = value;
 
@@ -174,16 +174,16 @@ public:
 	}
 
 	//offset [0:1]
-	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset = 0)
+	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset*2;
+		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * 2;
 		return GetData()[IndexOffsetGrunt] + ((uint16_t)GetData()[IndexOffsetGrunt + 1] << 8);
 	}
 
 	//offset [0:1]
-	inline void Set16(const uint16_t value, const uint8_t blockIndex, const uint8_t offset = 0)
+	inline void Set16(const uint16_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset*2;
+		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * 2;
 		GetData()[IndexOffsetGrunt] = value & 0x00FF;
 		GetData()[IndexOffsetGrunt + 1] = value >> 8;
 
