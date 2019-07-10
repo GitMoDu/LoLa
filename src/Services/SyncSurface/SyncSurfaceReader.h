@@ -15,8 +15,8 @@ private:
 	uint32_t LastUpdateReceived = ILOLA_INVALID_MILLIS;
 
 public:
-	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
-		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
+	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface, const bool autoStart = true)
+		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition, autoStart)
 	{
 	}
 

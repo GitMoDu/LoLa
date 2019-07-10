@@ -14,8 +14,8 @@ private:
 	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
 
 public:
-	SyncSurfaceWriter(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
-		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
+	SyncSurfaceWriter(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface, const bool autoStart = true)
+		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition, autoStart)
 	{
 	}
 
