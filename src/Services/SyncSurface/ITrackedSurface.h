@@ -171,13 +171,13 @@ public:
 	//offset [0:3]
 	inline uint8_t Get8(const uint8_t blockIndex, const uint8_t offset)
 	{
-		return GetData()[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset];
+		return Data[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset];
 	}
 
 	//offset [0:3]
 	inline void Set8(const uint8_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		GetData()[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset] = value;
+		Data[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset] = value;
 
 		InvalidateBlock(blockIndex);
 	}
@@ -186,7 +186,7 @@ public:
 	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset)
 	{
 		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * sizeof(uint16_t);
-		return GetData()[IndexOffsetGrunt] + ((uint16_t)GetData()[IndexOffsetGrunt + 1] << 8);
+		return Data[IndexOffsetGrunt] + ((uint16_t)Data[IndexOffsetGrunt + 1] << 8);
 	}
 
 	//offset [0:1]
@@ -195,8 +195,8 @@ public:
 		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * sizeof(uint16_t);
 
 		ATUI.uint16 = value;
-		GetData()[IndexOffsetGrunt + 0] = ATUI.array[0];
-		GetData()[IndexOffsetGrunt + 1] = ATUI.array[1];
+		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
+		Data[IndexOffsetGrunt + 1] = ATUI.array[1];
 
 		InvalidateBlock(blockIndex);
 	}
@@ -205,10 +205,10 @@ public:
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
-		ATUI.array[0] = GetData()[IndexOffsetGrunt + 0];
-		ATUI.array[1] = GetData()[IndexOffsetGrunt + 1];
-		ATUI.array[2] = GetData()[IndexOffsetGrunt + 2];
-		ATUI.array[3] = GetData()[IndexOffsetGrunt + 3];
+		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
+		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
+		ATUI.array[2] = Data[IndexOffsetGrunt + 2];
+		ATUI.array[3] = Data[IndexOffsetGrunt + 3];
 
 		return ATUI.uint32;
 	}
@@ -218,10 +218,10 @@ public:
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
 		ATUI.uint32 = value;
-		GetData()[IndexOffsetGrunt + 0] = ATUI.array[0];
-		GetData()[IndexOffsetGrunt + 1] = ATUI.array[1];
-		GetData()[IndexOffsetGrunt + 2] = ATUI.array[2];
-		GetData()[IndexOffsetGrunt + 3] = ATUI.array[3];
+		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
+		Data[IndexOffsetGrunt + 1] = ATUI.array[1];
+		Data[IndexOffsetGrunt + 2] = ATUI.array[2];
+		Data[IndexOffsetGrunt + 3] = ATUI.array[3];
 
 		InvalidateBlock(blockIndex);
 	}
@@ -230,14 +230,14 @@ public:
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
-		ATUI.array[0] = GetData()[IndexOffsetGrunt + 0];
-		ATUI.array[1] = GetData()[IndexOffsetGrunt + 1];
-		ATUI.array[2] = GetData()[IndexOffsetGrunt + 2];
-		ATUI.array[3] = GetData()[IndexOffsetGrunt + 3];
-		ATUI.array[4] = GetData()[IndexOffsetGrunt + 4];
-		ATUI.array[5] = GetData()[IndexOffsetGrunt + 5];
-		ATUI.array[6] = GetData()[IndexOffsetGrunt + 6];
-		ATUI.array[7] = GetData()[IndexOffsetGrunt + 7];
+		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
+		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
+		ATUI.array[2] = Data[IndexOffsetGrunt + 2];
+		ATUI.array[3] = Data[IndexOffsetGrunt + 3];
+		ATUI.array[4] = Data[IndexOffsetGrunt + 4];
+		ATUI.array[5] = Data[IndexOffsetGrunt + 5];
+		ATUI.array[6] = Data[IndexOffsetGrunt + 6];
+		ATUI.array[7] = Data[IndexOffsetGrunt + 7];
 
 		return ATUI.uint64;
 	}
@@ -247,14 +247,14 @@ public:
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
 		ATUI.uint64 = value;
-		GetData()[IndexOffsetGrunt + 0] = ATUI.array[0];
-		GetData()[IndexOffsetGrunt + 1] = ATUI.array[1];
-		GetData()[IndexOffsetGrunt + 2] = ATUI.array[2];
-		GetData()[IndexOffsetGrunt + 3] = ATUI.array[3];
-		GetData()[IndexOffsetGrunt + 4] = ATUI.array[4];
-		GetData()[IndexOffsetGrunt + 5] = ATUI.array[5];
-		GetData()[IndexOffsetGrunt + 6] = ATUI.array[6];
-		GetData()[IndexOffsetGrunt + 7] = ATUI.array[7];
+		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
+		Data[IndexOffsetGrunt + 1] = ATUI.array[1];
+		Data[IndexOffsetGrunt + 2] = ATUI.array[2];
+		Data[IndexOffsetGrunt + 3] = ATUI.array[3];
+		Data[IndexOffsetGrunt + 4] = ATUI.array[4];
+		Data[IndexOffsetGrunt + 5] = ATUI.array[5];
+		Data[IndexOffsetGrunt + 6] = ATUI.array[6];
+		Data[IndexOffsetGrunt + 7] = ATUI.array[7];
 
 		InvalidateBlock(blockIndex);
 		InvalidateBlock(blockIndex + 1);
