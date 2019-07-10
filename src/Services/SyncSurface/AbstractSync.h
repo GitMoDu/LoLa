@@ -37,13 +37,14 @@ private:
 protected:
 	enum SyncStateEnum : uint8_t
 	{
-		WaitingForServiceDiscovery = 0,
-		Syncing = 1,
-		Synced = 2,
-		Disabled = 3
-	} SyncState = SyncStateEnum::Disabled;
+		Sleeping = 0,
+		WaitingForServiceDiscovery = 1,
+		Syncing = 2,
+		Synced = 3,
+		Disabled = 4
+	} SyncState = SyncStateEnum::Sleeping;
 
-	ITrackedSurface * TrackedSurface = nullptr;
+	ITrackedSurface* TrackedSurface = nullptr;
 
 protected:
 	virtual void OnWaitingForServiceDiscovery() {}
@@ -54,12 +55,20 @@ protected:
 	virtual void OnStateUpdated(const AbstractSync::SyncStateEnum newState) {}
 
 public:
-	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLaDriver* driver, ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder)
+	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLaDriver* driver,
+		ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder, const bool autoStart = true)
 		: IPacketSendService(scheduler, period, driver, packetHolder)
 	{
 		TrackedSurface = trackedSurface;
 
-		SyncState = SyncStateEnum::Disabled;
+		if (autoStart)
+		{
+			SyncState = SyncStateEnum::Sleeping;
+		}
+		else
+		{
+			SyncState = SyncStateEnum::Disabled;
+		}
 	}
 
 	bool OnEnable()
@@ -72,14 +81,38 @@ public:
 		return TrackedSurface;
 	}
 
+	void SyncOverrideEnable(const bool enable)
+	{
+		if (enable)
+		{
+			if (SyncState == SyncStateEnum::Disabled) 
+			{
+				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+			}
+		}		
+		else
+		{
+			if (SyncState != SyncStateEnum::Disabled)
+			{
+				UpdateSyncState(SyncStateEnum::Disabled);
+			}
+		}
+	}
+
 	void OnLinkEstablished()
 	{
-		UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+		if (SyncState != SyncStateEnum::Disabled)
+		{
+			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+		}		
 	}
 
 	void OnLinkLost()
 	{
-		UpdateSyncState(SyncStateEnum::Disabled);
+		if (SyncState != SyncStateEnum::Disabled)
+		{
+			UpdateSyncState(SyncStateEnum::Sleeping);
+		}
 	}
 
 	bool IsSynced()
@@ -226,10 +259,12 @@ protected:
 #endif
 				InvalidateLocalHash();
 				break;
-			case SyncStateEnum::Disabled:
+			case SyncStateEnum::Sleeping:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("Disabled"));
+				Serial.println(F("Sleeping"));
 #endif
+				break;
+			case SyncStateEnum::Disabled:
 				break;
 			default:
 				break;
@@ -280,6 +315,7 @@ protected:
 			}
 			break;
 		case SyncStateEnum::Disabled:
+		case SyncStateEnum::Sleeping:
 		default:
 			Disable();
 			break;
