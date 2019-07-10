@@ -30,8 +30,8 @@ private:
 
 public:
 	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface,
-		SyncAbstractPacketDefinition* metaDefinition, SyncAbstractPacketDefinition* dataDefinition)
-		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder)
+		SyncAbstractPacketDefinition* metaDefinition, SyncAbstractPacketDefinition* dataDefinition, const bool autoStart = true)
+		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder, autoStart)
 	{
 		SyncMetaDefinition = metaDefinition;
 		DataPacketDefinition = dataDefinition;
@@ -69,48 +69,52 @@ protected:
 		if (incomingPacket->GetDataHeader() == DataPacketDefinition->GetHeader())
 		{
 			//To Reader.
-			OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
+			if (SyncState != SyncStateEnum::Disabled)
+			{
+				OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
+			}
 
 			return true;
 		}
 		else if (incomingPacket->GetDataHeader() == SyncMetaDefinition->GetHeader())
 		{
-			
-
-			switch (incomingPacket->GetId())
+			if (SyncState != SyncStateEnum::Disabled)
 			{
-				//To Reader.
-			case SYNC_META_SUB_HEADER_UPDATE_FINISHED:
+				switch (incomingPacket->GetId())
+				{
+					//To Reader.
+				case SYNC_META_SUB_HEADER_UPDATE_FINISHED:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("OnUpdateFinishedReceived"));
+					Serial.println(F("OnUpdateFinishedReceived"));
 #endif
-				SetRemoteHash(incomingPacket->GetPayload()[0]);
-				OnUpdateFinishedReceived();
-				break;
+					SetRemoteHash(incomingPacket->GetPayload()[0]);
+					OnUpdateFinishedReceived();
+					break;
 
-				//To Writer.
-			case SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY:
+					//To Writer.
+				case SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("OnUpdateFinishedReplyReceived"));
+					Serial.println(F("OnUpdateFinishedReplyReceived"));
 #endif
-				SetRemoteHash(incomingPacket->GetPayload()[0]);
-				OnUpdateFinishedReplyReceived();
-				break;
-			case SYNC_META_SUB_HEADER_INVALIDATE_REQUEST:
+					SetRemoteHash(incomingPacket->GetPayload()[0]);
+					OnUpdateFinishedReplyReceived();
+					break;
+				case SYNC_META_SUB_HEADER_INVALIDATE_REQUEST:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("OnInvalidateReceived"));
+					Serial.println(F("OnInvalidateReceived"));
 #endif
-				SetRemoteHash(incomingPacket->GetPayload()[0]);
-				OnInvalidateRequestReceived();
-				break;
-			case SYNC_META_SUB_HEADER_SERVICE_DISCOVERY:
+					SetRemoteHash(incomingPacket->GetPayload()[0]);
+					OnInvalidateRequestReceived();
+					break;
+				case SYNC_META_SUB_HEADER_SERVICE_DISCOVERY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("OnServiceDiscoveryReceived"));
+					Serial.println(F("OnServiceDiscoveryReceived"));
 #endif
-				OnServiceDiscoveryReceived(incomingPacket->GetPayload()[0]);
-				break;
-			default:
-				break;
+					OnServiceDiscoveryReceived(incomingPacket->GetPayload()[0]);
+					break;
+				default:
+					break;
+				}
 			}
 
 			return true;
