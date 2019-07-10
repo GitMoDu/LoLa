@@ -13,13 +13,13 @@
 class SyncSurfaceBase : public AbstractSync
 {
 private:
-	SyncAbstractPacketDefinition* SyncMetaDefinition =	nullptr;
+	SyncAbstractPacketDefinition* SyncMetaDefinition = nullptr;
 	SyncAbstractPacketDefinition* DataPacketDefinition = nullptr;
 
-	static const uint8_t SYNC_META_SUB_HEADER_SERVICE_DISCOVERY =		0;
-	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED =			1;
-	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY =	2;
-	static const uint8_t SYNC_META_SUB_HEADER_INVALIDATE_REQUEST =		3;
+	static const uint8_t SYNC_META_SUB_HEADER_SERVICE_DISCOVERY = 0;
+	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED = 1;
+	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY = 2;
+	static const uint8_t SYNC_META_SUB_HEADER_INVALIDATE_REQUEST = 3;
 
 	union ArrayToUint32 {
 		byte array[4];
@@ -43,7 +43,7 @@ public:
 
 protected:
 	//Reader
-	virtual void OnBlockReceived(const uint8_t index, uint8_t * payload) {}
+	virtual void OnBlockReceived(const uint8_t index, uint8_t* payload) {}
 	virtual void OnUpdateFinishedReceived() {}
 	virtual void OnSyncFinishedReceived() {}
 
@@ -123,7 +123,7 @@ protected:
 		return false;
 	}
 
-	void UpdateBlockData(const uint8_t blockIndex, uint8_t * payload)
+	void UpdateBlockData(const uint8_t blockIndex, uint8_t* payload)
 	{
 		uint8_t IndexOffset = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
@@ -133,7 +133,7 @@ protected:
 		}
 	}
 
-	void PrepareBlockPacketPayload(const uint8_t index, uint8_t * payload)
+	void PrepareBlockPacketPayload(const uint8_t index, uint8_t* payload)
 	{
 		uint8_t IndexOffset = index * SYNC_SURFACE_BLOCK_SIZE;
 
