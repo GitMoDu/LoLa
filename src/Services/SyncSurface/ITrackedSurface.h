@@ -244,7 +244,23 @@ public:
 		return ATUI.uint64;
 	}
 
-	inline void Set64(const uint64_t& value, const uint8_t& blockIndex)
+	inline void Get64(uint64_t& value, const uint8_t blockIndex)
+	{
+		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+
+		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
+		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
+		ATUI.array[2] = Data[IndexOffsetGrunt + 2];
+		ATUI.array[3] = Data[IndexOffsetGrunt + 3];
+		ATUI.array[4] = Data[IndexOffsetGrunt + 4];
+		ATUI.array[5] = Data[IndexOffsetGrunt + 5];
+		ATUI.array[6] = Data[IndexOffsetGrunt + 6];
+		ATUI.array[7] = Data[IndexOffsetGrunt + 7];
+
+		value = ATUI.uint64;
+	}
+
+	inline void Set64(uint64_t& value, uint8_t blockIndex)
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
