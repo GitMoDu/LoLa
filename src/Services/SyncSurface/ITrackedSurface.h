@@ -119,6 +119,8 @@ private:
 	uint8_t IndexOffsetGrunt;
 
 	TemplateBitTracker<BlockCount> Tracker;
+	
+protected:
 	uint8_t Data[BlockCount * SYNC_SURFACE_BLOCK_SIZE];
 
 protected:
