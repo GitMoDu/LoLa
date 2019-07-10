@@ -41,6 +41,11 @@ public:
 #endif
 	}
 
+	virtual bool OnSetup()
+	{
+		return AbstractSync::OnSetup();
+	}
+
 protected:
 	//Reader
 	virtual void OnBlockReceived(const uint8_t index, uint8_t* payload) {}

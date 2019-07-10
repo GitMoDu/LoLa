@@ -20,6 +20,11 @@ public:
 	{
 	}
 
+	virtual bool OnSetup()
+	{
+		return SyncSurfaceBase::OnSetup();
+	}
+
 protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)

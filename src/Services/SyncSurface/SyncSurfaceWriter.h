@@ -19,6 +19,11 @@ public:
 	{
 	}
 
+	virtual bool OnSetup()
+	{
+		return SyncSurfaceBase::OnSetup();
+	}
+
 private:
 	enum SyncWriterState : uint8_t
 	{
