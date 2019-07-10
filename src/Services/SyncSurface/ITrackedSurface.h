@@ -138,7 +138,7 @@ protected:
 
 
 public:
-	TemplateTrackedSurface() : ITrackedSurface()
+	TemplateTrackedSurface() : ITrackedSurface(), Tracker()
 	{
 		for (uint8_t i = 0; i < GetDataSize(); i++)
 		{
