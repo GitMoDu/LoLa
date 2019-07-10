@@ -127,6 +127,7 @@ protected:
 	void InvalidateBlock(const uint8_t blockIndex)
 	{
 		Tracker.SetBit(blockIndex);
+		InvalidateHash();
 		OnDataChanged();
 	}
 
