@@ -112,7 +112,7 @@ public:
 };
 
 //BlockCount < 32
-template <uint8_t BlockCount>
+template <const uint8_t BlockCount>
 class TemplateTrackedSurface : public ITrackedSurface
 {
 private:
