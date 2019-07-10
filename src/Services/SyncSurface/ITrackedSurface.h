@@ -185,16 +185,18 @@ public:
 	//offset [0:1]
 	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * 2;
+		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * sizeof(uint16_t);
 		return GetData()[IndexOffsetGrunt] + ((uint16_t)GetData()[IndexOffsetGrunt + 1] << 8);
 	}
 
 	//offset [0:1]
 	inline void Set16(const uint16_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * 2;
-		GetData()[IndexOffsetGrunt] = value & 0x00FF;
-		GetData()[IndexOffsetGrunt + 1] = value >> 8;
+		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * sizeof(uint16_t);
+
+		ATUI.uint16 = value;
+		GetData()[IndexOffsetGrunt + 0] = ATUI.array[0];
+		GetData()[IndexOffsetGrunt + 1] = ATUI.array[1];
 
 		InvalidateBlock(blockIndex);
 	}
@@ -240,7 +242,7 @@ public:
 		return ATUI.uint64;
 	}
 
-	inline void Set64(const uint64_t value, const uint8_t blockIndex)
+	inline void Set64(const uint64_t& value, const uint8_t& blockIndex)
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
