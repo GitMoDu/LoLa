@@ -119,7 +119,7 @@ private:
 	uint8_t IndexOffsetGrunt;
 
 	TemplateBitTracker<BlockCount> Tracker;
-	
+
 protected:
 	uint8_t Data[BlockCount * SYNC_SURFACE_BLOCK_SIZE];
 
@@ -189,7 +189,11 @@ public:
 	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset)
 	{
 		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * sizeof(uint16_t);
-		return Data[IndexOffsetGrunt] + ((uint16_t)Data[IndexOffsetGrunt + 1] << 8);
+
+		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
+		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
+
+		return ATUI.uint16;
 	}
 
 	//offset [0:1]
