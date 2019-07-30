@@ -261,7 +261,7 @@ public:
 		value = ATUI.uint64;
 	}
 
-	inline void Set64(uint64_t& value, uint8_t blockIndex)
+	inline void Set64(uint64_t& value, const uint8_t blockIndex)
 	{
 		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
 
