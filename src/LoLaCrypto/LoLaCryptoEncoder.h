@@ -73,7 +73,7 @@ public:
 		Cypher.addAuthData(TokenHolder, sizeof(TokenHolder));
 	}
 
-	//Returns 8 bit MAC/CRC.
+	//Returns 16 bit MAC/CRC.
 	uint16_t Encode(uint8_t* message, const uint8_t messageLength)
 	{
 		if (EncoderState == StageEnum::FullPower)
@@ -85,7 +85,7 @@ public:
 		return DataCRC(message, messageLength);
 	}
 
-	//Returns 8 bit MAC/CRC.
+	//Returns 16 bit MAC/CRC.
 	uint16_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
 	{
 		if (EncoderState == StageEnum::FullPower)
