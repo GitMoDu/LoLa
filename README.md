@@ -24,8 +24,7 @@ Generic Callbacks: https://github.com/tomstewart89/Callback
 
 OO TaskScheduler: https://github.com/arkhipenko/TaskScheduler
 
-FastCRC with added STM32F1 support: GitMoDu/FastCRC https://github.com/GitMoDu/FastCRC
-    forked from FrankBoesing/FastCRC https://github.com/FrankBoesing/FastCRC
+FastCRC: FrankBoesing/FastCRC https://github.com/FrankBoesing/FastCRC
 
 Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git
 
@@ -50,6 +49,8 @@ The packets definitions and payload are defined in a very minimalistic way with 
 
 # Link Features
 
+Unbuffered Output [WORKING]: Each LoLa service can handle a packet send being delayed or even failed, so we don't need to buffer outputs. IPacketSendService extends the base ILoLaService and provides overloads for extension.
+
 Async Driver for Si4463 [WORKING]: The radio IC this project is based around, but not limited to. Performs the packet processing in the main loop, instead of hogging the interrupt.
 
 Message Authentication Code [WORKING]: 16 bit Modbus CRC, completely replaces the raw hardware CRC. With crypto enable, uses MAC-then-Encrypt.
@@ -62,22 +63,20 @@ ECC Public Key Exchange [WORKING] - Elyptic Curve Diffie-Hellman key exchange, p
 
 Encrypted Link[WORKING] – Packets encrypted with Ascon128 cypher, using 16 bytes of the shared key. To source a 16 byte IV, the partners' Ids are used, salted with the session Id.
 
-TOTP protection [WORKING] - A TOTP seed is set using the last 4 bytes of the secret key, which is then used to generate a time based token, which is used by the cypher when encrypting/decrypting. The default hop time is 1 second.
+TOTP protection [FAILING] - A TOTP seed is set using the last 4 bytes of the secret key, which is then used to generate a time based token, which is used by the cypher when encrypting/decrypting. The default hop time is 1 second. Currently not working due to imprecise clock sync.
 
 Synchronized clock [WORKING]: when establishing a link, the Remote's clock is synced to the Host's clock. The host clock is randomized for each new link session. The clock is tuned during link time. Possible improvements: get host/remote clock delta.
 
 Packet collision avoidance [WORKING]: with the Synchronized clock, we split a fixed period in half where the Host can only transmit during the first half and the Remote during the second half (half-duplex). Default duplex period is 10 milliseconds. Latency is taken into account for this feature (optional).
 
-Unbuffered Output [WORKING]: Each LoLa service can handle a packet send being delayed or even failed, so we don't need to buffer outputs. IPacketSendService extends the base ILoLaService and provides overloads for extension.
-
 Link Handshake Handling [WORKING] – Broadcast Id and find a partner. Clock is synced, Crypto tokens and basic link info is exchanged.
 
 Link management [WORKING]: Link service establishes a link and fires events when the link is gained or lost. Keeps sending pings (with replies) to make sure the partner is still there, avoiding stealing bandwidth from user services.
 
-Transmit Power Balancer[WORKING]: with the link up, the end-points are continuosly updated on the RSSI of the partner, and adjusts the output power conservatively.
+Transmit Power Balancer[WORKING/NEEDS TUNNING]: with the link up, the end-points are continuosly updated on the RSSI of the partner, and adjusts the output power conservatively.
 
 Channel Hopping[IN PROGRESS]: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. Currently it's using a fixed channel (average between min and max channels).
-When linked, we use the TOTP mechanism to generate a pseudo-random channel hopping.
+When linked, we use the TOTP mechanism to generate a pseudo-random channel hopping. Currently not working due to imprecise clock sync.
 
 Simulated Packet Loss for Testing[IN PROGRESS]: This feature allows us to test the system in simulated bad conditions. Was reverted during last merge, needs to be reimplemented.
 
@@ -93,7 +92,6 @@ I'd like to build a real time system, biasing the implementation for low latency
 
  
 
-
 # Notable issues
 
 It's quite a memory hog (around 1.5 kB for the example projects with only 2 sync surfaces), and ROM but there's a lot of functionality. 
@@ -104,6 +102,10 @@ It's quite a memory hog (around 1.5 kB for the example projects with only 2 sync
 # Future : 
 
 Improved Time Source[IN PROGRESS]: current version is working but should be considered a fallback. GPS based time sources or an external time keeping device should be preferred. RTC is also an option on STM32F1.
+
+Support for other radio drivers [WAITING FOR HARDWARE]: NRF24L01 is next.
+
+Crypto key derivation [WORKING]: currently using a custom key derivation, should be replaced with standard KDF .
 
 
 
