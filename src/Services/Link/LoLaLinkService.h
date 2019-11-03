@@ -3,6 +3,8 @@
 #ifndef _LOLA_LINK_SERVICE_h
 #define _LOLA_LINK_SERVICE_h
 
+#define DEBUG_LINK_SERVICE
+
 
 #include <Services\Link\AbstractLinkService.h>
 
@@ -17,7 +19,7 @@
 
 #include <Services\Link\LoLaLinkTimedHopper.h>
 
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 class LinkDebugTask : Task
 {
 private:
@@ -159,7 +161,7 @@ private:
 
 class LoLaLinkService : public AbstractLinkService
 {
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 protected:
 	uint32_t LinkingDuration = 0;
 	uint32_t PKCDuration = 0;
@@ -196,7 +198,6 @@ protected:
 
 
 protected:
-
 	///Internal housekeeping.
 	virtual void OnClearSession() {}
 	virtual void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState) {}
@@ -240,7 +241,7 @@ public:
 		, ChannelManager()
 		, PowerBalancer()
 		, KeyExchanger()
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 		, DebugTask(servicesScheduler)
 #endif
 	{
@@ -490,7 +491,7 @@ protected:
 	{
 		if (LinkInfo->GetLinkState() != newState)
 		{
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 			if (newState == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
 				LinkingDuration = GetElapsedMillisSinceStateStart();
@@ -503,7 +504,7 @@ protected:
 			//Previous state.
 			if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked)
 			{
-#ifdef DEBUG_LOLA
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 				DebugTask.OnLinkOff();
 #endif
 				//Notify all link dependent services to stop.
