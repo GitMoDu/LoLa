@@ -76,7 +76,6 @@ public:
 		for (uint8_t i = 0; i < UNIQUE_ID_MAX_LENGTH; i++) {
 			UUID[i] = EEPROM.read(i);
 		}
-		;
 
 		if (EEPROM.read(UNIQUE_ID_MAX_LENGTH) == CRC8.smbus(UUID, UNIQUE_ID_MAX_LENGTH))
 		{
