@@ -9,12 +9,12 @@
 
 #define DEBUG_BIT_TRACKER
 
-#define SYNC_SURFACE_BLOCK_SIZE					4 //4 bytes per block, enough for a 32 bit value (uint32_t, int32_t);
-
-#define SYNC_SURFACE_PACKET_DEFINITION_COUNT	2
-
 class ITrackedSurface
 {
+public:
+	//4 bytes per block, enough for a 32 bit value (uint32_t, int32_t)
+	static const uint8_t BytesPerBlock = 4;
+
 private:
 	//Callback handler.
 	Signal<const bool> OnSurfaceUpdatedCallback;

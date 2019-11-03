@@ -130,9 +130,9 @@ protected:
 
 	void UpdateBlockData(const uint8_t blockIndex, uint8_t* payload)
 	{
-		uint8_t IndexOffset = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+		uint8_t IndexOffset = blockIndex * ITrackedSurface::BytesPerBlock;
 
-		for (uint8_t i = 0; i < SYNC_SURFACE_BLOCK_SIZE; i++)
+		for (uint8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
 		{
 			TrackedSurface->GetData()[IndexOffset + i] = payload[i];
 		}
@@ -140,9 +140,9 @@ protected:
 
 	void PrepareBlockPacketPayload(const uint8_t index, uint8_t* payload)
 	{
-		uint8_t IndexOffset = index * SYNC_SURFACE_BLOCK_SIZE;
+		uint8_t IndexOffset = index * ITrackedSurface::BytesPerBlock;
 
-		for (uint8_t i = 0; i < SYNC_SURFACE_BLOCK_SIZE; i++)
+		for (uint8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
 		{
 			payload[i] = TrackedSurface->GetData()[IndexOffset + i];
 		}
