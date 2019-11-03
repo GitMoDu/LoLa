@@ -37,8 +37,6 @@ protected:
 		}
 	};
 
-	volatile uint8_t LastSentHeader = 0xff;
-
 	///Statistics
 	InputInfoType LastReceivedInfo;
 	OutputInfoType LastSentInfo;
