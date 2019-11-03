@@ -166,10 +166,6 @@ protected:
 		{
 			Serial.println(F("Hash mismatch"));
 		}
-		else
-		{
-			Serial.println(F("Hash match"));
-		}
 #endif
 		return (HasRemoteHash() &&
 			GetLocalHash() == LastRemoteHash);
