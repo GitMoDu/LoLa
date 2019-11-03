@@ -176,7 +176,7 @@ protected:
 			{
 				UpdateSyncingState(SyncWriterState::SendingFinished);
 				ResetLastSentTimeStamp();
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS);
+				SetNextRunDelay(ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS);
 			}
 			break;
 		case SyncWriterState::SendingBlock:
