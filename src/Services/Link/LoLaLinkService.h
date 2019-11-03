@@ -36,6 +36,8 @@ public:
 	{
 		LinkInfo = linkInfo;
 		LoLaDriver = driver;
+
+		return LinkInfo != nullptr && LoLaDriver != nullptr;
 	}
 
 	void OnLinkOn()
