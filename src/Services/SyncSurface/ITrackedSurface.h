@@ -80,23 +80,23 @@ public:
 		return LastCRC;
 	}
 
-	inline uint8_t GetDataSize()
+	const uint8_t GetDataSize()
 	{
-		return GetBlockCount() * SYNC_SURFACE_BLOCK_SIZE;
+		return  GetBlockCount() * BytesPerBlock;
 	}
 
 public:
 	virtual uint8_t* GetData() { return nullptr; }
 	virtual IBitTracker* GetTracker() { return nullptr; };
-	inline virtual uint8_t GetBlockCount() { return 0; };
 	virtual void SetAllPending() {};
+	const virtual uint8_t GetBlockCount() { return 0; };
 
 public:
 #ifdef DEBUG_BIT_TRACKER
 	void Debug(Stream* serial)
 	{
 		serial->print(F("|"));
-		for (uint8_t i = 0; i < (GetBlockCount() * SYNC_SURFACE_BLOCK_SIZE); i++)
+		for (uint8_t i = 0; i < (GetBlockCount() * BytesPerBlock); i++)
 		{
 			serial->print(GetData()[i]);
 			serial->print(F("|"));
@@ -111,7 +111,7 @@ public:
 #endif 
 };
 
-//BlockCount < 32
+//BlockCount <= 512
 template <const uint8_t BlockCount>
 class TemplateTrackedSurface : public ITrackedSurface
 {
@@ -121,7 +121,7 @@ private:
 	TemplateBitTracker<BlockCount> Tracker;
 
 protected:
-	uint8_t Data[BlockCount * SYNC_SURFACE_BLOCK_SIZE];
+	uint8_t Data[BlockCount * BytesPerBlock];
 
 protected:
 	void InvalidateBlock(const uint8_t blockIndex)
@@ -160,7 +160,7 @@ public:
 		return &Tracker;
 	}
 
-	inline uint8_t GetBlockCount()
+	const uint8_t GetBlockCount()
 	{
 		return BlockCount;
 	}
@@ -174,13 +174,13 @@ public:
 	//offset [0:3]
 	inline uint8_t Get8(const uint8_t blockIndex, const uint8_t offset)
 	{
-		return Data[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset];
+		return Data[(blockIndex * BytesPerBlock) + offset];
 	}
 
 	//offset [0:3]
 	inline void Set8(const uint8_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		Data[(blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset] = value;
+		Data[(blockIndex * BytesPerBlock) + offset] = value;
 
 		InvalidateBlock(blockIndex);
 	}
@@ -188,7 +188,7 @@ public:
 	//offset [0:1]
 	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * sizeof(uint16_t);
+		IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset * sizeof(uint16_t);
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -199,7 +199,7 @@ public:
 	//offset [0:1]
 	inline void Set16(const uint16_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * SYNC_SURFACE_BLOCK_SIZE) + offset * sizeof(uint16_t);
+		IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset * sizeof(uint16_t);
 
 		ATUI.uint16 = value;
 		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
@@ -210,7 +210,7 @@ public:
 
 	inline uint32_t Get32(const uint8_t blockIndex)
 	{
-		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+		IndexOffsetGrunt = blockIndex * BytesPerBlock;
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -222,7 +222,7 @@ public:
 
 	inline void Set32(const uint32_t value, const uint8_t blockIndex)
 	{
-		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+		IndexOffsetGrunt = blockIndex * BytesPerBlock;
 
 		ATUI.uint32 = value;
 		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
@@ -235,7 +235,7 @@ public:
 
 	inline uint64_t Get64(const uint8_t blockIndex)
 	{
-		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+		IndexOffsetGrunt = blockIndex * BytesPerBlock;
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -251,7 +251,7 @@ public:
 
 	inline void Get64(uint64_t& value, const uint8_t blockIndex)
 	{
-		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+		IndexOffsetGrunt = blockIndex * BytesPerBlock;
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -267,7 +267,7 @@ public:
 
 	inline void Set64(uint64_t& value, const uint8_t blockIndex)
 	{
-		IndexOffsetGrunt = blockIndex * SYNC_SURFACE_BLOCK_SIZE;
+		IndexOffsetGrunt = blockIndex * BytesPerBlock;
 
 		ATUI.uint64 = value;
 		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
