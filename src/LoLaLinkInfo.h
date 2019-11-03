@@ -377,6 +377,11 @@ public:
 		return Driver->GetTimingCollisionCount();
 	}
 
+	uint64_t GetStateCollisionCount()
+	{
+		return Driver->GetTimingCollisionCount();
+	}
+
 #ifdef DEBUG_LOLA
 	void PrintMac(Stream* serial)
 	{
