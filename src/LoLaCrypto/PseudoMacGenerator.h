@@ -21,6 +21,12 @@ private:
 	UniqueIdProvider IdProvider;
 	///
 
+public:
+	LoLaMAC()
+	{
+
+	}
+
 private:
 	void UpdateMAC()
 	{
