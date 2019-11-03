@@ -60,6 +60,10 @@ private:
 
 
 public:
+	LoLaLinkInfo() : LocalMacGenerator()
+	{
+
+	}
 	LinkStateEnum GetLinkState()
 	{
 		return LinkState;
