@@ -16,10 +16,10 @@
 class LoLaManager
 {
 protected:
-	LoLaPacketDriver * LoLaDriver = nullptr;
+	LoLaPacketDriver* LoLaDriver = nullptr;
 
 protected:
-	virtual LoLaLinkService * GetLinkService() { return nullptr; }
+	virtual LoLaLinkService* GetLinkService() { return nullptr; }
 
 	virtual bool OnSetupServices()
 	{
@@ -28,7 +28,7 @@ protected:
 
 protected:
 	bool SetupServices()
-	{		
+	{
 		if (!GetLinkService()->SetServicesManager(LoLaDriver->GetServices()))
 		{
 			return false;
@@ -59,7 +59,7 @@ public:
 	}
 
 	void Start()
-	{		
+	{
 		GetLinkService()->Enable();
 	}
 
@@ -94,7 +94,7 @@ public:
 	}
 
 protected:
-	LoLaLinkService * GetLinkService() { return &LinkService; }
+	LoLaLinkService* GetLinkService() { return &LinkService; }
 };
 
 class LoLaManagerRemote : public LoLaManager
@@ -111,7 +111,7 @@ public:
 	}
 
 protected:
-	LoLaLinkService * GetLinkService() { return &LinkService; }
+	LoLaLinkService* GetLinkService() { return &LinkService; }
 };
 #endif
 
