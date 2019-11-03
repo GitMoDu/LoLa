@@ -374,6 +374,7 @@ protected:
 		switch (LinkInfo->GetLinkState())
 		{
 		case LoLaLinkInfo::LinkStateEnum::Setup:
+		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
 			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
@@ -390,9 +391,6 @@ protected:
 					UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingSleeping);
 				}
 			}
-			break;
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
 			break;
 		case LoLaLinkInfo::LinkStateEnum::Linking:
 			if (GetElapsedMillisSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
