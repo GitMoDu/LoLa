@@ -6,7 +6,7 @@
 
 #define UNIQUE_ID_MAX_LENGTH	16
 
-#if defined(ARDUINO_ARCH_STM32F1)
+#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
 //For STM32, unique ID is read straight from the IC.
 #define ID_ADDRESS_POINTER		(0x1FFFF7E8)
 #define ID_STM32_LENGTH			12
