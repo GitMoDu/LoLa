@@ -264,10 +264,7 @@ private:
 			ReceivedCount++;
 
 			//Check for packet collisions.
-			if (IsReceiveCollision(LastValidReceivedInfo.Micros - GetMicros()))
-			{
-				TimingCollisionCount++;
-			}
+			IsReceiveCollision(LastValidReceivedInfo.Micros - GetMicros());
 
 			//Is Ack packet.
 			if (IncomingPacket.GetDefinition()->IsAck())
