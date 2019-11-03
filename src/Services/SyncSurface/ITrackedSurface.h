@@ -75,6 +75,7 @@ public:
 		HashNeedsUpdate = true;
 	}
 
+	//Hash update (if needed) is checked by caller, to avoid multiple redundant checks. 
 	inline uint8_t GetHash()
 	{
 		return LastCRC;
