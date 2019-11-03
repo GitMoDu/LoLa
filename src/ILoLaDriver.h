@@ -48,6 +48,7 @@ protected:
 	uint64_t ReceivedCount = 0;
 	uint64_t RejectedCount = 0;
 	uint64_t TimingCollisionCount = 0;
+	uint64_t StateCollisionCount = 0;
 	///
 
 	///Configurations
@@ -172,6 +173,7 @@ public:
 		ReceivedCount = 0;
 		RejectedCount = 0;
 		TimingCollisionCount = 0;
+		StateCollisionCount = 0;
 	}
 
 	void ResetLiveData()
@@ -217,6 +219,11 @@ public:
 	uint64_t GetTimingCollisionCount()
 	{
 		return TimingCollisionCount;
+	}
+
+	uint64_t GetStateCollisionCount()
+	{
+		return StateCollisionCount;
 	}
 
 	int16_t GetLastRSSI()
