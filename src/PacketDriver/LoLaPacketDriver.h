@@ -340,14 +340,18 @@ public:
 		}
 		else
 		{
-#ifdef DEBUG_LOLA
-			Serial.print(F("Bad state OnIncoming: "));
-			Serial.println(DriverActiveState);
-#endif
-			if (DriverActiveState == DriverActiveStates::SendingOutgoing || 
+			if (DriverActiveState == DriverActiveStates::SendingOutgoing ||
 				DriverActiveState == DriverActiveStates::WaitingForTransmissionEnd)
 			{
-				TimingCollisionCount++;
+				StateCollisionCount++;
+				DriverActiveState = DriverActiveStates::BlockedForIncoming;
+			}
+			else
+			{
+#ifdef DEBUG_LOLA
+				Serial.print(F("Bad state OnIncoming: "));
+				Serial.println(DriverActiveState);
+#endif
 			}
 		}
 	}
