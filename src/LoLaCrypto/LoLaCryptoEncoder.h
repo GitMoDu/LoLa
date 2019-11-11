@@ -101,7 +101,6 @@ public:
 		return DataCRC(outputMessage, messageLength);
 	}
 
-	//Returns 8 bit MAC/CRC.
 	uint8_t Decode(uint8_t* message, const uint8_t messageLength, const uint16_t crc)
 	{
 		if (crc != DataCRC(message, messageLength))
