@@ -273,7 +273,7 @@ protected:
 			KeyExchanger.Setup() &&
 			ClockSyncerPointer->Setup(LoLaDriver->GetClockSource()) &&
 			ChannelManager.Setup(LoLaDriver) &&
-			TimedHopper.Setup(&ChannelManager))
+			TimedHopper.Setup())
 		{
 			LinkInfo = ServicesManager->GetLinkInfo();
 

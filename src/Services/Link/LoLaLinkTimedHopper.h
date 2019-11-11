@@ -78,9 +78,6 @@ private:
 	//Synced clock.
 	ILoLaClockSource* SyncedClock = nullptr;
 
-	//Channel manager.
-	LoLaLinkChannelManager* ChannelManager = nullptr;
-
 	//Crypto Encoder.
 	LoLaCryptoEncoder* Encoder = nullptr;
 
@@ -93,14 +90,12 @@ public:
 
 	}
 
-	bool Setup(LoLaLinkChannelManager* channelManager)
+	bool Setup()
 	{
-		ChannelManager = channelManager;
 		SyncedClock = LoLaDriver->GetClockSource();
 		Encoder = LoLaDriver->GetCryptoEncoder();
 		if (SyncedClock != nullptr &&
-			Encoder != nullptr &&
-			ChannelManager != nullptr)
+			Encoder != nullptr)
 		{
 			CryptoSeed.SetTOTPPeriod(HopPeriod);
 
@@ -168,7 +163,7 @@ private:
 
 #ifdef LOLA_LINK_USE_FREQUENCY_HOP
 		//Use last 8 bits of crypto token to generate a pseudo-random channel distribution.
-		ChannelManager->SetNextHop((uint8_t)(token & 0xFF));
+		SetNextHop((uint8_t)(token & 0xFF));
 #endif
 	}
 };
