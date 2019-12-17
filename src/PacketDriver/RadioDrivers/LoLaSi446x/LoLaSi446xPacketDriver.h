@@ -223,7 +223,7 @@ private:
 		return false;
 	}
 
-	void SetRadioReceive()
+	virtual void SetRadioReceive()
 	{
 		if (AllowedRadioChange() && SetRadioReceiveInternal())
 		{
