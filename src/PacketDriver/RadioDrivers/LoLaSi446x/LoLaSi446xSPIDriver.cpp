@@ -10,7 +10,7 @@ LoLaSi446xSPIDriver* StaticSi446LoLa = nullptr;
 
 void SI446xInterrupt()
 {
-	StaticSi446LoLa->OnRadioInterrupt();
+	StaticSi446LoLa->OnRadioInterrupt(micros());
 }
 
 /////////////////////////

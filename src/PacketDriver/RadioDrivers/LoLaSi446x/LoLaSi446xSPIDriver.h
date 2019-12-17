@@ -70,9 +70,10 @@ public:
 	//	spi = spi_instance;
 	//}
 
-	void OnRadioInterrupt()
+
+	void OnRadioInterrupt(const uint32_t timestamp)
 	{
-		EventTimestamp = micros();
+		EventTimestamp = timestamp;
 		RadioTask->Wake();
 	}
 
