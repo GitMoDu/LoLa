@@ -49,20 +49,20 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
+	virtual void OnLinkStateChanged(const LinkStatus::StateEnum newState)
 	{
 		switch (newState)
 		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		case LinkStatus::StateEnum::AwaitingLink:
 			KeyExchanger.GenerateNewKeyPair();
 			break;
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+		case LinkStatus::StateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD);
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Linking:
+		case LinkStatus::StateEnum::Linking:
 			InfoSyncStage = InfoSyncStagesEnum::AwaitingHostRequest;
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Linked:
+		case LinkStatus::StateEnum::Linked:
 			//TODO: Restore value from flash.
 			ClockSyncer.SetStartingDrift(-25000);
 			break;
@@ -78,13 +78,13 @@ protected:
 			//If we are sending a clock sync request, we update our synced clock payload as late as possible.
 			if (OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_REQUEST)
 			{
-				ATUI_S.uint = LoLaDriver->GetClockSource()->GetSyncMicrosFull()
+				ATUI_S.uint = SyncedClock.GetSyncMicrosFull()
 					+ LoLaDriver->GetETTMMicros();
 				S_ArrayToPayload();
 			}
 			else if (OutPacket.GetPayload()[0] == LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST)
 			{
-				ATUI_S.uint = LoLaDriver->GetClockSource()->GetSyncMicros()
+				ATUI_S.uint = SyncedClock.GetSyncMicros()
 					+ LoLaDriver->GetETTMMicros();
 				S_ArrayToPayload();
 			}
@@ -124,11 +124,14 @@ protected:
 				//TODO: Filter accepted hosts by Id.
 				if (true)
 				{
-					LoLaDriver->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
-						LinkInfo->GetPartnerId(), LinkInfo->GetLocalId());
+					LoLaDriver->GetCryptoEncoder()->SetIvData(LinkInfo.GetSessionId(),
+						LinkInfo.GetPartnerId(), LinkInfo.GetLocalId());
 					ResetLastSentTimeStamp();
 					SubStateStart = millis();
 					SetLinkingState(AwaitingLinkEnum::AwaitingHostPublicKey);
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
+					DebugTask.OnPKCStarted();
+#endif
 				}
 				else
 				{
@@ -183,11 +186,11 @@ protected:
 				}
 				break;
 			case AwaitingLinkEnum::LinkingSwitchOver:
-#ifdef DEBUG_LOLA
-				PKCDuration = millis() - SubStateStart;
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
+				DebugTask.OnPKCDone();
 #endif
 				//All set to start linking.
-				UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
+				UpdateLinkState(LinkStatus::StateEnum::Linking);
 				break;
 			default:
 				break;
@@ -198,17 +201,17 @@ protected:
 	}
 	void OnIdBroadcastReceived(const uint8_t sessionId, const uint32_t hostId)
 	{
-		switch (LinkInfo->GetLinkState())
+		switch (LinkInfo.GetLinkState())
 		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		case LinkStatus::StateEnum::AwaitingSleeping:
+			UpdateLinkState(LinkStatus::StateEnum::AwaitingLink);
+		case LinkStatus::StateEnum::AwaitingLink:
 			switch (LinkingState)
 			{
 			case AwaitingLinkEnum::SearchingForHost:
-				if (!LinkInfo->HasSession() && LinkInfo->SetSessionId(sessionId))
+				if (!LinkInfo.HasSession() && LinkInfo.SetSessionId(sessionId))
 				{
-					LinkInfo->SetPartnerId(hostId);
+					LinkInfo.SetPartnerId(hostId);
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
 				break;
@@ -216,9 +219,9 @@ protected:
 			case AwaitingLinkEnum::AwaitingHostPublicKey:
 				//In case we have a pending link and our target host has a new session.
 				//Note: this is an easy target for denial of service.
-				if (LinkInfo->HasSession() &&
-					LinkInfo->GetPartnerId() == hostId &&
-					LinkInfo->SetSessionId(sessionId))
+				if (LinkInfo.HasSession() &&
+					LinkInfo.GetPartnerId() == hostId &&
+					LinkInfo.SetSessionId(sessionId))
 				{
 					SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 				}
@@ -234,10 +237,10 @@ protected:
 
 	void OnHostPublicKeyReceived(const uint8_t sessionId, uint8_t* hostPublicKey)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::AwaitingHostPublicKey &&
-			LinkInfo->HasSession() &&
-			LinkInfo->GetSessionId() == sessionId)
+			LinkInfo.HasSession() &&
+			LinkInfo.GetSessionId() == sessionId)
 		{
 			//Assumes public key is the correct size.
 			if (KeyExchanger.SetPartnerPublicKey(hostPublicKey))
@@ -249,10 +252,10 @@ protected:
 
 	bool OnLinkProtocolReceived(const uint8_t sessionId, uint32_t hostId)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage &&
-			LinkInfo->GetSessionId() == sessionId &&
-			LinkInfo->GetLocalId() == hostId)
+			LinkInfo.GetSessionId() == sessionId &&
+			LinkInfo.GetLocalId() == hostId)
 		{
 			SetLinkingState(LinkingStagesEnum::LinkProtocolSwitchOver);
 
@@ -265,13 +268,13 @@ protected:
 	bool OnCryptoStartReceived(const uint8_t sessionId, uint8_t* localId)
 	{
 		if (LinkingState == AwaitingLinkEnum::SendingPublicKey &&
-			LinkInfo->HasSessionId() &&
-			LinkInfo->GetSessionId() == sessionId)
+			LinkInfo.HasSessionId() &&
+			LinkInfo.GetSessionId() == sessionId)
 		{
 			///Quick decode for validation.
 			LoLaDriver->GetCryptoEncoder()->DecodeDirect(localId, sizeof(uint32_t), ATUI_R.array);
 
-			if (LinkInfo->GetLocalId() == ATUI_R.uint)
+			if (LinkInfo.GetLocalId() == ATUI_R.uint)
 			{
 				SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
 
@@ -303,10 +306,10 @@ protected:
 			break;
 		case LinkingStagesEnum::LinkingDone:
 			//All linking stages complete, we have a link.
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linked);
+			UpdateLinkState(LinkStatus::StateEnum::Linked);
 			break;
 		default:
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
+			UpdateLinkState(LinkStatus::StateEnum::AwaitingLink);
 			break;
 		}
 	}
@@ -341,7 +344,7 @@ protected:
 
 	void OnHostInfoSyncRequestReceived()
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage &&
 			InfoSyncStage == InfoSyncStagesEnum::AwaitingHostRequest)
 		{
@@ -352,12 +355,12 @@ protected:
 
 	void OnHostInfoSyncReceived(const uint8_t rssi, const uint16_t rtt)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage &&
 			InfoSyncStage == InfoSyncStagesEnum::SendingRemoteInfo)
 		{
-			LinkInfo->SetRTT(rtt);
-			LinkInfo->SetPartnerRSSINormalized(rssi);
+			LinkInfo.SetRTT(rtt);
+			LinkInfo.SetPartnerRSSINormalized(rssi);
 
 			InfoSyncStage = InfoSyncStagesEnum::InfoSyncDone;
 			SetNextRunASAP();
@@ -410,7 +413,7 @@ protected:
 
 	void OnClockUTCResponseReceived(const uint8_t requestId, const uint32_t secondsUTC)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage &&
 			RemoteClockSecondsTransaction.IsRequested() &&
 			RemoteClockSecondsTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME))
@@ -424,7 +427,7 @@ protected:
 
 	void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::ClockSyncStage &&
 			RemoteClockSyncTransaction.IsRequested() &&
 			RemoteClockSyncTransaction.IsFresh(LOLA_LINK_SERVICE_UNLINK_TRANSACTION_LIFETIME))
@@ -444,7 +447,7 @@ protected:
 		{
 			if (!ClockSyncer.OnTuneErrorReceived(RemoteClockSyncTransaction.GetResult()))
 			{
-				LinkInfo->StampClockSyncAdjustment();
+				LinkInfo.StampClockSyncAdjustment();
 			}
 
 			RemoteClockSyncTransaction.Reset();
@@ -470,7 +473,7 @@ protected:
 
 	void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedError)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linked &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linked &&
 			RemoteClockSyncTransaction.IsRequested())
 		{
 			RemoteClockSyncTransaction.SetResult(requestId, estimatedError);
@@ -482,11 +485,11 @@ protected:
 	{
 		if (receivedPacket->GetDataHeader() == LOLA_LINK_HEADER_SHORT_WITH_ACK)
 		{
-			switch (LinkInfo->GetLinkState())
+			switch (LinkInfo.GetLinkState())
 			{
-			case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+			case LinkStatus::StateEnum::AwaitingLink:
 				return OnCryptoStartReceived(receivedPacket->GetId(), receivedPacket->GetPayload());
-			case LoLaLinkInfo::LinkStateEnum::Linking:
+			case LinkStatus::StateEnum::Linking:
 				ATUI_R.array[0] = receivedPacket->GetPayload()[0];
 				ATUI_R.array[1] = receivedPacket->GetPayload()[1];
 				ATUI_R.array[2] = receivedPacket->GetPayload()[2];
@@ -505,7 +508,7 @@ protected:
 private:
 	void PrepareLinkDiscovery()
 	{
-		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
+		PrepareShortPacket(LinkInfo.GetSessionId(), LOLA_LINK_SUBHEADER_LINK_DISCOVERY);
 
 		//TODO: Maybe use data slot for quick reconnect token?
 		for (uint8_t i = 1; i < DefinitionShort.GetPayloadSize(); i++)
@@ -516,15 +519,15 @@ private:
 
 	void PreparePKCStartRequest()
 	{
-		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST);
-		ATUI_S.uint = LinkInfo->GetLocalId();
+		PrepareShortPacket(LinkInfo.GetSessionId(), LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST);
+		ATUI_S.uint = LinkInfo.GetLocalId();
 		S_ArrayToPayload();
 	}
 
 	void PrepareRemoteInfoSync()
 	{
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE);
-		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
+		OutPacket.GetPayload()[0] = LinkInfo.GetRSSINormalized();
 		for (uint8_t i = 1; i < DefinitionReport.GetPayloadSize(); i++)
 		{
 			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding

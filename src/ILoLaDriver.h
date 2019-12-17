@@ -10,77 +10,80 @@
 #include <LoLaClock\ILoLaClockSource.h>
 #include <LoLaClock\RTCClockSource.h>
 #include <LoLaDefinitions.h>
+#include <PacketDriver\ILoLaSelector.h>
+#include <LinkIndicator.h>
 
 class ILoLaDriver
 {
 protected:
-	struct InputInfoType
+	class InputInfoType
 	{
-		volatile uint32_t Micros = ILOLA_INVALID_MICROS;
-		volatile int16_t RSSI = ILOLA_INVALID_RSSI;
+	public:
+		uint32_t Micros = 0;
+		int16_t RSSI = ILOLA_INVALID_RSSI;
 
 		void Clear()
 		{
 
-			Micros = ILOLA_INVALID_MICROS;
+			Micros = 0;
 			RSSI = ILOLA_INVALID_RSSI;
 		}
 	};
 
-	struct OutputInfoType
+	class OutputInfoType
 	{
-		volatile uint32_t Micros = ILOLA_INVALID_MICROS;
+	public:
+		uint32_t Micros = 0;
+		uint8_t Header = 0;
+		uint8_t Id = 0;
 
 		void Clear()
 		{
-			Micros = ILOLA_INVALID_MICROS;
+			Micros = 0;
 		}
 	};
 
-	///Statistics
+	///Statistics.
+	//Incoming packet.
 	InputInfoType LastReceivedInfo;
-	OutputInfoType LastSentInfo;
 
+	//Outgoing packet.
 	InputInfoType LastValidReceivedInfo;
 	OutputInfoType LastValidSentInfo;
 
+	//Global statistics.
 	uint64_t TransmitedCount = 0;
 	uint64_t ReceivedCount = 0;
 	uint64_t RejectedCount = 0;
-	uint64_t TimingCollisionCount = 0;
 	uint64_t StateCollisionCount = 0;
+#ifdef DEBUG_LOLA
+	uint64_t TimingCollisionCount = 0;
+#endif
 	///
 
-	///Configurations
-	//From 0 to UINT8_MAX, limited by driver.
-	uint8_t CurrentTransmitPower = 0;
-	uint8_t CurrentChannel = 0;
-	uint8_t TransmitPowerNormalized = 0;
+	///Dynamic power and channel sources.
+	ITransmitPowerSelector* TransmitPowerSelector = nullptr;
+	IChannelSelector* ChannelSelector = nullptr;
+	///
+
+	//Synced clock instance.
+	ILoLaClockSource* SyncedClock = nullptr;
+
+	///Timings.
 	const uint32_t DuplexPeriodMicros = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * (uint32_t)1000;
 	const uint32_t HalfDuplexPeriodMicros = DuplexPeriodMicros / 2;
 	const uint32_t BackOffPeriodUnlinkedMillis = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
-	const uint32_t BackOffPeriodLinkedMillis = LOLA_LINK_LINKED_BACK_OFF_DURATION_MILLIS;
 	///
 
 	///Link Status.
-	bool LinkActive = false;
+	LinkStatus* LinkStatusIndicator = nullptr;
 
 	///Duplex.
 	bool EvenSlot = false;
-	//Helper.
-	uint32_t DuplexElapsed;
 	///
 
 	///Packet Mapper for known definitions.
 	LoLaPacketMap PacketMap;
-	///
-
-	///Synced clock
-#ifdef LOLA_LINK_USE_RTC_CLOCK_SOURCE
-	RTCClockSource SyncedClock;
-#else
-	ILoLaClockSource SyncedClock;
-#endif
 	///
 
 	///Crypto
@@ -96,16 +99,19 @@ protected:
 		DriverDisabled,
 		ReadyForAnything,
 		BlockedForIncoming,
-		AwaitingProcessing,
 		ProcessingIncoming,
-		SendingOutgoing,
-		SendingAck,
-		WaitingForTransmissionEnd
+		SendingOutgoing
 	};
 
 public:
-	ILoLaDriver() : PacketMap(), CryptoEncoder(), SyncedClock()
+	ILoLaDriver() : PacketMap(), CryptoEncoder()
 	{
+	
+	}
+	
+	void SetClockSource(ILoLaClockSource* syncedClock)
+	{
+		SyncedClock = syncedClock;
 	}
 
 	LoLaCryptoEncoder* GetCryptoEncoder()
@@ -113,24 +119,38 @@ public:
 		return &CryptoEncoder;
 	}
 
-	void Enable()
+	LinkStatus* GetLinkStatusIndicator()
 	{
-		OnStart();
+		return LinkStatusIndicator;
 	}
 
-	void Disable()
+	void SetLinkStatusIndicator(LinkStatus* linkStatusIndicator)
 	{
-		OnStop();
+		if (linkStatusIndicator != nullptr)
+		{
+			LinkStatusIndicator = linkStatusIndicator;
+		}
 	}
 
-	void SetLinkStatus(const bool linked)
+	void SetChannelSelector(IChannelSelector* channelSelector)
 	{
-		LinkActive = linked;
+		if (channelSelector != nullptr)
+		{
+			ChannelSelector = channelSelector;
+		}
+	}
+
+	void SetTransmitPowerSelector(ITransmitPowerSelector* transmitPowerSelector)
+	{
+		if (transmitPowerSelector != nullptr)
+		{
+			TransmitPowerSelector = transmitPowerSelector;
+		}
 	}
 
 	bool HasLink()
 	{
-		return LinkActive;
+		return LinkStatusIndicator->HasLink();
 	}
 
 #ifdef LOLA_MOCK_PACKET_LOSS
@@ -153,15 +173,6 @@ public:
 		return ETTM;
 	}
 
-	void SetETTM(const uint32_t ettmMicros)
-	{
-#ifdef LOLA_LINK_USE_LATENCY_COMPENSATION
-		ETTM = ettmMicros;
-#else
-		ETTM = LOLA_LINK_DEFAULT_LATENCY_COMPENSATION_MILLIS * (uint32_t)1000;
-#endif
-	}
-
 	void SetDuplexSlot(const bool evenSlot)
 	{
 		EvenSlot = evenSlot;
@@ -172,8 +183,10 @@ public:
 		TransmitedCount = 0;
 		ReceivedCount = 0;
 		RejectedCount = 0;
-		TimingCollisionCount = 0;
 		StateCollisionCount = 0;
+#ifdef DEBUG_LOLA
+		TimingCollisionCount = 0;
+#endif
 	}
 
 	void ResetLiveData()
@@ -181,17 +194,23 @@ public:
 		ETTM = 0;
 
 		LastReceivedInfo.Clear();
-		LastSentInfo.Clear();
 
 		LastValidReceivedInfo.Clear();
 		LastValidSentInfo.Clear();
 
 		ResetStatistics();
+		OnResetLiveData();
 	}
 
-	ILoLaClockSource* GetClockSource()
+	void Stop()
 	{
-		return &SyncedClock;
+
+	}
+
+	void Start()
+	{
+		ResetLiveData();
+		OnStart();
 	}
 
 	uint8_t GetRSSINormalized()
@@ -216,10 +235,12 @@ public:
 		return TransmitedCount;
 	}
 
+#ifdef DEBUG_LOLA
 	uint64_t GetTimingCollisionCount()
 	{
 		return TimingCollisionCount;
 	}
+#endif
 
 	uint64_t GetStateCollisionCount()
 	{
@@ -233,25 +254,25 @@ public:
 
 	uint32_t GetElapsedMillisLastValidReceived()
 	{
-		if (LastValidReceivedInfo.Micros == ILOLA_INVALID_MICROS)
+		if (LastValidReceivedInfo.Micros == 0)
 		{
-			return ILOLA_INVALID_MILLIS;
+			return UINT32_MAX;
 		}
 		else
 		{
-			return (GetMicros() - LastValidReceivedInfo.Micros) / 1000;
+			return (micros() - LastValidReceivedInfo.Micros) / 1000;
 		}
 	}
 
 	uint32_t GetElapsedMillisLastValidSent()
 	{
-		if (LastValidSentInfo.Micros == ILOLA_INVALID_MICROS)
+		if (LastValidSentInfo.Micros == 0)
 		{
-			return ILOLA_INVALID_MILLIS;
+			return UINT32_MAX;
 		}
 		else
 		{
-			return (GetMicros() - LastValidSentInfo.Micros) / 1000;
+			return (micros() - LastValidSentInfo.Micros) / 1000;
 		}
 	}
 
@@ -270,77 +291,86 @@ public:
 		return LastValidReceivedInfo.RSSI;
 	}
 
+	uint8_t GetTransmitPower()
+	{
+		return map(TransmitPowerSelector->GetTransmitPower(), 0, UINT8_MAX, GetTransmitPowerMin(), GetTransmitPowerMax());
+	}
+
 	uint8_t GetTransmitPowerNormalized()
 	{
-		return TransmitPowerNormalized;
+		return TransmitPowerSelector->GetTransmitPower();
 	}
 
-	void SetTransmitPower(const uint8_t transmitPowerNormalized)
+	const uint8_t GetChannelRange()
 	{
-		TransmitPowerNormalized = transmitPowerNormalized;
-		CurrentTransmitPower = map(TransmitPowerNormalized, 0, UINT8_MAX, GetTransmitPowerMin(), GetTransmitPowerMax());
-
-		OnTransmitPowerUpdated();
+		return GetChannelMax() - GetChannelMin();
 	}
 
-	uint8_t GetChannel()
+	void ResetChannel()
 	{
-		return CurrentChannel;
+		ChannelSelector->ResetChannel();
 	}
 
-	bool SetChannel(const uint8_t channel)
+	inline uint8_t GetChannel()
 	{
-		CurrentChannel = channel;
-
-		OnChannelUpdated();
-
-		return true;
+		return ChannelSelector->GetChannel();
 	}
 
-	LoLaPacketMap * GetPacketMap()
+	LoLaPacketMap* GetPacketMap()
 	{
 		return &PacketMap;
 	}
 
-	inline uint32_t GetMicros()
-	{
-		return micros();
-	}
-
 protected:
 	//Driver constants' overload.
-	virtual uint8_t GetTransmitPowerMax() const { return 1; }
-	virtual uint8_t GetTransmitPowerMin() const { return 0; }
+	virtual const uint8_t GetTransmitPowerMax() { return 1; }
+	virtual const uint8_t GetTransmitPowerMin() { return 0; }
 
-	virtual int16_t GetRSSIMax() const { return 0; }
-	virtual int16_t GetRSSIMin() const { return ILOLA_DEFAULT_MIN_RSSI; }
+	virtual const int16_t GetRSSIMax() { return 0; }
+	virtual const int16_t GetRSSIMin() { return ILOLA_DEFAULT_MIN_RSSI; }
+
+	virtual const uint8_t GetChannelMax() { return 0; }
+	virtual const uint8_t GetChannelMin() { return 0; }
+
+	virtual void OnStart() {}
+	virtual void OnResetLiveData() {}
 
 public:
 	//Packet driver implementation.
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
-	virtual bool Setup() { return true; }
+	virtual bool Setup() 
+	{
+		return SyncedClock != nullptr &&
+			LinkStatusIndicator != nullptr &&
+			TransmitPowerSelector != nullptr &&
+			ChannelSelector != nullptr;
+	}
 	virtual bool AllowedSend() { return false; }
-	virtual void OnStart() {}
-	virtual void OnStop() {}
+
 	virtual void OnChannelUpdated() {}
 	virtual void OnTransmitPowerUpdated() {}
-
-	//Device driver implementation.
-	virtual uint8_t GetChannelMax() const { return 0; }
-	virtual uint8_t GetChannelMin() const { return 0; }
-
-	//Device driver events.
-	virtual void OnWakeUpTimer() {}
-	virtual void OnBatteryAlarm() {}
-	virtual void OnReceiveBegin(const uint8_t length, const int16_t rssi) {}
-	virtual void OnReceivedFail(const int16_t rssi) {}
-	virtual void OnSentOk() {}
-	virtual void OnIncoming(const int16_t rssi) {}
 
 #ifdef DEBUG_LOLA
 	virtual void Debug(Stream* serial)
 	{
 		PacketMap.Debug(serial);
+
+		serial->println(F("Radio constants:"));
+
+		serial->print(F(" TransmitPowerMin: "));
+		serial->println(GetTransmitPowerMin());
+		serial->print(F(" TransmitPowerMax: "));
+		serial->println(GetTransmitPowerMax());
+
+		serial->print(F(" RSSIMin: "));
+		serial->println(GetRSSIMin());
+		serial->print(F(" RSSIMax: "));
+		serial->println(GetRSSIMax());
+
+		serial->print(F(" ChannelMin: "));
+		serial->println(GetChannelMin());
+		serial->print(F(" ChannelMax: "));
+		serial->println(GetChannelMax());
 	}
 #endif
 };

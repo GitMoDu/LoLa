@@ -5,9 +5,11 @@
 
 #include <ILoLaDriver.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
+#include <PacketDriver\ILoLaSelector.h>
 
 
-class LoLaLinkPowerBalancer
+
+class LoLaLinkPowerBalancer : public ITransmitPowerSelector
 {
 private:
 	LoLaLinkInfo* LinkInfo = nullptr;
@@ -15,32 +17,39 @@ private:
 
 	uint8_t CurrentPartnerRSSI = 0;
 
-	uint8_t TransmitPowerNormalized = 0;
-	uint8_t NextTransmitPower = 0;
+	//uint8_t TransmitPowerNormalized = 0;
+	uint8_t CurrentTransmitPower = 0;
 
-	uint32_t LastUpdated = ILOLA_INVALID_MILLIS;
+	uint32_t LastUpdated = 0;
 
 public:
-	LoLaLinkPowerBalancer() {}
-
-	bool Setup(ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
+	LoLaLinkPowerBalancer(ILoLaDriver* driver, LoLaLinkInfo* linkInfo) 
+		: ITransmitPowerSelector()
 	{
 		LoLaDriver = driver;
 		LinkInfo = linkInfo;
-		TransmitPowerNormalized = 0;
+	}
 
-		LastUpdated = ILOLA_INVALID_MILLIS;
+	uint8_t GetTransmitPower()
+	{
+		return CurrentTransmitPower;
+	}
 
+	bool Setup()
+	{
 		return LoLaDriver != nullptr && LinkInfo != nullptr;
 	}
 
 	bool Update()
 	{
-		if (LastUpdated == ILOLA_INVALID_MILLIS || 
+		if (LastUpdated == 0 ||
 			LoLaDriver->GetElapsedMillisLastValidReceived() >= LOLA_LINK_SERVICE_LINKED_MAX_PANIC)
 		{
 			LastUpdated = millis();
-			SetMaxPower();
+			CurrentTransmitPower = RADIO_POWER_BALANCER_POWER_MAX;
+			LoLaDriver->OnTransmitPowerUpdated();
+
+			return true;
 		}
 		else if (millis() - LastUpdated > LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD)
 		{
@@ -48,44 +57,37 @@ public:
 
 			CurrentPartnerRSSI = LinkInfo->GetPartnerRSSINormalized();
 
-
-			NextTransmitPower = TransmitPowerNormalized;
-
 			if ((CurrentPartnerRSSI > RADIO_POWER_BALANCER_RSSI_TARGET) &&
-				(NextTransmitPower > RADIO_POWER_BALANCER_POWER_MIN))
+				(CurrentTransmitPower > RADIO_POWER_BALANCER_POWER_MIN))
 			{
-				//Down.
+				// Down.
 				if (CurrentPartnerRSSI > (RADIO_POWER_BALANCER_RSSI_TARGET + RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN))
 				{
-					NextTransmitPower = max(RADIO_POWER_BALANCER_POWER_MIN, NextTransmitPower - RADIO_POWER_BALANCER_ADJUST_DOWN_LONG);
+					CurrentTransmitPower = max(RADIO_POWER_BALANCER_POWER_MIN, CurrentTransmitPower - RADIO_POWER_BALANCER_ADJUST_DOWN_LONG);
 				}
-				else if (NextTransmitPower > RADIO_POWER_BALANCER_POWER_MIN)
+				else if (CurrentTransmitPower > RADIO_POWER_BALANCER_POWER_MIN)
 				{
-					NextTransmitPower--;
+					CurrentTransmitPower--;
 				}
 			}
 			else if ((CurrentPartnerRSSI < RADIO_POWER_BALANCER_RSSI_TARGET) &&
-				(NextTransmitPower < RADIO_POWER_BALANCER_POWER_MAX))
+				(CurrentTransmitPower < RADIO_POWER_BALANCER_POWER_MAX))
 			{
-				//Up.
+				// Up.
 				if (CurrentPartnerRSSI < (RADIO_POWER_BALANCER_RSSI_TARGET - RADIO_POWER_BALANCER_RSSI_TARGET_MARGIN))
 				{
-					NextTransmitPower = min(RADIO_POWER_BALANCER_POWER_MAX, NextTransmitPower + RADIO_POWER_BALANCER_ADJUST_UP_LONG);
+					CurrentTransmitPower = min(RADIO_POWER_BALANCER_POWER_MAX, CurrentTransmitPower + RADIO_POWER_BALANCER_ADJUST_UP_LONG);
 
 				}
-				else if (NextTransmitPower < RADIO_POWER_BALANCER_POWER_MAX)
+				else if (CurrentTransmitPower < RADIO_POWER_BALANCER_POWER_MAX)
 				{
-					NextTransmitPower++;
+					CurrentTransmitPower++;
 				}
 			}
 
-			if (NextTransmitPower != TransmitPowerNormalized)
-			{
-				TransmitPowerNormalized = NextTransmitPower;
-				LoLaDriver->SetTransmitPower(TransmitPowerNormalized);
+			LoLaDriver->OnTransmitPowerUpdated();
 
-				return true;
-			}
+			return true;
 		}
 
 		return false;
@@ -93,8 +95,8 @@ public:
 
 	void SetMaxPower()
 	{
-		TransmitPowerNormalized = RADIO_POWER_BALANCER_POWER_MAX;
-		LoLaDriver->SetTransmitPower(TransmitPowerNormalized);
+		CurrentTransmitPower = RADIO_POWER_BALANCER_POWER_MAX;
+		LoLaDriver->OnTransmitPowerUpdated();
 	}
 };
 #endif

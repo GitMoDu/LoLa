@@ -6,18 +6,21 @@
 #include <Services\IPacketSendService.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
 
-#include <Services\LoLaServicesManager.h>
 #include <LoLaLinkInfo.h>
 
 #include <LoLaCrypto\LoLaCryptoKeyExchange.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
+
 class AbstractLinkService : public IPacketSendService
 {
 private:
-	PingPacketDefinition				DefinitionPing;
 
-	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
+	//Runtime helpers.
+	uint32_t StateStartTime = 0;
+
+	PacketDefinition::IPacketListener* LastNotifiedListener = nullptr;
+	PacketDefinition::IPacketListener* NotifyListener = nullptr;
 
 protected:
 	LinkReportPacketDefinition			DefinitionReport;
@@ -32,61 +35,40 @@ protected:
 		int32_t iint;
 	};
 
+	//Runtime helpers.
 	ArrayToUint32 ATUI_R;
 	ArrayToUint32 ATUI_S;
 
 	//Send packet.
 	TemplateLoLaPacket<LOLA_LINK_SERVICE_PACKET_MAX_SIZE> OutPacket;
 
-	LoLaServicesManager * ServicesManager = nullptr;
-
 	LoLaLinkInfo* LinkInfo = nullptr;
 
-	volatile uint32_t LastSentMillis = ILOLA_INVALID_MILLIS;
+	volatile uint32_t LastSentMillis = 0;
 
 
 public:
 	AbstractLinkService(Scheduler* scheduler, ILoLaDriver* driver)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, driver, &OutPacket)
+		, DefinitionReport(this)
+		, DefinitionShort(this)
+		, DefinitionShortWithAck(this)
+		, DefinitionLong(this)
 	{
 	}
 
-	bool SetServicesManager(LoLaServicesManager * servicesManager)
+	virtual bool Setup()
 	{
-		ServicesManager = servicesManager;
-
-		if (ServicesManager != nullptr)
-		{
-			return OnAddSubServices();
-		}
-		return false;
-	}
-
-protected:
-	virtual bool OnAddSubServices() { return true; }
-
-	///Common packet handling.
-	virtual void OnLinkAckReceived(const uint8_t header, const uint8_t id) {}
-	virtual void OnPingAckReceived(const uint8_t id) {}
-
-	//Unlinked packets.
-	virtual bool OnAckedPacketReceived(ILoLaPacket* receivedPacket) { return false; }
-
-protected:
-	bool OnAddPacketMap(LoLaPacketMap* packetMap)
-	{
-		if (!packetMap->AddMapping(&DefinitionPing) ||
-			!packetMap->AddMapping(&DefinitionReport) ||
-			!packetMap->AddMapping(&DefinitionShort) ||
-			!packetMap->AddMapping(&DefinitionShortWithAck) ||
-			!packetMap->AddMapping(&DefinitionLong))
+		if (!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionReport) ||
+			!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionShort) ||
+			!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionShortWithAck) ||
+			!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionLong))
 		{
 			return false;
 		}
 
 		//Make sure our re-usable packet has enough space for all our packets.
-		if (Packet->GetMaxSize() < DefinitionPing.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionReport.GetTotalSize() ||
+		if (Packet->GetMaxSize() < DefinitionReport.GetTotalSize() ||
 			Packet->GetMaxSize() < DefinitionShort.GetTotalSize() ||
 			Packet->GetMaxSize() < DefinitionShortWithAck.GetTotalSize() ||
 			Packet->GetMaxSize() < DefinitionLong.GetTotalSize())
@@ -94,38 +76,24 @@ protected:
 			return false;
 		}
 
-		return true;
+		return IPacketSendService::Setup();
 	}
 
-	bool ProcessAckedPacket(ILoLaPacket* receivedPacket)
+
+protected:
+	///Common packet handling.
+	virtual void OnLinkAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp) {}
+
+public:
+	virtual void OnAckOk(const uint8_t header, const uint8_t id, const uint32_t timestamp)
 	{
-		if (receivedPacket->GetDataHeader() == DefinitionPing.GetHeader())
-		{
-			switch (LinkInfo->GetLinkState())
-			{
-			case LoLaLinkInfo::LinkStateEnum::Linking:
-				return true;
-			case LoLaLinkInfo::LinkStateEnum::Linked:
-				return true;
-			default:
-				return false;
-			}
-		}
-
-		return OnAckedPacketReceived(receivedPacket);
+		OnLinkAckReceived(header, id, timestamp);
 	}
 
-	void OnAckReceived(const uint8_t header, const uint8_t id)
-	{
-		if (header == DefinitionPing.GetHeader())
-		{
-			OnPingAckReceived(id);
-		}
-		else
-		{
-			OnLinkAckReceived(header, id);
-		}
-	}
+	//Overload and do nothing, since we are the emiter.
+	virtual void OnLinkStatusChanged() {}
+
+protected:
 
 	void OnSendFailed()
 	{
@@ -140,9 +108,9 @@ protected:
 
 	uint32_t GetElapsedMillisSinceStateStart()
 	{
-		if (StateStartTime == ILOLA_INVALID_MILLIS)
+		if (StateStartTime == 0)
 		{
-			return ILOLA_INVALID_MILLIS;
+			return UINT32_MAX;
 		}
 		else
 		{
@@ -152,9 +120,9 @@ protected:
 
 	uint32_t GetElapsedMillisSinceLastSent()
 	{
-		if (LastSentMillis == ILOLA_INVALID_MILLIS)
+		if (LastSentMillis == 0)
 		{
-			return ILOLA_INVALID_MILLIS;
+			return UINT32_MAX;
 		}
 		else
 		{
@@ -164,12 +132,28 @@ protected:
 
 	void ResetLastSentTimeStamp()
 	{
-		LastSentMillis = ILOLA_INVALID_MILLIS;
+		LastSentMillis = 0;
 	}
 
 	void TimeStampLastSent()
 	{
 		LastSentMillis = millis();
+	}
+
+	void NotifyServicesLinkStatusChanged()
+	{
+		uint8_t Count = LoLaDriver->GetPacketMap()->GetCount();
+
+		LastNotifiedListener = nullptr;
+		for (uint8_t i = 0; i < Count; i++)
+		{
+			NotifyListener = LoLaDriver->GetPacketMap()->GetServiceAt(i);
+			if (NotifyListener != nullptr)
+			{
+				NotifyListener->OnLinkStatusChanged();
+				LastNotifiedListener = NotifyListener;
+			}
+		}
 	}
 
 #ifdef DEBUG_LOLA
@@ -179,18 +163,13 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
+	//Link service should receive packets even without link, of course.
 	bool ShouldProcessReceived()
 	{
-		return IsSetupOk();
+		return true;
 	}
 
 	///Packet builders.
-	void PreparePing()
-	{
-		OutPacket.SetDefinition(&DefinitionPing);
-		OutPacket.SetId(random(0, UINT8_MAX));
-	}
-
 	inline void PrepareReportPacket(const uint8_t subHeader)
 	{
 		OutPacket.SetDefinition(&DefinitionReport);

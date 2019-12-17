@@ -6,23 +6,53 @@
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 
-template <const uint8_t BasePacketHeader>
-class SyncSurfaceWriter : public SyncSurfaceBase
+template <const uint8_t BasePacketHeader,
+	const uint32_t ThrottlePeriodMillis = 1>
+	class SyncSurfaceWriter : public SyncSurfaceBase<ThrottlePeriodMillis>
 {
 private:
 	SyncMetaPacketDefinition<BasePacketHeader> SyncMetaDefinition;
 	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
 
+private:
+	using SyncSurfaceBase<ThrottlePeriodMillis>::UpdateBlockData;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareServiceDiscoveryPacket;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareInvalidateRequestPacket;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareUpdateFinishedReplyPacket;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareUpdateFinishedPacket;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareBlockPacketHeader;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareBlockPacketPayload;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::ResetLastSentTimeStamp;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::CheckThrottling;
+
+	using AbstractSync::TrackedSurface;
+	using AbstractSync::SyncState;
+
+	using AbstractSync::InvalidateLocalHash;
+	using AbstractSync::InvalidateRemoteHash;
+	using AbstractSync::HashesMatch;
+	using AbstractSync::UpdateLocalHash;
+	using AbstractSync::NotifyDataChanged;
+	using AbstractSync::UpdateSyncState;
+	using AbstractSync::GetElapsedSinceStateStart;
+	using AbstractSync::GetElapsedSinceLastSent;
+	using AbstractSync::GetSurfaceId;
+
+
+	using IPacketSendService::RequestSendPacket;
+	using IPacketSendService::Packet;
+	using ILoLaService::Disable;
+	using ILoLaService::SetNextRunDelay;
+	using ILoLaService::SetNextRunASAP;
+
 public:
-	SyncSurfaceWriter(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface, const bool autoStart = true)
-		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition, autoStart)
+	SyncSurfaceWriter(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
+		: SyncMetaDefinition(this),
+		DataPacketDefinition(this),
+		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
 	{
 	}
 
-	virtual bool OnSetup()
-	{
-		return SyncSurfaceBase::OnSetup();
-	}
 
 private:
 	enum SyncWriterState : uint8_t
@@ -43,9 +73,9 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	void OnSendOk(const uint8_t header, const uint32_t sendDuration)
+	void OnTransmitted(const uint8_t header, const uint8_t id, const uint32_t transmitDuration, const uint32_t sendDuration)
 	{
-		if (SyncState == SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
+		if (SyncState == AbstractSync::SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
 		{
 			TrackedSurface->GetTracker()->ClearBit(SurfaceSendingIndex);
 			SurfaceSendingIndex++;
@@ -53,14 +83,14 @@ protected:
 		SetNextRunASAP();
 	}
 
-	void OnStateUpdated(const SyncStateEnum newState)
+	void OnStateUpdated(const AbstractSync::SyncStateEnum newState)
 	{
 		switch (newState)
 		{
-		case SyncStateEnum::WaitingForServiceDiscovery:
+		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
 			InvalidateRemoteHash();
 			Disable();
-		case SyncStateEnum::Syncing:
+		case AbstractSync::SyncStateEnum::Syncing:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
 		default:
@@ -81,12 +111,12 @@ protected:
 
 		switch (SyncState)
 		{
-		case SyncStateEnum::Syncing:
+		case AbstractSync::SyncStateEnum::Syncing:
 			break;
-		case SyncStateEnum::Disabled:
+		case AbstractSync::SyncStateEnum::Disabled:
 			break;
 		default:
-			UpdateSyncState(SyncStateEnum::Syncing);
+			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			break;
 		}
 	}
@@ -102,9 +132,9 @@ protected:
 
 		switch (SyncState)
 		{
-		case SyncStateEnum::WaitingForServiceDiscovery:
+		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
 			break;
-		case SyncStateEnum::Syncing:
+		case AbstractSync::SyncStateEnum::Syncing:
 			switch (WriterState)
 			{
 			case SyncWriterState::SendingFinished:
@@ -114,7 +144,7 @@ protected:
 				}
 				else if (HashesMatch())
 				{
-					UpdateSyncState(SyncStateEnum::Synced);
+					UpdateSyncState(AbstractSync::SyncStateEnum::Synced);
 				}
 				else
 				{
@@ -126,14 +156,14 @@ protected:
 				break;
 			}
 			break;
-		case SyncStateEnum::Synced:
+		case AbstractSync::SyncStateEnum::Synced:
 			if (!HashesMatch())
 			{
 				TrackedSurface->GetTracker()->SetAll();
-				UpdateSyncState(SyncStateEnum::Syncing);
+				UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			}
 			break;
-		case SyncStateEnum::Disabled:
+		case AbstractSync::SyncStateEnum::Disabled:
 			break;
 		default:
 			break;
@@ -144,17 +174,17 @@ protected:
 	{
 		switch (SyncState)
 		{
-		case SyncStateEnum::WaitingForServiceDiscovery:
+		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
 			break;
-		case SyncStateEnum::Syncing:
+		case AbstractSync::SyncStateEnum::Syncing:
 			TrackedSurface->GetTracker()->SetAll();
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
-		case SyncStateEnum::Synced:
+		case AbstractSync::SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->SetAll();
-			UpdateSyncState(SyncStateEnum::Syncing);
+			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			break;
-		case SyncStateEnum::Disabled:
+		case AbstractSync::SyncStateEnum::Disabled:
 			break;
 		default:
 			break;
@@ -168,9 +198,16 @@ protected:
 		case SyncWriterState::UpdatingBlocks:
 			if (TrackedSurface->GetTracker()->HasSet())
 			{
-				PrepareNextPendingBlockPacket();
-				RequestSendPacket();
-				UpdateSyncingState(SyncWriterState::SendingBlock);
+				if (CheckThrottling())
+				{
+					PrepareNextPendingBlockPacket();
+					RequestSendPacket();
+					UpdateSyncingState(SyncWriterState::SendingBlock);
+				}
+				else
+				{
+					SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+				}
 			}
 			else
 			{
@@ -181,7 +218,7 @@ protected:
 			break;
 		case SyncWriterState::SendingBlock:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			SetNextRunDelay(ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS);
+			SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::SendingFinished:
 			if (TrackedSurface->GetTracker()->HasSet())
@@ -206,7 +243,7 @@ protected:
 
 	void OnSendDelayed()
 	{
-		if (SyncState == SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
+		if (SyncState == AbstractSync::SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
 		{
 			UpdatePendingBlockPacketPayload();//Update packet payload with latest live data.
 		}
@@ -214,7 +251,7 @@ protected:
 
 	void OnSendRetrying()
 	{
-		if (SyncState == SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
+		if (SyncState == AbstractSync::SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
 		{
 			UpdatePendingBlockPacketPayload();//Update packet payload with latest live data.
 		}

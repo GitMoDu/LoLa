@@ -11,7 +11,6 @@ class ILoLaPacket
 private:
 	PacketDefinition * Definition = nullptr;
 
-
 	union ArrayToUint16 {
 		byte array[sizeof(uint16_t)];
 		uint16_t uint;
@@ -22,7 +21,7 @@ public:
 	virtual uint8_t GetMaxSize() { return 0; }
 
 public:
-	PacketDefinition * GetDefinition()
+	inline PacketDefinition * GetDefinition()
 	{
 		return Definition;
 	}
@@ -31,7 +30,7 @@ public:
 	{
 		Definition = nullptr;
 	}
-
+	
 	uint8_t GetId()
 	{
 		return GetRaw()[LOLA_PACKET_ID_INDEX];
@@ -64,23 +63,23 @@ public:
 
 	bool SetDefinition(PacketDefinition* definition)
 	{
-		if (definition != nullptr)
-		{
-			GetRaw()[LOLA_PACKET_HEADER_INDEX] = definition->GetHeader();
-		}
 		Definition = definition;
+		if (Definition != nullptr)
+		{
+			return true;
+		}
 
-		return Definition != nullptr;
+		return false;
+	}
+
+	uint8_t* GetContent()
+	{
+		return &GetRaw()[LOLA_PACKET_HEADER_INDEX];
 	}
 
 	uint8_t* GetPayload()
 	{
 		return &GetRaw()[LOLA_PACKET_PAYLOAD_INDEX];
-	}
-
-	uint8_t* GetRawContent()
-	{
-		return &GetRaw()[LOLA_PACKET_HEADER_INDEX];
 	}
 };
 
@@ -91,7 +90,7 @@ private:
 	uint8_t Data[DataSize];
 
 public:
-	uint8_t * GetRaw()
+	uint8_t* GetRaw()
 	{
 		return Data;
 	}

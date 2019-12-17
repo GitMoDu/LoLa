@@ -85,6 +85,18 @@ public:
 		return DataCRC(message, messageLength);
 	}
 
+	void EmptyEncode(uint8_t* message, const uint8_t messageLength)
+	{
+		ResetCypherBlock();
+		Cypher.encrypt(message, message, messageLength);
+	}
+
+	void EmptyDecode(uint8_t* message, const uint8_t messageLength)
+	{
+		ResetCypherBlock();
+		Cypher.decrypt(message, message, messageLength);
+	}
+
 	//Returns 16 bit MAC/CRC.
 	uint16_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
 	{

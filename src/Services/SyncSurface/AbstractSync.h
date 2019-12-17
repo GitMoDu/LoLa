@@ -3,7 +3,7 @@
 #ifndef _ABSTRACTSURFACE_h
 #define _ABSTRACTSURFACE_h
 
-#define LOLA_SYNC_FULL_DEBUG
+//#define LOLA_SYNC_FULL_DEBUG
 
 #include <Arduino.h>
 #include <Services\IPacketSendService.h>
@@ -30,9 +30,9 @@ private:
 	uint8_t LastRemoteHash = ABSTRACT_SURFACE_DEFAULT_HASH;
 	bool RemoteHashIsSet = false;
 
-	uint32_t StateStartTime = ILOLA_INVALID_MILLIS;
+	uint32_t StateStartTime = 0;
 
-	uint32_t LastSent = ILOLA_INVALID_MILLIS;
+	uint32_t LastSent = 0;
 
 protected:
 	enum SyncStateEnum : uint8_t
@@ -46,6 +46,8 @@ protected:
 
 	ITrackedSurface* TrackedSurface = nullptr;
 
+	uint32_t LastSyncMillis = 0;
+
 protected:
 	virtual void OnWaitingForServiceDiscovery() {}
 	virtual uint8_t GetSurfaceId() { return 0; }
@@ -56,24 +58,25 @@ protected:
 
 public:
 	AbstractSync(Scheduler* scheduler, const uint16_t period, ILoLaDriver* driver,
-		ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder, const bool autoStart = true)
+		ITrackedSurface* trackedSurface, ILoLaPacket* packetHolder)
 		: IPacketSendService(scheduler, period, driver, packetHolder)
 	{
 		TrackedSurface = trackedSurface;
 
-		if (autoStart)
-		{
-			SyncState = SyncStateEnum::Sleeping;
-		}
-		else
-		{
-			SyncState = SyncStateEnum::Disabled;
-		}
+		SyncState = SyncStateEnum::Disabled;
 	}
 
-	bool OnEnable()
+
+	virtual bool Setup()
 	{
-		return true;
+		if (IPacketSendService::Setup() && TrackedSurface != nullptr)
+		{
+			MethodSlot<AbstractSync, const bool> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
+			TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
+			return true;
+		}
+
+		return false;
 	}
 
 	ITrackedSurface* GetSurface()
@@ -85,11 +88,11 @@ public:
 	{
 		if (enable)
 		{
-			if (SyncState == SyncStateEnum::Disabled) 
+			if (SyncState == SyncStateEnum::Disabled)
 			{
 				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
 			}
-		}		
+		}
 		else
 		{
 			if (SyncState != SyncStateEnum::Disabled)
@@ -99,19 +102,21 @@ public:
 		}
 	}
 
-	void OnLinkEstablished()
+	virtual void OnLinkStatusChanged()
 	{
-		if (SyncState != SyncStateEnum::Disabled)
+		if (LoLaDriver->HasLink())
 		{
-			UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
-		}		
-	}
-
-	void OnLinkLost()
-	{
-		if (SyncState != SyncStateEnum::Disabled)
+			if (SyncState != SyncStateEnum::Disabled)
+			{
+				UpdateSyncState(SyncStateEnum::WaitingForServiceDiscovery);
+			}
+		}
+		else 
 		{
-			UpdateSyncState(SyncStateEnum::Sleeping);
+			if (SyncState != SyncStateEnum::Disabled)
+			{
+				UpdateSyncState(SyncStateEnum::Sleeping);
+			}
 		}
 	}
 
@@ -194,26 +199,26 @@ protected:
 
 	uint32_t GetElapsedSinceStateStart()
 	{
-		if (StateStartTime != ILOLA_INVALID_MILLIS)
+		if (StateStartTime != 0)
 		{
 			return millis() - StateStartTime;
 		}
 		else
 		{
-			return ILOLA_INVALID_MILLIS;
+			return UINT32_MAX;
 		}
 	}
 
 	void ResetLastSentTimeStamp()
 	{
-		LastSent = ILOLA_INVALID_MILLIS;
+		LastSent = 0;
 	}
 
 	uint32_t GetElapsedSinceLastSent()
 	{
-		if (LastSent == ILOLA_INVALID_MILLIS)
+		if (LastSent == 0)
 		{
-			return ILOLA_INVALID_MILLIS;
+			return UINT32_MAX;
 		}
 		else
 		{
@@ -242,6 +247,7 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 				Serial.println(F("WaitingForServiceDiscovery"));
 #endif
+				LastSyncMillis == 0;
 				break;
 			case SyncStateEnum::Syncing:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
@@ -254,6 +260,7 @@ protected:
 				Serial.println(F("Synced"));
 #endif
 				InvalidateLocalHash();
+				LastSyncMillis = StateStartTime;
 				break;
 			case SyncStateEnum::Sleeping:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
@@ -272,17 +279,6 @@ protected:
 		}
 	}
 
-	virtual bool OnSetup()
-	{
-		if (IPacketSendService::OnSetup() && TrackedSurface != nullptr)
-		{
-			MethodSlot<AbstractSync, const bool> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
-			TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
-			return true;
-		}
-
-		return false;
-	}
 
 	void OnService()
 	{

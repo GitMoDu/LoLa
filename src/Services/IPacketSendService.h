@@ -28,17 +28,16 @@ private:
 		SendingPacket = 1,
 		WaitingForSendOk = 2,
 		SendOk = 3,
-		SendFailed = 4,
-		WaitingForAck = 5
+		WaitingForAck = 4
 	} SendStatus = SendStatusEnum::Done;
 
 	uint8_t SendFailures = 0;
-	uint32_t SendStartMillis = ILOLA_INVALID_MILLIS;
+	uint32_t SendStartMillis = 0;
 	uint8_t SendTimeOutDuration = 0;
 	uint8_t AckTimeOutDuration = 0;
 
 protected:
-	ILoLaPacket * Packet = nullptr;
+	ILoLaPacket* Packet = nullptr;
 
 private:
 	inline bool HasSendPendingInternal()
@@ -48,8 +47,8 @@ private:
 
 protected:
 	virtual void OnAckFailed(const uint8_t header, const uint8_t id) { }
-	virtual void OnAckReceived(const uint8_t header, const uint8_t id) { }
-	virtual void OnSendOk(const uint8_t header, const uint32_t sendDuration) { SetNextRunASAP(); }
+	virtual void OnAckOk(const uint8_t header, const uint8_t id, const uint32_t timestamp) { }
+	virtual void OnTransmitted(const uint8_t header, const uint8_t id, const uint32_t transmitTimestamp, const uint32_t sendDuration) { SetNextRunASAP(); }
 	virtual void OnSendFailed() { SetNextRunASAP(); }
 	virtual void OnService() { SetNextRunDelay(LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS); }
 	virtual void OnSendTimedOut() { SetNextRunASAP(); }
@@ -58,26 +57,44 @@ protected:
 	virtual void OnPreSend() { }
 	virtual bool OnEnable() { return true; }
 	virtual void OnDisable() { }
-	virtual bool OnSetup()
-	{
-		return Packet != nullptr;
-	}
+
 
 public:
-	IPacketSendService(Scheduler* scheduler, const uint16_t period, ILoLaDriver* driver, ILoLaPacket* packetHolder)
+	IPacketSendService(Scheduler* scheduler, const uint32_t period, ILoLaDriver* driver, ILoLaPacket* packetHolder)
 		: ILoLaService(scheduler, period, driver)
 	{
 		Packet = packetHolder;
 		Packet->ClearDefinition();
 	}
 
-	bool ProcessSent(const uint8_t header)
+public:
+	virtual bool OnAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp)
 	{
-		if (HasSendPendingInternal() &&
+		// Make sure we only eat our own packets.
+		if (SendStatus == SendStatusEnum::WaitingForAck &&
 			Packet->GetDataHeader() == header &&
-			SendStatus == SendStatusEnum::WaitingForSendOk)
+			Packet->GetId() == id)
 		{
-			//Notify sent Ok will be fired, as soon as the service runs.
+			OnAckOk(header, id, timestamp);
+			ClearSendRequest();
+
+			return true;
+		}
+
+		return false;
+	}
+
+	virtual bool Setup()
+	{
+		return ILoLaService::Setup() && Packet != nullptr;
+	}
+
+	virtual bool OnPacketTransmitted(const uint8_t header, const uint8_t id, const uint32_t timestamp)
+	{
+		if (SendStatus == SendStatusEnum::WaitingForSendOk &&
+			Packet->GetDataHeader() == header)
+		{
+			OnTransmitted(Packet->GetDataHeader(), Packet->GetId(), timestamp, millis() - SendStartMillis);
 			SendStatus = SendStatusEnum::SendOk;
 			SetNextRunASAP();
 			return true;
@@ -86,39 +103,41 @@ public:
 		return false;
 	}
 
-	bool Callback()
+	virtual bool Callback()
 	{
-		//Ensure we only deal with sending if there's request pending, otherwise yeald back to main service.
+		// Ensure we only deal with sending if there's request pending, otherwise yield back to main service.
 		if (!HasSendPendingInternal() && SendStatus != SendStatusEnum::Done)
 		{
 			SendStatus = SendStatusEnum::Done;
 			SetNextRunASAP();
 		}
-		//Finish sending any pending packet.
+
+		// Finish sending any pending packet.
 		switch (SendStatus)
 		{
 		case SendStatusEnum::SendingPacket:
-			if (SendStartMillis == ILOLA_INVALID_MILLIS ||
+			if (SendStartMillis == 0 ||
 				((millis() - SendStartMillis) > SendTimeOutDuration))
 			{
 				OnSendTimedOut();
 				ClearSendRequest();
-				break;
+				break;// Early break from case.
 			}
 
-			if (!AllowedSend())
+			if (!LoLaDriver->AllowedSend())
 			{
-				//Give an opportunity for the service to update the packet, if needed.
+				// Give an opportunity for the service to update the packet, if needed.
 				SetNextRunDelay(LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS);
 				OnSendDelayed();
-				break;
+				break;// Early break from case.
 			}
 
-			//Last minute fast stuff.
+			// Last minute fast stuff.
 			OnPreSend();
 
-			//SendPacket is quite time consuming.
-			if (SendPacket(Packet))
+			// SendPacket is quite time consuming.
+			// Update: driver has been severly optimized, test new times.
+			if (LoLaDriver->SendPacket(Packet))
 			{
 				SendStatus = SendStatusEnum::WaitingForSendOk;
 				SetNextRunDelay(SendTimeOutDuration - constrain(millis() - SendStartMillis, 0, SendTimeOutDuration));
@@ -128,7 +147,8 @@ public:
 				SendFailures++;
 				if (SendFailures > LOLA_SEND_SERVICE_DENIED_MAX_FAILS)
 				{
-					SendStatus = SendStatusEnum::SendFailed;
+					OnSendFailed();
+					ClearSendRequest();
 					SetNextRunASAP();
 				}
 				else
@@ -138,11 +158,11 @@ public:
 			}
 			break;
 		case SendStatusEnum::WaitingForSendOk:
-			SendStatus = SendStatusEnum::SendFailed;
+			OnSendFailed();
+			ClearSendRequest();
 			SetNextRunASAP();
 			break;
 		case SendStatusEnum::SendOk:
-			OnSendOk(Packet->GetDataHeader(), millis() - SendStartMillis);
 			if (Packet->GetDefinition()->HasACK())
 			{
 				SendStatus = SendStatusEnum::WaitingForAck;
@@ -152,10 +172,6 @@ public:
 			{
 				ClearSendRequest();
 			}
-			break;
-		case SendStatusEnum::SendFailed:
-			OnSendFailed();
-			ClearSendRequest();
 			break;
 		case SendStatusEnum::WaitingForAck:
 			OnAckFailed(Packet->GetDataHeader(), Packet->GetId());
@@ -194,28 +210,11 @@ protected:
 	void ClearSendRequest()
 	{
 		Packet->ClearDefinition();
-		SendStartMillis = ILOLA_INVALID_MILLIS;
+		SendStartMillis = 0;
 		SendStatus = SendStatusEnum::Done;
 		SetNextRunASAP();
 	}
 
-public:
-	bool ProcessAck(const uint8_t header, const uint8_t id)
-	{
-		//Make sure we eat out own packets.
-		if (HasSendPendingInternal() && Packet->GetDataHeader() == header)
-		{
-			if (SendStatus == SendStatusEnum::WaitingForAck &&
-				Packet->GetId() == id)
-			{
-				OnAckReceived(header, id);
-				ClearSendRequest();
-			}
 
-			return true;
-		}
-
-		return false;
-	}
 };
 #endif

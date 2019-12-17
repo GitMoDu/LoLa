@@ -5,9 +5,6 @@
 
 #include <Services\Link\LoLaLinkService.h>
 
-#include <Services\Link\LoLaLinkLatencyMeter.h>
-
-
 class LoLaLinkHostService : public LoLaLinkService
 {
 private:
@@ -23,21 +20,17 @@ private:
 
 	enum InfoSyncStagesEnum : uint8_t
 	{
-		AwaitingLatencyMeasurement = 0,
-		SendingInfoRequest = 1,
-		SendingHostInfo = 2
+		SendingInfoRequest = 0,
+		SendingHostInfo = 1
 	};
 
 	LinkHostClockSyncer ClockSyncer;
 	ClockSecondsResponseTransaction HostClockSecondsTransaction;
 	ClockSyncResponseTransaction HostClockSyncTransaction;
 
-	//Latency measurement.
-	bool PingAcked = false;
-	LoLaLinkLatencyMeter<LOLA_LINK_SERVICE_UNLINK_MAX_LATENCY_SAMPLES> LatencyMeter;
 
 	//Session lifetime.
-	uint32_t SessionLastStarted = ILOLA_INVALID_MILLIS;
+	uint32_t SessionLastStarted = 0;
 
 
 public:
@@ -50,7 +43,7 @@ public:
 		ClockSyncerPointer = &ClockSyncer;
 		driver->SetDuplexSlot(true);
 	}
-protected:
+
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
@@ -58,44 +51,34 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
+protected:
 	void OnClearSession()
 	{
-		LatencyMeter.Reset();
 		HostClockSyncTransaction.Reset();
 		HostClockSecondsTransaction.Reset();
 		ClockSyncer.Reset();
 
-		SessionLastStarted = ILOLA_INVALID_MILLIS;
+		SessionLastStarted = 0;
 	}
 
-	void OnLinkStateChanged(const LoLaLinkInfo::LinkStateEnum newState)
+	void OnLinkStateChanged(const LinkStatus::StateEnum newState)
 	{
 		switch (newState)
 		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		case LinkStatus::StateEnum::AwaitingLink:
 			NewSession();
 			break;
-		case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+		case LinkStatus::StateEnum::AwaitingSleeping:
 			SetNextRunDelay(LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD);
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Linking:
-			InfoSyncStage = InfoSyncStagesEnum::AwaitingLatencyMeasurement;
+		case LinkStatus::StateEnum::Linking:
+			InfoSyncStage = InfoSyncStagesEnum::SendingInfoRequest;
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Linked:
+		case LinkStatus::StateEnum::Linked:
 			HostClockSyncTransaction.Reset();
 			break;
 		default:
 			break;
-		}
-	}
-
-	void OnPreSend()
-	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
-			LinkingState == LinkingStagesEnum::InfoSyncStage &&
-			OutPacket.GetDataHeader() == LOLA_LINK_HEADER_PING_WITH_ACK)
-		{
-			LatencyMeter.OnAckPacketSent(OutPacket.GetId());
 		}
 	}
 
@@ -115,7 +98,7 @@ protected:
 		else switch (LinkingState)
 		{
 		case AwaitingLinkEnum::BroadcastingOpenSession:
-			if (!LinkInfo->HasSessionId() || SessionLastStarted == ILOLA_INVALID_MILLIS || millis() - SessionLastStarted > LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME)
+			if (!LinkInfo.HasSessionId() || SessionLastStarted == 0 || millis() - SessionLastStarted > LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME)
 			{
 				NewSession();
 				SessionLastStarted = millis();
@@ -135,14 +118,17 @@ protected:
 			//TODO: Filter accepted Id from known list.
 			if (true)
 			{
-				LoLaDriver->GetCryptoEncoder()->SetIvData(LinkInfo->GetSessionId(),
-					LinkInfo->GetLocalId(), LinkInfo->GetPartnerId());
+				LoLaDriver->GetCryptoEncoder()->SetIvData(LinkInfo.GetSessionId(),
+					LinkInfo.GetLocalId(), LinkInfo.GetPartnerId());
 				SubStateStart = millis();
 				SetLinkingState(AwaitingLinkEnum::SendingPublicKey);
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
+				DebugTask.OnPKCStarted();
+#endif
 			}
 			else
 			{
-				LinkInfo->ClearRemoteId();
+				LinkInfo.ClearRemoteId();
 				RestartAwaitingLink();
 			}
 			break;
@@ -193,11 +179,11 @@ protected:
 			}
 			break;
 		case AwaitingLinkEnum::LinkingSwitchOver:
-#ifdef DEBUG_LOLA
-			PKCDuration = millis() - SubStateStart;
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
+			DebugTask.OnPKCDone();
 #endif
 			//All set to start linking.
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linking);
+			UpdateLinkState(LinkStatus::StateEnum::Linking);
 			break;
 		default:
 			SetLinkingState(0);
@@ -210,7 +196,7 @@ protected:
 
 	void OnLinkDiscoveryReceived()
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingSleeping)
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::AwaitingSleeping)
 		{
 			SetNextRunASAP();
 		}
@@ -218,22 +204,22 @@ protected:
 
 	void OnPKCRequestReceived(const uint8_t sessionId, const uint32_t remotePartnerId)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::BroadcastingOpenSession &&
-			LinkInfo->HasSessionId() &&
-			LinkInfo->GetSessionId() == sessionId)
+			LinkInfo.HasSessionId() &&
+			LinkInfo.GetSessionId() == sessionId)
 		{
-			LinkInfo->SetPartnerId(remotePartnerId);
+			LinkInfo.SetPartnerId(remotePartnerId);
 			SetLinkingState(AwaitingLinkEnum::ValidatingPartner);
 		}
 	}
 
 	void OnRemotePublicKeyReceived(const uint8_t sessionId, uint8_t *remotePublicKey)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::AwaitingLink &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::AwaitingLink &&
 			LinkingState == AwaitingLinkEnum::SendingPublicKey &&
-			LinkInfo->HasSessionId() &&
-			LinkInfo->GetSessionId() == sessionId)
+			LinkInfo.HasSessionId() &&
+			LinkInfo.GetSessionId() == sessionId)
 		{
 			//The partner Public Key is encoded at this point.
 			if (KeyExchanger.SetPartnerPublicKey(remotePublicKey))
@@ -276,10 +262,10 @@ protected:
 			break;
 		case LinkingStagesEnum::LinkingDone:
 			//All linking stages complete, we have a link.
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::Linked);
+			UpdateLinkState(LinkStatus::StateEnum::Linked);
 			break;
 		default:
-			UpdateLinkState(LoLaLinkInfo::LinkStateEnum::AwaitingLink);
+			UpdateLinkState(LinkStatus::StateEnum::AwaitingLink);
 			break;
 		}
 	}
@@ -288,31 +274,8 @@ protected:
 	{
 		switch (InfoSyncStage)
 		{
-		case InfoSyncStagesEnum::AwaitingLatencyMeasurement:
-			if (LatencyMeter.GetSampleCount() >= LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES)
-			{
-				//Update link info RTT.
-				LinkInfo->SetRTT(LatencyMeter.GetAverageLatency());
-
-				InfoSyncStage = InfoSyncStagesEnum::SendingInfoRequest;
-				SetNextRunASAP();
-			}
-			else
-			{	//If we don't have enough latency samples, we make more.
-				if (PingAcked || GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_UNLINK_PING_RESEND_PERIOD_MAX)
-				{
-					PingAcked = false;
-					PreparePing();
-					RequestSendPacket();
-				}
-				else
-				{
-					SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-				}
-			}
-			break;
 		case InfoSyncStagesEnum::SendingInfoRequest:
-			if (LinkInfo->HasPartnerRSSI())
+			if (LinkInfo.HasPartnerRSSI())
 			{
 				InfoSyncStage = InfoSyncStagesEnum::SendingHostInfo;
 				SetNextRunASAP();
@@ -345,10 +308,10 @@ protected:
 
 	void OnRemoteInfoSyncReceived(const uint8_t rssi)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking &&
 			LinkingState == LinkingStagesEnum::InfoSyncStage)
 		{
-			LinkInfo->SetPartnerRSSINormalized(rssi);
+			LinkInfo.SetPartnerRSSINormalized(rssi);
 			SetNextRunASAP();
 		}
 	}
@@ -357,7 +320,7 @@ protected:
 	{
 		if (HostClockSecondsTransaction.IsRequested())
 		{
-			PrepareClockUTCResponse(HostClockSecondsTransaction.GetId(), LoLaDriver->GetClockSource()->GetSyncSeconds());
+			PrepareClockUTCResponse(HostClockSecondsTransaction.GetId(), SyncedClock.GetSyncSeconds());
 			HostClockSecondsTransaction.Reset();
 			RequestSendPacket();
 		}
@@ -377,13 +340,12 @@ protected:
 	///Clock Sync.
 	void OnClockUTCRequestReceived(const uint8_t requestId)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking)
 		{
 			switch (LinkingState)
 			{
 			case LinkingStagesEnum::InfoSyncStage:
-				if (LatencyMeter.GetSampleCount() >= LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES &&
-					LinkInfo->HasPartnerRSSI())
+				if (LinkInfo.HasPartnerRSSI())
 				{
 					HostClockSecondsTransaction.SetRequested(requestId);
 					SetLinkingState(LinkingStagesEnum::ClockSyncStage);
@@ -405,16 +367,15 @@ protected:
 
 	void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros)
 	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking)
+		if (LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linking)
 		{
-			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + (micros() - LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros);
+			HostClockSyncTransaction.SetResult(requestId, SyncedClock.GetSyncMicros() + (micros() - LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros);
 			SetNextRunASAP();
 
 			switch (LinkingState)
 			{
 			case LinkingStagesEnum::InfoSyncStage:
-				if (LatencyMeter.GetSampleCount() >= LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES &&
-					LinkInfo->HasPartnerRSSI())
+				if (LinkInfo.HasPartnerRSSI())
 				{
 					SetLinkingState(LinkingStagesEnum::ClockSyncStage);
 				}
@@ -431,9 +392,9 @@ protected:
 
 	void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros)
 	{
-		if (LinkInfo->HasLink())
+		if (LinkInfo.HasLink())
 		{
-			HostClockSyncTransaction.SetResult(requestId, LoLaDriver->GetClockSource()->GetSyncMicros() + (micros() - LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros);
+			HostClockSyncTransaction.SetResult(requestId, SyncedClock.GetSyncMicros() + (micros() - LoLaDriver->GetLastValidReceivedMicros()) - estimatedMicros);
 			SetNextRunASAP();
 		}
 	}
@@ -444,7 +405,7 @@ protected:
 		{
 			if (!ClockSyncer.OnEstimationReceived(HostClockSyncTransaction.GetResult()))
 			{
-				LinkInfo->StampClockSyncAdjustment();
+				LinkInfo.StampClockSyncAdjustment();
 			}
 			PrepareClockSyncTuneResponse(HostClockSyncTransaction.GetId(), HostClockSyncTransaction.GetResult());
 			HostClockSyncTransaction.Reset();
@@ -456,36 +417,27 @@ protected:
 		}
 	}
 
-	void OnPingAckReceived(const uint8_t id)
-	{
-		if (LinkInfo->GetLinkState() == LoLaLinkInfo::LinkStateEnum::Linking &&
-			LinkingState == LinkingStagesEnum::InfoSyncStage &&
-			LatencyMeter.OnAckReceived(id))
-		{
-			PingAcked = true;
-			SetNextRunASAP();
-		}
-	}
+	
 
-	void OnLinkAckReceived(const uint8_t header, const uint8_t id)
+	virtual void OnLinkAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp)
 	{
 		if (header != DefinitionShortWithAck.GetHeader())
 		{
 			return;
 		}
 
-		switch (LinkInfo->GetLinkState())
+		switch (LinkInfo.GetLinkState())
 		{
-		case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+		case LinkStatus::StateEnum::AwaitingLink:
 			if (LinkingState == AwaitingLinkEnum::GotSharedKey &&
-				LinkInfo->GetSessionId() == id)
+				LinkInfo.GetSessionId() == id)
 			{
 				SetLinkingState(AwaitingLinkEnum::LinkingSwitchOver);
 			}
 			break;
-		case LoLaLinkInfo::LinkStateEnum::Linking:
+		case LinkStatus::StateEnum::Linking:
 			if (LinkingState == LinkingStagesEnum::LinkProtocolSwitchOver &&
-				LinkInfo->GetSessionId() == id)
+				LinkInfo.GetSessionId() == id)
 			{
 				SetLinkingState(LinkingStagesEnum::LinkingDone);
 			}
@@ -500,13 +452,13 @@ private:
 	{
 		ClearSession();
 
-		LinkInfo->SetSessionId((uint8_t)random(1, (UINT8_MAX - 1)));
+		LinkInfo.SetSessionId((uint8_t)random(1, (UINT8_MAX - 1)));
 	}
 
 	void PrepareIdBroadcast()
 	{
-		PrepareShortPacket(LinkInfo->GetSessionId(), LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST);
-		ATUI_S.uint = LinkInfo->GetLocalId();
+		PrepareShortPacket(LinkInfo.GetSessionId(), LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST);
+		ATUI_S.uint = LinkInfo.GetLocalId();
 		S_ArrayToPayload();
 	}
 
@@ -519,9 +471,7 @@ private:
 	void PrepareHostInfoSync()
 	{
 		PrepareReportPacket(LOLA_LINK_SUBHEADER_INFO_SYNC_HOST);
-		OutPacket.GetPayload()[0] = LinkInfo->GetRSSINormalized();
-		OutPacket.GetPayload()[1] = LinkInfo->GetRTT() & 0xFF; //MSB 16 bit unsigned.
-		OutPacket.GetPayload()[2] = (LinkInfo->GetRTT() >> 8) & 0xFF;
+		OutPacket.GetPayload()[0] = LinkInfo.GetRSSINormalized();
 		for (uint8_t i = 3; i < DefinitionReport.GetPayloadSize(); i++)
 		{
 			OutPacket.GetPayload()[i] = UINT8_MAX; //Padding
@@ -553,8 +503,8 @@ private:
 
 	void PrepareLinkProtocolSwitchOver()
 	{
-		PrepareShortPacketWithAck(LinkInfo->GetSessionId());
-		ATUI_S.uint = LinkInfo->GetPartnerId();
+		PrepareShortPacketWithAck(LinkInfo.GetSessionId());
+		ATUI_S.uint = LinkInfo.GetPartnerId();
 		OutPacket.GetPayload()[0] = ATUI_S.array[0];
 		OutPacket.GetPayload()[1] = ATUI_S.array[1];
 		OutPacket.GetPayload()[2] = ATUI_S.array[2];

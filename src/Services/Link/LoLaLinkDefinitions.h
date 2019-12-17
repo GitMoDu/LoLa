@@ -13,8 +13,7 @@
 ///
 
 ///Link packet sizes.
-#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING					0 //Only payload is Id.
-#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT				3
+#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT				1
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT				(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK		(sizeof(uint32_t))	//4 byte encoded Partner Id.
 #define LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG					(1 + LoLaCryptoKeyExchanger::KEY_MAX_SIZE)  //1 byte Sub-header + key payload size.		
@@ -67,27 +66,35 @@ enum LinkingStagesEnum : uint8_t
 	LinkingDone = 3
 };
 
+
 class PingPacketDefinition : public PacketDefinition
 {
+
 public:
-	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
-	const uint8_t GetHeader() { return LOLA_LINK_HEADER_PING_WITH_ACK; }
-	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_PING; }
+	PingPacketDefinition(IPacketListener* service)
+		: PacketDefinition(service,
+			LOLA_LINK_HEADER_PING_WITH_ACK, 
+			0,// Only payload is Id. 
+			PacketDefinition::PACKET_DEFINITION_MASK_HAS_ACK)
+	{}
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("Ping\t"));
+		serial->print(F("Ping"));
 	}
 #endif
 };
 
+
 class LinkReportPacketDefinition : public PacketDefinition
 {
 public:
-	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	const uint8_t GetHeader() { return LOLA_LINK_HEADER_REPORT; }
-	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT; }
+	LinkReportPacketDefinition(IPacketListener* service) :
+		PacketDefinition(service,
+			LOLA_LINK_HEADER_REPORT,
+			LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT)
+	{}
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -100,14 +107,16 @@ public:
 class LinkShortPacketDefinition : public PacketDefinition
 {
 public:
-	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	const uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT; }
-	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT; }
+	LinkShortPacketDefinition(IPacketListener* service) :
+		PacketDefinition(service, 
+			LOLA_LINK_HEADER_SHORT,
+			LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT)
+	{}
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("L-Short\t"));
+		serial->print(F("L-Short"));
 	}
 #endif
 };
@@ -115,9 +124,12 @@ public:
 class LinkShortWithAckPacketDefinition : public PacketDefinition
 {
 public:
-	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_HAS_ACK; }
-	const uint8_t GetHeader() { return LOLA_LINK_HEADER_SHORT_WITH_ACK; }
-	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK; }
+	LinkShortWithAckPacketDefinition(IPacketListener* service) :
+		PacketDefinition(service, 
+			LOLA_LINK_HEADER_SHORT_WITH_ACK, 
+			LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK,
+			PacketDefinition::PACKET_DEFINITION_MASK_HAS_ACK)
+	{}
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
@@ -130,14 +142,16 @@ public:
 class LinkLongPacketDefinition : public PacketDefinition
 {
 public:
-	const uint8_t GetConfiguration() { return PACKET_DEFINITION_MASK_BASIC; }
-	const uint8_t GetHeader() { return LOLA_LINK_HEADER_LONG; }
-	const uint8_t GetPayloadSize() { return LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG; }
+	LinkLongPacketDefinition(IPacketListener* service) :
+		PacketDefinition(service,
+			LOLA_LINK_HEADER_LONG,
+			LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
+	{}
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("L-Long\t"));
+		serial->print(F("L-Long"));
 	}
 #endif
 };

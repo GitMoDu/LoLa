@@ -4,6 +4,7 @@
 #define _LOLA_CRYPTO_KEY_EXCHANGE_h
 
 #include <uECC.h>
+#include <LoLaDefinitions.h>
 
 class LoLaCryptoKeyExchanger
 {
@@ -13,7 +14,7 @@ public:
 	static const uint8_t SIGNATURE_LENGTH = (KEY_CURVE_SIZE * 2);
 
 private:
-	static int RNG(uint8_t *dest, unsigned size)
+	static int RNG(uint8_t* dest, unsigned size)
 	{
 		// Use the least-significant bits from the ADC for an unconnected pin (or connected to a source of 
 		// random noise). This can take a long time to generate random data if the result of analogRead(0) 
@@ -51,8 +52,8 @@ private:
 		StageSharedKey
 	} PairingStage = PairingStageEnum::StageClear;
 
-	const struct uECC_Curve_t * ECC_CURVE = uECC_secp160r1();
-	
+	const struct uECC_Curve_t* ECC_CURVE = uECC_secp160r1();
+
 
 	uint8_t PartnerPublicKeyCompressed[KEY_CURVE_SIZE + 1];
 	uint8_t LocalPublicKeyCompressed[KEY_CURVE_SIZE + 1];
@@ -61,6 +62,8 @@ private:
 
 	//Temporary holder for the uncompressed public keys.
 	uint8_t UncompressedKey[KEY_CURVE_SIZE * 2];
+
+	uint32_t KeyPairLastGenerated = 0;
 
 public:
 	LoLaCryptoKeyExchanger() {}
@@ -84,7 +87,7 @@ public:
 		if (PairingStage == PairingStageEnum::StagePartnerKey || PairingStage == PairingStageEnum::StageSharedKey)
 		{
 			PairingStage = PairingStageEnum::StageLocalKey;
-		}	
+		}
 	}
 
 	bool IsReadyToUse()
@@ -98,7 +101,7 @@ public:
 	}
 
 	///Make sure there is room for KEY_SIZE bytes in the destination array.
-	bool GetSharedKey(uint8_t * keyTarget)
+	bool GetSharedKey(uint8_t* keyTarget)
 	{
 		if (PairingStage != PairingStageEnum::StageSharedKey)
 		{
@@ -110,13 +113,11 @@ public:
 			keyTarget[i] = SharedKey[i];
 		}
 
-		PairingStage = PairingStageEnum::StageSharedKey;
-
 		return true;
 	}
 
 #ifdef DEBUG_LOLA
-	bool GetPartnerPublicKeyCompressed(uint8_t * keyTarget)
+	bool GetPartnerPublicKeyCompressed(uint8_t* keyTarget)
 	{
 		for (uint8_t i = 0; i < KEY_CURVE_SIZE + 1; i++)
 		{
@@ -132,7 +133,7 @@ public:
 	}
 #endif
 
-	bool GetPublicKeyCompressed(uint8_t * keyTarget)
+	bool GetPublicKeyCompressed(uint8_t* keyTarget)
 	{
 		if (PairingStage == PairingStageEnum::StageClear)
 		{
@@ -164,10 +165,15 @@ public:
 		return true;
 	}
 
+	uint32_t GetKeyPairAgeMillis()
+	{
+		return millis() - KeyPairLastGenerated;
+	}
+
 	bool GenerateNewKeyPair()
 	{
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_ENCRYPTION)
-			uint32_t SharedKeyTime = micros();
+		uint32_t SharedKeyTime = micros();
 #endif
 		if (uECC_make_key(UncompressedKey, PrivateKey, ECC_CURVE))
 		{
@@ -181,6 +187,8 @@ public:
 			Serial.print(SharedKeyTime);
 			Serial.println(F(" us."));
 #endif
+
+			KeyPairLastGenerated = millis();
 
 			return true;
 		}

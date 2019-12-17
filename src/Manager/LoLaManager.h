@@ -10,8 +10,7 @@
 #include <Services\Link\LoLaLinkHostService.h>
 #include <Services\Link\LoLaLinkRemoteService.h>
 
-#include <Services\LoLaServicesManager.h>
-
+#include <LinkIndicator.h>
 
 class LoLaManager
 {
@@ -26,27 +25,6 @@ protected:
 		return true;
 	}
 
-protected:
-	bool SetupServices()
-	{
-		if (!GetLinkService()->SetServicesManager(LoLaDriver->GetServices()))
-		{
-			return false;
-		}
-
-		if (!LoLaDriver->GetServices()->Add(GetLinkService()))
-		{
-			return false;
-		}
-
-		if (!OnSetupServices())
-		{
-			return false;
-		}
-
-		return true;
-	}
-
 public:
 	LoLaManager(LoLaPacketDriver* driver)
 	{
@@ -55,7 +33,17 @@ public:
 
 	LoLaLinkInfo* GetLinkInfo()
 	{
-		return LoLaDriver->GetServices()->GetLinkInfo();
+		return GetLinkService()->GetLinkInfo();
+	}
+
+	ILinkIndicator* GetLinkIndicator()
+	{
+		return GetLinkService()->GetLinkIndicator();
+	}
+
+	LinkStatus* GetLinkStatus()
+	{
+		return GetLinkService()->GetLinkStatus();
 	}
 
 	void Start()
@@ -65,18 +53,22 @@ public:
 
 	void Stop()
 	{
-		LoLaDriver->Disable();
 		GetLinkService()->Disable();
 	}
 
 	bool Setup()
 	{
-		if (SetupServices())
+		if (!(GetLinkService() != nullptr) || !GetLinkService()->Setup())
 		{
-			return LoLaDriver->Setup();
+			return false;
 		}
 
-		return false;
+		if (!OnSetupServices())
+		{
+			return false;
+		}
+
+		return LoLaDriver->GetPacketMap()->CloseMap() && LoLaDriver->Setup();
 	}
 };
 

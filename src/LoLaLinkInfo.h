@@ -4,37 +4,28 @@
 #define _LOLALINK_INFO_h
 
 #include <ILoLaDriver.h>
-#include <Callback.h>
+
 #include <RingBufCPP.h>
+#include <LinkIndicator.h>
+#include <LoLaClock\ILoLaClockSource.h>
 #include <LoLaCrypto\PseudoMacGenerator.h>
 
 
-class LoLaLinkInfo
+class LoLaLinkInfo : public LinkStatus
 {
-public:
-	enum LinkStateEnum : uint8_t
-	{
-		Disabled = 0,
-		Setup = 1,
-		AwaitingLink = 2,
-		AwaitingSleeping = 3,
-		Linking = 4,
-		Linked = 5
-	};
-
 private:
+	const uint32_t ILOLA_INVALID_LATENCY = UINT32_MAX;
 	const uint8_t INVALID_SESSION = 0;
 
-	ILoLaDriver * Driver = nullptr;
-
-	LinkStateEnum LinkState = LinkStateEnum::Disabled;
+	ILoLaDriver* Driver = nullptr;
+	ILoLaClockSource* SyncedClock = nullptr;
 
 	uint32_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStartedSeconds = 0;
 
 	//Real time update tracking.
-	uint32_t PartnerInfoLastUpdated = ILOLA_INVALID_MILLIS;
-	uint32_t PartnerInfoLastUpdatedRemotely = ILOLA_INVALID_MILLIS;
+	uint32_t PartnerInfoLastUpdated = 0;
+	uint32_t PartnerInfoLastUpdatedRemotely = 0;
 
 	RingBufCPP<uint8_t, RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT> PartnerRSSISamples;
 	uint32_t PartnerAverageRSSI = 0;
@@ -50,23 +41,23 @@ private:
 	bool PartnerIdPresent = false;
 	uint32_t PartnerId = 0;
 
+
 	uint32_t ClockSyncAdjustments = 0;
 
 	//Helper.
-	uint32_t ActivityElapsedHelper = ILOLA_INVALID_MILLIS;
-
-	//Callback handler.
-	Signal<const LinkStateEnum> LinkStatusUpdated;
-
+	uint32_t ActivityElapsedHelper = 0;
 
 public:
-	LoLaLinkInfo() : LocalMacGenerator()
+	LoLaLinkInfo(ILoLaDriver* driver, ILoLaClockSource* syncedClock) :
+		LinkStatus(),
+		LocalMacGenerator()
 	{
-
-	}
-	LinkStateEnum GetLinkState()
-	{
-		return LinkState;
+		Driver = driver;
+		SyncedClock = syncedClock;
+		if (Driver != nullptr)
+		{
+			Driver->SetLinkStatusIndicator(this);
+		}
 	}
 
 	uint32_t GetPartnerId()
@@ -123,11 +114,6 @@ public:
 		return SessionId;
 	}
 
-	void SetDriver(ILoLaDriver* driver)
-	{
-		Driver = driver;
-	}
-
 	uint32_t GetClockSyncAdjustments()
 	{
 		return ClockSyncAdjustments;
@@ -150,22 +136,22 @@ public:
 
 	uint32_t GetLocalInfoUpdateRemotelyElapsed()
 	{
-		if (PartnerInfoLastUpdatedRemotely != ILOLA_INVALID_MILLIS)
+		if (PartnerInfoLastUpdatedRemotely != 0)
 		{
 			return millis() - PartnerInfoLastUpdatedRemotely;
 		}
 
-		return ILOLA_INVALID_MILLIS;
+		return UINT32_MAX;
 	}
 
 	uint32_t GetPartnerLastReportElapsed()
 	{
-		if (PartnerInfoLastUpdated != ILOLA_INVALID_MILLIS)
+		if (PartnerInfoLastUpdated != 0)
 		{
 			return millis() - PartnerInfoLastUpdated;
 		}
 
-		return ILOLA_INVALID_MILLIS;
+		return UINT32_MAX;
 	}
 
 	void Reset()
@@ -187,30 +173,8 @@ public:
 
 		if (Driver != nullptr)
 		{
-			Driver->SetLinkStatus(false);
 			Driver->ResetLiveData();
 		}
-	}
-
-	void UpdateState(LinkStateEnum newState)
-	{
-		LinkState = newState;
-		LinkStatusUpdated.fire(LinkState);
-	}
-
-	void AttachOnLinkStatusUpdated(const Slot<const LinkStateEnum>& slot)
-	{
-		LinkStatusUpdated.attach(slot);
-	}
-
-	bool IsDisabled()
-	{
-		return LinkState == LinkStateEnum::Disabled;
-	}
-
-	bool HasLink()
-	{
-		return LinkState == LinkStateEnum::Linked;
 	}
 
 	bool HasLatency()
@@ -221,10 +185,6 @@ public:
 	void SetRTT(const uint32_t rttMicros)
 	{
 		RTT = rttMicros;
-		if (Driver != nullptr)
-		{
-			Driver->SetETTM((RTT * 8)/ 20); //Transmission takes a lot longer than receiving.
-		}
 	}
 
 	uint16_t GetRTT()
@@ -240,7 +200,7 @@ public:
 		}
 		else
 		{
-			return (float)0;//Unknown.
+			return (float)0;// Unknown.
 		}
 	}
 
@@ -248,18 +208,17 @@ public:
 	{
 		if (HasLink())
 		{
-			return (Driver->GetClockSource()->GetSyncSeconds() - LinkStartedSeconds);
+			return (SyncedClock->GetSyncSeconds() - LinkStartedSeconds);
 		}
 		else
 		{
-			return 0;//Unknown.
+			return 0;// Unknown.
 		}
 	}
 
 	void StampLinkStarted()
 	{
-		LinkStartedSeconds = Driver->GetClockSource()->GetSyncSeconds();
-		Driver->SetLinkStatus(true);
+		LinkStartedSeconds = SyncedClock->GetSyncSeconds();
 	}
 
 	bool HasPartnerRSSI()
@@ -330,7 +289,7 @@ public:
 				return Driver->GetElapsedMillisLastValidReceived();
 			}
 		}
-		return ILOLA_INVALID_MILLIS;
+		return UINT32_MAX;
 	}
 
 	uint32_t GetElapsedMillisLastValidSent()
@@ -339,7 +298,7 @@ public:
 		{
 			return Driver->GetElapsedMillisLastValidSent();
 		}
-		return ILOLA_INVALID_MILLIS;
+		return UINT32_MAX;
 	}
 
 	uint32_t GetElapsedMillisLastValidReceived()
@@ -348,7 +307,7 @@ public:
 		{
 			return Driver->GetElapsedMillisLastValidReceived();
 		}
-		return ILOLA_INVALID_MILLIS;
+		return UINT32_MAX;
 	}
 
 	uint8_t GetTransmitPowerNormalized()
@@ -357,10 +316,10 @@ public:
 		{
 			return Driver->GetTransmitPowerNormalized();
 		}
-		return 0;//Unknown.
+		return 0;// Unknown.
 	}
 
-	//Public getters.
+	// Public getters.
 	uint64_t GetReceivedCount()
 	{
 		return Driver->GetReceivedCount();
@@ -376,10 +335,12 @@ public:
 		return Driver->GetTransmitedCount();
 	}
 
+#ifdef DEBUG_LOLA
 	uint64_t GetTimingCollisionCount()
 	{
 		return Driver->GetTimingCollisionCount();
 	}
+#endif
 
 	uint64_t GetStateCollisionCount()
 	{

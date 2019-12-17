@@ -10,11 +10,12 @@
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacketMap.h>
 
+template<const uint32_t ThrottlePeriodMillis = 1>
 class SyncSurfaceBase : public AbstractSync
 {
 private:
-	SyncAbstractPacketDefinition* SyncMetaDefinition = nullptr;
-	SyncAbstractPacketDefinition* DataPacketDefinition = nullptr;
+	PacketDefinition* SyncMetaDefinition = nullptr;
+	PacketDefinition* DataPacketDefinition = nullptr;
 
 	static const uint8_t SYNC_META_SUB_HEADER_SERVICE_DISCOVERY = 0;
 	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED = 1;
@@ -30,21 +31,33 @@ private:
 
 public:
 	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface,
-		SyncAbstractPacketDefinition* metaDefinition, SyncAbstractPacketDefinition* dataDefinition, const bool autoStart = true)
-		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder, autoStart)
+		PacketDefinition* metaDefinition, PacketDefinition* dataDefinition)
+		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder)
 	{
 		SyncMetaDefinition = metaDefinition;
 		DataPacketDefinition = dataDefinition;
-#ifdef DEBUG_LOLA
-		SyncMetaDefinition->SetOwner(trackedSurface);
-		DataPacketDefinition->SetOwner(trackedSurface);
-#endif
+//#ifdef DEBUG_LOLA
+//		SyncMetaDefinition->SetOwner(trackedSurface);
+//		DataPacketDefinition->SetOwner(trackedSurface);
+//#endif
 	}
 
-	virtual bool OnSetup()
+	bool Setup()
 	{
-		return AbstractSync::OnSetup();
+		if (!AbstractSync::Setup())
+		{
+			return false;
+		}
+
+		if (!LoLaDriver->GetPacketMap()->AddMapping(SyncMetaDefinition) ||
+			!LoLaDriver->GetPacketMap()->AddMapping(DataPacketDefinition))
+		{
+			return false;
+		}
+
+		return true;
 	}
+
 
 protected:
 	//Reader
@@ -58,15 +71,20 @@ protected:
 	virtual void OnInvalidateRequestReceived() {}
 
 protected:
-	bool OnAddPacketMap(LoLaPacketMap* packetMap)
+
+	bool CheckThrottling()
 	{
-		if (!packetMap->AddMapping(SyncMetaDefinition) ||
-			!packetMap->AddMapping(DataPacketDefinition))
+		if (LastSyncMillis == 0
+			||
+			(millis() - LastSyncMillis > ThrottlePeriodMillis))
+		{
+
+			return true;
+		}
+		else
 		{
 			return false;
 		}
-
-		return true;
 	}
 
 	bool ProcessPacket(ILoLaPacket* incomingPacket)

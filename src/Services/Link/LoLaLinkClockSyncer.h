@@ -15,7 +15,7 @@ protected:
 	ILoLaClockSource * SyncedClock = nullptr;
 
 	uint8_t SyncGoodCount = 0;
-	uint32_t LastSynced = ILOLA_INVALID_MILLIS;
+	uint32_t LastSynced = 0;
 
 	static const int32_t MAX_TUNE_ERROR_MICROS = 10000;
 	static const int32_t MAX_FINE_TUNE_ERROR_MICROS = 1001;
@@ -78,7 +78,7 @@ public:
 	virtual void Reset()
 	{
 		SyncGoodCount = 0;
-		LastSynced = ILOLA_INVALID_MILLIS;
+		LastSynced = 0;
 	}
 };
 
@@ -86,8 +86,8 @@ class LinkRemoteClockSyncer : public LoLaLinkClockSyncer
 {
 private:
 	boolean HostSynced = false;
-	uint32_t LastTuneReceivedMillis = ILOLA_INVALID_MILLIS;
-	uint32_t LastGreatSync = ILOLA_INVALID_MILLIS;
+	uint32_t LastTuneReceivedMillis = 0;
+	uint32_t LastGreatSync = 0;
 
 	static const uint8_t TUNE_ERROR_SAMPLES_COUNT = 5;
 
@@ -108,19 +108,19 @@ public:
 	{
 		SyncGoodCount = 0;
 		TuneDiscard = MAX_TUNE_DISCARD_COUNT;
-		LastSynced = ILOLA_INVALID_MILLIS;
-		LastTuneReceivedMillis = ILOLA_INVALID_MILLIS;
-		LastGreatSync = ILOLA_INVALID_MILLIS;
+		LastSynced = 0;
+		LastTuneReceivedMillis = 0;
+		LastGreatSync = 0;
 		HostSynced = false;
 		TuneErrorStatistics.Reset();
 	}
 
 	bool IsTimeToTune()
 	{
-		return (LastTuneReceivedMillis == ILOLA_INVALID_MILLIS || (millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_MIN_PERIOD))
+		return (LastTuneReceivedMillis == 0 || (millis() - LastTuneReceivedMillis > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_MIN_PERIOD))
 			&&
-			((LastGreatSync == ILOLA_INVALID_MILLIS) ||
-			(LastSynced == ILOLA_INVALID_MILLIS) ||
+			((LastGreatSync == 0) ||
+			(LastSynced == 0) ||
 			((millis() - LastSynced) > (LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD)));
 	}
 
@@ -134,7 +134,7 @@ public:
 		HostSynced = true;
 		StampSynced();
 		LastTuneReceivedMillis = millis();
-		LastGreatSync = ILOLA_INVALID_MILLIS;
+		LastGreatSync = 0;
 		TuneDiscard = MAX_TUNE_DISCARD_COUNT;
 	}
 
@@ -163,7 +163,7 @@ public:
 	*/
 	bool OnTuneErrorReceived(const int32_t estimationErrorMicros)
 	{
-		if (LastTuneReceivedMillis == ILOLA_INVALID_MILLIS)
+		if (LastTuneReceivedMillis == 0)
 		{
 			LastTuneReceivedMillis = millis() - 1;
 		}
@@ -177,7 +177,7 @@ public:
 		if (!TuneErrorStatistics.HasEnoughSamples())
 		{
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);
-			LastGreatSync = ILOLA_INVALID_MILLIS;
+			LastGreatSync = 0;
 		}
 		else if (abs(SampleGrunt.ErrorMicros) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS)
 		{
@@ -192,14 +192,14 @@ public:
 		{
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);			
 			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetWeightedAverageError() / (int64_t)(TuneErrorStatistics.GetWeightedAverageDurationMillis() / 200)));
-			LastGreatSync = ILOLA_INVALID_MILLIS;
+			LastGreatSync = 0;
 		}
 		else if (abs(TuneErrorStatistics.GetAverageError()) < LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS &&
 			TuneErrorStatistics.GetWeightedAverageDurationMillis() > LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD &&
 			TuneDiscard < MAX_TUNE_DISCARD_COUNT)
 		{
 			TuneDiscard++;
-			if (LastGreatSync != ILOLA_INVALID_MILLIS)
+			if (LastGreatSync != 0)
 			{
 				LastGreatSync = min(millis(), LastGreatSync + SampleGrunt.PeriodMillis);
 			}
@@ -208,7 +208,7 @@ public:
 		{			
 			TuneErrorStatistics.AddTuneSample(SampleGrunt);
 			AddDriftCompensationMicros((int32_t)((int64_t)TuneErrorStatistics.GetAverageError() / (int64_t)(35)));
-			LastGreatSync = ILOLA_INVALID_MILLIS;
+			LastGreatSync = 0;
 		}
 
 #ifdef LOLA_DEBUG_CLOCK_SYNC
@@ -241,7 +241,7 @@ public:
 
 	uint8_t GetNormalizedClockQuality()
 	{
-		if(LastGreatSync == ILOLA_INVALID_MILLIS ||
+		if(LastGreatSync == 0 ||
 			TuneErrorStatistics.GetAverageError() > LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS ||
 			TuneErrorStatistics.GetWeightedAverageDurationMillis() < LOLA_LINK_SERVICE_LINKED_CLOCK_TUNE_PERIOD )
 		{
@@ -269,7 +269,7 @@ public:
 	void Reset()
 	{
 		SyncGoodCount = 0;
-		LastSynced = ILOLA_INVALID_MILLIS;
+		LastSynced = 0;
 
 		SyncedClock->SetRandom();
 	}

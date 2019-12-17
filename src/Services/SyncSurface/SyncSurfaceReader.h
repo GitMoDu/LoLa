@@ -5,24 +5,46 @@
 
 #include <Services\SyncSurface\SyncSurfaceBase.h>
 
-template <const uint8_t BasePacketHeader>
-class SyncSurfaceReader : public SyncSurfaceBase
+
+template <const uint8_t BasePacketHeader,
+	const uint32_t ThrottlePeriodMillis = 1>
+	class SyncSurfaceReader : public SyncSurfaceBase<ThrottlePeriodMillis>
 {
 private:
 	SyncMetaPacketDefinition<BasePacketHeader> SyncMetaDefinition;
 	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
 
-	uint32_t LastUpdateReceived = ILOLA_INVALID_MILLIS;
+	uint32_t LastUpdateReceived = 0;
+
+private:
+	using SyncSurfaceBase<ThrottlePeriodMillis>::UpdateBlockData;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareServiceDiscoveryPacket;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareInvalidateRequestPacket;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareUpdateFinishedReplyPacket;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::CheckThrottling;
+
+	using AbstractSync::TrackedSurface;
+	using AbstractSync::SyncState;
+
+	using AbstractSync::InvalidateLocalHash;
+	using AbstractSync::HashesMatch;
+	using AbstractSync::UpdateLocalHash;
+	using AbstractSync::NotifyDataChanged;
+	using AbstractSync::UpdateSyncState;
+	using AbstractSync::GetElapsedSinceStateStart;
+	using AbstractSync::GetElapsedSinceLastSent;
+
+
+	using IPacketSendService::RequestSendPacket;
+	using ILoLaService::Disable;
+	using ILoLaService::SetNextRunDelay;
 
 public:
-	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface, const bool autoStart = true)
-		: SyncSurfaceBase(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition, autoStart)
+	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
+		: SyncMetaDefinition(this),
+		DataPacketDefinition(this),
+		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
 	{
-	}
-
-	virtual bool OnSetup()
-	{
-		return SyncSurfaceBase::OnSetup();
 	}
 
 protected:
@@ -33,7 +55,7 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
-	void OnBlockReceived(const uint8_t index, uint8_t * payload)
+	void OnBlockReceived(const uint8_t index, uint8_t* payload)
 	{
 		UpdateBlockData(index, payload);
 		InvalidateLocalHash();
@@ -42,14 +64,14 @@ protected:
 
 		switch (SyncState)
 		{
-		case SyncStateEnum::WaitingForServiceDiscovery:
-			UpdateSyncState(SyncStateEnum::Syncing);
+		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
+			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			TrackedSurface->SetDataGood(false);
 			break;
-		case SyncStateEnum::Synced:
+		case AbstractSync::SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->SetAll();
 			TrackedSurface->GetTracker()->ClearBit(index);
-			UpdateSyncState(SyncStateEnum::Syncing);
+			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			break;
 		default:
 			break;
@@ -62,11 +84,11 @@ protected:
 	{
 		switch (newState)
 		{
-		case SyncStateEnum::Syncing:
-			LastUpdateReceived = ILOLA_INVALID_MILLIS;
+		case AbstractSync::SyncStateEnum::Syncing:
+			LastUpdateReceived = 0;
 			TrackedSurface->GetTracker()->SetAll();
 			break;
-		case SyncStateEnum::Synced:
+		case AbstractSync::SyncStateEnum::Synced:
 			TrackedSurface->GetTracker()->ClearAll();
 			InvalidateLocalHash();
 			UpdateLocalHash();
@@ -76,7 +98,7 @@ protected:
 				NotifyDataChanged();
 			}
 			break;
-		case SyncStateEnum::Disabled:			
+		case AbstractSync::SyncStateEnum::Disabled:
 			TrackedSurface->SetDataGood(false);
 			break;
 		default:
@@ -106,25 +128,22 @@ protected:
 
 	void OnSyncActive()
 	{
-		if (LastUpdateReceived != ILOLA_INVALID_MILLIS && millis() - LastUpdateReceived > ABSTRACT_SURFACE_RECEIVE_FAILED_PERIDO)
+		if (LastUpdateReceived != 0 &&
+			(millis() - LastUpdateReceived > ABSTRACT_SURFACE_RECEIVE_FAILED_PERIDO) &&
+			CheckThrottling() &&
+			GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
 		{
-			if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
-			{
-				PrepareInvalidateRequestPacket();
-				RequestSendPacket();
+			PrepareInvalidateRequestPacket();
+			RequestSendPacket();
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-				Serial.println(F("Surface Reader Recovery!"));
+			Serial.println(F("Surface Reader Recovery!"));
 #endif
-			}
-			else
-			{
-				SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
-			}
 		}
 		else
 		{
-			SetNextRunDelay(ABSTRACT_SURFACE_SLOW_CHECK_PERIOD_MILLIS);
+			SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
 		}
+
 	}
 
 	void OnUpdateFinishedReceived()
@@ -133,15 +152,15 @@ protected:
 
 		switch (SyncState)
 		{
-		case SyncStateEnum::Syncing:
+		case AbstractSync::SyncStateEnum::Syncing:
 			PrepareUpdateFinishedReplyPacket();
 			RequestSendPacket();
 			if (HashesMatch())
 			{
-				UpdateSyncState(SyncStateEnum::Synced);
+				UpdateSyncState(AbstractSync::SyncStateEnum::Synced);
 			}
 			break;
-		case SyncStateEnum::Synced:
+		case AbstractSync::SyncStateEnum::Synced:
 			if (HashesMatch())
 			{
 				PrepareUpdateFinishedReplyPacket();
@@ -151,19 +170,19 @@ protected:
 			{
 				PrepareInvalidateRequestPacket();
 				RequestSendPacket();
-				UpdateSyncState(SyncStateEnum::Syncing);
+				UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			}
 			break;
-		case SyncStateEnum::WaitingForServiceDiscovery:
+		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
 			PrepareUpdateFinishedReplyPacket();
 			RequestSendPacket();
 			if (HashesMatch())
 			{
-				UpdateSyncState(SyncStateEnum::Synced);
+				UpdateSyncState(AbstractSync::SyncStateEnum::Synced);
 			}
 			else
 			{
-				UpdateSyncState(SyncStateEnum::Syncing);
+				UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			}
 			break;
 		default:
