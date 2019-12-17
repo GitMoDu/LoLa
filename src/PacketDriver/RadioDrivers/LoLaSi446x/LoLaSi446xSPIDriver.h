@@ -60,16 +60,8 @@ protected:
 #endif
 
 public:
+	// Declared on LoLaSi446xSPIDriver.cpp
 	LoLaSi446xSPIDriver(SPIClass* spi_instance, const uint8_t cs, const uint8_t reset, const uint8_t irq);
-	//LoLaSi446xSPIDriver(SPIClass* spi_instance, const uint8_t cs, const uint8_t reset, const uint8_t irq)
-	//	: LoLaPacketDriver()
-	//	, CS_PIN(cs)
-	//	, RESET_PIN(reset)
-	//	, IRQ_PIN(irq)
-	//{
-	//	spi = spi_instance;
-	//}
-
 
 	void OnRadioInterrupt(const uint32_t timestamp)
 	{
@@ -78,6 +70,7 @@ public:
 	}
 
 protected:
+	// Declared on LoLaSi446xSPIDriver.cpp
 	void AttachInterrupt();
 
 protected:
@@ -152,14 +145,13 @@ protected:
 		return true;
 	}
 
-
-	inline uint8_t On()
+	uint8_t On()
 	{
 		digitalWrite(CS_PIN, LOW);
 		return 1;
 	}
 
-	inline uint8_t Off()
+	uint8_t Off()
 	{
 		digitalWrite(CS_PIN, HIGH);
 		return 0;
