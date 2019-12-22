@@ -167,7 +167,14 @@ public:
 
 	uint32_t GetKeyPairAgeMillis()
 	{
-		return millis() - KeyPairLastGenerated;
+		if (KeyPairLastGenerated == 0)
+		{
+			return UINT32_MAX;
+		}
+		else
+		{
+			return millis() - KeyPairLastGenerated;
+		}
 	}
 
 	bool GenerateNewKeyPair()
