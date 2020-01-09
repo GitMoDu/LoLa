@@ -11,15 +11,16 @@
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 
-#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
+#include <LoLaCrypto\LoLaCryptoKeyExchanger.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
 #include <Services\Link\LoLaLinkPowerBalancer.h>
-//#include <Services\Link\LoLaLinkChannelManager.h>
+#include <Services\Link\LoLaLinkChannelManager.h>
 
-#include <Services\Link\LoLaLinkTimedHopper.h>
 
-#include <LinkIndicator.h>
+#include <PacketDriver\LinkIndicator.h>
+#include <PacketDriver\ILoLaSelector.h>
+
 
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 #include <Services\Link\PingService.h>
@@ -31,128 +32,105 @@ class LoLaLinkService : public AbstractLinkService
 {
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 protected:
-	PingService LatencyService;
 	LinkDebugTask DebugTask;
 #endif
 
 private:
-	//Crypto Token.
-	LoLaTimedCryptoTokenSource	CryptoSeed;
+	// Channel manager.
+	LoLaLinkChannelManager ChannelSelector;
 
-	//Sub-services.
-	LoLaLinkTimedHopper<LoLaTimedCryptoTokenSource::PeriodMillis> TimedHopper;
-
-	//Power balancer.
+	// Power balancer.
 	LoLaLinkPowerBalancer PowerBalancer;
 
-	//Channel manager.
-	IChannelSelector ChannelSelector;
+	// Host/Remote clock syncer.
+	LoLaLinkClockSyncer* ClockSyncer = nullptr;
 
-	//Link report tracking.
+	// Link report tracking.
 	bool ReportPending = false;
 
 protected:
-	///Synced clock
-#ifdef LOLA_LINK_USE_RTC_CLOCK_SOURCE
-	RTCClockSource SyncedClock;
-#else
-	ILoLaClockSource SyncedClock;
-#endif
-	///
+	// Crypto encode.
+	LoLaCryptoEncoder CryptoEncoder;
 
-	//Crypto key exchanger.
+	// Synced clock.
+	TickTrainedTimerSyncedClock SyncedClock;
+
+	// Crypto key exchanger.
 	LoLaCryptoKeyExchanger	KeyExchanger;
-	//
 
-	//Synced Clock.
-	LoLaLinkClockSyncer* ClockSyncerPointer = nullptr;
+	// Shared Sub state helpers.
+	enum LinkingStagesEnum : uint8_t
+	{
+		ClockSyncStage = 1,
+		LinkProtocolSwitchOver = 2,
+		LinkingDone = 3
+	} LinkingState = LinkingStagesEnum::ClockSyncStage;
 
-	//Shared Sub state helpers.
-	uint32_t SubStateStart = 0;
-	uint8_t LinkingState = 0;
-	uint8_t InfoSyncStage = 0;
+	enum ProcessingDHEnum : uint8_t
+	{
+		GeneratingSecretKey = 0,
+		ExpandingKey = 1
+	} ProcessingDHState = ProcessingDHEnum::GeneratingSecretKey;
 
-	///Link Info Source
+	// Link Info.
 	LoLaLinkInfo LinkInfo;
-	///
+
+
+	// Random salt, unique for each session.
+	uint32_t SessionSalt = 0;
+
+	// Used to keep track of establishing links.
+	uint8_t SessionId = 0;
 
 protected:
 	///Internal housekeeping.
-	virtual void OnClearSession() {}
-	virtual void OnLinkStateChanged(const LinkStatus::StateEnum newState) {}
+	virtual void OnStateChanged() {}
+	virtual uint32_t GetSleepDelay() { return LOLA_LINK_SERVICE_CHECK_PERIOD; }
+	virtual void ResetLinkingState() {}
+	virtual const uint32_t GetAwaitingSleepDuration() { return 1; }//TODO: Revise.
 
-	///Host packet handling.
-	//Unlinked packets.
-	virtual void OnLinkDiscoveryReceived() {}
-	virtual void OnPKCRequestReceived(const uint8_t sessionId, const uint32_t remoteMACHash) {}
-	virtual void OnRemotePublicKeyReceived(const uint8_t sessionId, uint8_t* encodedPublicKey) {}
+	// Host packet handling.
+	virtual void OnPKERequestReceived(const uint8_t sessionId, const uint32_t protocolCode, uint8_t* remotePublicKey) {}
+	virtual bool OnLinkSwitchOverReceived(const uint8_t sessionId) {}
 
-	//Linked packets.
-	virtual void OnRemoteInfoSyncReceived(const uint8_t rssi) {}
-	virtual void OnHostInfoSyncRequestReceived() {}
-	virtual void OnClockSyncRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros) {}
-	virtual void OnClockUTCRequestReceived(const uint8_t requestId) {}
-	virtual void OnClockSyncTuneRequestReceived(const uint8_t requestId, const uint32_t estimatedMicros) {}
-	///
+	// Remote packet handling.
+	virtual bool OnPKEResponseReceived(const uint8_t sessionId, const uint32_t sessionSalt, uint8_t* hostPublicKey) {}
 
-	///Remote packet handling.
-	//Unlinked packets.
-	virtual void OnIdBroadcastReceived(const uint8_t sessionId, const uint32_t hostMACHash) {}
-	virtual void OnHostPublicKeyReceived(const uint8_t sessionId, uint8_t* hostPublicKey) {}
-
-	//Linked packets.
-	virtual void OnHostInfoSyncReceived(const uint8_t rssi, const uint16_t rtt) {}
-	virtual void OnClockSyncResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros) {}
-	virtual void OnClockUTCResponseReceived(const uint8_t requestId, const uint32_t secondsUTC) {}
-	virtual void OnClockSyncTuneResponseReceived(const uint8_t requestId, const int32_t estimatedErrorMicros) {}
-	///
-
-	//Runtime handlers.
+	// Runtime handlers.
 	virtual void OnLinking() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
-	virtual bool OnAwaitingLink() { return false; }
+	virtual void OnAwaitingLink() {}
 	virtual void OnKeepingLink() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 
-
 public:
-	LoLaLinkService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
+	LoLaLinkService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver, LoLaLinkClockSyncer* clockSyncer)
 		: AbstractLinkService(driverScheduler, driver)
 		, SyncedClock()
-		, LinkInfo(driver, &SyncedClock)
-		, CryptoSeed(&SyncedClock)
-		, TimedHopper(driverScheduler, driver, &SyncedClock)
+		, CryptoEncoder(&SyncedClock)
+		, LinkInfo(driver)
 		, PowerBalancer(driver, &LinkInfo)
-		, ChannelSelector()
+		, ChannelSelector(driverScheduler, &SyncedClock)
 		, KeyExchanger()
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-		, LatencyService(servicesScheduler, driver, &LinkInfo)
 		, DebugTask(servicesScheduler, driver, &LinkInfo, &SyncedClock, &KeyExchanger)
 #endif
 	{
-		LoLaDriver->SetTransmitPowerSelector(&PowerBalancer);
-		LoLaDriver->SetChannelSelector(&ChannelSelector);
-		LoLaDriver->SetClockSource(&SyncedClock);
-
-#ifdef LOLA_LINK_USE_TOKEN_HOP
-		//TODO:
-		LoLaDriver->SetDynamicTokenSource();
-#endif
-
-#ifdef LOLA_LINK_USE_FREQUENCY_HOP
-		//TODO:
-		LoLaDriver->SetDynamicChannelSource();
-#endif
+		ClockSyncer = clockSyncer;
+		driver->SetCryptoEncoder(&CryptoEncoder);
+		driver->SetTransmitPowerSelector(&PowerBalancer);
+		driver->SetChannelSelector(&ChannelSelector);
+		driver->SetSyncedClock(&SyncedClock);
 	}
 
 	bool OnEnable()
 	{
-		UpdateLinkState(LinkStatus::StateEnum::Setup);
+		UpdateLinkState(LinkStateEnum::StartLink);
 
 		return true;
 	}
 
 	void OnDisable()
 	{
-		UpdateLinkState(LinkStatus::StateEnum::Disabled);
+		UpdateLinkState(LinkStateEnum::Disabled);
 	}
 
 	LoLaLinkInfo* GetLinkInfo()
@@ -160,43 +138,27 @@ public:
 		return &LinkInfo;
 	}
 
-	ILinkIndicator* GetLinkIndicator()
+	LinkIndicator* GetLinkIndicator()
 	{
 		return &LinkInfo;
 	}
 
-	LinkStatus* GetLinkStatus()
-	{
-		return &LinkInfo;
-	}
-
-public:
 	bool Setup()
 	{
 		if (AbstractLinkService::Setup() &&
-#ifdef LOLA_LINK_USE_FREQUENCY_HOP
-			TimedHopper.Setup() &&
-#endif			
-			ClockSyncerPointer != nullptr &&
+			ClockSyncer != nullptr &&
+			SyncedClock.Setup() &&
 			PowerBalancer.Setup() &&
-			CryptoSeed.Setup() &&
 			KeyExchanger.Setup() &&
-			TimedHopper.Setup() &&
-			ClockSyncerPointer->Setup(&SyncedClock))
+			ChannelSelector.Setup(LoLaDriver, CryptoEncoder.GetChannelTokenSource()))
 		{
-			SyncedClock.Start();
-
 			LinkInfo.Reset();
-
 			KeyExchanger.GenerateNewKeyPair();
-
-			//Make sure to lazy load the local MAC on startup.
-			LinkInfo.GetLocalId();
 
 			ClearSession();
 
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-			DebugTask.Debug();
+			DebugTask.Start();
 #endif
 			ResetStateStartTime();
 			SetNextRunASAP();
@@ -208,112 +170,34 @@ public:
 		return false;
 	}
 
-	bool OnPacketReceived(PacketDefinition* definition, const uint8_t id, uint8_t* payload, const uint32_t timestamp)
+	bool OnPacketReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp, uint8_t* payload)
 	{
-
 		// Switch the packet to the appropriate method.
-		switch (definition->GetHeader())
+		switch (header)
 		{
-		case LOLA_LINK_HEADER_SHORT:
-			switch (payload[0])
-			{
-				///Unlinked packets.
-				//To Host.
-			case LOLA_LINK_SUBHEADER_LINK_DISCOVERY:
-				OnLinkDiscoveryReceived();
-				break;
-
-			case LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST:
-				ArrayToR_Array(&payload[1]);
-				OnPKCRequestReceived(id, ATUI_R.uint);
-				break;
-
-				//To remote.
-			case LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST:
-				ArrayToR_Array(&payload[1]);
-				OnIdBroadcastReceived(id, ATUI_R.uint);
-				break;
-				///
-
-				///Linking Packets
-				//To Host
-			case LOLA_LINK_SUBHEADER_NTP_REQUEST:
-				ArrayToR_Array(&payload[1]);
-				OnClockSyncRequestReceived(id, ATUI_R.uint);
-				break;
-			case LOLA_LINK_SUBHEADER_UTC_REQUEST:
-				OnClockUTCRequestReceived(id);
-				break;
-
-				//To Remote.
-			case LOLA_LINK_SUBHEADER_NTP_REPLY:
-				ArrayToR_Array(&payload[1]);
-				OnClockSyncResponseReceived(id, ATUI_R.iint);
-				break;
-
-			case LOLA_LINK_SUBHEADER_UTC_REPLY:
-				ArrayToR_Array(&payload[1]);
-				OnClockUTCResponseReceived(id, ATUI_R.uint);
-				break;
-				///
-
-				///Linked packets.
-				//Host.
-			case LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST:
-				ArrayToR_Array(&payload[1]);
-				OnClockSyncTuneRequestReceived(id, ATUI_R.uint);
-				break;
-
-				//Remote.
-			case LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY:
-				ArrayToR_Array(&payload[1]);
-				OnClockSyncTuneResponseReceived(id, ATUI_R.iint);
-				break;
-				///
-			default:
-				break;
-			}
-			return true;
-		case LOLA_LINK_HEADER_LONG:
-			switch (payload[0])
-			{
-				//To Host.
-			case LOLA_LINK_SUBHEADER_REMOTE_PUBLIC_KEY:
-				OnRemotePublicKeyReceived(id, &payload[1]);
-				break;
-
-				//To remote.
-			case LOLA_LINK_SUBHEADER_HOST_PUBLIC_KEY:
-				OnHostPublicKeyReceived(id, &payload[1]);
-				break;
-			}
-			return true;
+		case LOLA_LINK_HEADER_PKE_REQUEST:
+			// To Host. Unencrypted packets (Expanded key set to all zeros.)
+			ATUI_R.array[0] = payload[0];
+			ATUI_R.array[1] = payload[1];
+			ATUI_R.array[2] = payload[2];
+			ATUI_R.array[3] = payload[3];
+			OnPKERequestReceived(id, ATUI_R.uint, &payload[sizeof(uint32_t)]);
+			break;
+		case LOLA_LINK_HEADER_PKE_RESPONSE:
+			// To remote. Unencrypted packets (Expanded key set to all zeros.)
+			ATUI_R.array[0] = payload[0];
+			ATUI_R.array[1] = payload[1];
+			ATUI_R.array[2] = payload[2];
+			ATUI_R.array[3] = payload[3];
+			return OnPKEResponseReceived(id, ATUI_R.uint, &payload[sizeof(uint32_t)]);
+		case LOLA_LINK_HEADER_LINK_START:
+			return OnLinkSwitchOverReceived(id);
+			break;
+		case LOLA_LINK_HEADER_MULTI:
+			OnClockSyncReceived(id, timestamp, payload);
+			break;
 		case LOLA_LINK_HEADER_REPORT:
-			switch (id)
-			{
-				//To both.
-			case LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY:
-				ReportPending = true;
-			case LOLA_LINK_SUBHEADER_LINK_REPORT:
-				OnLinkInfoReportReceived(payload[0], payload[1]);
-				break;
-
-				//To Host.
-			case LOLA_LINK_SUBHEADER_INFO_SYNC_HOST:
-				OnHostInfoSyncReceived(payload[0],
-					(uint16_t)(payload[1] + (payload[2] << 8)));
-				break;
-
-				//To Remote.
-			case LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE:
-				OnRemoteInfoSyncReceived(payload[0]);
-				break;
-			case LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST:
-				OnHostInfoSyncRequestReceived();
-				break;
-			default:
-				break;
-			}
+			OnInfoReportReceived(id, payload);
 			return true;
 		default:
 			break;
@@ -326,47 +210,50 @@ public:
 	{
 		LastSentMillis = millis();
 
-		if (header == DefinitionReport.GetHeader() &&
-			LinkInfo.HasLink() &&
-			ReportPending)
-		{
-			ReportPending = false;
-			LinkInfo.StampLocalInfoLastUpdatedRemotely();
-		}
-
 		SetNextRunASAP();
 	}
 
 protected:
-	void OnLinkInfoReportReceived(const uint8_t rssi, const uint8_t partnerReceivedCount)
+	void OnClockSyncReceived(const uint8_t id, const uint32_t timestamp, uint8_t* payload)
 	{
-		if (LinkInfo.HasLink())
+		if (LinkState == LinkStateEnum::Linked || LinkState == LinkStateEnum::Linking)
+		{
+			//ATUI_R.uint = (SyncedClock.GetSyncMicros() + LoLaDriver->GetETTMMicros()) % UINT32_MAX;
+			ClockSyncer->OnReceived(id, timestamp, payload);
+			SetNextRunASAP();
+		}
+	}
+
+	void OnInfoReportReceived(const uint8_t id, uint8_t* payload)
+	{
+		if (LinkState == LinkStateEnum::Linking)
 		{
 			LinkInfo.StampPartnerInfoUpdated();
-			LinkInfo.SetPartnerRSSINormalized(rssi);
-			LinkInfo.SetPartnerReceivedCount(partnerReceivedCount);
+			LinkInfo.SetPartnerRSSINormalized(payload[0]);
+			LinkInfo.PartnerReceivedCount = payload[1];
+
+			ReportPending = id > 0;
 
 			SetNextRunASAP();
 		}
 	}
 
-	void SetLinkingState(const uint8_t linkingState)
-	{
-		LinkingState = linkingState;
-		ResetLastSentTimeStamp();
-
-		SetNextRunASAP();
-	}
-
 	void OnService()
 	{
-		switch (LinkInfo.GetLinkState())
+		switch (LinkState)
 		{
-		case LinkStatus::StateEnum::Setup:
-		case LinkStatus::StateEnum::AwaitingSleeping:
-			UpdateLinkState(LinkStatus::StateEnum::AwaitingLink);
+		case LinkStateEnum::StartLink:
+			LoLaDriver->Start();
+			//TODO: Replace with constant random address, bitcoin style.
+			// the public key is the address.
+			//TODO: Sign the address with the certificate.
+			KeyExchanger.GenerateNewKeyPair();
+			UpdateLinkState(LinkStateEnum::AwaitingLink);
 			break;
-		case LinkStatus::StateEnum::AwaitingLink:
+		case LinkStateEnum::AwaitingSleeping:
+			UpdateLinkState(LinkStateEnum::AwaitingLink);
+			break;
+		case LinkStateEnum::AwaitingLink:
 			if (LOLA_LINK_SERVICE_UNLINK_KEY_PAIR_LIFETIME != 0)
 			{
 				if (KeyExchanger.GetKeyPairAgeMillis() > LOLA_LINK_SERVICE_UNLINK_KEY_PAIR_LIFETIME)
@@ -376,74 +263,72 @@ protected:
 					return;
 				}
 			}
-
-			if (!OnAwaitingLink())//Time out is different for host/remote.
-			{
-				UpdateLinkState(LinkStatus::StateEnum::AwaitingSleeping);
-			}
+			OnAwaitingLink();
 			break;
-		case LinkStatus::StateEnum::Linking:
+		case LinkStateEnum::Linking:
 			if (GetElapsedMillisSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
 			{
-				UpdateLinkState(LinkStatus::StateEnum::AwaitingLink);
+				UpdateLinkState(LinkStateEnum::AwaitingLink);
 			}
 			else
 			{
 				OnLinking();
 			}
 			break;
-		case LinkStatus::StateEnum::Linked:
+		case LinkStateEnum::Linked:
 			if (LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT)
 			{
-				UpdateLinkState(LinkStatus::StateEnum::AwaitingLink);
+				UpdateLinkState(LinkStateEnum::AwaitingLink);
 			}
 			else
 			{
 				OnKeepingLinkCommon();
 			}
 			break;
-		case LinkStatus::StateEnum::Disabled:
+		case LinkStateEnum::Disabled:
 		default:
 			Disable();
 			return;
 		}
 	}
 
-private:
-	inline void OnKeepingLinkCommon()
+	bool ProcessClockSync()
 	{
+		if (ClockSyncer->HasResponse())
+		{
+			OutPacket.SetDefinition(&DefinitionMulti);
+			OutPacket.SetId(ClockSyncer->GetResponse(OutPacket.GetPayload()));
+			RequestSendPacket();
+
+			return true;
+		}
+
+		return false;
+	}
+
+private:
+	void OnKeepingLinkCommon()
+	{
+		if (!ReportPending)
+		{
+			ReportPending = LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_PERIOD_INTERVENTION;
+			ReportPending |= LinkInfo.GetLocalInfoUpdateRemotelyElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD;
+		}
+
 		if (PowerBalancer.Update())
 		{
 			SetNextRunASAP();
 		}
-		else if (ReportPending) //Priority update, to keep link info up to date.
+		else if (ReportPending) // Keep link info up to date.
 		{
-			if (GetElapsedMillisSinceLastSent() > LOLA_LINK_SERVICE_LINKED_RESEND_PERIOD)
-			{
-				PrepareLinkReport(LinkInfo.GetPartnerLastReportElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD);
-				RequestSendPacket();
-			}
-			else
-			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			}
+			PrepareLinkReport(LinkInfo.GetPartnerLastReportElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD);
+			ReportPending = false;
+			LinkInfo.StampLocalInfoLastUpdatedRemotely();
+			RequestSendPacket();
 		}
-		else if (LoLaDriver->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_PERIOD_INTERVENTION)
+		else if (ProcessClockSync())
 		{
-			if (!ReportPending)
-			{
-				ReportPending = true; //Send link info update, deferred.
-				SetNextRunASAP();
-			}
-			else
-			{
-				SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD);
-			}
-		}
-		else if (LinkInfo.GetLocalInfoUpdateRemotelyElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD)
-		{
-			ReportPending = true; //Send link info update, deferred.
-			SetNextRunDelay(random(0, LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX));
+			// Sending packet.
 		}
 		else
 		{
@@ -456,141 +341,93 @@ protected:
 	{
 		ReportPending = false;
 
-		if (ClockSyncerPointer != nullptr)
-		{
-			ClockSyncerPointer->Reset();
-		}
+		ClockSyncer->Reset();
 
 		LinkInfo.Reset();
-		LoLaDriver->GetCryptoEncoder()->Clear();
-		CryptoSeed.SetSeed(0);
+		CryptoEncoder.Clear();
 		LoLaDriver->ResetLiveData();
 
 		KeyExchanger.ClearPartner();
 
-		InfoSyncStage = 0;
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-		LatencyService.Reset();
+		DebugTask.Reset();
 #endif
-		OnClearSession();
 	}
 
-	void UpdateLinkState(const LinkStatus::StateEnum newState)
+	void UpdateLinkState(const LinkStateEnum newState)
 	{
-		if (LinkInfo.GetLinkState() != newState)
+		if (LinkState != newState)
 		{
 			ResetStateStartTime();
 			ResetLastSentTimeStamp();
 
-			bool NotifyUnlink = LinkInfo.GetLinkState() == LinkStatus::StateEnum::Linked;
-
-#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-			if (NotifyUnlink)
-			{
-				DebugTask.OnLinkOff();
-			}
-#endif
-
 			switch (newState)
 			{
-			case LinkStatus::StateEnum::Setup:
-				LoLaDriver->Start();
-				SetLinkingState(0);
+			case LinkStateEnum::StartLink:
 				ClearSession();
+				ResetLinkingState();
 				SetNextRunASAP();
 				break;
-			case LinkStatus::StateEnum::AwaitingLink:
+			case LinkStateEnum::AwaitingLink:
 				ClearSession();
-				SetLinkingState(0);
+				ResetLinkingState();
+				CryptoEncoder.ResetCypherBlock();
 				PowerBalancer.SetMaxPower();
 				LoLaDriver->OnChannelUpdated();
 				SetNextRunASAP();
 				break;
-			case LinkStatus::StateEnum::AwaitingSleeping:
+			case LinkStateEnum::AwaitingSleeping:
 				ClearSession();
-				SetLinkingState(0);
-				// Sleep time is set on Host/Remote virtual.
+				ResetLinkingState();
+				CryptoEncoder.ResetCypherBlock();
+				SetNextRunDelay(GetSleepDelay());
 				break;
-			case LinkStatus::StateEnum::Linking:
-				SetLinkingState(0);
-				CryptoSeed.SetSeed(LoLaDriver->GetCryptoEncoder()->GetSeed());
-				if (!LoLaDriver->GetCryptoEncoder()->SetEnabled())
-				{
+			case LinkStateEnum::Linking:
+				ResetLinkingState();
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-					Serial.println(F("Failed to start Crypto."));
+				DebugTask.OnLinkingStarted();
 #endif
-					UpdateLinkState(LinkStatus::StateEnum::AwaitingLink);
-				}
-				else
-				{
-#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-					DebugTask.OnLinkingStarted();
-#endif
-					SetNextRunASAP();
-				}
-				break;
-			case LinkStatus::StateEnum::Linked:
-				LinkInfo.StampLinkStarted();
-				LoLaDriver->GetCryptoEncoder()->SetToken(CryptoSeed.GetSeed());
-				ClockSyncerPointer->StampSynced();
-				LoLaDriver->ResetStatistics();
-#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-				DebugTask.OnLinkOn();
-#endif
-
-				// Notify all link dependent services they can start.
-				NotifyServicesLinkStatusChanged();
 				SetNextRunASAP();
 				break;
-			case LinkStatus::StateEnum::Disabled:
+			case LinkStateEnum::Linked:
+				CryptoEncoder.EnableTOTP();
+				LinkInfo.StampLinkStarted();
+				ClockSyncer->StampSynced();
+				LoLaDriver->ResetStatistics();
+				SetNextRunASAP();
+				break;
+			case LinkStateEnum::Disabled:
 				LinkInfo.Reset();
 				LoLaDriver->Stop();
 			default:
 				break;
 			}
 
-			OnLinkStateChanged(newState);			
-			LinkInfo.UpdateState(newState);
+			LinkState = newState;
+			OnStateChanged();
 
-			// Previous state was linked, and now it's not.
-			if (NotifyUnlink)
+#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
+			DebugTask.OnLinkStateChanged(LinkState);
+#endif
+
+			// If link status changed, 
+			// notify all link dependent services they can start/stop.
+			if (LinkInfo.UpdateState(LinkState == LinkStateEnum::Linked))
 			{
-				// Notify all link dependent services to stop.
 				NotifyServicesLinkStatusChanged();
 			}
 		}
 	}
 
 protected:
-	void PreparePublicKeyPacket(const uint8_t subHeader)
-	{
-		PrepareLongPacket(LinkInfo.GetSessionId(), subHeader);
-
-		if (!KeyExchanger.GetPublicKeyCompressed(&OutPacket.GetPayload()[1]))
-		{
-#if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
-			Serial.println(F("Unable to read PK"));
-#endif
-		}
-	}
-
 	///// Linking time packets.
 	void PrepareLinkReport(const bool requestReply)
 	{
-		if (requestReply)
-		{
-			PrepareReportPacket(LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY);
-		}
-		else
-		{
-			PrepareReportPacket(LOLA_LINK_SUBHEADER_LINK_REPORT);
-		}
+		OutPacket.SetDefinition(&DefinitionReport);
+		OutPacket.SetId(requestReply ? UINT8_MAX : 0);
 
 		OutPacket.GetPayload()[0] = LinkInfo.GetRSSINormalized();
 		OutPacket.GetPayload()[1] = LoLaDriver->GetReceivedCount() % UINT8_MAX;
 	}
-
 };
-
-
 #endif

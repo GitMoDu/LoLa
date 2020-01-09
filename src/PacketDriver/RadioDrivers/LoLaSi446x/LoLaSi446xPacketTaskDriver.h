@@ -16,6 +16,8 @@ private:
 	private:
 		LoLaSi446xPacketDriver* Driver = nullptr;
 
+		bool DriverEnabled = false;
+
 	public:
 		LoLaSi446xRadioTaskClass(Scheduler* scheduler, LoLaSi446xPacketDriver* driver) : Task(0, TASK_FOREVER, scheduler, false)
 		{
@@ -24,7 +26,7 @@ private:
 
 		bool Callback()
 		{
-			if (Driver->CheckPending())
+			if (!DriverEnabled || Driver->CheckPending())
 			{
 				disable();
 			}
@@ -35,6 +37,17 @@ private:
 		virtual void Wake()
 		{
 			enableIfNot();
+		}
+
+		void Enable()
+		{
+			DriverEnabled = true;
+			Wake();
+		}
+
+		void Disable()
+		{
+			DriverEnabled = false;
 		}
 
 	};
@@ -56,12 +69,15 @@ public:
 	}
 
 protected:
-	virtual void OnStart() 
+	virtual void OnStart()
 	{
-		RadioTask.Wake();
+		LoLaSi446xPacketDriver::OnStart();
+		RadioTask.Enable();
+	}
+
+	virtual void OnStop()
+	{
+		RadioTask.Disable();
 	}
 };
-
-
 #endif
-

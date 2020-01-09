@@ -7,6 +7,7 @@
 #include <TaskSchedulerDeclarations.h>
 
 #include <LoLaDefinitions.h>
+#include <LoLaClock\IClock.h>
 
 
 class LinkDebugTask : Task
@@ -14,24 +15,61 @@ class LinkDebugTask : Task
 private:
 	uint32_t NextDebug = 0;
 
-	uint32_t PKCDuration = 0;
+	uint32_t DiffieHellmanKeyExchangeDuration = 0;
 	uint32_t LinkingDuration = 0;
 
 	LoLaLinkInfo* LinkInfo = nullptr;
 	ILoLaDriver* LoLaDriver = nullptr;
 
-	ILoLaClockSource* SyncedClock = nullptr;
+	ISyncedClock* SyncedClock = nullptr;
 	LoLaCryptoKeyExchanger* KeyExchanger = nullptr;
 
 	const static uint32_t UPDATE_PERIOD = LOLA_LINK_DEBUG_UPDATE_SECONDS * 1000;
+
+	uint32_t ETTM = 0;
+	uint32_t RTT = 0;
+
+	class EncoderDurations
+	{
+	public:
+		uint32_t ShortEncode = 0;
+		uint32_t LongEncode = 0;
+
+		uint32_t ShortDecode = 0;
+		uint32_t LongDecode = 0;
+	};
+
+	class RadioDurations
+	{
+	public:
+		uint32_t ShortTransmit = 0;
+		uint32_t LongTransmit = 0;
+	};
+
+	EncoderDurations EncoderTimings;
+	RadioDurations RadioTimings;
+
+
+	const uint32_t MeasureTimeoutMillis = 10000;
+
+	PingService LatencyService;
+
+	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> TestPacket;
+
+	PacketDefinition TestShortDefinition;
+	PacketDefinition TestLongDefinition;
+
 
 public:
 	LinkDebugTask(Scheduler* scheduler,
 		ILoLaDriver* loLaDriver,
 		LoLaLinkInfo* linkInfo,
-		ILoLaClockSource* syncedClock,
+		ISyncedClock* syncedClock,
 		LoLaCryptoKeyExchanger* keyExchanger)
-		: Task(UPDATE_PERIOD, TASK_FOREVER, scheduler, false)
+		: Task(1, TASK_FOREVER, scheduler, false)
+		, LatencyService(scheduler, loLaDriver)
+		, TestShortDefinition(&LatencyService, 0, LOLA_PACKET_MIN_PACKET_SIZE)
+		, TestLongDefinition(&LatencyService, 0, LOLA_PACKET_MAX_PACKET_SIZE)
 	{
 		LoLaDriver = loLaDriver;
 		LinkInfo = linkInfo;
@@ -39,32 +77,139 @@ public:
 		KeyExchanger = keyExchanger;
 	}
 
-	void Debug()
+	void Start()
 	{
-		Serial.print(F("Local MAC: "));
-		LinkInfo->PrintMac(&Serial);
-		Serial.println();
-		Serial.print(F("\tId: "));
-		Serial.println(LinkInfo->GetLocalId());
+		LatencyService.Setup();
+		disable();
+	}
 
-#ifdef LOLA_LINK_USE_ENCRYPTION
-		Serial.println(F("Link secured with"));
+	void Reset()
+	{
+		RTT = 0;
+		ETTM = 0;
+	}
+
+	void DebugTimings()
+	{
+		Serial.println("Radio timings");
+
+		Serial.print(F("Round Trip Time: "));
+		Serial.print(RTT);
+		Serial.println(F(" us"));
+
+		Serial.print(" ETTM: ");
+		Serial.print(ETTM);
+		Serial.println(" us");
+
+		Serial.print(" ShortEncode: ");
+		Serial.print(EncoderTimings.ShortEncode);
+		Serial.println(" us");
+
+		Serial.print(" LongEncode: ");
+		Serial.print(EncoderTimings.LongEncode);
+		Serial.println(" us");
+
+		Serial.print(" ShortDecode: ");
+		Serial.print(EncoderTimings.ShortDecode);
+		Serial.println(" us");
+
+		Serial.print(" LongDecode: ");
+		Serial.print(EncoderTimings.LongDecode);
+		Serial.println(" us");
+
+		Serial.print(" ShortTransmit: ");
+		Serial.print(RadioTimings.ShortTransmit);
+		Serial.println(" us");
+
+		Serial.print(" LongTransmit: ");
+		Serial.print(RadioTimings.LongTransmit);
+		Serial.println(" us");
+	}
+
+	void UpdateETTM()
+	{
+		ETTM = (RadioTimings.ShortTransmit + RadioTimings.LongTransmit) / 2;
+	}
+
+	bool MeasureRadioTimings()
+	{
+		const uint32_t Timeout = micros() + (MeasureTimeoutMillis * 1000);
+
+		uint32_t Measure = 0;
+
+		// Measure send for short packets.
+		TestPacket.SetDefinition(&TestShortDefinition);
+
+		RadioTimings.ShortTransmit = 0;
+		Measure = micros();
+		if (LoLaDriver->SendPacket(&TestPacket))
+		{
+			RadioTimings.ShortTransmit = micros() - Measure- EncoderTimings.ShortEncode;
+		}
+
+		// Measure send for long packets.
+		TestPacket.SetDefinition(&TestLongDefinition);
+		Measure = micros();
+		if (LoLaDriver->SendPacket(&TestPacket))
+		{
+			RadioTimings.LongTransmit = micros() - Measure- EncoderTimings.LongEncode;
+		}
+
+		return micros() < Timeout;
+	}
+
+	bool MeasureEncoderTimings()
+	{
+		const uint32_t Timeout = micros() + (MeasureTimeoutMillis * 1000);
+		uint32_t Measure = 0;
+
+		// Measure CRC and encode for short packets.
+		Measure = micros();
+		LoLaDriver->GetCryptoEncoder()->Encode(TestPacket.GetContent(), LOLA_PACKET_MIN_PACKET_SIZE, TestPacket.GetContent());
+		EncoderTimings.ShortEncode = micros() - Measure;
+
+		// Measure CRC and encode for long packets.
+		Measure = micros();
+		LoLaDriver->GetCryptoEncoder()->Encode(TestPacket.GetContent(), LOLA_PACKET_MAX_PACKET_SIZE, TestPacket.GetContent());
+		EncoderTimings.LongEncode = micros() - Measure;
+
+		// Measure CRC and decode for short packets.
+		Measure = micros();
+		LoLaDriver->GetCryptoEncoder()->Encode(TestPacket.GetContent(), LOLA_PACKET_MIN_PACKET_SIZE, TestPacket.GetContent());
+		EncoderTimings.ShortDecode = micros() - Measure;
+
+		// Measure CRC and decode for long packets.
+		Measure = micros();
+		LoLaDriver->GetCryptoEncoder()->Encode(TestPacket.GetContent(), LOLA_PACKET_MAX_PACKET_SIZE, TestPacket.GetContent());
+		EncoderTimings.LongDecode = micros() - Measure;
+
+		return micros() < Timeout;
+	}
+
+	void DebugOut()
+	{
+		//Serial.print(F("Local MAC: "));
+		//LinkInfo->PrintMac(&Serial);
+		//Serial.println();
+		//Serial.print(F("\tId: "));
+		//Serial.println(LinkInfo->GetLocalId());
+
+		Serial.println(F("LoLa Link secured with"));
 		Serial.print(F("160 bit "));
 		KeyExchanger->Debug(&Serial);
 		Serial.println();
 		Serial.print(F("\tEncrypted with 128 bit cypher "));
 		LoLaDriver->GetCryptoEncoder()->Debug(&Serial);
 		Serial.println();
-#ifdef LOLA_LINK_USE_FREQUENCY_HOP
+#ifdef LOLA_LINK_USE_CHANNEL_HOP
 		Serial.print(F("\tChannel hopping"));
-		Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
+		Serial.print(LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS);
 		Serial.println(F(" ms"));
 #endif
 #ifdef LOLA_LINK_USE_TOKEN_HOP
 		Serial.print(F("\tProtected with 32 bit TOTP @ "));
-		Serial.print(LOLA_LINK_SERVICE_LINKED_TIMED_HOP_PERIOD_MILLIS);
+		Serial.print(LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_MILLIS);
 		Serial.println(F(" ms"));
-#endif
 #else
 		Serial.println(F("Link unsecured."));
 #endif
@@ -74,7 +219,64 @@ public:
 #endif
 	}
 
-	void OnLinkOn()
+	enum LinkStateEnum : uint8_t
+	{
+		Disabled = 0,
+		SetupRadio = 1,
+		AwaitingLink = 2,
+		AwaitingSleeping = 3,
+		Linking = 4,
+		Linked = 5
+	};
+
+	void OnLinkStateChanged(uint8_t linkState)
+	{
+		Serial.print(F("New radio state: "));
+
+		switch (linkState)
+		{
+		case LinkStateEnum::Disabled:
+			Serial.println(F("Disabled"));
+			break;
+		case LinkStateEnum::SetupRadio:
+			Serial.println(F("SetupRadio"));
+			break;
+		case LinkStateEnum::AwaitingLink:
+			Serial.println(F("AwaitingLink"));
+			if (ETTM == 0)
+			{
+				if (MeasureEncoderTimings() && MeasureRadioTimings())
+				{
+					UpdateETTM();
+
+					DebugTimings();
+					DebugState = DebugStateEnum::MeasuringTimings;
+				}
+				else
+				{
+					DebugState = DebugStateEnum::FailedTime;
+				}
+			}
+			else
+			{
+				DebugState = DebugStateEnum::RuntimeDebug;
+			}			
+			break;
+		case LinkStateEnum::AwaitingSleeping:
+			Serial.println(F("AwaitingSleeping"));
+			break;
+		case LinkStateEnum::Linking:
+			Serial.println(F("Linking"));
+			break;
+		case LinkStateEnum::Linked:
+			Serial.println(F("Linked"));
+			break;
+		default:
+			break;
+		}
+	}
+
+	/*void OnLinkOn()
 	{
 		LinkingDuration = millis() - LinkingDuration;
 		DebugLinkEstablished();
@@ -85,27 +287,28 @@ public:
 	{
 		disable();
 		DebugLinkStatistics(&Serial);
+	}*/
+
+	void OnDHStarted()
+	{
+		DiffieHellmanKeyExchangeDuration = millis();
 	}
 
-	void OnPKCStarted()
+	void OnDHDone()
 	{
-		PKCDuration = millis();
-	}
-
-	void OnPKCDone()
-	{
-		PKCDuration = millis() - PKCDuration;
+		DiffieHellmanKeyExchangeDuration = millis() - DiffieHellmanKeyExchangeDuration;
 	}
 
 	void OnLinkingStarted()
 	{
 		LinkingDuration = millis();
-		Serial.print(F("Linking to Id: "));
+		Serial.print(F("Linking: "));
+		Serial.print(F("Linking to Id: "));/*
 		Serial.print(LinkInfo->GetPartnerId());
 		Serial.print(F("\tSession: "));
-		Serial.println(LinkInfo->GetSessionId());
-		Serial.print(F("PKC took "));
-		Serial.print(PKCDuration);
+		Serial.println(LinkInfo->GetSessionId());*/
+		Serial.print(F("Diffie-Hellman Key Exchange took "));
+		Serial.print(DiffieHellmanKeyExchangeDuration);
 		Serial.println(F(" ms."));
 	}
 
@@ -114,9 +317,58 @@ public:
 		return LinkInfo != nullptr && LoLaDriver != nullptr;
 	}
 
+	enum DebugStateEnum : uint8_t
+	{
+		Starting,
+		MeasuringTimings,
+		MeasuringLatency,
+		RuntimeDebug,
+		FailedTime
+	} DebugState = DebugStateEnum::Starting;
+
+	uint32_t LatencyStartedMillis = 0;
+	uint32_t LatencyTimeoutMillis = 2000;
+
 	bool Callback()
 	{
-		DebugLinkStatistics(&Serial);
+		switch (DebugState)
+		{
+		case DebugStateEnum::Starting:
+			DebugState = DebugStateEnum::MeasuringTimings;
+			break;
+		case DebugStateEnum::MeasuringTimings:
+			LatencyService.Start();
+			LatencyStartedMillis = millis();
+			DebugState = DebugStateEnum::MeasuringLatency;
+			break;
+		case DebugStateEnum::MeasuringLatency:
+			if (LatencyService.HasRTT())
+			{
+				DebugState = DebugStateEnum::RuntimeDebug;
+				DebugOut();
+			}
+			else
+			{
+				if (millis() - LatencyStartedMillis > LatencyTimeoutMillis)
+				{
+					DebugState = DebugStateEnum::FailedTime;
+				}
+				else
+				{
+					Task::delay(10);
+				}
+			}
+			break;
+		case DebugStateEnum::RuntimeDebug:
+			DebugLinkStatistics(&Serial);
+			Task::delay(UPDATE_PERIOD);
+			break;
+		default:
+			Serial.println(F("Debug Task failed."));
+			disable();
+			break;
+		}
+
 
 		return true;
 	}
@@ -131,9 +383,6 @@ private:
 		Serial.print(F("Linking took "));
 		Serial.print(LinkingDuration);
 		Serial.println(F(" ms."));
-		Serial.print(F("Round Trip Time: "));
-		Serial.print(LinkInfo->GetRTT());
-		Serial.println(F(" us"));
 		Serial.print(F("Latency compensation: "));
 		Serial.print(LoLaDriver->GetETTMMicros());
 		Serial.println(F(" us"));

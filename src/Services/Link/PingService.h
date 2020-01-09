@@ -11,13 +11,12 @@
 class PingService : public IPacketSendService
 {
 private:
-	LoLaLinkInfo* LinkInfo = nullptr;
 	PingPacketDefinition DefinitionPing;
 
 	const static uint8_t SAMPLE_COUNT = LATENCY_SERVICE_MAX_LATENCY_SAMPLES;
-	const static uint32_t RESEND_PERIOD = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * 2;
-	const static uint32_t PING_TIMEOUT_MILLIS = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * 4;
-	const static uint16_t MAX_RTT_MICROS = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * 1000;
+	const static uint32_t RESEND_PERIOD = ILOLA_DUPLEX_PERIOD_MILLIS * 2;
+	const static uint32_t PING_TIMEOUT_MILLIS = ILOLA_DUPLEX_PERIOD_MILLIS * 4;
+	const static uint16_t MAX_RTT_MICROS = ILOLA_DUPLEX_PERIOD_MILLIS * 1000;
 
 	// Only payload is Id.
 	TemplateLoLaPacket<LOLA_PACKET_MIN_PACKET_SIZE> OutPacket;
@@ -33,22 +32,39 @@ private:
 
 	uint32_t LastSentMicros = 0;
 
-	uint32_t Grunt;
+	uint32_t Grunt = 0;
+
+	bool RTTSet = false;
 
 	//TODO: Store more rich timing information, instead of just the broad duration.
 	RingBufCPP<uint16_t, SAMPLE_COUNT> DurationStack;
 
 public:
-	PingService(Scheduler* scheduler, ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
+	PingService(Scheduler* scheduler, ILoLaDriver* driver)
 		: IPacketSendService(scheduler, 0, driver, &OutPacket)
 		, DefinitionPing(this)
 	{
-		LinkInfo = linkInfo;
 	}
 
-	void StartDelayed()
+	void Start()
 	{
-		SetNextRunDelay(2000);
+		SetNextRunDelay(1);
+	}
+
+	bool HasRTT()
+	{
+		return RTTSet;
+	}
+
+	bool PiggybackSendPacket(ILoLaPacket* packet)
+	{
+		OutPacket.SetDefinition(packet->GetDefinition());
+
+		for (uint8_t i = 0; i < packet->GetDefinition()->GetTotalSize(); i++)
+		{
+			OutPacket.GetRaw()[i] = packet->GetRaw()[i];
+		}
+		RequestSendPacket();
 	}
 
 	virtual bool Callback()
@@ -66,7 +82,9 @@ public:
 			case PingStatusEnum::Sent:
 				if (millis() > Timeout)
 				{
+#ifdef DEBUG_LOLA
 					Serial.println("Latency meter timed out.");
+#endif
 					Disable();
 				}
 				break;
@@ -78,18 +96,16 @@ public:
 		}
 		else
 		{
-			// Update link info RTT.
-			LinkInfo->SetRTT(GetAverageLatency());
+			RTTSet = true;
 
 			// Job done.
 			Disable();
-			//TODO: Debug.
 		}
 	}
 
 	virtual bool Setup()
 	{
-		if (LinkInfo != nullptr && !LoLaDriver->GetPacketMap()->AddMapping(&DefinitionPing))
+		if (LoLaDriver->GetPacketMap()->RegisterMapping(&DefinitionPing))
 		{
 			return false;
 		}
@@ -98,7 +114,6 @@ public:
 		{
 			return false;
 		}
-
 
 		return IPacketSendService::Setup();
 	}
@@ -118,20 +133,21 @@ public:
 				}
 				else
 				{
-					//Outlier value discarded.
+					// Outlier value discarded.
 				}
 			}
 			SetNextRunASAP();
 		}
 	}
 
-	bool OnPacketReceived(PacketDefinition* definition, const uint8_t id, uint8_t* payload, const uint32_t timestamp)
+	bool OnPacketReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp, uint8_t* payload)
 	{
 		return ShouldProcessReceived();
 	}
 
 	void Reset()
 	{
+		RTTSet = false;
 		LastSentMicros = 0;
 		while (!DurationStack.isEmpty())
 		{
@@ -179,7 +195,5 @@ private:
 		OutPacket.SetDefinition(&DefinitionPing);
 		OutPacket.SetId(random(0, UINT8_MAX));
 	}
-	};
-
+};
 #endif
-

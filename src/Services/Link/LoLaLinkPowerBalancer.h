@@ -30,7 +30,7 @@ public:
 		LinkInfo = linkInfo;
 	}
 
-	uint8_t GetTransmitPower()
+	uint8_t GetTransmitPowerNormalized()
 	{
 		return CurrentTransmitPower;
 	}

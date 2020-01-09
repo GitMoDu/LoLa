@@ -102,9 +102,9 @@ public:
 		}
 	}
 
-	virtual void OnLinkStatusChanged()
+	virtual void OnLinkStatusChanged(const bool linked)
 	{
-		if (LoLaDriver->HasLink())
+		if (linked)
 		{
 			if (SyncState != SyncStateEnum::Disabled)
 			{

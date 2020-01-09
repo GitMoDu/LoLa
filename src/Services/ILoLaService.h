@@ -7,11 +7,10 @@
 #include <TaskSchedulerDeclarations.h>
 
 #include <LoLaDefinitions.h>
-#include <Packet\LoLaPacket.h>
-#include <Packet\LoLaPacketMap.h>
 #include <ILoLaDriver.h>
+#include <IPacketListener.h>
 
-class ILoLaService : Task, public virtual PacketDefinition::IPacketListener
+class ILoLaService : Task, public virtual IPacketListener
 {
 protected:
 	ILoLaDriver* LoLaDriver = nullptr;
@@ -19,46 +18,26 @@ protected:
 public:
 	ILoLaService(Scheduler* scheduler, const uint32_t period, ILoLaDriver* driver)
 		: Task(period, TASK_FOREVER, scheduler, false)
-		, PacketDefinition::IPacketListener()
+		, IPacketListener()
 	{
 		LoLaDriver = driver;
 	}
 
-
 public:
 	///IPacketService Calls
 	//Returning false denies Ack response, if packet has Ack.
-	virtual bool OnPacketReceived(PacketDefinition* definition, const uint8_t id, uint8_t* payload, const uint32_t timestamp)
+	virtual bool OnPacketReceived(PacketDefinition* definition, const uint8_t id, const uint32_t timestamp, uint8_t* payload)
 	{
 		return false;
 	}
 
-	virtual bool OnAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp) 
-	{
-		return false;
-	}
+	virtual void OnAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp) {}
 
-	virtual bool OnPacketSent(const uint8_t header, const uint8_t id, const uint32_t timestamp)
-	{
-		return false;
-	}
+	virtual void OnPacketSent(const uint8_t header, const uint8_t id, const uint32_t timestamp) {}
 
-	virtual bool OnPacketTransmited(const uint32_t timestamp)
-	{
-		return false;
-	}
+	virtual void OnPacketTransmited(const uint32_t timestamp) {}
 
-	virtual void OnLinkStatusChanged()
-	{
-		if (LoLaDriver != nullptr && LoLaDriver->HasLink())
-		{
-			Enable();
-		}
-		else
-		{
-			disable();
-		}
-	}
+	virtual void OnLinkStatusChanged(const bool linked) {}
 
 	virtual bool Setup()
 	{

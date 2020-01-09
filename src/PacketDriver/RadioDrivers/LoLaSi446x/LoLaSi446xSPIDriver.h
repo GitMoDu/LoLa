@@ -7,43 +7,38 @@
 #include <stdint.h>
 #include <Arduino.h>
 #include <SPI.h>
+#include <LoLaDefinitions.h>
 #include <PacketDriver\LoLaPacketDriver.h>
 #include <PacketDriver\RadioDrivers\LoLaSi446x\IRadioTask.h>
+#include <PacketDriver\RadioDrivers\LoLaSi446x\Si446x.h>
 
-
-#define RADIO_USE_DMA
-#define USE_RADIO_ATOMIC
 
 
 
 class LoLaSi446xSPIDriver : public LoLaPacketDriver
 {
 private:
-#define CHIP_SELECT()	for(uint8_t _cs = On(); _cs; _cs = Off())
-
-#ifdef USE_RADIO_ATOMIC
-#define RADIO_ATOMIC() for(uint8_t _cs2 = InterruptOff(); _cs2; _cs2 = InterruptOn())
-#else
-#define RADIO_ATOMIC() 
-#endif
-
 	uint32_t TimeoutHelper = 0;
 	IRadioTask* RadioTask = nullptr;
 
 protected:
-	static const uint8_t COMMAND_READ_BUFFER = 0x44;
-
+#define CHIP_SELECT()	for(uint8_t _cs = On(); _cs; _cs = Off())
+#define RADIO_ATOMIC()	for(uint8_t _cs2 = InterruptOff(); _cs2; _cs2 = InterruptOn())
 
 	//Device communication helpers.
 	static const uint8_t MESSAGE_OUT_SIZE = 18; //Max internal sent message length;
-	static const uint8_t MESSAGE_IN_SIZE = 8; //Max internal received message length;
+	static const uint8_t MESSAGE_IN_SIZE = 9; //Max internal received message length;
 
 	uint8_t MessageIn[MESSAGE_IN_SIZE];
 	uint8_t MessageOut[MESSAGE_OUT_SIZE];
 
-	static const uint32_t RESPONSE_TIMEOUT_MICROS = 500000;
+	static const uint32_t RESPONSE_LONG_TIMEOUT_MICROS = 2000;
 	static const uint32_t RESPONSE_SHORT_TIMEOUT_MICROS = 250;
-	static const uint32_t RESPONSE_CHECK_PERIOD_MICROS = 2;
+	static const uint32_t RESPONSE_WAIT_TIMEOUT_MICROS = 500;
+	static const uint32_t RESPONSE_CHECK_PERIOD_MICROS = 10;
+	static const uint32_t RESPONSE_DMA_BACKOFF_PERIOD_MICROS = 20;
+
+	static const uint32_t RADIO_RESET_PERIOD_MICROS = 20000;
 
 	//SPI instance.
 	SPIClass* spi = nullptr;
@@ -98,7 +93,7 @@ protected:
 			detachInterrupt(digitalPinToInterrupt(IRQ_PIN));
 		}
 
-		return 0;
+		return 1;
 	}
 
 	uint8_t InterruptOn()
@@ -110,7 +105,7 @@ protected:
 			InterruptsEnabled = true;
 		}
 
-		return 1;
+		return 0;
 	}
 
 protected:
@@ -133,9 +128,7 @@ protected:
 
 #ifdef LOLA_SET_SPEED_SPI
 		//The SPI interface is designed to operate at a maximum of 10 MHz.
-#if defined(ARDUINO_ARCH_AVR)
-		spi->setClockDivider(SPI_CLOCK_DIV2); // 16 MHz / 2 = 8 MHz
-#elif defined(ARDUINO_ARCH_STM32F1)
+#if defined(ARDUINO_ARCH_STM32F1)
 		spi->setClockDivider(SPI_CLOCK_DIV8); // 72 MHz / 8 = 9 MHz
 #endif
 #endif
@@ -161,74 +154,85 @@ protected:
 	void RadioReset()
 	{
 		digitalWrite(RESET_PIN, HIGH);
-		delay(20);
+		delayMicroseconds(RADIO_RESET_PERIOD_MICROS);
 		digitalWrite(RESET_PIN, LOW);
-		delay(20);
+		delayMicroseconds(RADIO_RESET_PERIOD_MICROS);
 	}
 
 protected:
 	// Low level communications.
-	bool API(const uint8_t outLength, const uint8_t inLength)
+	bool API(const uint8_t outLength, const uint8_t inLength, const uint32_t timeoutMicros = RESPONSE_LONG_TIMEOUT_MICROS)
 	{
-		if (WaitForResponse(MessageIn, 0, RESPONSE_SHORT_TIMEOUT_MICROS)) // Make sure it's ok to send a command
+		if (!WaitForResponse(MessageIn, 0, RESPONSE_WAIT_TIMEOUT_MICROS)) // Make sure it's ok to send a command
 		{
-			RADIO_ATOMIC()
-			{
-				CHIP_SELECT()
-				{
-#ifdef RADIO_USE_DMA
-					spi->dmaSend(MessageOut, inLength);
-#else
-					for (uint8_t i = 0; i < inLength; i++)
-					{
-						spi->transfer(MessageOut[i]);
-					}
-#endif
-				}
-			}
+			return false;
+		}
 
-			if (inLength > 0)
+		RADIO_ATOMIC()
+		{
+			CHIP_SELECT()
 			{
-				// If we have an output buffer then read command response into it
-				return WaitForResponse(MessageIn, inLength, RESPONSE_SHORT_TIMEOUT_MICROS);
+				for (uint8_t i = 0; i < outLength; i++)
+				{
+					spi->transfer(MessageOut[i]);
+				}
 			}
 		}
 
-		return false;
+		if (inLength == 0)
+		{
+			return true;
+		}
+		else
+		{
+			// If we have an output buffer then read command response into it
+			return WaitForResponse(MessageIn, inLength, timeoutMicros);
+		}
 	}
 
 	// Keep trying to read the command buffer, with timeout of around 500ms
-	bool WaitForResponse(uint8_t* target, const uint8_t inLength, const uint32_t timeoutMicros = RESPONSE_TIMEOUT_MICROS)
+	bool WaitForResponse(uint8_t* target, const uint8_t inLength, const uint32_t timeoutMicros)
 	{
 		TimeoutHelper = micros() + timeoutMicros;
+		uint32_t Start = TimeoutHelper - timeoutMicros;
+		uint32_t Tries = 1;
 		while (GetResponse(target, inLength) == false)
 		{
 			if (micros() < TimeoutHelper)
 			{
+				Tries++;
 				delayMicroseconds(RESPONSE_CHECK_PERIOD_MICROS);
 			}
 			else
 			{
-#ifdef DEBUG_LOLA
-				TimeoutCount++;
-#endif
 				return false;
 			}
 		}
+
+		//#ifdef DEBUG_RADIO_DRIVER
+		//		if (inLength > 0)
+		//		{
+		//			Serial.print(F("WaitForResponse: OK: "));
+		//			Serial.print(micros() - Start);
+		//			Serial.print(F(" us Tries: "));
+		//			Serial.println(Tries);
+		//		}
+		//#endif
+
 		return true;
 	}
 
 	// Read CTS and if its ok then read the command buffer
 	bool GetResponse(uint8_t* target, const uint8_t inLength)
 	{
-		bool cts = 0;
+		bool cts = false;
 
 		RADIO_ATOMIC()
 		{
 			CHIP_SELECT()
 			{
 				// Send command.
-				spi->transfer(COMMAND_READ_BUFFER);
+				spi->transfer(Si446x::COMMAND_READ_BUFFER);
 
 				// Get CTS value.
 				cts = spi->transfer(0xFF) == 0xFF;
@@ -236,20 +240,15 @@ protected:
 				if (cts)
 				{
 					// Get response data
-#ifdef RADIO_USE_DMA
-					//If passed as 0, it sends FF repeatedly for "length" bytes.
-					spi->dmaTransfer(0, target, inLength);
-#else
 					for (uint8_t i = 0; i < inLength; i++)
 					{
-						target[i] = spi_transfer(0xFF);
+						target[i] = spi->transfer(0xFF);
 					}
-#endif					
 				}
 			}
 		}
+
 		return cts;
 	}
 };
 #endif
-

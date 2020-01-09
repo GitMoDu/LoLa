@@ -10,7 +10,8 @@
 #include <Services\Link\LoLaLinkHostService.h>
 #include <Services\Link\LoLaLinkRemoteService.h>
 
-#include <LinkIndicator.h>
+#include <PacketDriver\LinkIndicator.h>
+
 
 class LoLaManager
 {
@@ -36,15 +37,17 @@ public:
 		return GetLinkService()->GetLinkInfo();
 	}
 
-	ILinkIndicator* GetLinkIndicator()
+	LinkIndicator* GetLinkIndicator()
 	{
 		return GetLinkService()->GetLinkIndicator();
 	}
 
-	LinkStatus* GetLinkStatus()
+#ifdef DEBUG_LOLA
+	uint8_t GetLinkState()
 	{
-		return GetLinkService()->GetLinkStatus();
+		return GetLinkService()->GetLinkState();
 	}
+#endif
 
 	void Start()
 	{
@@ -68,7 +71,7 @@ public:
 			return false;
 		}
 
-		return LoLaDriver->GetPacketMap()->CloseMap() && LoLaDriver->Setup();
+		return LoLaDriver->Setup();
 	}
 };
 

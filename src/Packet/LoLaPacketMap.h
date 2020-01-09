@@ -5,123 +5,79 @@
 
 #include <Packet\PacketDefinition.h>
 #include <LoLaDefinitions.h>
+#include <IPacketListener.h>
 
 
-
-class AckPacketDefinition : public PacketDefinition
+class ILoLaPacketMap
 {
-
-public:
-	AckPacketDefinition(IPacketListener* service) :
-		PacketDefinition(service,
-			PACKET_DEFINITION_ACK_HEADER,
-			1)//Payload is original Header. Id is optional.
-	{
-	}
-
-	virtual bool Validate()
-	{
-		//Ack is the only packet with no associated service.
-		return true;
-	}
+protected:
+	uint8_t MaxMappingIndex = 0;
 
 #ifdef DEBUG_LOLA
-	void PrintName(Stream* serial)
+	uint8_t UsedMappings = 0;
+#endif
+
+public:
+#ifdef DEBUG_LOLA
+	uint8_t GetCount()
 	{
-		serial->print(F("Ack"));
+		return UsedMappings;
 	}
 #endif
+
+	const uint8_t GetMaxIndex()
+	{
+		return MaxMappingIndex;
+	}
+
+public:
+	virtual bool RegisterMapping(PacketDefinition* packetDefinition)
+	{
+		return false;
+	}
+
+	virtual IPacketListener* GetServiceAt(const uint8_t index)
+	{
+		return nullptr;
+	}
 };
 
-class LoLaPacketMap
+class LoLaPacketMap : public ILoLaPacketMap
 {
+public:
+	class AckPacketDefinition : public PacketDefinition
+	{
+	public:
+		AckPacketDefinition() :
+			PacketDefinition(nullptr,
+				PACKET_DEFINITION_ACK_HEADER,
+				1)//Payload is original Header. Id is optional.
+		{
+		}
+
+		virtual bool Validate()
+		{
+			//Ack is the only packet with no associated service.
+			return true;
+		}
+
+#ifdef DEBUG_LOLA
+		void PrintName(Stream* serial)
+		{
+			serial->print(F("Ack"));
+		}
+#endif
+	};
 private:
 	AckPacketDefinition DefinitionACK;
 
-#define ENABLE_PACKET_MAP_OPTIMIZATION
-
-	// This value can be reduced to greatly optimize memory use.
-	// But to do that safely: Packet map must be contiguous and ENABLE_PACKET_MAP_OPTIMIZATION must be enabled.
-	// With no constrains, the default value of UINT8_MAX should be used.
-	const uint8_t MAX_MAPPING_SIZE = UINT8_MAX;
-
-	// Reduce this to the highest header value in the mapping, to reduce memory usage.
-
 protected:
-	uint8_t MappingCount = 0;
-	PacketDefinition *Mapping[UINT8_MAX];
-
-	bool MapClosed = false;
+	PacketDefinition* Mapping[MAX_MAPPING_SIZE];
 
 public:
-	LoLaPacketMap() : DefinitionACK(nullptr)
+	LoLaPacketMap() : DefinitionACK()
 	{
 		ResetMapping();
-	}
-
-	PacketDefinition* GetAck() { return &DefinitionACK; }
-
-	bool AddMapping(PacketDefinition* packetDefinition)
-	{
-		if (MapClosed ||
-#ifdef ENABLE_PACKET_MAP_OPTIMIZATION
-			MappingCount >= MAX_MAPPING_SIZE ||
-#endif
-			Mapping[packetDefinition->Header] != nullptr)
-		{
-			return false;
-		}
-		else
-		{
-			Mapping[packetDefinition->Header] = packetDefinition;
-			MappingCount++;
-			return true;
-		}
-	}
-
-	PacketDefinition::IPacketListener* GetServiceAt(const uint8_t index)
-	{
-		if (
-#ifdef ENABLE_PACKET_MAP_OPTIMIZATION
-			index < MappingCount &&
-#endif
-			Mapping[index] != nullptr
-			)
-		{
-			return Mapping[index]->Service;
-		}
-
-		return nullptr;
-	}
-
-	uint8_t GetCount()
-	{
-		return MappingCount;
-	}
-
-	bool CloseMap()
-	{
-		// Cannot reclose map.
-		if (MapClosed)
-		{
-			return false;
-		}
-
-		for (uint8_t i = 0; i < MAX_MAPPING_SIZE; i++)
-		{
-			if (Mapping[i] != nullptr)
-			{
-				if (!Mapping[i]->Validate())
-				{
-					return false;
-				}
-			}
-		}
-
-		// We expect at least the Ack definition to be present.
-		MapClosed = MappingCount > 0;
-
-		return MapClosed;
 	}
 
 	void ResetMapping()
@@ -130,26 +86,63 @@ public:
 		{
 			Mapping[i] = nullptr;
 		}
-		MappingCount = 0;
-		MapClosed = false;
+		MaxMappingIndex = 0;
+
+#ifdef DEBUG_LOLA
+		UsedMappings = 0;
+#endif
 
 		//Add base mappings.
-		AddMapping(&DefinitionACK);
+		RegisterMapping(&DefinitionACK);
+	}
+
+	virtual bool RegisterMapping(PacketDefinition* packetDefinition)
+	{
+		if (packetDefinition->Header < MAX_MAPPING_SIZE &&
+			packetDefinition != nullptr &&
+			Mapping[packetDefinition->Header] == nullptr &&
+			packetDefinition->Validate())
+		{
+			Mapping[packetDefinition->Header] = packetDefinition;
+
+			if (packetDefinition->Header > MaxMappingIndex)
+			{
+				MaxMappingIndex = packetDefinition->Header;
+			}
+
+#ifdef DEBUG_LOLA
+			UsedMappings++;
+#endif
+			return true;
+		}
+
+		return false;
+	}
+
+	IPacketListener* GetServiceAt(const uint8_t index)
+	{
+		if (index <= MaxMappingIndex &&
+			Mapping[index] != nullptr)
+		{
+			return Mapping[index]->Service;
+		}
+
+		return nullptr;
 	}
 
 	PacketDefinition* GetDefinition(const uint8_t header)
 	{
-#ifdef ENABLE_PACKET_MAP_OPTIMIZATION
-		if (header >= MAX_MAPPING_SIZE)
+		if (header <= MaxMappingIndex)
+		{
+			return Mapping[header];
+		}
+		else
 		{
 #ifdef DEBUG_LOLA
 			Serial.println(F("GetDefinition index out of bounds."));
 #endif
 			return nullptr;
 		}
-#endif
-
-		return Mapping[header];
 	}
 
 #ifdef DEBUG_LOLA
@@ -159,62 +152,60 @@ public:
 		serial->print(MAX_MAPPING_SIZE * sizeof(PacketDefinition*));
 		serial->println(F(" bytes."));
 
+		serial->print(F("MaxMappingIndex: "));
+		serial->println(MaxMappingIndex);
 
 		serial->print(F("Packet map usage: "));
 		serial->print((GetCount() * 100) / MAX_MAPPING_SIZE);
 		serial->println(F("% ."));
 
-		serial->print(F("Packet map real memory usage: "));
-		serial->print(sizeof(LoLaPacketMap));
-		serial->println(F(" bytes."));
-
 		serial->print(F("Packet mappings: "));
 		serial->println(GetCount());
+
+		uint8_t MaxServiceHeader = 0;
 
 		for (uint8_t i = 0; i < MAX_MAPPING_SIZE; i++)
 		{
 			if (Mapping[i] != nullptr)
 			{
+				if (Mapping[i]->Header > MaxServiceHeader)
+				{
+					MaxServiceHeader = Mapping[i]->Header;
+				}
+
 				serial->print(' ');
 				serial->print(i);
 				serial->print(F(": "));
 				Mapping[i]->Debug(serial);
 				serial->println();
 			}
-#ifdef ENABLE_PACKET_MAP_OPTIMIZATION
-			else if (i < MappingCount)
-			{
-
-				Serial.println(F("[WARNING] PacketMap mapping not contiguous."));
-			}
-#endif
 		}
 
-		uint8_t ServiceCount = 0;
 		serial->println(F("Services:"));
-		PacketDefinition::IPacketListener* service = nullptr;
+		IPacketListener* service = nullptr;
 
-		for (uint8_t i = 0; i < MAX_MAPPING_SIZE; i++)
+		uint8_t ServiceCount = 0;
+		for (uint8_t i = 1; i < MAX_MAPPING_SIZE; i++)
 		{
 			if (Mapping[i] != nullptr)
 			{
 				if (Mapping[i]->Service != service)
 				{
-					service = Mapping[i]->Service;
 					ServiceCount++;
+					service = Mapping[i]->Service;
 					serial->print(' ');
 
 					service->PrintName(serial);
 					serial->println();
 				}
 			}
-#ifdef ENABLE_PACKET_MAP_OPTIMIZATION
-			else if (i < MappingCount)
-			{
-				Serial.println(F("[WARNING] PacketMap mapping not contiguous."));
-			}
-#endif
 		}
+
+		serial->print(F("Max Header: "));
+		serial->println(MaxServiceHeader);
+
+		serial->print(F("Total Mapped Definitions: "));
+		serial->println(GetCount());
 
 		serial->print(F("Total Mapped Services: "));
 		serial->println(ServiceCount);

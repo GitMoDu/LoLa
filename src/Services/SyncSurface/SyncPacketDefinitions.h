@@ -26,11 +26,12 @@ public:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("SyncData "));
-		//TODO: Get name from service.
+		serial->print(F("SyncData for "));
+		Service->PrintName(serial);
 	}
 #endif
 };
+
 
 template <const uint8_t BaseHeader>
 class SyncMetaPacketDefinition : public PacketDefinition
@@ -45,8 +46,8 @@ public:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("SyncMeta "));
-		//TODO: Get name from service.
+		serial->print(F("SyncMeta for "));
+		Service->PrintName(serial);
 	}
 #endif
 };

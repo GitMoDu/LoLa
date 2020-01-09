@@ -4,219 +4,210 @@
 #define _LOLACRYPTOENCODER_h
 
 #include <Crypto.h>
-#include <CryptoLW.h>
+#include <BLAKE2s.h>
 #include <Ascon128.h>
-#include <Acorn128.h>
 #include "utility/ProgMemUtil.h"
 
-#include <FastCRC.h>
+#include <LoLaDefinitions.h>
+#include <PacketDriver\ILoLaSelector.h>
+#include <LoLaCrypto\CryptoTokenGenerator.h>
 
 
-#include <Crypto.h>
-#include <SHA256.h>
-
+// Responsible keeping the state of crypto encoding/decoding,
+// MAC hash and key expansion.
 class LoLaCryptoEncoder
 {
 private:
-	enum  StageEnum : uint8_t
-	{
-		AllClear,
-		AllReady,
-		FullPower
-	} EncoderState = StageEnum::AllClear;
+	// From Ascon128 spec
+	static const uint8_t KeySize = 16;
+	static const uint8_t IVSize = 16;
 
-	Ascon128 Cypher;
-	SHA256 Hasher;
+	static const uint8_t MACSize = LOLA_LINK_CRYPTO_MAC_CRC_SIZE;
 
-	union ArrayToUint32 {
-		byte array[sizeof(uint32_t)];
-		uint32_t uint;
-	} ATUI;
-
-	static const uint8_t KeySize = 16; //Should be the same as Cypher.keySize();
-	static const uint8_t TokenSize = 4; //Should be the same as Secret Key - Cypher.keySize();
-
-	uint8_t KeyHolder[KeySize];
-	uint8_t IVHolder[KeySize];
-	uint8_t TokenHolder[TokenSize];
-
-	uint32_t TokenSeed = 0; //Last 4 bytes of key are used for token.
-
-
-	///CRC validation.
-	FastCRC16 CRC16;
-#define DataCRC( data, length ) CRC16.modbus(data, length)
-
-	///
-
+	// Protocol defined values
+	static const uint8_t CryptoSeedSize = LOLA_LINK_CRYPTO_SEED_SIZE;
+	static const uint8_t CryptoTokenSize = LOLA_LINK_CRYPTO_TOKEN_SIZE;
+	static const uint8_t ChannelSeedSize = LOLA_LINK_CHANNEL_SEED_SIZE;
+	static const uint8_t CryptoTokenPeriodMillis = LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_MILLIS;
 
 private:
-	void SetTokenSeed(uint8_t* seedBytes, const uint8_t length)
+	// Large enough to generate unique keys for each purpose.
+	struct ExpandedKeyStruct
 	{
-		Hasher.clear();
-		Hasher.update(seedBytes, length);
+		uint8_t Key[KeySize];
+		uint8_t IV[IVSize];
+		uint8_t CryptoSeed[CryptoSeedSize];
+		uint8_t ChannelSeed[ChannelSeedSize];
+	};
 
-		Hasher.finalize(ATUI.array, sizeof(uint32_t));
+	ExpandedKeyStruct ExpandedKeySource;
 
-		TokenSeed = ATUI.uint;
-	}
+	// If these are changed, update ProtocolVersionCalculator.
+	Ascon128 Cypher;
+	BLAKE2s Hasher;
+
+	union ArrayToUint32 {
+		byte array[sizeof(uint32_t)]; //TOKEN_SIZE
+		uint32_t uint;
+	} HasherHelper;
+
+	static const uint8_t TokenSize = LOLA_LINK_CRYPTO_TOKEN_SIZE; // Token is 32 bit.
+	static const uint8_t AuthDataSize = TokenSize;
+
+	TOTPMillisecondsTokenGenerator CryptoTokenGenerator;
+	TOTPMillisecondsTokenGenerator ChannelTokenGenerator;
+
+	bool TOTPEnabled = false;
 
 public:
-	LoLaCryptoEncoder()
+	LoLaCryptoEncoder(ISyncedClock* syncedClock) :
+		Cypher(),
+		Hasher(),
+		CryptoTokenGenerator(syncedClock, &TOTPEnabled),
+		ChannelTokenGenerator(syncedClock, &TOTPEnabled)
 	{
 	}
 
-	inline void ResetCypherBlock()
+	uint32_t HashArray(uint8_t* array, const uint8_t arrayLength)
 	{
-		Cypher.setKey(KeyHolder, sizeof(KeyHolder));
-		Cypher.setIV(IVHolder, sizeof(IVHolder));
-		Cypher.addAuthData(TokenHolder, sizeof(TokenHolder));
+		Hasher.reset();
+		Hasher.update(array, arrayLength);
+		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
+
+		return HasherHelper.uint;
 	}
 
-	//Returns 16 bit MAC/CRC.
-	uint16_t Encode(uint8_t* message, const uint8_t messageLength)
+	ITokenSource* GetChannelTokenSource()
 	{
-		if (EncoderState == StageEnum::FullPower)
-		{
-			ResetCypherBlock();
-			Cypher.encrypt(message, message, messageLength);
-		}
-
-		return DataCRC(message, messageLength);
+		return &ChannelTokenGenerator;
 	}
 
-	void EmptyEncode(uint8_t* message, const uint8_t messageLength)
+	bool Setup()
+	{
+		return CryptoTokenGenerator.Setup() &&
+			ChannelTokenGenerator.Setup();
+	}
+
+	void EnableTOTP()
+	{
+		TOTPEnabled = true;
+	}
+
+	void ResetCypherBlock()
+	{
+		Cypher.setKey(ExpandedKeySource.Key, KeySize);
+		Cypher.setIV(ExpandedKeySource.IV, IVSize);
+		//TODO: Consider adding auth data if performance is ok.
+	}
+
+	// Returns MAC/CRC.
+	uint32_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
 	{
 		ResetCypherBlock();
-		Cypher.encrypt(message, message, messageLength);
+		Cypher.encrypt(outputMessage, message, messageLength);
+
+		Hasher.reset();
+
+#ifdef LOLA_LINK_USE_TOKEN_HOP
+		HasherHelper.uint = CryptoTokenGenerator.GetToken();
+		Hasher.update(HasherHelper.array, CryptoTokenSize);
+#endif
+
+		Hasher.update(message, messageLength);
+		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
+
+		return HasherHelper.uint;
 	}
 
-	void EmptyDecode(uint8_t* message, const uint8_t messageLength)
+	bool Decode(uint8_t* message, const uint8_t messageLength, const uint32_t macCRC)
 	{
-		ResetCypherBlock();
-		Cypher.decrypt(message, message, messageLength);
-	}
+		Hasher.reset();
 
-	//Returns 16 bit MAC/CRC.
-	uint16_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
-	{
-		if (EncoderState == StageEnum::FullPower)
-		{
-			ResetCypherBlock();
-			Cypher.encrypt(outputMessage, message, messageLength);
-		}
-		else
-		{
-			memcpy(outputMessage, message, messageLength);
-		}
+#ifdef LOLA_LINK_USE_TOKEN_HOP
+		HasherHelper.uint = CryptoTokenGenerator.GetToken();
+		Hasher.update(HasherHelper.array, CryptoTokenSize);
+#endif
 
-		return DataCRC(outputMessage, messageLength);
-	}
+		Hasher.update(message, messageLength);
+		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
 
-	uint8_t Decode(uint8_t* message, const uint8_t messageLength, const uint16_t crc)
-	{
-		if (crc != DataCRC(message, messageLength))
-		{
-			return false;
-		}
-
-		if (EncoderState == StageEnum::FullPower)
+		if (macCRC == HasherHelper.uint)
 		{
 			ResetCypherBlock();
 			Cypher.decrypt(message, message, messageLength);
+
+			return true;
 		}
 
 		return true;
-	}
-
-	void EncodeDirect(uint8_t* message, const uint8_t messageLength)
-	{
-		ResetCypherBlock();
-		Cypher.encrypt(message, message, messageLength);
-	}
-
-	void DecodeDirect(uint8_t* inputMessage, const uint8_t messageLength, uint8_t* outputMessage)
-	{
-		ResetCypherBlock();
-		Cypher.decrypt(outputMessage, inputMessage, messageLength);
 	}
 
 	void Clear()
 	{
-		EncoderState = StageEnum::AllClear;
-
-		for (uint8_t i = 0; i < TokenSize; i++)
+		for (uint8_t i = 0; i < sizeof(ExpandedKeySource); i++)
 		{
-			TokenHolder[i] = 0;
+			((uint8_t*)&ExpandedKeySource)[i] = 0;
 		}
 
-		for (uint8_t i = 0; i < KeySize; i++)
-		{
-			KeyHolder[i] = 0;
-			IVHolder[i] = 0;
-		}
+		UpdateSeeds();
 
-		TokenSeed = 0;
+		TOTPEnabled = false;
 	}
 
-	bool SetEnabled()
+	void SetKeyWithSalt(uint8_t* secretKey, const uint32_t salt)
 	{
-#ifdef LOLA_LINK_USE_ENCRYPTION
-		if (EncoderState == StageEnum::AllReady)
-		{
-			EncoderState = StageEnum::FullPower;
+		// Adding shared entropy and expanding key to fill in all slots.
+		Hasher.clear();
 
-			return true;
-		}
-		else if (EncoderState == StageEnum::FullPower)
-		{
-			return true;
-		}
+		// Secret key.
+		Hasher.update(secretKey, KeySize);
 
-		return false;
-#else
-		return true;
-#endif
-	}
+		// Salt.
+		HasherHelper.uint = salt;
+		Hasher.update(HasherHelper.array, sizeof(uint32_t));
 
-	bool SetSecretKey(uint8_t * secretKey, const uint8_t keyLength)
-	{
-		if (keyLength < KeySize + TokenSize)
-		{
-			return false;
-		}
+		// sizeof(ExpandedKeySource) = 40 bytes.
+		// We don't even need the full hash, let alone another iteration.
+		Hasher.finalize((uint8_t*)&ExpandedKeySource, sizeof(ExpandedKeySource));
 
+#ifdef DEBUG_LOLA
 		Cypher.clear();
 
-		//HKey reduction, only use keySize bytes for key.
-		for (uint8_t i = 0; i < KeySize; i++)
+		// Test if key is accepted.
+		if (!Cypher.setKey(ExpandedKeySource.Key, KeySize))
 		{
-			KeyHolder[i] = secretKey[i];
+			Serial.println(F("Failed to set Key."));
 		}
 
-		//Test if key is accepted.
-		if (!Cypher.setKey(KeyHolder, KeySize))
+		// Test setting IV.
+		if (!Cypher.setIV(ExpandedKeySource.IV, KeySize))
 		{
-			return false;
+			Serial.println(F("Failed to set IV."));
 		}
+		Cypher.clear();
+#endif
 
-		//Test setting IV.
-		if (!Cypher.setIV(IVHolder, KeySize))
-		{
-			return false;
-		}
+		UpdateSeeds();
+	}
 
-		//Update token seed from last unused bytes of the key.
-		SetTokenSeed(&KeyHolder[KeySize], keyLength - KeySize);
+private:
+	void UpdateSeeds()
+	{
+		// Update token seeds for token generators.
+		Hasher.reset();
+		Hasher.update(ExpandedKeySource.CryptoSeed, CryptoSeedSize);
+		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
 
-		ResetCypherBlock();
+		CryptoTokenGenerator.SetSeed(HasherHelper.uint);
 
-		EncoderState = StageEnum::AllReady;
-
-		return true;
+		Hasher.reset();
+		Hasher.update(ExpandedKeySource.ChannelSeed, ChannelSeedSize);
+		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
+		ChannelTokenGenerator.SetSeed(HasherHelper.uint);
 	}
 
 #ifdef DEBUG_LOLA
+public:
 	void Debug(Stream* serial)
 	{
 		serial->print("Ascon128");
@@ -227,91 +218,10 @@ public:
 		serial->print("Secret Key:\n\t|");
 		for (uint8_t i = 0; i < KeySize; i++)
 		{
-			serial->print(KeyHolder[i]);
+			serial->print(ExpandedKeySource.Key[i]);
 			serial->print('|');
 		}
 	}
 #endif
-
-	void SetIvData(const uint32_t session, const uint32_t id1, const uint32_t id2)
-	{
-		//Custom key expansion.
-		//TODO: Replace with RFC HKDF.
-
-		//Id 1 with Session.
-		Hasher.clear();
-		ATUI.uint = session;
-		Hasher.update(ATUI.array, sizeof(uint8_t));
-		ATUI.uint = id1;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		Hasher.finalize(ATUI.array, sizeof(uint32_t));
-		IVHolder[0] = ATUI.array[0];
-		IVHolder[1] = ATUI.array[1];
-		IVHolder[2] = ATUI.array[2];
-		IVHolder[3] = ATUI.array[3];
-
-		//Id 2 with Session.
-		Hasher.clear();
-		ATUI.uint = session;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		ATUI.uint = id2;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		Hasher.finalize(ATUI.array, sizeof(uint32_t));
-		IVHolder[4] = ATUI.array[0];
-		IVHolder[5] = ATUI.array[1];
-		IVHolder[6] = ATUI.array[2];
-		IVHolder[7] = ATUI.array[3];
-
-		//Id 1 and 2 with Session.
-		Hasher.clear();
-		ATUI.uint = session;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		ATUI.uint = id1;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		ATUI.uint = id2;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		Hasher.finalize(ATUI.array, sizeof(uint32_t));
-		IVHolder[8] = ATUI.array[0];
-		IVHolder[9] = ATUI.array[1];
-		IVHolder[10] = ATUI.array[2];
-		IVHolder[11] = ATUI.array[3];
-
-		//Session only.
-		Hasher.clear();
-		ATUI.uint = session;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		Hasher.finalize(ATUI.array, sizeof(uint32_t));
-		IVHolder[12] = ATUI.array[0];
-		IVHolder[13] = ATUI.array[1];
-		IVHolder[14] = ATUI.array[2];
-		IVHolder[15] = ATUI.array[3];
-	}
-
-	uint32_t GetSeed()
-	{
-		return TokenSeed;
-	}
-
-	uint32_t GetToken()
-	{
-		for (uint8_t i = 0; i < TokenSize; i++)
-		{
-			ATUI.array[i] = TokenHolder[i];
-		}
-
-		return ATUI.uint;
-	}
-
-	void SetToken(const uint32_t token)
-	{
-		ATUI.uint = token;
-		Hasher.update(ATUI.array, sizeof(uint32_t));
-		Hasher.finalize(ATUI.array, sizeof(uint32_t));
-
-		for (uint8_t i = 0; i < TokenSize; i++)
-		{
-			TokenHolder[i] = ATUI.array[i];
-		}
-	}
 };
 #endif

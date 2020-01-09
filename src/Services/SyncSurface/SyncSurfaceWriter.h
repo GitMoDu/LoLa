@@ -24,6 +24,8 @@ private:
 	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareBlockPacketPayload;
 	using SyncSurfaceBase<ThrottlePeriodMillis>::ResetLastSentTimeStamp;
 	using SyncSurfaceBase<ThrottlePeriodMillis>::CheckThrottling;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::MetaDefinition;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::DataDefinition;
 
 	using AbstractSync::TrackedSurface;
 	using AbstractSync::SyncState;
@@ -49,10 +51,18 @@ public:
 	SyncSurfaceWriter(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
 		: SyncMetaDefinition(this),
 		DataPacketDefinition(this),
-		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
+		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface)
 	{
+		MetaDefinition = &SyncMetaDefinition;
+		DataDefinition = &DataPacketDefinition;
 	}
 
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("SyncSurfaceWriter"));
+	}
+#endif
 
 private:
 	enum SyncWriterState : uint8_t
@@ -65,14 +75,6 @@ private:
 	uint8_t SurfaceSendingIndex = 0;
 
 protected:
-#ifdef DEBUG_LOLA
-	void PrintName(Stream* serial)
-	{
-		serial->print(F("SyncSurfaceWriter"));
-
-	}
-#endif // DEBUG_LOLA
-
 	void OnTransmitted(const uint8_t header, const uint8_t id, const uint32_t transmitDuration, const uint32_t sendDuration)
 	{
 		if (SyncState == AbstractSync::SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)

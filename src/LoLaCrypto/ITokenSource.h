@@ -8,8 +8,7 @@
 class ITokenSource
 {
 public:
-	virtual uint32_t GetTOTPPeriod() { return 0; }
-	virtual void SetSeed(const uint32_t seed) {};
 	virtual uint32_t GetToken() { return 0; }
+	virtual void SetSeed(const uint32_t seed) {}
 };
 #endif

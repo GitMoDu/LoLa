@@ -5,73 +5,95 @@
 
 #include <Services\IPacketSendService.h>
 #include <Services\Link\LoLaLinkDefinitions.h>
+#include <Services\Link\ProtocolVersionCalculator.h>
 
 #include <LoLaLinkInfo.h>
 
-#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
+#include <LoLaCrypto\LoLaCryptoKeyExchanger.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
 
 
 class AbstractLinkService : public IPacketSendService
 {
-private:
-
-	//Runtime helpers.
-	uint32_t StateStartTime = 0;
-
-	PacketDefinition::IPacketListener* LastNotifiedListener = nullptr;
-	PacketDefinition::IPacketListener* NotifyListener = nullptr;
-
 protected:
-	LinkReportPacketDefinition			DefinitionReport;
-
-	LinkShortPacketDefinition			DefinitionShort;
-	LinkShortWithAckPacketDefinition	DefinitionShortWithAck;
-	LinkLongPacketDefinition			DefinitionLong;
-
 	union ArrayToUint32 {
-		byte array[4];
+		uint8_t array[4];
 		uint32_t uint;
 		int32_t iint;
 	};
 
-	//Runtime helpers.
-	ArrayToUint32 ATUI_R;
-	ArrayToUint32 ATUI_S;
+private:
+	// Runtime helpers.
+	uint32_t StateStartTime = 0;
+
+	IPacketListener* LastNotifiedListener = nullptr;
+	IPacketListener* NotifyListener = nullptr;
+
+
+	//LinkShortPacketDefinition			DefinitionShort;
+
+
+
+protected:
+	LinkPKERequestPacketDefinition		DefinitionPKERequest;
+	LinkPKEResponsePacketDefinition		DefinitionPKEResponse;
+	LinkStartWithAckPacketDefinition	DefinitionStartLink;
+
+	LinkMultiPacketDefinition			DefinitionMulti;
+	LinkReportPacketDefinition			DefinitionReport;
+
+	ProtocolVersionCalculator ProtocolVersion;
 
 	//Send packet.
-	TemplateLoLaPacket<LOLA_LINK_SERVICE_PACKET_MAX_SIZE> OutPacket;
+	TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE> OutPacket;
 
 	LoLaLinkInfo* LinkInfo = nullptr;
 
-	volatile uint32_t LastSentMillis = 0;
+	enum LinkStateEnum : uint8_t
+	{
+		Disabled = 0,
+		StartLink = 1,
+		AwaitingLink = 2,
+		AwaitingSleeping = 3,
+		Linking = 4,
+		Linked = 5
+	};
 
+	LinkStateEnum LinkState = LinkStateEnum::Disabled;
+
+	// Runtime helpers.
+	ArrayToUint32 ATUI_R;
+	uint32_t LastSentMillis = 0;
+	ArrayToUint32 ATUI_S;
 
 public:
 	AbstractLinkService(Scheduler* scheduler, ILoLaDriver* driver)
 		: IPacketSendService(scheduler, LOLA_LINK_SERVICE_CHECK_PERIOD, driver, &OutPacket)
+		, DefinitionPKERequest(this)
+		, DefinitionPKEResponse(this)
+		, DefinitionStartLink(this)
+		, DefinitionMulti(this)
 		, DefinitionReport(this)
-		, DefinitionShort(this)
-		, DefinitionShortWithAck(this)
-		, DefinitionLong(this)
 	{
 	}
 
 	virtual bool Setup()
 	{
-		if (!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionReport) ||
-			!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionShort) ||
-			!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionShortWithAck) ||
-			!LoLaDriver->GetPacketMap()->AddMapping(&DefinitionLong))
+		//Make sure our re-usable packet has enough space.
+		if (Packet->GetMaxSize() < DefinitionPKERequest.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionPKEResponse.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionStartLink.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionMulti.GetTotalSize() ||
+			Packet->GetMaxSize() < DefinitionReport.GetTotalSize())
 		{
 			return false;
 		}
 
-		//Make sure our re-usable packet has enough space for all our packets.
-		if (Packet->GetMaxSize() < DefinitionReport.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionShort.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionShortWithAck.GetTotalSize() ||
-			Packet->GetMaxSize() < DefinitionLong.GetTotalSize())
+		if (!LoLaDriver->GetPacketMap()->RegisterMapping(&DefinitionPKERequest) ||
+			!LoLaDriver->GetPacketMap()->RegisterMapping(&DefinitionPKEResponse) ||
+			!LoLaDriver->GetPacketMap()->RegisterMapping(&DefinitionStartLink) ||
+			!LoLaDriver->GetPacketMap()->RegisterMapping(&DefinitionMulti) ||
+			!LoLaDriver->GetPacketMap()->RegisterMapping(&DefinitionReport))
 		{
 			return false;
 		}
@@ -79,19 +101,17 @@ public:
 		return IPacketSendService::Setup();
 	}
 
-
-protected:
-	///Common packet handling.
-	virtual void OnLinkAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp) {}
-
 public:
-	virtual void OnAckOk(const uint8_t header, const uint8_t id, const uint32_t timestamp)
-	{
-		OnLinkAckReceived(header, id, timestamp);
-	}
-
 	//Overload and do nothing, since we are the emiter.
-	virtual void OnLinkStatusChanged() {}
+	virtual void OnLinkStatusChanged(const bool linked) {}
+
+
+#ifdef DEBUG_LOLA
+	uint8_t GetLinkState()
+	{
+		return LinkState;
+	}
+#endif // DEBUG_LOLA
 
 protected:
 
@@ -142,15 +162,17 @@ protected:
 
 	void NotifyServicesLinkStatusChanged()
 	{
-		uint8_t Count = LoLaDriver->GetPacketMap()->GetCount();
+		uint8_t Count = LoLaDriver->GetPacketMap()->GetMaxIndex();
 
 		LastNotifiedListener = nullptr;
-		for (uint8_t i = 0; i < Count; i++)
+
+		// Skip first mapping, it's gonna be the Ack definition.
+		for (uint8_t i = PACKET_DEFINITION_ACK_HEADER + 1; i < Count; i++)
 		{
 			NotifyListener = LoLaDriver->GetPacketMap()->GetServiceAt(i);
 			if (NotifyListener != nullptr)
 			{
-				NotifyListener->OnLinkStatusChanged();
+				NotifyListener->OnLinkStatusChanged(LinkInfo->HasLink());
 				LastNotifiedListener = NotifyListener;
 			}
 		}
@@ -162,55 +184,5 @@ protected:
 		serial->print(F("Link service"));
 	}
 #endif // DEBUG_LOLA
-
-	//Link service should receive packets even without link, of course.
-	bool ShouldProcessReceived()
-	{
-		return true;
-	}
-
-	///Packet builders.
-	inline void PrepareReportPacket(const uint8_t subHeader)
-	{
-		OutPacket.SetDefinition(&DefinitionReport);
-		OutPacket.SetId(subHeader);
-	}
-
-	inline void PrepareShortPacket(const uint8_t requestId, const uint8_t subHeader)
-	{
-		OutPacket.SetDefinition(&DefinitionShort);
-		OutPacket.SetId(requestId);
-		OutPacket.GetPayload()[0] = subHeader;
-	}
-
-	inline void PrepareLongPacket(const uint8_t requestId, const uint8_t subHeader)
-	{
-		OutPacket.SetDefinition(&DefinitionLong);
-		OutPacket.SetId(requestId);
-		OutPacket.GetPayload()[0] = subHeader;
-	}
-
-	inline void PrepareShortPacketWithAck(const uint8_t requestId)
-	{
-		OutPacket.SetDefinition(&DefinitionShortWithAck);
-		OutPacket.SetId(requestId);
-	}
-
-	inline void S_ArrayToPayload()
-	{
-		OutPacket.GetPayload()[1] = ATUI_S.array[0];
-		OutPacket.GetPayload()[2] = ATUI_S.array[1];
-		OutPacket.GetPayload()[3] = ATUI_S.array[2];
-		OutPacket.GetPayload()[4] = ATUI_S.array[3];
-	}
-
-	inline void ArrayToR_Array(uint8_t* incomingPayload)
-	{
-		ATUI_R.array[0] = incomingPayload[0];
-		ATUI_R.array[1] = incomingPayload[1];
-		ATUI_R.array[2] = incomingPayload[2];
-		ATUI_R.array[3] = incomingPayload[3];
-	}
 };
-
 #endif

@@ -22,6 +22,8 @@ private:
 	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareInvalidateRequestPacket;
 	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareUpdateFinishedReplyPacket;
 	using SyncSurfaceBase<ThrottlePeriodMillis>::CheckThrottling;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::MetaDefinition;
+	using SyncSurfaceBase<ThrottlePeriodMillis>::DataDefinition;
 
 	using AbstractSync::TrackedSurface;
 	using AbstractSync::SyncState;
@@ -43,18 +45,20 @@ public:
 	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
 		: SyncMetaDefinition(this),
 		DataPacketDefinition(this),
-		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface, &SyncMetaDefinition, &DataPacketDefinition)
+		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface)
 	{
+		MetaDefinition = &SyncMetaDefinition;
+		DataDefinition = &DataPacketDefinition;
 	}
 
-protected:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
 		serial->print(F("SyncSurfaceReader"));
 	}
-#endif // DEBUG_LOLA
+#endif
 
+protected:
 	void OnBlockReceived(const uint8_t index, uint8_t* payload)
 	{
 		UpdateBlockData(index, payload);

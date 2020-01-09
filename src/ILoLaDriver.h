@@ -7,15 +7,18 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 #include <LoLaCrypto\LoLaCryptoEncoder.h>
-#include <LoLaClock\ILoLaClockSource.h>
-#include <LoLaClock\RTCClockSource.h>
+
+#include <LoLaClock\IClock.h>
 #include <LoLaDefinitions.h>
+
 #include <PacketDriver\ILoLaSelector.h>
-#include <LinkIndicator.h>
+#include <PacketDriver\LinkIndicator.h>
+
+
 
 class ILoLaDriver
 {
-protected:
+private:
 	class InputInfoType
 	{
 	public:
@@ -24,7 +27,6 @@ protected:
 
 		void Clear()
 		{
-
 			Micros = 0;
 			RSSI = ILOLA_INVALID_RSSI;
 		}
@@ -34,7 +36,6 @@ protected:
 	{
 	public:
 		uint32_t Micros = 0;
-		uint8_t Header = 0;
 		uint8_t Id = 0;
 
 		void Clear()
@@ -43,15 +44,8 @@ protected:
 		}
 	};
 
-	///Statistics.
-	//Incoming packet.
-	InputInfoType LastReceivedInfo;
-
-	//Outgoing packet.
-	InputInfoType LastValidReceivedInfo;
-	OutputInfoType LastValidSentInfo;
-
-	//Global statistics.
+protected:
+	// Global statistics.
 	uint64_t TransmitedCount = 0;
 	uint64_t ReceivedCount = 0;
 	uint64_t RejectedCount = 0;
@@ -59,36 +53,36 @@ protected:
 #ifdef DEBUG_LOLA
 	uint64_t TimingCollisionCount = 0;
 #endif
-	///
 
-	///Dynamic power and channel sources.
+	// Incoming packet.
+	InputInfoType LastReceivedInfo;
+
+	// Outgoing packet.
+	InputInfoType LastValidReceivedInfo;
+	OutputInfoType LastValidSentInfo;
+	
+	/// External sources. ///
+	// Transmit power selector.
 	ITransmitPowerSelector* TransmitPowerSelector = nullptr;
+	
+	// Channel selector.
 	IChannelSelector* ChannelSelector = nullptr;
+
+	// Synced clock source.
+	ISyncedClock* SyncedClock = nullptr;
+
+	// Link Status source.
+	LinkIndicator* LinkStatusIndicator = nullptr;
+
+	// Crypto encoder.
+	LoLaCryptoEncoder* CryptoEncoder = nullptr;
 	///
 
-	//Synced clock instance.
-	ILoLaClockSource* SyncedClock = nullptr;
-
-	///Timings.
-	const uint32_t DuplexPeriodMicros = ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS * (uint32_t)1000;
-	const uint32_t HalfDuplexPeriodMicros = DuplexPeriodMicros / 2;
-	const uint32_t BackOffPeriodUnlinkedMillis = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
-	///
-
-	///Link Status.
-	LinkStatus* LinkStatusIndicator = nullptr;
-
-	///Duplex.
+	// Duplex.
 	bool EvenSlot = false;
-	///
 
-	///Packet Mapper for known definitions.
+	// Packet Mapper for known definitions.
 	LoLaPacketMap PacketMap;
-	///
-
-	///Crypto
-	LoLaCryptoEncoder	CryptoEncoder;
-	///
 
 	///For use of estimated latency features
 	uint32_t ETTM = 0;//Estimated transmission time in microseconds.
@@ -99,32 +93,41 @@ protected:
 		DriverDisabled,
 		ReadyForAnything,
 		BlockedForIncoming,
-		ProcessingIncoming,
 		SendingOutgoing
 	};
 
 public:
-	ILoLaDriver() : PacketMap(), CryptoEncoder()
+	ILoLaDriver() : PacketMap()
 	{
-	
+
 	}
-	
-	void SetClockSource(ILoLaClockSource* syncedClock)
+
+	ISyncedClock* GetSyncedClock()
+	{
+		return SyncedClock;
+	}
+
+	void SetSyncedClock(ISyncedClock* syncedClock)
 	{
 		SyncedClock = syncedClock;
 	}
 
 	LoLaCryptoEncoder* GetCryptoEncoder()
 	{
-		return &CryptoEncoder;
+		return CryptoEncoder;
 	}
 
-	LinkStatus* GetLinkStatusIndicator()
+	void SetCryptoEncoder(LoLaCryptoEncoder* cryptoEncoder)
+	{
+		CryptoEncoder = cryptoEncoder;
+	}
+
+	LinkIndicator* GetLinkStatusIndicator()
 	{
 		return LinkStatusIndicator;
 	}
 
-	void SetLinkStatusIndicator(LinkStatus* linkStatusIndicator)
+	void SetLinkStatusIndicator(LinkIndicator* linkStatusIndicator)
 	{
 		if (linkStatusIndicator != nullptr)
 		{
@@ -204,7 +207,7 @@ public:
 
 	void Stop()
 	{
-
+		OnStop();
 	}
 
 	void Start()
@@ -249,7 +252,7 @@ public:
 
 	int16_t GetLastRSSI()
 	{
-		return LastReceivedInfo.RSSI;
+		return LastValidReceivedInfo.RSSI;
 	}
 
 	uint32_t GetElapsedMillisLastValidReceived()
@@ -291,24 +294,19 @@ public:
 		return LastValidReceivedInfo.RSSI;
 	}
 
+	uint8_t GetTransmitPowerRange()
+	{
+		return GetTransmitPowerMax() - GetTransmitPowerMin();
+	}
+
 	uint8_t GetTransmitPower()
 	{
-		return map(TransmitPowerSelector->GetTransmitPower(), 0, UINT8_MAX, GetTransmitPowerMin(), GetTransmitPowerMax());
+		return GetTransmitPowerMin() + (uint8_t)(((uint16_t)TransmitPowerSelector->GetTransmitPowerNormalized() * GetTransmitPowerRange()) / UINT8_MAX);
 	}
 
 	uint8_t GetTransmitPowerNormalized()
 	{
-		return TransmitPowerSelector->GetTransmitPower();
-	}
-
-	const uint8_t GetChannelRange()
-	{
-		return GetChannelMax() - GetChannelMin();
-	}
-
-	void ResetChannel()
-	{
-		ChannelSelector->ResetChannel();
+		return TransmitPowerSelector->GetTransmitPowerNormalized();
 	}
 
 	inline uint8_t GetChannel()
@@ -316,31 +314,39 @@ public:
 		return ChannelSelector->GetChannel();
 	}
 
-	LoLaPacketMap* GetPacketMap()
+	ILoLaPacketMap* GetPacketMap()
 	{
 		return &PacketMap;
 	}
 
-protected:
-	//Driver constants' overload.
+public:
+	// Driver constants' overload.
+	virtual const uint8_t GetChannelMax() { return 0; }
+	virtual const uint8_t GetChannelMin() { return 0; }
+	virtual const uint8_t GetMaxPacketSize() { return 0; }
+
+	// Driver constants' overload.
 	virtual const uint8_t GetTransmitPowerMax() { return 1; }
 	virtual const uint8_t GetTransmitPowerMin() { return 0; }
 
 	virtual const int16_t GetRSSIMax() { return 0; }
-	virtual const int16_t GetRSSIMin() { return ILOLA_DEFAULT_MIN_RSSI; }
+	virtual const int16_t GetRSSIMin() { return -50; }
 
-	virtual const uint8_t GetChannelMax() { return 0; }
-	virtual const uint8_t GetChannelMin() { return 0; }
 
+protected:
+
+	// Oportune overload to do some houseleeping, if needed.
 	virtual void OnStart() {}
+	virtual void OnStop() {}
 	virtual void OnResetLiveData() {}
 
 public:
 	//Packet driver implementation.
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
-	virtual bool Setup() 
+	virtual bool Setup()
 	{
 		return SyncedClock != nullptr &&
+			CryptoEncoder != nullptr &&
 			LinkStatusIndicator != nullptr &&
 			TransmitPowerSelector != nullptr &&
 			ChannelSelector != nullptr;

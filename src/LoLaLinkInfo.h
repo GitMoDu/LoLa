@@ -6,21 +6,16 @@
 #include <ILoLaDriver.h>
 
 #include <RingBufCPP.h>
-#include <LinkIndicator.h>
-#include <LoLaClock\ILoLaClockSource.h>
-#include <LoLaCrypto\PseudoMacGenerator.h>
+#include <PacketDriver\LinkIndicator.h>
 
 
-class LoLaLinkInfo : public LinkStatus
+class LoLaLinkInfo : public LinkIndicator
 {
 private:
 	const uint32_t ILOLA_INVALID_LATENCY = UINT32_MAX;
-	const uint8_t INVALID_SESSION = 0;
 
 	ILoLaDriver* Driver = nullptr;
-	ILoLaClockSource* SyncedClock = nullptr;
 
-	uint32_t RTT = ILOLA_INVALID_LATENCY;
 	uint32_t LinkStartedSeconds = 0;
 
 	//Real time update tracking.
@@ -29,18 +24,6 @@ private:
 
 	RingBufCPP<uint8_t, RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT> PartnerRSSISamples;
 	uint32_t PartnerAverageRSSI = 0;
-	uint8_t PartnerReceivedCount = 0;
-
-	//Link session information.
-	uint8_t SessionId = INVALID_SESSION;
-
-	//MAC generated from UUID.
-	LoLaMAC<LOLA_LINK_INFO_MAC_LENGTH> LocalMacGenerator;
-	//
-
-	bool PartnerIdPresent = false;
-	uint32_t PartnerId = 0;
-
 
 	uint32_t ClockSyncAdjustments = 0;
 
@@ -48,70 +31,22 @@ private:
 	uint32_t ActivityElapsedHelper = 0;
 
 public:
-	LoLaLinkInfo(ILoLaDriver* driver, ILoLaClockSource* syncedClock) :
-		LinkStatus(),
-		LocalMacGenerator()
+	// Link session information.
+	uint32_t SessionLastStarted = 0;
+
+
+	//TODO: This should only be here in debug mode.
+	uint8_t PartnerReceivedCount = 0;
+
+public:
+	LoLaLinkInfo(ILoLaDriver* driver) :
+		LinkIndicator()
 	{
 		Driver = driver;
-		SyncedClock = syncedClock;
 		if (Driver != nullptr)
 		{
 			Driver->SetLinkStatusIndicator(this);
 		}
-	}
-
-	uint32_t GetPartnerId()
-	{
-		return PartnerId;
-	}
-
-	uint8_t* GetLocalMAC()
-	{
-		return LocalMacGenerator.GetMACPointer();
-	}
-
-	uint32_t GetLocalId()
-	{
-		return LocalMacGenerator.GetMACHash();
-	}
-
-	//Only for use in Host
-	void ClearRemoteId()
-	{
-		PartnerIdPresent = false;
-	}
-
-	void SetPartnerId(const uint32_t id)
-	{
-		PartnerId = id;
-		PartnerIdPresent = true;
-	}
-
-	bool HasPartnerId()
-	{
-		return PartnerId;
-	}
-
-	bool SetSessionId(const uint8_t sessionId)
-	{
-		SessionId = sessionId;
-
-		return SessionId != INVALID_SESSION;
-	}
-
-	bool HasSession()
-	{
-		return HasSessionId() && HasPartnerId();
-	}
-
-	bool HasSessionId()
-	{
-		return SessionId != INVALID_SESSION;
-	}
-
-	uint8_t GetSessionId()
-	{
-		return SessionId;
 	}
 
 	uint32_t GetClockSyncAdjustments()
@@ -156,12 +91,9 @@ public:
 
 	void Reset()
 	{
-		SessionId = INVALID_SESSION;
-		PartnerIdPresent = false;
-
+		SessionLastStarted = 0;
 		LinkStartedSeconds = 0;
 
-		RTT = ILOLA_INVALID_LATENCY;
 		while (!PartnerRSSISamples.isEmpty())
 		{
 			PartnerRSSISamples.pull();
@@ -171,44 +103,15 @@ public:
 
 		ClockSyncAdjustments = 0;
 
-		if (Driver != nullptr)
-		{
-			Driver->ResetLiveData();
-		}
-	}
-
-	bool HasLatency()
-	{
-		return RTT != ILOLA_INVALID_LATENCY;
-	}
-
-	void SetRTT(const uint32_t rttMicros)
-	{
-		RTT = rttMicros;
-	}
-
-	uint16_t GetRTT()
-	{
-		return RTT;
-	}
-
-	float GetLatency()
-	{
-		if (HasLatency())
-		{
-			return ((float)RTT / (float)2000);
-		}
-		else
-		{
-			return (float)0;// Unknown.
-		}
+		Driver->ResetLiveData();
 	}
 
 	uint32_t GetLinkDurationSeconds()
 	{
 		if (HasLink())
 		{
-			return (SyncedClock->GetSyncSeconds() - LinkStartedSeconds);
+			//TODO: Replace with UTC seconds.
+			return (millis() / 1000 - LinkStartedSeconds);
 		}
 		else
 		{
@@ -218,7 +121,8 @@ public:
 
 	void StampLinkStarted()
 	{
-		LinkStartedSeconds = SyncedClock->GetSyncSeconds();
+		//TODO: Replace with UTC seconds.
+		LinkStartedSeconds = millis() / 1000;
 	}
 
 	bool HasPartnerRSSI()
@@ -256,24 +160,10 @@ public:
 		return max(PartnerReceivedCount, (Driver->GetTransmitedCount() % UINT8_MAX)) - PartnerReceivedCount;
 	}
 
-	uint8_t GetPartnerReceivedCount()
-	{
-		return PartnerReceivedCount;
-	}
-
-	void SetPartnerReceivedCount(const uint8_t partnerReceivedCount)
-	{
-		PartnerReceivedCount = partnerReceivedCount;
-	}
-
 	//Output normalized to uint8_t range.
 	uint8_t GetRSSINormalized()
 	{
-		if (Driver != nullptr)
-		{
-			return Driver->GetRSSINormalized();
-		}
-		return 0;//Unknown.
+		return Driver->GetRSSINormalized();
 	}
 
 	uint32_t GetLastActivityElapsedMillis()
@@ -340,30 +230,28 @@ public:
 	{
 		return Driver->GetTimingCollisionCount();
 	}
-#endif
 
 	uint64_t GetStateCollisionCount()
 	{
 		return Driver->GetTimingCollisionCount();
 	}
 
-#ifdef DEBUG_LOLA
-	void PrintMac(Stream* serial)
-	{
-		PrintMac(serial, GetLocalMAC());
-	}
+	//void PrintMac(Stream* serial)
+	//{
+	//	PrintMac(serial, GetLocalMAC());
+	//}
 
-	void PrintMac(Stream* serial, uint8_t* mac)
-	{
-		for (uint8_t i = 0; i < LOLA_LINK_INFO_MAC_LENGTH; i++)
-		{
-			serial->print(mac[i], HEX);
-			if (i < LOLA_LINK_INFO_MAC_LENGTH - 1)
-			{
-				serial->print(':');
-			}
-		}
-	}
+	//void PrintMac(Stream* serial, uint8_t* mac)
+	//{
+	//	for (uint8_t i = 0; i < LOLA_LINK_INFO_MAC_LENGTH; i++)
+	//	{
+	//		serial->print(mac[i], HEX);
+	//		if (i < LOLA_LINK_INFO_MAC_LENGTH - 1)
+	//		{
+	//			serial->print(':');
+	//		}
+	//	}
+	//}
 #endif // DEBUG_LOLA
 };
 #endif

@@ -14,8 +14,8 @@
 
 
 #define LOLA_SEND_SERVICE_CHECK_PERIOD_MILLIS				(uint32_t)1
-#define LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(LOLA_SEND_SERVICE_DELAYED_MAX_DUPLEX*ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
-#define LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(ILOLA_DEFAULT_DUPLEX_PERIOD_MILLIS)
+#define LOLA_SEND_SERVICE_SEND_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(LOLA_SEND_SERVICE_DELAYED_MAX_DUPLEX*ILOLA_DUPLEX_PERIOD_MILLIS)
+#define LOLA_SEND_SERVICE_REPLY_TIMEOUT_DEFAULT_MILLIS		(uint8_t)(ILOLA_DUPLEX_PERIOD_MILLIS)
 
 #define LOLA_SEND_SERVICE_BACK_OFF_DEFAULT_DURATION_MILLIS	(uint32_t)200
 
@@ -68,20 +68,15 @@ public:
 	}
 
 public:
-	virtual bool OnAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp)
+	virtual void OnAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp)
 	{
-		// Make sure we only eat our own packets.
 		if (SendStatus == SendStatusEnum::WaitingForAck &&
 			Packet->GetDataHeader() == header &&
 			Packet->GetId() == id)
 		{
 			OnAckOk(header, id, timestamp);
 			ClearSendRequest();
-
-			return true;
 		}
-
-		return false;
 	}
 
 	virtual bool Setup()

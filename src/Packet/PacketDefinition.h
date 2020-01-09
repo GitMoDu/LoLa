@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <LoLaDefinitions.h>
+#include <IPacketListener.h>
 
 
 
@@ -12,14 +13,14 @@
 // Packet: [MACCRC1|MACCRC2|HEADER|ID|PAYLOAD]
 
 #define LOLA_PACKET_MACCRC_INDEX				(0)
-#define LOLA_PACKET_MACCRC_SIZE					(2)
+#define LOLA_PACKET_MACCRC_SIZE					(LOLA_LINK_CRYPTO_MAC_CRC_SIZE)
 #define LOLA_PACKET_HEADER_INDEX				(LOLA_PACKET_MACCRC_INDEX + LOLA_PACKET_MACCRC_SIZE)
 #define LOLA_PACKET_ID_INDEX					(LOLA_PACKET_HEADER_INDEX + 1)
 #define LOLA_PACKET_PAYLOAD_INDEX				(LOLA_PACKET_ID_INDEX + 1)
 
 #define LOLA_PACKET_MIN_PACKET_SIZE				(LOLA_PACKET_PAYLOAD_INDEX)	//CRC + Header + Id.
 
-#define LOLA_PACKET_MAX_PACKET_SIZE				22 + LOLA_PACKET_MIN_PACKET_SIZE
+#define LOLA_PACKET_MAX_PACKET_SIZE				64
 
 
 class PacketDefinitionHelper
@@ -34,38 +35,6 @@ public:
 
 class PacketDefinition
 {
-
-public:
-	class IPacketListener
-	{
-	public:
-		//Returning false denies Ack response, if packet has Ack.
-		virtual bool OnPacketReceived(PacketDefinition* definition, const uint8_t id, uint8_t* payload, const uint32_t timestamp)
-		{
-			return false;
-		}
-
-		virtual bool OnAckReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp)
-		{
-			return false;
-		}
-
-		virtual bool OnPacketTransmited(const uint8_t header, const uint8_t id, const uint32_t timestamp)
-		{
-			return false;
-		}
-
-		virtual void OnLinkStatusChanged() {}
-
-#ifdef DEBUG_LOLA
-		virtual void PrintName(Stream* serial)
-		{
-			serial->print(F("No Name"));
-		}
-#endif
-	};
-
-
 public:
 	///Configurations for packets.
 	static const uint8_t PACKET_DEFINITION_MASK_CUSTOM_7 = B00000010;
@@ -98,19 +67,9 @@ public:
 		return Service != nullptr;
 	}
 
-	const uint8_t GetHeader()
-	{
-		return Header;
-	}
-
-	const uint8_t GetPayloadSize()
-	{
-		return PayloadSize;
-	}
-
 	const uint8_t GetContentSize()
 	{
-		return LOLA_PACKET_HEADER_INDEX + PayloadSize;
+		return LOLA_PACKET_PAYLOAD_INDEX - LOLA_PACKET_HEADER_INDEX + PayloadSize;
 	}
 
 	const uint8_t GetTotalSize()
@@ -144,7 +103,5 @@ public:
 		}
 	}
 #endif
-
 };
-
 #endif

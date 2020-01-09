@@ -3,21 +3,17 @@
 #ifndef _ILOLA_SELECTOR_h
 #define _ILOLA_SELECTOR_h
 
+class ITransmitPowerSelector
+{
+public:
+	virtual uint8_t GetTransmitPowerNormalized() { return UINT8_MAX / 2; }
+};
 
 class IChannelSelector
 {
 public:
-	virtual uint8_t GetChannel() { return UINT8_MAX / 2; }
-	virtual void ResetChannel() {}
+	IChannelSelector() {}
+
+	virtual uint8_t GetChannel() { return 0; }
 };
-
-class ITransmitPowerSelector
-{
-public:
-	virtual uint8_t GetTransmitPower() { return UINT8_MAX / 2; }
-};
-
-
-
 #endif
-

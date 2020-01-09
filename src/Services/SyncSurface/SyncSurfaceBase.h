@@ -14,9 +14,6 @@ template<const uint32_t ThrottlePeriodMillis = 1>
 class SyncSurfaceBase : public AbstractSync
 {
 private:
-	PacketDefinition* SyncMetaDefinition = nullptr;
-	PacketDefinition* DataPacketDefinition = nullptr;
-
 	static const uint8_t SYNC_META_SUB_HEADER_SERVICE_DISCOVERY = 0;
 	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED = 1;
 	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY = 2;
@@ -29,17 +26,14 @@ private:
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_PACKET_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
 
+protected:
+	PacketDefinition* MetaDefinition = nullptr;
+	PacketDefinition* DataDefinition = nullptr;
+
 public:
-	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface,
-		PacketDefinition* metaDefinition, PacketDefinition* dataDefinition)
+	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
 		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder)
 	{
-		SyncMetaDefinition = metaDefinition;
-		DataPacketDefinition = dataDefinition;
-//#ifdef DEBUG_LOLA
-//		SyncMetaDefinition->SetOwner(trackedSurface);
-//		DataPacketDefinition->SetOwner(trackedSurface);
-//#endif
 	}
 
 	bool Setup()
@@ -49,8 +43,8 @@ public:
 			return false;
 		}
 
-		if (!LoLaDriver->GetPacketMap()->AddMapping(SyncMetaDefinition) ||
-			!LoLaDriver->GetPacketMap()->AddMapping(DataPacketDefinition))
+		if (!LoLaDriver->GetPacketMap()->RegisterMapping(MetaDefinition) ||
+			!LoLaDriver->GetPacketMap()->RegisterMapping(DataDefinition))
 		{
 			return false;
 		}
@@ -87,30 +81,30 @@ protected:
 		}
 	}
 
-	bool ProcessPacket(ILoLaPacket* incomingPacket)
+	bool OnPacketReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp, uint8_t* payload)
 	{
-		if (incomingPacket->GetDataHeader() == DataPacketDefinition->GetHeader())
+		if (header == DataDefinition->Header)
 		{
 			//To Reader.
 			if (SyncState != SyncStateEnum::Disabled)
 			{
-				OnBlockReceived(incomingPacket->GetId(), incomingPacket->GetPayload());
+				OnBlockReceived(id, payload);
 			}
 
 			return true;
 		}
-		else if (incomingPacket->GetDataHeader() == SyncMetaDefinition->GetHeader())
+		else if (header == MetaDefinition->Header)
 		{
 			if (SyncState != SyncStateEnum::Disabled)
 			{
-				switch (incomingPacket->GetId())
+				switch (id)
 				{
 					//To Reader.
 				case SYNC_META_SUB_HEADER_UPDATE_FINISHED:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnUpdateFinishedReceived"));
 #endif
-					SetRemoteHash(incomingPacket->GetPayload()[0]);
+					SetRemoteHash(payload[0]);
 					OnUpdateFinishedReceived();
 					break;
 
@@ -119,21 +113,21 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnUpdateFinishedReplyReceived"));
 #endif
-					SetRemoteHash(incomingPacket->GetPayload()[0]);
+					SetRemoteHash(payload[0]);
 					OnUpdateFinishedReplyReceived();
 					break;
 				case SYNC_META_SUB_HEADER_INVALIDATE_REQUEST:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnInvalidateReceived"));
 #endif
-					SetRemoteHash(incomingPacket->GetPayload()[0]);
+					SetRemoteHash(payload[0]);
 					OnInvalidateRequestReceived();
 					break;
 				case SYNC_META_SUB_HEADER_SERVICE_DISCOVERY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnServiceDiscoveryReceived"));
 #endif
-					OnServiceDiscoveryReceived(incomingPacket->GetPayload()[0]);
+					OnServiceDiscoveryReceived(payload[0]);
 					break;
 				default:
 					break;
@@ -168,7 +162,7 @@ protected:
 
 	inline void PrepareMetaHashPacket(const uint8_t subHeader)
 	{
-		Packet->SetDefinition(SyncMetaDefinition);
+		Packet->SetDefinition(MetaDefinition);
 		Packet->SetId(subHeader);
 		UpdateLocalHash();
 		Packet->GetPayload()[0] = GetLocalHash();
@@ -176,7 +170,7 @@ protected:
 
 	inline void PrepareMetaPacket(const uint8_t subHeader, const uint8_t hash)
 	{
-		Packet->SetDefinition(SyncMetaDefinition);
+		Packet->SetDefinition(MetaDefinition);
 		Packet->SetId(subHeader);
 		Packet->GetPayload()[0] = hash;
 	}
@@ -191,7 +185,7 @@ protected:
 	{
 		if (index < TrackedSurface->GetBlockCount())
 		{
-			Packet->SetDefinition(DataPacketDefinition);
+			Packet->SetDefinition(DataDefinition);
 			Packet->SetId(index);
 			return true;
 		}

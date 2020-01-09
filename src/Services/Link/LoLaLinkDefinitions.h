@@ -6,65 +6,54 @@
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 
-#include <LoLaCrypto\LoLaCryptoKeyExchange.h>
+#include <LoLaCrypto\LoLaCryptoKeyExchanger.h>
 
 #include <LoLaLinkInfo.h>
 #include <LoLaDefinitions.h>
 ///
 
-///Link packet sizes.
-#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT				1
-#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT				(1 + sizeof(uint32_t))  //1 byte Sub-header + 4 byte payload for uint32.
-#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK		(sizeof(uint32_t))	//4 byte encoded Partner Id.
-#define LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG					(1 + LoLaCryptoKeyExchanger::KEY_MAX_SIZE)  //1 byte Sub-header + key payload size.		
-
-#define LOLA_LINK_SERVICE_PACKET_MAX_SIZE					(LOLA_PACKET_MIN_PACKET_SIZE + LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
 
 
-///Link headers.
-//Pre-Linking headers, with space for protocol versioning.
-#define LOLA_LINK_SUBHEADER_LINK_DISCOVERY					0x00 + LOLA_LINK_PROTOCOL_VERSION
-#define LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST				0x10 + LOLA_LINK_PROTOCOL_VERSION
+
+
+// Link sub-headers.
+
+// ClockSync.
+
+//#define LOLA_LINK_SUBHEADER_LINK_DISCOVERY					0x00
+//#define LOLA_LINK_SUBHEADER_HOST_ID_BROADCAST				0x10
 
 //Public Key Cryptography (PKC) headers.
-#define LOLA_LINK_SUBHEADER_HOST_PUBLIC_KEY					0x20
-
-#define LOLA_LINK_SUBHEADER_REMOTE_PKC_START_REQUEST		0x30
-#define LOLA_LINK_SUBHEADER_REMOTE_PUBLIC_KEY				0x31
+//#define LOLA_LINK_SUBHEADER_REMOTE_KE_START_REQUEST			0x10
+//#define LOLA_LINK_SUBHEADER_HOST_KE_RESPONSE				0x20
 
 //Linking packets.
-#define LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST				0x40
-#define LOLA_LINK_SUBHEADER_INFO_SYNC_HOST					0x41
-#define LOLA_LINK_SUBHEADER_NTP_REPLY						0x42
-#define LOLA_LINK_SUBHEADER_UTC_REPLY						0x43
-
-#define LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE				0x50
-#define LOLA_LINK_SUBHEADER_NTP_REQUEST						0X51
-#define LOLA_LINK_SUBHEADER_UTC_REQUEST						0X52
-
-
-#define LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST				0x90
-#define LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY					0x91
-
-#define LOLA_LINK_SUBHEADER_LINK_REPORT						0x0A
-#define LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY			0x0B
+//#define LOLA_LINK_SUBHEADER_INFO_SYNC_REQUEST				0x40
+//#define LOLA_LINK_SUBHEADER_INFO_SYNC_HOST					0x41
+//#define LOLA_LINK_SUBHEADER_NTP_REPLY						0x42
+//#define LOLA_LINK_SUBHEADER_UTC_REPLY						0x43
+//
+//#define LOLA_LINK_SUBHEADER_INFO_SYNC_REMOTE				0x50
+//#define LOLA_LINK_SUBHEADER_NTP_REQUEST						0X51
+//#define LOLA_LINK_SUBHEADER_UTC_REQUEST						0X52
+//
+//
+//#define LOLA_LINK_SUBHEADER_NTP_TUNE_REQUEST				0x90
+//#define LOLA_LINK_SUBHEADER_NTP_TUNE_REPLY					0x91
+//
+//#define LOLA_LINK_SUBHEADER_LINK_REPORT						0x0A
+//#define LOLA_LINK_SUBHEADER_LINK_REPORT_WITH_REPLY			0x0B
 
 
 //Packet definition headers.
-#define LOLA_LINK_HEADER_PING_WITH_ACK						(PACKET_DEFINITION_LINK_START_HEADER)
-#define LOLA_LINK_HEADER_SHORT								(LOLA_LINK_HEADER_PING_WITH_ACK + 1)
-#define LOLA_LINK_HEADER_SHORT_WITH_ACK						(LOLA_LINK_HEADER_SHORT + 1)
-#define LOLA_LINK_HEADER_LONG								(LOLA_LINK_HEADER_SHORT_WITH_ACK + 1)
-#define LOLA_LINK_HEADER_REPORT								(LOLA_LINK_HEADER_LONG + 1)
+#define LOLA_LINK_HEADER_PKE_REQUEST						(PACKET_DEFINITION_LINK_START_HEADER)
+#define LOLA_LINK_HEADER_PKE_RESPONSE						(LOLA_LINK_HEADER_PKE_REQUEST + 1)
+#define LOLA_LINK_HEADER_LINK_START							(LOLA_LINK_HEADER_PKE_RESPONSE + 1)
 
+#define LOLA_LINK_HEADER_MULTI								(LOLA_LINK_HEADER_LINK_START + 1)
 
-enum LinkingStagesEnum : uint8_t
-{
-	InfoSyncStage = 0,
-	ClockSyncStage = 1,
-	LinkProtocolSwitchOver = 2,
-	LinkingDone = 3
-};
+#define LOLA_LINK_HEADER_REPORT								(LOLA_LINK_HEADER_MULTI + 1)
+#define LOLA_LINK_HEADER_PING_WITH_ACK						(LOLA_LINK_HEADER_REPORT + 1)
 
 
 class PingPacketDefinition : public PacketDefinition
@@ -73,7 +62,7 @@ class PingPacketDefinition : public PacketDefinition
 public:
 	PingPacketDefinition(IPacketListener* service)
 		: PacketDefinition(service,
-			LOLA_LINK_HEADER_PING_WITH_ACK, 
+			LOLA_LINK_HEADER_PING_WITH_ACK,
 			0,// Only payload is Id. 
 			PacketDefinition::PACKET_DEFINITION_MASK_HAS_ACK)
 	{}
@@ -86,48 +75,30 @@ public:
 #endif
 };
 
-
-class LinkReportPacketDefinition : public PacketDefinition
+class LinkMultiPacketDefinition : public PacketDefinition
 {
 public:
-	LinkReportPacketDefinition(IPacketListener* service) :
+	LinkMultiPacketDefinition(IPacketListener* service) :
 		PacketDefinition(service,
-			LOLA_LINK_HEADER_REPORT,
-			LOLA_LINK_SERVICE_PAYLOAD_SIZE_REPORT)
+			LOLA_LINK_HEADER_MULTI,
+			sizeof(uint32_t)*2)  // 2 x 32 bit payload.
 	{}
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("L-Report"));
+		serial->print(F("L-Linker"));
 	}
 #endif
 };
 
-class LinkShortPacketDefinition : public PacketDefinition
+class LinkStartWithAckPacketDefinition : public PacketDefinition
 {
 public:
-	LinkShortPacketDefinition(IPacketListener* service) :
-		PacketDefinition(service, 
-			LOLA_LINK_HEADER_SHORT,
-			LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT)
-	{}
-
-#ifdef DEBUG_LOLA
-	void PrintName(Stream* serial)
-	{
-		serial->print(F("L-Short"));
-	}
-#endif
-};
-
-class LinkShortWithAckPacketDefinition : public PacketDefinition
-{
-public:
-	LinkShortWithAckPacketDefinition(IPacketListener* service) :
-		PacketDefinition(service, 
-			LOLA_LINK_HEADER_SHORT_WITH_ACK, 
-			LOLA_LINK_SERVICE_PAYLOAD_SIZE_SHORT_WITH_ACK,
+	LinkStartWithAckPacketDefinition(IPacketListener* service) :
+		PacketDefinition(service,
+			LOLA_LINK_HEADER_LINK_START,
+			0,
 			PacketDefinition::PACKET_DEFINITION_MASK_HAS_ACK)
 	{}
 
@@ -139,21 +110,55 @@ public:
 #endif
 };
 
-class LinkLongPacketDefinition : public PacketDefinition
+class LinkReportPacketDefinition : public PacketDefinition
 {
 public:
-	LinkLongPacketDefinition(IPacketListener* service) :
+	LinkReportPacketDefinition(IPacketListener* service) :
 		PacketDefinition(service,
-			LOLA_LINK_HEADER_LONG,
-			LOLA_LINK_SERVICE_PAYLOAD_SIZE_LONG)
+			LOLA_LINK_HEADER_REPORT,
+			2)// 1 byte for RSSI + 1 byte 
 	{}
 
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("L-Long"));
+		serial->print(F("L-Report"));
 	}
 #endif
 };
 
+class LinkPKERequestPacketDefinition : public PacketDefinition
+{
+public:
+	LinkPKERequestPacketDefinition(IPacketListener* service) :
+		PacketDefinition(service,
+			LOLA_LINK_HEADER_PKE_REQUEST,
+			sizeof(uint8_t) + sizeof(uint32_t) + LoLaCryptoKeyExchanger::KEY_MAX_SIZE)// Request Id + Protocol Id + Public Key.
+	{}
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("L-PKERequest"));
+	}
+#endif
+};
+
+class LinkPKEResponsePacketDefinition : public PacketDefinition
+{
+public:
+	LinkPKEResponsePacketDefinition(IPacketListener* service) :
+		PacketDefinition(service,
+			LOLA_LINK_HEADER_PKE_RESPONSE,
+			sizeof(uint8_t) + sizeof(uint32_t) + LoLaCryptoKeyExchanger::KEY_MAX_SIZE, // Request Id + Session Salt + Public Key.
+			PacketDefinition::PACKET_DEFINITION_MASK_HAS_ACK)
+	{}
+
+#ifdef DEBUG_LOLA
+	void PrintName(Stream* serial)
+	{
+		serial->print(F("L-PKEResponse"));
+	}
+#endif
+};
 #endif

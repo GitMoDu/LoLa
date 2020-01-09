@@ -4,8 +4,8 @@
 #define _LOLASI446XPACKETDRIVER_h
 
 
+#include <SPI.h>
 #include <PacketDriver\RadioDrivers\LoLaSi446x\LoLaSi446xRadioDriver.h>
-#include <PacketDriver\RadioDrivers\LoLaSi446x\PendingActionsTracker.h>
 
 
 class LoLaSi446xPacketDriver
@@ -15,12 +15,28 @@ private:
 
 	uint32_t LastEventTimestamp = 0;
 
-	PendingActionsTracker PendingActions;
+	uint8_t ReceivedPacketLength = 0;
+
+	struct PendingActionsStruct
+	{
+		volatile bool RX = false;
+		volatile bool Power = false;
+		volatile bool Channel = false;
+
+		void Clear()
+		{
+			RX = false;
+			Power = false;
+			Channel = false;
+		}
+	};
+
+protected:
+	PendingActionsStruct PendingActions;
 
 public:
 	LoLaSi446xPacketDriver(SPIClass* spi, const uint8_t cs, const uint8_t reset, const uint8_t irq)
 		: LoLaSi446xRadioDriver(spi, cs, reset, irq)
-		, PendingActions()
 	{
 	}
 
@@ -47,15 +63,15 @@ public:
 		LastEventTimestamp = EventTimestamp;
 		if (CheckQueue(LastEventTimestamp))
 		{
-			if (PendingActions.GetRX())
+			if (PendingActions.RX)
 			{
 				SetRadioReceive();
 			}
-			else if (PendingActions.GetPower())
+			else if (PendingActions.Power)
 			{
 				SetRadioPower();
 			}
-			else if (PendingActions.GetChannel())
+			else if (PendingActions.Channel)
 			{
 				SetRadioChannel();
 			}
@@ -76,13 +92,13 @@ protected:
 
 	virtual void OnChannelUpdated()
 	{
-		PendingActions.SetChannel();
+		PendingActions.Channel = true;
 		Wake();
 	}
 
 	virtual void OnTransmitPowerUpdated()
 	{
-		PendingActions.SetPower();
+		PendingActions.Power = true;
 		Wake();
 	}
 
@@ -90,11 +106,11 @@ protected:
 	{
 		if (AllowedRadioChange() && SetRadioTransmitPower())
 		{
-			PendingActions.ClearPower();
+			PendingActions.Power = false;
 		}
 		else
 		{
-			PendingActions.SetPower();
+			PendingActions.Power = true;
 			Wake();
 		}
 	}
@@ -104,29 +120,31 @@ protected:
 		if (AllowedRadioChange())
 		{
 			SetRadioReceive();
-			PendingActions.ClearChannel();
+			// Setting the channel and RX are the same in this radio, so we clear both flags.
+			PendingActions.Channel = false;
+			PendingActions.RX = false;
 		}
 		else
 		{
-			PendingActions.SetChannel();
+			PendingActions.Channel = true;
 			Wake();
 		}
 	}
 
-	bool RadioTransmit()
+	virtual void SetRadioReceive()
 	{
-#ifdef LOLA_MOCK_RADIO
-		delayMicroseconds(500);
-		return true;
-#else
-
-		if (!AllowedRadioChange())
+		if (AllowedRadioChange() && SetRadioReceiveInternal())
 		{
-			return false;
+			OnRadioSetToRX();
+			// Setting the channel and RX are the same in this radio, so we clear both flags.
+			PendingActions.Channel = false;
+			PendingActions.RX = false;
 		}
-
-		return RadioTransmitInternal();
-#endif
+		else
+		{
+			PendingActions.Channel = true;
+			Wake();
+		}
 	}
 
 	bool RadioSetup()
@@ -136,25 +154,27 @@ protected:
 #else
 		if (!LoLaSi446xRadioDriver::RadioSetup())
 		{
-#ifdef DEBUG_LOLA
-			Serial.println(F("Si4463 Present"));
-			Serial.println(DeviceInfo.RevisionBranch);
-			Serial.println(DeviceInfo.RevisionExternal);
-			Serial.println(DeviceInfo.RevisionInternal);
-			Serial.println(DeviceInfo.ChipRevision);
-			Serial.println(DeviceInfo.Customer);
-			Serial.println(DeviceInfo.PartId);
-			Serial.println(DeviceInfo.Patch);
-			Serial.println(DeviceInfo.PartBuild);
-			Serial.println(DeviceInfo.Function);
-			Serial.println(DeviceInfo.ROM);
-#endif // DEBUG_LOLA
-			return true;
-		}
-		else
-		{
+#ifdef DEBUG_RADIO_DRIVER
+			Serial.println(F("LoLaSi446xRadioDriver setup failed."));
+#endif
 			return false;
 		}
+
+#ifdef DEBUG_RADIO_DRIVER
+		Serial.print(F("Si4463 Present: "));
+		//Serial.println(DeviceInfo.RevisionBranch);
+		//Serial.println(DeviceInfo.RevisionExternal);
+		//Serial.println(DeviceInfo.RevisionInternal);
+		//Serial.println(DeviceInfo.ChipRevision);
+		//Serial.println(DeviceInfo.Customer);
+		Serial.println(DeviceInfo.PartId);
+		//Serial.println(DeviceInfo.Patch);
+		//Serial.println(DeviceInfo.PartBuild);
+		//Serial.println(DeviceInfo.Function);
+		//Serial.println(DeviceInfo.ROM);
+#endif
+
+		return true;
 #endif
 	}
 
@@ -164,7 +184,7 @@ private:
 	{
 		ReadInterruptFlags();
 
-		// Valid PREAMBLE and SYNC, packet data now begins
+		// Valid PREAMBLE and SYNC detected.
 		if (HasInterruptSyncDetect())
 		{
 			LastReceivedInfo.Micros = timeMicros;
@@ -174,38 +194,37 @@ private:
 		// Valid packet.
 		else if (HasInterruptRX())
 		{
-			uint8_t PacketLength = GetReceivedLength();
+			ReceivedPacketLength = GetReceivedLength();
 
-			if (PacketLength >= LOLA_PACKET_MIN_PACKET_SIZE &&
-				PacketLength < LOLA_PACKET_MAX_PACKET_SIZE &&
-				AllowedReceive())
+			if (ReceivedPacketLength >= LOLA_PACKET_MIN_PACKET_SIZE &&
+				ReceivedPacketLength < LOLA_PACKET_MAX_PACKET_SIZE)
 			{
-				ReadReceived(PacketLength);
-				if (OnReceiveOk(PacketLength))
+				if (AllowedReceive())
 				{
-					SetRadioReceive();
+					ReadReceived(ReceivedPacketLength);
+					OnReceiveOk(ReceivedPacketLength);
+				}
+				else
+				{
+					// TODO: Retry again later?
+					OnReceiveFail();
 				}
 			}
 			else
 			{
 				OnReceiveFail();
-				SetRadioReceive();
 			}
 		}
 		// Internal CRC is not used.
 		// Corrupted packet.
 		else if (HasInterruptCRCError())
 		{
-			SetRadioReceive();
 			OnReceiveFail();
 		}
 		// Packet sent.
 		else if (HasInterruptPacketSent())
 		{
-			if (OnSentOk(timeMicros))
-			{
-				SetRadioReceive();
-			}
+			OnSentOk(timeMicros);
 		}
 		else if (HasInterruptLowBattery())
 		{
@@ -223,17 +242,6 @@ private:
 		return false;
 	}
 
-	virtual void SetRadioReceive()
-	{
-		if (AllowedRadioChange() && SetRadioReceiveInternal())
-		{
-			PendingActions.ClearRX();
-		}
-		else
-		{
-			PendingActions.SetRX();
-			Wake();
-		}
-	}
+
 };
 #endif
