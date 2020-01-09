@@ -85,19 +85,13 @@ public:
 	bool Setup()
 	{
 		return CryptoTokenGenerator.Setup() &&
-			ChannelTokenGenerator.Setup();
+			ChannelTokenGenerator.Setup() &&
+			sizeof(ExpandedKeySource) <= Hasher.hashSize();
 	}
 
 	void EnableTOTP()
 	{
 		TOTPEnabled = true;
-	}
-
-	void ResetCypherBlock()
-	{
-		Cypher.setKey(ExpandedKeySource.Key, KeySize);
-		Cypher.setIV(ExpandedKeySource.IV, IVSize);
-		//TODO: Consider adding auth data if performance is ok.
 	}
 
 	// Returns MAC/CRC.
@@ -107,13 +101,11 @@ public:
 		Cypher.encrypt(outputMessage, message, messageLength);
 
 		Hasher.reset();
+		Hasher.update(message, messageLength);
 
-#ifdef LOLA_LINK_USE_TOKEN_HOP
 		HasherHelper.uint = CryptoTokenGenerator.GetToken();
 		Hasher.update(HasherHelper.array, CryptoTokenSize);
-#endif
 
-		Hasher.update(message, messageLength);
 		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
 
 		return HasherHelper.uint;
@@ -121,14 +113,13 @@ public:
 
 	bool Decode(uint8_t* message, const uint8_t messageLength, const uint32_t macCRC)
 	{
-		Hasher.reset();
-
-#ifdef LOLA_LINK_USE_TOKEN_HOP
 		HasherHelper.uint = CryptoTokenGenerator.GetToken();
-		Hasher.update(HasherHelper.array, CryptoTokenSize);
-#endif
-
+		
+		Hasher.reset();
 		Hasher.update(message, messageLength);
+
+		Hasher.update(HasherHelper.array, CryptoTokenSize);
+
 		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
 
 		if (macCRC == HasherHelper.uint)
@@ -166,7 +157,7 @@ public:
 		HasherHelper.uint = salt;
 		Hasher.update(HasherHelper.array, sizeof(uint32_t));
 
-		// sizeof(ExpandedKeySource) = 40 bytes.
+		// sizeof(ExpandedKeySource) <= Hasher.hashSize()
 		// We don't even need the full hash, let alone another iteration.
 		Hasher.finalize((uint8_t*)&ExpandedKeySource, sizeof(ExpandedKeySource));
 
@@ -191,6 +182,13 @@ public:
 	}
 
 private:
+	void ResetCypherBlock()
+	{
+		Cypher.setKey(ExpandedKeySource.Key, KeySize);
+		Cypher.setIV(ExpandedKeySource.IV, IVSize);
+		//TODO: Consider adding auth data if performance is ok.
+	}
+
 	void UpdateSeeds()
 	{
 		// Update token seeds for token generators.

@@ -5,74 +5,19 @@
 
 #include <ILoLaDriver.h>
 #include <LoLaClock\TickTrainedTimerSyncedClock.h>
+#include <PacketDriver\PacketDriverNotify.h>
 
 
 
 class LoLaPacketDriver : public ILoLaDriver
 {
 private:
-	class NotifiableAckReverseDefinition
-	{
-	private:
-		PacketDefinition* OriginalDefinition = nullptr;
-		PacketDefinition* AckDefinition = nullptr;
-
-	public:
-		bool SetOriginalDefinition(PacketDefinition* originalDefinition)
-		{
-			// If definition exists and is not recursively pointing to Ack.
-			if (originalDefinition != nullptr &&
-				originalDefinition != AckDefinition)
-			{
-				OriginalDefinition = originalDefinition;
-
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
-
-		bool SetAckDefinition(PacketDefinition* ackDefinition)
-		{
-			AckDefinition = ackDefinition;
-
-			return AckDefinition != nullptr;
-		}
-
-		void NotifyAckReceived(const uint8_t id, const uint32_t timestamp)
-		{
-			OriginalDefinition->Service->OnPacketTransmited(OriginalDefinition->Header, id, timestamp);
-		}
-	};
-
-	class NotifiableIncomingPacket : public TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE>
-	{
-	public:
-		bool NotifyPacketReceived(const uint32_t timestamp)
-		{
-
-			return GetDefinition()->Service->OnPacketReceived(GetDefinition()->Header, GetId(), timestamp, GetPayload());
-		}
-	};
-
-	class NotifiableOutgoingPacket : public TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE>
-	{
-	public:
-		void NotifyPacketTransmitted(const uint8_t id, const uint32_t timestamp)
-		{
-			TemplateLoLaPacket<LOLA_PACKET_MAX_PACKET_SIZE>::GetDefinition()->Service->OnPacketTransmited(GetDefinition()->Header, id, timestamp);
-		}
-	};
-
 	// Timings.
 	const uint32_t DuplexPeriodMicros = ILOLA_DUPLEX_PERIOD_MILLIS * (uint32_t)1000;
 	const uint32_t HalfDuplexPeriodMicros = DuplexPeriodMicros / 2;
 	const uint32_t BackOffPeriodUnlinkedMillis = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
 	
 	TickTrainedTimerSyncedClock MasterSyncClock;
-
 
 	// Static helpers.
 	uint32_t DuplexElapsed;
@@ -87,15 +32,16 @@ protected:
 	NotifiableOutgoingPacket OutgoingPacket;
 
 protected:
-	//Radio Driver implementation.
+	// Radio Driver implementation.
 	virtual bool RadioSetup() { return false; }
 	virtual void SetRadioReceive() {}
 	virtual void SetRadioChannel() {}
 	virtual void SetRadioPower() {}
 	virtual bool RadioTransmit() { return false; }
+	virtual void OnStart() {}
 
 public:
-	//Packet Driver implementation.
+	// Packet Driver implementation.
 	virtual void OnChannelUpdated() {}
 	virtual void OnTransmitPowerUpdated() {}
 
@@ -161,14 +107,6 @@ public:
 
 		return true;
 	}
-
-protected:
-	virtual void OnStart()
-	{
-
-
-	}
-
 
 protected:
 	///Driver calls.///
@@ -314,7 +252,6 @@ protected:
 		SetRadioReceive();
 	}
 
-protected:
 	bool AllowedRadioChange()
 	{
 		return DriverActiveState == DriverActiveStates::ReadyForAnything;
@@ -402,6 +339,5 @@ private:
 		return false;
 	}
 #endif
-
 };
 #endif

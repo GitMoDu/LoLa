@@ -371,7 +371,7 @@ protected:
 			case LinkStateEnum::AwaitingLink:
 				ClearSession();
 				ResetLinkingState();
-				CryptoEncoder.ResetCypherBlock();
+				CryptoEncoder.Clear();
 				PowerBalancer.SetMaxPower();
 				LoLaDriver->OnChannelUpdated();
 				SetNextRunASAP();
@@ -379,7 +379,7 @@ protected:
 			case LinkStateEnum::AwaitingSleeping:
 				ClearSession();
 				ResetLinkingState();
-				CryptoEncoder.ResetCypherBlock();
+				CryptoEncoder.Clear();
 				SetNextRunDelay(GetSleepDelay());
 				break;
 			case LinkStateEnum::Linking:
