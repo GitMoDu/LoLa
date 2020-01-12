@@ -10,24 +10,11 @@ class IClock
 {
 public:
 	static const uint32_t ONE_SECOND_MICROS = 1000000;
+	static const uint32_t ONE_SECOND_NANOS =  1000000000;
 	static const uint32_t ONE_SECOND_MILLIS = 1000;
 	static const uint32_t ONE_MILLI_MICROS = 1000;
 	static const uint32_t ONE_SECOND = 1;
-
-	static const uint32_t TOLERANCE_MICROS = 100;
-	static const uint32_t ONE_SECOND_WITH_TOLERANCE_MICROS = ONE_SECOND_MICROS + TOLERANCE_MICROS;
 };
-
-
-class IClockTickTarget : public IClock
-{
-public:
-	IClockTickTarget() : IClock() {}
-
-	virtual void OnTick() {}
-	virtual void OnTrainingTick() {}
-};
-
 
 // Virtual interface for a target to fired from an interrupt.
 class ISyncedCallbackTarget : public IClock
@@ -48,17 +35,15 @@ public:
 	virtual void StartCallbackAfterMicros(const uint32_t delayMicros) {}
 };
 
-
-class ISyncedClock : public virtual IClockTickTarget
+class ISyncedClock : public ISyncedCallbackSource
 {
 public:
-	ISyncedClock() : IClockTickTarget()
+	ISyncedClock() : ISyncedCallbackSource()
 	{}
 
-	ISyncedCallbackSource* GetSyncedCallbackSource()
-	{
-		return nullptr;
-	}
+	virtual void OnTick() {}
+
+	virtual void OnTrainingTick() {}
 
 	// Rolls over every ~136 years.
 	virtual uint32_t GetSyncSeconds()
@@ -67,10 +52,10 @@ public:
 	}
 
 	//// Rolls over every ~48 days.
-	//virtual uint64_t GetSyncMillis()
-	//{
-	//	return 0;
-	//}
+	virtual uint64_t GetSyncMillis()
+	{
+		return 0;
+	}
 
 	// Rolls over every ~584942 years.
 	virtual uint64_t GetSyncMicros()
@@ -85,6 +70,11 @@ public:
 	void SetOffsetMicros(const uint32_t offsetMicros) {}
 
 	void AddOffsetMicros(const int32_t offsetMicros) {}
+
+	virtual bool HasTraining()
+	{
+		return false;
+	}
 };
 
 class IClockTickSource : public IClock
@@ -102,20 +92,6 @@ public:
 	virtual void SetTuneOffset(const int32_t tunePPB) {}
 };
 
-// 
-class IClockMicrosSource : public virtual ISyncedCallbackSource
-{
-public:
-	IClockMicrosSource() : ISyncedCallbackSource() {}
-
-	virtual uint32_t GetMicros()
-	{
-		return 0;
-	}
-
-	virtual void OnTuneUpdated() {}
-};
-
 // Virtual interface for a free running, self resetting timer hardware.
 class IFreeRunningTimer : public IClock
 {
@@ -126,7 +102,9 @@ public:
 	// With a period of > 1,1 seconds.
 	virtual bool SetupTimer() { return false; }
 
-	virtual uint32_t GetCurrentStep() { return 0; }
+	virtual uint32_t GetStep() { return 0; }
+
+	virtual uint32_t GetTimerRange() { return INT32_MAX; }
 
 	virtual void SetCallbackTarget(ISyncedCallbackTarget* source) {}
 

@@ -9,13 +9,13 @@
 class ClockTicker : public virtual IClockTickSource
 {
 private:
-	RTClock RTC;
-	static const rtc_clk_src ClockSourceType = RTCSEL_LSE;
+	RTClock RTCInstance;
+	static const rtc_clk_src ClockSourceType = RTCSEL_LSI;
 
 public:
 	ClockTicker();
 
-	bool Setup(IClockTickTarget* target);
+	bool Setup(ISyncedClock* target);
 
 	virtual void SetupTrainingTickInterrupt();
 
@@ -23,10 +23,10 @@ public:
 
 	virtual void DetachAll()
 	{
-		//RTC.detach();//TODO:
+		RTCInstance.detachAlarmInterrupt();
+		RTCInstance.detachSecondsInterrupt();
 	}
 
-	// tuneOffset in ppb (Parts per Billion)
-	virtual void SetTuneOffset(const int32_t tunePPB) {}
+	virtual void SetTuneOffset(const int32_t offsetMicros) {}
 };
 #endif

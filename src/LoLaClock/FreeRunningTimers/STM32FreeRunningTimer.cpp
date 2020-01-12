@@ -4,7 +4,7 @@
 
 FreeRunningTimer* StaticTarget = nullptr;
 
-void StaticOnTimerCompare()
+static void StaticOnTimerCompare()
 {
 	StaticTarget->OnCompareInterrupt();
 }

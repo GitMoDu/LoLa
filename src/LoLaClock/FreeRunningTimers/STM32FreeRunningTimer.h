@@ -19,12 +19,16 @@ private:
 
 	ISyncedCallbackTarget* CallbackTarget = nullptr;
 
-private:
-	uint32_t GetPrescaleFactor()
-	{
-		uint32 period_cyc = ONE_SECOND_WITH_TOLERANCE_MICROS * CYCLES_PER_MICROSECOND;
+	static const uint32_t TOLERANCE_MICROS = 20 * ONE_MILLI_MICROS;
+	static const uint32_t ONE_SECOND_WITH_TOLERANCE_MICROS = ONE_SECOND_MICROS + TOLERANCE_MICROS;
 
-		return (uint16)((period_cyc / UINT16_MAX) + 1);
+
+private:
+	const uint32_t GetPrescaleFactor()
+	{
+		uint64_t period_cyc = ONE_SECOND_WITH_TOLERANCE_MICROS * CYCLES_PER_MICROSECOND;
+
+		return (uint16_t)((period_cyc / UINT16_MAX) + 1);
 	}
 
 public:
@@ -33,7 +37,12 @@ public:
 	virtual void StartCallbackAfterSteps(const uint32_t steps);
 
 public:
-	virtual uint32_t GetCurrentStep()
+	virtual uint32_t GetTimerRange() 
+	{ 
+		return UINT16_MAX; 
+	}
+
+	virtual uint32_t GetStep()
 	{
 		return Timer.getCount();
 	}
@@ -55,10 +64,11 @@ public:
 	{
 		Timer.detachInterrupt(0);
 		Timer.detachInterrupt(TimerIndex);
-		Timer.refresh();
+		Timer.pause();
 		Timer.setPrescaleFactor(GetPrescaleFactor());
 		Timer.setOverflow(UINT16_MAX);
 		Timer.setMode(TimerIndex, timer_mode::TIMER_OUTPUT_COMPARE);
+		Timer.refresh();
 		Timer.resume();
 
 		return true;

@@ -1,37 +1,38 @@
 //RTCClockSource.cpp
 //
 #include <LoLaClock\ClockTickers\STM32RTCClockTicker.h>
+#include <Arduino.h>
 
-static IClockTickTarget* StaticTarget = nullptr;
+static ISyncedClock* StaticClockTickerTarget = nullptr;
 
-void StaticOnRTCTick()
+static void StaticOnRTCTick()
 {
-	StaticTarget->OnTick();
+	StaticClockTickerTarget->OnTick();
 }
 
-void StaticOnRTCTrainingTick()
+static void StaticOnRTCTrainingTick()
 {
-	StaticTarget->OnTrainingTick();
+	StaticClockTickerTarget->OnTrainingTick();
 }
 
 ClockTicker::ClockTicker() : IClockTickSource()
-	, RTC(ClockSourceType)
+	, RTCInstance(ClockSourceType)
 {
 }
 
-bool ClockTicker::Setup(IClockTickTarget* target)
+bool ClockTicker::Setup(ISyncedClock* target)
 {
-	StaticTarget = target;
+	StaticClockTickerTarget = target;
 
-	return StaticTarget != nullptr;
+	return StaticClockTickerTarget != nullptr;
 }
 
 void ClockTicker::SetupTrainingTickInterrupt()
 {
-	RTC.attachSecondsInterrupt(StaticOnRTCTrainingTick);
+	RTCInstance.attachSecondsInterrupt(StaticOnRTCTrainingTick);
 }
 
 void ClockTicker::SetupTickInterrupt()
 {
-	RTC.attachSecondsInterrupt(StaticOnRTCTick);
+	RTCInstance.attachSecondsInterrupt(StaticOnRTCTick);
 }
