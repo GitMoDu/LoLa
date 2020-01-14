@@ -23,13 +23,24 @@ private:
 
 public:
 	LoLaLinkRemoteService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
-		: LoLaLinkService(servicesScheduler, driverScheduler, driver, &ClockSyncer)
+		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
 		, ClockSyncer()
 	{
 		driver->SetDuplexSlot(false);
 	}
 
-protected:
+	virtual bool Setup()
+	{
+		if (ClockSyncer.Setup())
+		{
+			SetClockSyncer(&ClockSyncer);
+
+			return LoLaLinkService::Setup();
+		}
+
+		return false;
+	}
+
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{

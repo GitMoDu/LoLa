@@ -7,8 +7,6 @@
 #include <LoLaClock\TickTrainedTimerSyncedClock.h>
 #include <PacketDriver\PacketDriverNotify.h>
 
-
-
 class LoLaPacketDriver : public ILoLaDriver
 {
 private:

@@ -23,12 +23,22 @@ private:
 
 public:
 	LoLaLinkHostService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
-		: LoLaLinkService(servicesScheduler, driverScheduler, driver, &ClockSyncer)
+		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
 		, ClockSyncer(&SyncedClock)
-		//, HostClockSecondsTransaction()
-		//, HostClockSyncTransaction()
 	{
 		driver->SetDuplexSlot(true);
+	}
+
+	virtual bool Setup()
+	{
+		if (ClockSyncer.Setup())
+		{
+			SetClockSyncer(&ClockSyncer);
+
+			return LoLaLinkService::Setup();
+		}
+
+		return false;
 	}
 
 #ifdef DEBUG_LOLA
@@ -38,10 +48,6 @@ public:
 	}
 #endif // DEBUG_LOLA
 
-	virtual bool Setup()
-	{
-		return ClockSyncer.Setup() && LoLaLinkService::Setup();
-	}
 
 protected:
 	virtual void OnAckFailed(const uint8_t header, const uint8_t id)

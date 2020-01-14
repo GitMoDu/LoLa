@@ -60,11 +60,11 @@ private:
 	bool TOTPEnabled = false;
 
 public:
-	LoLaCryptoEncoder(ISyncedClock* syncedClock) :
+	LoLaCryptoEncoder() :
 		Cypher(),
 		Hasher(),
-		CryptoTokenGenerator(syncedClock, &TOTPEnabled),
-		ChannelTokenGenerator(syncedClock, &TOTPEnabled)
+		CryptoTokenGenerator(),
+		ChannelTokenGenerator()
 	{
 	}
 
@@ -82,10 +82,10 @@ public:
 		return &ChannelTokenGenerator;
 	}
 
-	bool Setup()
+	bool Setup(ISyncedClock* syncedClock)
 	{
-		return CryptoTokenGenerator.Setup() &&
-			ChannelTokenGenerator.Setup() &&
+		return CryptoTokenGenerator.Setup(syncedClock, &TOTPEnabled) &&
+			ChannelTokenGenerator.Setup(syncedClock, &TOTPEnabled) &&
 			sizeof(ExpandedKeySource) <= Hasher.hashSize();
 	}
 

@@ -8,6 +8,7 @@
 
 #include <Services\Link\AbstractLinkService.h>
 
+#include <LoLaClock\TickTrainedTimerSyncedClock.h>
 
 #include <Services\Link\LoLaLinkClockSyncer.h>
 
@@ -42,13 +43,14 @@ private:
 	// Power balancer.
 	LoLaLinkPowerBalancer PowerBalancer;
 
-	// Host/Remote clock syncer.
-	LoLaLinkClockSyncer* ClockSyncer = nullptr;
 
 	// Link report tracking.
 	bool ReportPending = false;
 
 protected:
+	// Host/Remote clock syncer.
+	LoLaLinkClockSyncer* ClockSyncer = nullptr;
+
 	// Crypto encode.
 	LoLaCryptoEncoder CryptoEncoder;
 
@@ -74,7 +76,6 @@ protected:
 
 	// Link Info.
 	LoLaLinkInfo LinkInfo;
-
 
 	// Random salt, unique for each session.
 	uint32_t SessionSalt = 0;
@@ -102,19 +103,18 @@ protected:
 	virtual void OnKeepingLink() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
 
 public:
-	LoLaLinkService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver, LoLaLinkClockSyncer* clockSyncer)
+	LoLaLinkService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
 		: AbstractLinkService(driverScheduler, driver)
 		, SyncedClock()
-		, CryptoEncoder(&SyncedClock)
-		, LinkInfo(driver)
-		, PowerBalancer(driver, &LinkInfo)
-		, ChannelSelector(driverScheduler, &SyncedClock)
+		, CryptoEncoder()
+		, LinkInfo()
+		, PowerBalancer()
+		, ChannelSelector(driverScheduler)
 		, KeyExchanger()
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_SERVICE)
 		, DebugTask(servicesScheduler, driver, &LinkInfo, &SyncedClock, &KeyExchanger)
 #endif
 	{
-		ClockSyncer = clockSyncer;
 		driver->SetCryptoEncoder(&CryptoEncoder);
 		driver->SetTransmitPowerSelector(&PowerBalancer);
 		driver->SetChannelSelector(&ChannelSelector);
@@ -143,14 +143,17 @@ public:
 		return &LinkInfo;
 	}
 
-	bool Setup()
+	virtual bool Setup()
 	{
+
 		if (AbstractLinkService::Setup() &&
 			ClockSyncer != nullptr &&
+			LinkInfo.Setup(LoLaDriver) &&
 			SyncedClock.Setup() &&
-			PowerBalancer.Setup() &&
+			CryptoEncoder.Setup(&SyncedClock) &&
+			PowerBalancer.Setup(LoLaDriver, &LinkInfo) &&
 			KeyExchanger.Setup() &&
-			ChannelSelector.Setup(LoLaDriver, CryptoEncoder.GetChannelTokenSource()))
+			ChannelSelector.Setup(LoLaDriver, CryptoEncoder.GetChannelTokenSource(), &SyncedClock))
 		{
 			LinkInfo.Reset();
 			KeyExchanger.GenerateNewKeyPair();
@@ -214,6 +217,11 @@ public:
 	}
 
 protected:
+	void SetClockSyncer(LoLaLinkClockSyncer* clockSyncer)
+	{
+		ClockSyncer = clockSyncer;
+	}
+
 	void OnClockSyncReceived(const uint8_t id, const uint32_t timestamp, uint8_t* payload)
 	{
 		if (LinkState == LinkStateEnum::Linked || LinkState == LinkStateEnum::Linking)

@@ -23,11 +23,9 @@ private:
 	uint32_t LastUpdated = 0;
 
 public:
-	LoLaLinkPowerBalancer(ILoLaDriver* driver, LoLaLinkInfo* linkInfo) 
+	LoLaLinkPowerBalancer() 
 		: ITransmitPowerSelector()
 	{
-		LoLaDriver = driver;
-		LinkInfo = linkInfo;
 	}
 
 	uint8_t GetTransmitPowerNormalized()
@@ -35,8 +33,11 @@ public:
 		return CurrentTransmitPower;
 	}
 
-	bool Setup()
+	bool Setup(ILoLaDriver* driver, LoLaLinkInfo* linkInfo)
 	{
+		LoLaDriver = driver;
+		LinkInfo = linkInfo;
+
 		return LoLaDriver != nullptr && LinkInfo != nullptr;
 	}
 

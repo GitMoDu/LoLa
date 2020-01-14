@@ -3,13 +3,13 @@
 #ifndef _LOLALINKDEFINITIONS_h
 #define _LOLALINKDEFINITIONS_h
 
+#include <LoLaDefinitions.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\LoLaPacketMap.h>
 
 #include <LoLaCrypto\LoLaCryptoKeyExchanger.h>
 
 #include <LoLaLinkInfo.h>
-#include <LoLaDefinitions.h>
 ///
 
 

@@ -39,14 +39,23 @@ public:
 	uint8_t PartnerReceivedCount = 0;
 
 public:
-	LoLaLinkInfo(ILoLaDriver* driver) :
+	LoLaLinkInfo() :
 		LinkIndicator()
+	{
+		
+	}
+
+	bool Setup(ILoLaDriver* driver)
 	{
 		Driver = driver;
 		if (Driver != nullptr)
 		{
 			Driver->SetLinkStatusIndicator(this);
+
+			return true;
 		}
+
+		return false;
 	}
 
 	uint32_t GetClockSyncAdjustments()

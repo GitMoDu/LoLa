@@ -33,14 +33,16 @@ protected:
 	}
 
 public:
-	TOTPMillisecondsTokenGenerator(ISyncedClock* syncedClock, bool* totpEnabled = nullptr)
+	TOTPMillisecondsTokenGenerator()
+	{
+
+	}
+
+	bool Setup(ISyncedClock* syncedClock, bool* totpEnabled = nullptr)
 	{
 		SyncedClock = syncedClock;
 		TOTPEnabled = totpEnabled;
-	}
 
-	bool Setup()
-	{
 		return SyncedClock != nullptr &&
 			TOTPEnabled != nullptr &&
 			TokenSize == sizeof(uint32_t) &&
