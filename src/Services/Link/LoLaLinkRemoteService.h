@@ -37,6 +37,8 @@ protected:
 	}
 #endif // DEBUG_LOLA
 
+protected:
+	
 	virtual uint32_t GetSleepDelay()
 	{
 		return LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD;
