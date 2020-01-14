@@ -50,15 +50,15 @@ private:
 	LoLaLinkTimedHopper TimedHopper;
 
 public:
-	LoLaLinkChannelManager(Scheduler* scheduler, ISyncedClock* syncedClock) : IChannelSelector()
+	LoLaLinkChannelManager(Scheduler* scheduler) : IChannelSelector()
 		, FastHasher()
-		, TimedHopper(scheduler, syncedClock)
+		, TimedHopper(scheduler)
 	{
 	}
 
 	void NextRandomChannel()
 	{
-		CurrentChannel = ChannelInfo.Min + (random(UINT32_MAX) % ChannelInfo.Range);
+		CurrentChannel = ChannelInfo.Min + (random(INT32_MAX) % ChannelInfo.Range);
 	}
 
 	void NextChannel()
@@ -67,7 +67,7 @@ public:
 
 		if (CurrentChannel > ChannelInfo.Max)
 		{
-			CurrentChannel = ChannelInfo.Min + (CurrentChannel % ChannelInfo.Max);
+			CurrentChannel = ChannelInfo.Min + ((CurrentChannel - 1) % ChannelInfo.Max);
 		}
 	}
 
@@ -96,13 +96,13 @@ public:
 		return CurrentChannel;
 	}
 
-	bool Setup(ILoLaDriver* lolaDriver, ITokenSource* tokenSource)
+	bool Setup(ILoLaDriver* lolaDriver, ITokenSource* tokenSource, ISyncedClock* syncedClock)
 	{
 		if (HopPeriodMillis <= MaxPeriodMillis &&
 			HopPeriodMillis > MinPeriodMillis&&
 			lolaDriver != nullptr &&
-			tokenSource != nullptr && 
-			TimedHopper.Setup())
+			tokenSource != nullptr &&
+			TimedHopper.Setup(syncedClock))
 		{
 			TokenSource = tokenSource;
 
