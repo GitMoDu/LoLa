@@ -21,4 +21,3 @@ void FreeRunningTimer::StartCallbackAfterSteps(const uint32_t steps)
 	Timer.setCompare(TimerIndex, (Timer.getCount() + steps) % UINT16_MAX);
 	Timer.attachCompare1Interrupt(StaticOnTimerCompare);
 }
-

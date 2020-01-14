@@ -4,8 +4,8 @@
 #define _STM32FREERUNNINGTIMER_h
 
 
-#include <LoLaClock\IClock.h>
 #include <LoLaDefinitions.h>
+#include <LoLaClock\IClock.h>
 #include <HardwareTimer.h>
 #include <Arduino.h>
 
@@ -37,9 +37,9 @@ public:
 	virtual void StartCallbackAfterSteps(const uint32_t steps);
 
 public:
-	virtual uint32_t GetTimerRange() 
-	{ 
-		return UINT16_MAX; 
+	virtual uint32_t GetTimerRange()
+	{
+		return UINT16_MAX;
 	}
 
 	virtual uint32_t GetStep()
@@ -56,6 +56,11 @@ public:
 	virtual void SetCallbackTarget(ISyncedCallbackTarget* target)
 	{
 		CallbackTarget = target;
+	}
+
+	virtual void CancelCallback()
+	{
+		Timer.detachInterrupt(TimerIndex);
 	}
 
 	// Should set up the timer with >20000 steps per calibrated second.
