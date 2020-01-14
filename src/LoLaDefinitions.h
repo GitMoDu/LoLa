@@ -9,7 +9,6 @@
 #define DEBUG_LINK_ENCRYPTION
 #define DEBUG_RADIO_DRIVER
 //#define DEBUG_LOLA_CLOCK
-//#define DEBUG_LINK_FREQUENCY_HOP
 #endif 
 
 
@@ -93,7 +92,7 @@
 // How long to stay on a channel/token.
 // Higher periods decrease rollover periods.
 #define LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_MILLIS	(uint32_t)(100) // Ideally should be the same as the duplex period, if the clock sync is good enough.
-#define LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS	(uint32_t)(250) // Better or faster response radio allows this value to go lower.
+#define LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS	(uint32_t)(50) // Better or faster response radio allows this value to go lower.
 
 // Link constants.
 #define LOLA_LINK_SERVICE_TRANSACTION_LIFETIME				(uint32_t)(35)
