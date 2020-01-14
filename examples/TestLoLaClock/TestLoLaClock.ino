@@ -8,6 +8,8 @@
 #define _TASK_OO_CALLBACKS
 #define _TASK_SLEEP_ON_IDLE_RUN
 
+#define DEBUG_LOLA_CLOCK
+
 #include <TaskScheduler.h>
 #include <TestIncludes.h>
 #include <LoLaDefinitions.h>
