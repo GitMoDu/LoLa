@@ -33,6 +33,8 @@ public:
 	virtual void SetCallbackTarget(ISyncedCallbackTarget* source) {}
 
 	virtual void StartCallbackAfterMicros(const uint32_t delayMicros) {}
+
+	virtual void CancelCallback() {}
 };
 
 class ISyncedClock : public ISyncedCallbackSource
