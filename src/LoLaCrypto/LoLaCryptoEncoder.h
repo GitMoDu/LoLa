@@ -49,13 +49,11 @@ private:
 		uint32_t uint;
 	} HasherHelper;
 
-	static const uint8_t TokenSize = LOLA_LINK_CRYPTO_TOKEN_SIZE; // Token is 32 bit.
-	static const uint8_t AuthDataSize = TokenSize;
 
 	TOTPMillisecondsTokenGenerator CryptoTokenGenerator;
 	TOTPMillisecondsTokenGenerator ChannelTokenGenerator;
 
-	bool TOTPEnabled = false;
+	TimedHopProvider TimedHopEnabled;
 
 public:
 	LoLaCryptoEncoder() :
