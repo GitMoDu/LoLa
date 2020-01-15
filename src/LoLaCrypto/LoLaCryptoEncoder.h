@@ -84,14 +84,13 @@ public:
 
 	bool Setup(ISyncedClock* syncedClock)
 	{
-		return CryptoTokenGenerator.Setup(syncedClock, &TOTPEnabled) &&
-			ChannelTokenGenerator.Setup(syncedClock, &TOTPEnabled) &&
-			sizeof(ExpandedKeySource) <= Hasher.hashSize();
+		return CryptoTokenGenerator.Setup(syncedClock, &TimedHopEnabled) &&
+			ChannelTokenGenerator.Setup(syncedClock, &TimedHopEnabled);
 	}
 
 	void EnableTOTP()
 	{
-		TOTPEnabled = true;
+		TimedHopEnabled.TimedHopEnabled = true;
 	}
 
 	// Returns MAC/CRC.
@@ -114,7 +113,7 @@ public:
 	bool Decode(uint8_t* message, const uint8_t messageLength, const uint32_t macCRC)
 	{
 		HasherHelper.uint = CryptoTokenGenerator.GetToken();
-		
+
 		Hasher.reset();
 		Hasher.update(message, messageLength);
 
@@ -142,7 +141,7 @@ public:
 
 		UpdateSeeds();
 
-		TOTPEnabled = false;
+		TimedHopEnabled.TimedHopEnabled = false;
 	}
 
 	void SetKeyWithSalt(uint8_t* secretKey, const uint32_t salt)
