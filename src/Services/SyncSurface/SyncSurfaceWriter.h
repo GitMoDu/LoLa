@@ -8,50 +8,18 @@
 
 template <const uint8_t BasePacketHeader,
 	const uint32_t ThrottlePeriodMillis = 1>
-	class SyncSurfaceWriter : public SyncSurfaceBase<ThrottlePeriodMillis>
+	class SyncSurfaceWriter : public SyncSurfaceBase
 {
 private:
 	SyncMetaPacketDefinition<BasePacketHeader> SyncMetaDefinition;
 	SyncDataPacketDefinition<BasePacketHeader> DataPacketDefinition;
 
-private:
-	using SyncSurfaceBase<ThrottlePeriodMillis>::UpdateBlockData;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareServiceDiscoveryPacket;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareInvalidateRequestPacket;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareUpdateFinishedReplyPacket;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareUpdateFinishedPacket;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareBlockPacketHeader;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareBlockPacketPayload;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::ResetLastSentTimeStamp;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::CheckThrottling;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::MetaDefinition;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::DataDefinition;
-
-	using AbstractSync::TrackedSurface;
-	using AbstractSync::SyncState;
-
-	using AbstractSync::InvalidateLocalHash;
-	using AbstractSync::InvalidateRemoteHash;
-	using AbstractSync::HashesMatch;
-	using AbstractSync::UpdateLocalHash;
-	using AbstractSync::NotifyDataChanged;
-	using AbstractSync::UpdateSyncState;
-	using AbstractSync::GetElapsedSinceStateStart;
-	using AbstractSync::GetElapsedSinceLastSent;
-	using AbstractSync::GetSurfaceId;
-
-
-	using IPacketSendService::RequestSendPacket;
-	using IPacketSendService::Packet;
-	using ILoLaService::Disable;
-	using ILoLaService::SetNextRunDelay;
-	using ILoLaService::SetNextRunASAP;
 
 public:
 	SyncSurfaceWriter(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
-		: SyncMetaDefinition(this),
-		DataPacketDefinition(this),
-		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface)
+		: SyncSurfaceBase(scheduler, driver, trackedSurface, ThrottlePeriodMillis)
+		, SyncMetaDefinition(this)
+		, DataPacketDefinition(this)
 	{
 		MetaDefinition = &SyncMetaDefinition;
 		DataDefinition = &DataPacketDefinition;

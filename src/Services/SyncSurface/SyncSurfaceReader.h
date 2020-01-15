@@ -8,7 +8,7 @@
 
 template <const uint8_t BasePacketHeader,
 	const uint32_t ThrottlePeriodMillis = 1>
-	class SyncSurfaceReader : public SyncSurfaceBase<ThrottlePeriodMillis>
+	class SyncSurfaceReader : public SyncSurfaceBase
 {
 private:
 	SyncMetaPacketDefinition<BasePacketHeader> SyncMetaDefinition;
@@ -16,36 +16,11 @@ private:
 
 	uint32_t LastUpdateReceived = 0;
 
-private:
-	using SyncSurfaceBase<ThrottlePeriodMillis>::UpdateBlockData;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareServiceDiscoveryPacket;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareInvalidateRequestPacket;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::PrepareUpdateFinishedReplyPacket;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::CheckThrottling;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::MetaDefinition;
-	using SyncSurfaceBase<ThrottlePeriodMillis>::DataDefinition;
-
-	using AbstractSync::TrackedSurface;
-	using AbstractSync::SyncState;
-
-	using AbstractSync::InvalidateLocalHash;
-	using AbstractSync::HashesMatch;
-	using AbstractSync::UpdateLocalHash;
-	using AbstractSync::NotifyDataChanged;
-	using AbstractSync::UpdateSyncState;
-	using AbstractSync::GetElapsedSinceStateStart;
-	using AbstractSync::GetElapsedSinceLastSent;
-
-
-	using IPacketSendService::RequestSendPacket;
-	using ILoLaService::Disable;
-	using ILoLaService::SetNextRunDelay;
-
 public:
 	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
-		: SyncMetaDefinition(this),
-		DataPacketDefinition(this),
-		SyncSurfaceBase<ThrottlePeriodMillis>(scheduler, driver, trackedSurface)
+		: SyncSurfaceBase(scheduler, driver, trackedSurface, ThrottlePeriodMillis)
+		, SyncMetaDefinition(this)
+		, DataPacketDefinition(this)
 	{
 		MetaDefinition = &SyncMetaDefinition;
 		DataDefinition = &DataPacketDefinition;

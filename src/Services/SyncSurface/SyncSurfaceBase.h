@@ -10,7 +10,7 @@
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacketMap.h>
 
-template<const uint32_t ThrottlePeriodMillis = 1>
+
 class SyncSurfaceBase : public AbstractSync
 {
 private:
@@ -26,14 +26,18 @@ private:
 
 	TemplateLoLaPacket<LOLA_PACKET_MIN_PACKET_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
 
+
 protected:
 	PacketDefinition* MetaDefinition = nullptr;
 	PacketDefinition* DataDefinition = nullptr;
 
+	uint32_t ThrottlePeriodMillis = 0;
+
 public:
-	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
+	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface, const uint32_t throttlePeriodMillis = 1)
 		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder)
 	{
+		ThrottlePeriodMillis = throttlePeriodMillis;
 	}
 
 	bool Setup()
@@ -65,7 +69,6 @@ protected:
 	virtual void OnInvalidateRequestReceived() {}
 
 protected:
-
 	bool CheckThrottling()
 	{
 		if (LastSyncMillis == 0

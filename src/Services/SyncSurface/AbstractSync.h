@@ -73,6 +73,7 @@ public:
 		{
 			MethodSlot<AbstractSync, const bool> memFunSlot(this, &AbstractSync::SurfaceDataChangedEvent);
 			TrackedSurface->AttachOnSurfaceUpdated(memFunSlot);
+
 			return true;
 		}
 
