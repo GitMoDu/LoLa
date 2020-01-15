@@ -18,17 +18,15 @@
 class LoLaCryptoEncoder
 {
 private:
-	// From Ascon128 spec
-	static const uint8_t KeySize = 16;
-	static const uint8_t IVSize = 16;
+	static const uint8_t KeySize = 16; // Cypher.keySize()
+	static const uint8_t IVSize = 16; // Cypher.ivSize()
 
 	static const uint8_t MACSize = LOLA_LINK_CRYPTO_MAC_CRC_SIZE;
 
 	// Protocol defined values
 	static const uint8_t CryptoSeedSize = LOLA_LINK_CRYPTO_SEED_SIZE;
-	static const uint8_t CryptoTokenSize = LOLA_LINK_CRYPTO_TOKEN_SIZE;
 	static const uint8_t ChannelSeedSize = LOLA_LINK_CHANNEL_SEED_SIZE;
-	static const uint8_t CryptoTokenPeriodMillis = LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_MILLIS;
+	static const uint8_t CryptoTokenSize = LOLA_LINK_CRYPTO_TOKEN_SIZE;
 
 private:
 	// Large enough to generate unique keys for each purpose.
