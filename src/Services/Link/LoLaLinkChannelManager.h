@@ -14,7 +14,7 @@
 class LoLaLinkChannelManager : public virtual IChannelSelector
 {
 private:
-	const uint32_t MinPeriodMillis = 100;
+	const uint32_t MinPeriodMillis = 5;
 	const uint32_t MaxPeriodMillis = 60000;
 
 	// Protocol defined values
