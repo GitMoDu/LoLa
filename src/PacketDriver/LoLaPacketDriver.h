@@ -51,15 +51,10 @@ public:
 
 	bool Setup()
 	{
-		if (!ILoLaDriver::Setup())
-		{
-			return false;
-		}
 
 		AckDefinition = PacketMap.GetDefinition(PACKET_DEFINITION_ACK_HEADER);
 
-		if (SyncedClock != nullptr &&
-			AckDefinition != nullptr &&
+		if (AckDefinition != nullptr &&
 			MasterSyncClock.Setup() &&
 			AckNotifier.SetAckDefinition(AckDefinition))
 		{

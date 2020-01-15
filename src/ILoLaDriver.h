@@ -60,11 +60,11 @@ protected:
 	// Outgoing packet.
 	InputInfoType LastValidReceivedInfo;
 	OutputInfoType LastValidSentInfo;
-	
+
 	/// External sources. ///
 	// Transmit power selector.
 	ITransmitPowerSelector* TransmitPowerSelector = nullptr;
-	
+
 	// Channel selector.
 	IChannelSelector* ChannelSelector = nullptr;
 
@@ -213,7 +213,16 @@ public:
 	void Start()
 	{
 		ResetLiveData();
-		OnStart();
+		if (Validate())
+		{
+			OnStart();
+		}
+#ifdef DEBUG_LOLA
+		else
+		{
+			Serial.println(F("[ERROR] LoLa Driver needs a synced clock."));
+		}
+#endif // DEBUG_LOLA		
 	}
 
 	uint8_t GetRSSINormalized()
@@ -334,6 +343,14 @@ public:
 
 
 protected:
+	virtual bool Validate()
+	{
+		return SyncedClock != nullptr &&
+			CryptoEncoder != nullptr &&
+			LinkStatusIndicator != nullptr &&
+			TransmitPowerSelector != nullptr &&
+			ChannelSelector != nullptr;
+	}
 
 	// Oportune overload to do some houseleeping, if needed.
 	virtual void OnStart() {}
@@ -343,14 +360,7 @@ protected:
 public:
 	//Packet driver implementation.
 	virtual bool SendPacket(ILoLaPacket* packet) { return false; }
-	virtual bool Setup()
-	{
-		return SyncedClock != nullptr &&
-			CryptoEncoder != nullptr &&
-			LinkStatusIndicator != nullptr &&
-			TransmitPowerSelector != nullptr &&
-			ChannelSelector != nullptr;
-	}
+	
 	virtual bool AllowedSend() { return false; }
 
 	virtual void OnChannelUpdated() {}
