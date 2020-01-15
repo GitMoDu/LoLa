@@ -38,20 +38,25 @@ private:
 		uint8_t ChannelSeed[ChannelSeedSize];
 	};
 
-	ExpandedKeyStruct ExpandedKeySource;
+	union KeyArray
+	{
+		ExpandedKeyStruct Keys;
+		uint8_t Array[sizeof(ExpandedKeyStruct)];
+	} ExpandedKeySource;
 
 	// If these are changed, update ProtocolVersionCalculator.
 	Ascon128 Cypher;
 	BLAKE2s Hasher;
 
-	union ArrayToUint32 {
-		byte array[sizeof(uint32_t)]; //TOKEN_SIZE
+	union ArrayToUint32
+	{
+		byte array[sizeof(uint32_t)];
 		uint32_t uint;
 	} HasherHelper;
 
 
-	TOTPMillisecondsTokenGenerator CryptoTokenGenerator;
-	TOTPMillisecondsTokenGenerator ChannelTokenGenerator;
+	TOTPMillisecondsTokenGenerator<LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_MILLIS, LOLA_LINK_CRYPTO_SEED_SIZE> CryptoTokenGenerator;
+	TOTPMillisecondsTokenGenerator<LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS, LOLA_LINK_CHANNEL_SEED_SIZE> ChannelTokenGenerator;
 
 	TimedHopProvider TimedHopEnabled;
 
@@ -140,33 +145,59 @@ public:
 		TimedHopEnabled.TimedHopEnabled = false;
 	}
 
+	// Expands secret key + salt to fill the Expanded key (and all sub keys).
+	// Can be optimized with a state preserving hasher expansion.
 	void SetKeyWithSalt(uint8_t* secretKey, const uint32_t salt)
 	{
-		// Adding shared entropy and expanding key to fill in all slots.
+		uint8_t ByteCount = 0;
+
+		uint8_t Rounds = 1;
+		uint8_t Chunk = 0;
+
+		while (ByteCount < sizeof(ExpandedKeySource))
+		{
+			Hasher.clear();
+
+			// Secret key.
+			Hasher.update(secretKey, KeySize);
+
+			// Salt.
+			// We resalt Round times because we're stretching the original hash state, without directly restoring the state.
+			// Fortunately, our hash is fast.
+			for (uint8_t i = 0; i < Rounds; i++)
+			{
+				HasherHelper.uint = salt;
+				Hasher.update(HasherHelper.array, sizeof(uint32_t));
+			}
+
+			Chunk = min(sizeof(ExpandedKeySource) - ByteCount, Hasher.hashSize());
+
+			Hasher.finalize(&ExpandedKeySource.Array[ByteCount], Chunk);
+
+			if (ByteCount >= sizeof(ExpandedKeySource))
+			{
+				// We're done.
+				break;
+			}
+			else
+			{
+				ByteCount += Chunk;
+				Rounds++;
+			}
+		}
 		Hasher.clear();
-
-		// Secret key.
-		Hasher.update(secretKey, KeySize);
-
-		// Salt.
-		HasherHelper.uint = salt;
-		Hasher.update(HasherHelper.array, sizeof(uint32_t));
-
-		// sizeof(ExpandedKeySource) <= Hasher.hashSize()
-		// We don't even need the full hash, let alone another iteration.
-		Hasher.finalize((uint8_t*)&ExpandedKeySource, sizeof(ExpandedKeySource));
 
 #ifdef DEBUG_LOLA
 		Cypher.clear();
 
 		// Test if key is accepted.
-		if (!Cypher.setKey(ExpandedKeySource.Key, KeySize))
+		if (!Cypher.setKey(ExpandedKeySource.Keys.Key, KeySize))
 		{
 			Serial.println(F("Failed to set Key."));
 		}
 
 		// Test setting IV.
-		if (!Cypher.setIV(ExpandedKeySource.IV, KeySize))
+		if (!Cypher.setIV(ExpandedKeySource.Keys.IV, KeySize))
 		{
 			Serial.println(F("Failed to set IV."));
 		}
@@ -179,8 +210,8 @@ public:
 private:
 	void ResetCypherBlock()
 	{
-		Cypher.setKey(ExpandedKeySource.Key, KeySize);
-		Cypher.setIV(ExpandedKeySource.IV, IVSize);
+		Cypher.setKey(ExpandedKeySource.Keys.Key, KeySize);
+		Cypher.setIV(ExpandedKeySource.Keys.IV, IVSize);
 		//TODO: Consider adding auth data if performance is ok.
 	}
 
@@ -188,13 +219,13 @@ private:
 	{
 		// Update token seeds for token generators.
 		Hasher.reset();
-		Hasher.update(ExpandedKeySource.CryptoSeed, CryptoSeedSize);
+		Hasher.update(ExpandedKeySource.Keys.CryptoSeed, CryptoSeedSize);
 		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
 
 		CryptoTokenGenerator.SetSeed(HasherHelper.uint);
 
 		Hasher.reset();
-		Hasher.update(ExpandedKeySource.ChannelSeed, ChannelSeedSize);
+		Hasher.update(ExpandedKeySource.Keys.ChannelSeed, ChannelSeedSize);
 		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
 		ChannelTokenGenerator.SetSeed(HasherHelper.uint);
 	}
@@ -208,12 +239,21 @@ public:
 
 	void PrintKey(Stream* serial)
 	{
-		serial->print("Secret Key:\n\t|");
+		/*serial->print("Secret Key:\n\t|");
 		for (uint8_t i = 0; i < KeySize; i++)
 		{
-			serial->print(ExpandedKeySource.Key[i]);
+			serial->print(ExpandedKeySource.Keys.Key[i]);
 			serial->print('|');
 		}
+		serial->println();*/
+
+		serial->print("Full Key:\n\t|");
+		for (uint8_t i = 0; i < sizeof(ExpandedKeyStruct); i++)
+		{
+			serial->print(ExpandedKeySource.Array[i]);
+			serial->print('|');
+		}
+		serial->println();
 	}
 #endif
 };
