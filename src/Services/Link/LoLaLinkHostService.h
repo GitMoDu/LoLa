@@ -24,17 +24,16 @@ private:
 public:
 	LoLaLinkHostService(Scheduler* servicesScheduler, Scheduler* driverScheduler, ILoLaDriver* driver)
 		: LoLaLinkService(servicesScheduler, driverScheduler, driver)
-		, ClockSyncer(&SyncedClock)
+		, ClockSyncer()
 	{
 		driver->SetDuplexSlot(true);
+		SetClockSyncer(&ClockSyncer);
 	}
 
 	virtual bool Setup()
 	{
-		if (ClockSyncer.Setup())
+		if (ClockSyncer.Setup(&SyncedClock))
 		{
-			SetClockSyncer(&ClockSyncer);
-
 			return LoLaLinkService::Setup();
 		}
 

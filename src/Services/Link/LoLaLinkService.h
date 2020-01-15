@@ -145,7 +145,6 @@ public:
 
 	virtual bool Setup()
 	{
-
 		if (AbstractLinkService::Setup() &&
 			ClockSyncer != nullptr &&
 			LinkInfo.Setup(LoLaDriver) &&

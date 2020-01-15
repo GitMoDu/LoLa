@@ -47,9 +47,15 @@ protected:
 	uint8_t PendingResponse = 0;
 
 public:
-	LoLaLinkClockSyncer(ISyncedClock* syncedClock)
+	LoLaLinkClockSyncer()
+	{
+	}
+
+	bool Setup(ISyncedClock* syncedClock)
 	{
 		SyncedClock = syncedClock;
+
+		return SyncedClock != nullptr;
 	}
 
 	void Reset()
@@ -115,14 +121,6 @@ protected:
 		}
 	}*/
 
-public:
-	LoLaLinkClockSyncer() {}
-
-	bool Setup()
-	{
-		return SyncedClock != nullptr;
-	}
-
 	/*void StampSynced()
 	{
 		LastSynced = millis();
@@ -151,18 +149,18 @@ class LinkRemoteClockSyncer : public LoLaLinkClockSyncer
 	//	uint8_t TuneDiscard = 0;
 	//	ClockErrorSample SampleGrunt;
 	//
-	public:
-		LinkRemoteClockSyncer() : LoLaLinkClockSyncer() {}
+public:
+	LinkRemoteClockSyncer() : LoLaLinkClockSyncer() {}
 
-		void RequestSync()
-		{
+	void RequestSync()
+	{
 
-		}
+	}
 
-		bool Update()
-		{
-			return false;
-		}
+	bool Update()
+	{
+		return false;
+	}
 	//
 	//	bool IsSynced()
 	//	{
@@ -329,7 +327,7 @@ private:
 
 
 public:
-	LinkHostClockSyncer(ISyncedClock* syncedClock) : LoLaLinkClockSyncer(syncedClock) {}
+	LinkHostClockSyncer() : LoLaLinkClockSyncer() {}
 
 	virtual bool OnReceived(const uint8_t subHeader, const uint32_t timestamp, uint8_t* payload)
 	{

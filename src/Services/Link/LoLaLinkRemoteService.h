@@ -18,7 +18,6 @@ private:
 
 	LinkRemoteClockSyncer ClockSyncer;
 
-
 	uint32_t SessionIdTimestamp = 0;
 
 public:
@@ -27,14 +26,13 @@ public:
 		, ClockSyncer()
 	{
 		driver->SetDuplexSlot(false);
+		SetClockSyncer(&ClockSyncer);
 	}
 
 	virtual bool Setup()
 	{
-		if (ClockSyncer.Setup())
+		if (ClockSyncer.Setup(&SyncedClock))
 		{
-			SetClockSyncer(&ClockSyncer);
-
 			return LoLaLinkService::Setup();
 		}
 
