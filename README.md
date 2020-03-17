@@ -104,13 +104,22 @@ It's quite a memory hog (around 1.5 kB for the example projects with only 2 sync
 
 # Future : 
 
-Drunk rebuild. Don't ask, I wasn't happy with a lot of stuff, so I changed a lot of stuff. Now nothing works, but it's fine, it will.
-
-Support for other radio drivers [WORK_IN_PROGRESS]: NRF24L01, Ti 
+Support for other radio drivers [WORK_IN_PROGRESS]: NRF24L01, Ti CC1310.
 
 SyncSurface Service upgrade to 64 bit blocks: should allow for easier 64 bit native values and more bandwidth efficient sync.
 
-Slave Device: turn a small micro
+Slave Device: turn a small micro (or raadio SoC) into a dedicated LoLa endpoint.
+
+Drunk rebuild. Don't ask, I wasn't happy with a lot of stuff, so I changed a lot of stuff. Now nothing works, but it's fine, it will.
+  - Custom radio driver: no more hogging the interrupt.
+  - Fully async packet processing: no more worrying that taking too long to eat a packet will make us lose the next one.
+  - Revamp crypto with modern practices: KDF and standard hashing.
+  - Simplify radio driver model: simplify radio driver implementation.
+  - Optimize blocking operations: reduce the key generations to once per boot or per lifetime.
+  - Reliable sub-second time with RTC: a 16 bit timer provides enough resolution (< 50 us).
+  - Optimize packet map and definitions: less setupy, more constructy.
+  - Improve replay attack protection: eventually I will decide to add a counter/padding to the packets. Not today.
+
 
 
 # Deprecated:
