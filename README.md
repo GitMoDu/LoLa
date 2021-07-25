@@ -53,9 +53,9 @@ Unbuffered Output [WORKING]: Each LoLa service can handle a packet send being de
 
 Async Driver for Si4463 [WORKING]: The radio IC this project is based around, but not limited to. Performs the packet processing in the main loop, instead of hogging the interrupt.
 
-Message Authentication Code [WORKING]: 16 bit Modbus CRC, completely replaces the raw hardware CRC. With crypto enable, uses MAC-then-Encrypt.
+Message Authentication Code [WORKING]: Blake2s hash, completely replaces the raw hardware CRC. With crypto enable, uses Encrypt-then-Mac.
 
-Acknowledged Packets with Id [WORKING]: carrying only the original packet's header and optional id. Currently only used for establishing a link, as the Ack packets ignore the collision-avoidance setup. This way we can accuratelly measure total system latency before the link is ready.
+Acknowledged Packets with Id [WORKING]: carrying only the original packet's header and optional id. Mostly used for measuring total system latency and linking status progression.
 
 Latency Compensation for Link[WORKING]: Using the measured latency, we use the estimated transmission time to optimize time dependent values.
 
@@ -63,7 +63,7 @@ ECC Public Key Exchange [WORKING] - Elyptic Curve Diffie-Hellman key exchange, p
 
 Encrypted Link[WORKING] – Packets encrypted with Ascon128 cypher, using 16 bytes of the shared key. To source a 16 byte IV, the partners' Ids are used, salted with the session Id.
 
-TOTP protection [FAILING] - A TOTP seed is set using the last 4 bytes of the secret key, which is then used to generate a time based token, which is used by the cypher when encrypting/decrypting. The default hop time is 1 second. Currently not working due to imprecise clock sync.
+TOTP protection [NEEDS_TESTING] - A TOTP seed is set using expanded bytes from secret key, which is then used to generate a time based token, which is used by the cypher when encrypting/decrypting. The default hop time is 1 second.
 
 Synchronized clock [WORKING]: when establishing a link, the Remote's clock is synced to the Host's clock. The host clock is randomized for each new link session. The clock is tuned during link time. Possible improvements: get host/remote clock delta.
 
@@ -73,12 +73,15 @@ Link Handshake Handling [WORKING] – Broadcast Id and find a partner. Clock is 
 
 Link management [WORKING]: Link service establishes a link and fires events when the link is gained or lost. Keeps sending pings (with replies) to make sure the partner is still there, avoiding stealing bandwidth from user services.
 
-Transmit Power Balancer[WORKING/NEEDS TUNNING]: with the link up, the end-points are continuosly updated on the RSSI of the partner, and adjusts the output power conservatively.
+Transmit Power Balancer[WORKING/NEEDS TUNNING]: with the link up, the end-points are continuosly updated on the RSSI of the partner, and adjusts the output power conservatively. Currently it's too jumpy and not conservative enough.
 
-Channel Hopping[IN PROGRESS]: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. Currently it's using a fixed channel (average between min and max channels).
-When linked, we use the TOTP mechanism to generate a pseudo-random channel hopping. Currently not working due to imprecise clock sync.
+Channel Hopping[NEEDS_TESTING]: The Host should hop on various channels while broadcasting, as should the remote while trying to establish a link. When linked, we use the TOTP mechanism to generate a pseudo-random channel hopping.
 
 Simulated Packet Loss for Testing[IN PROGRESS]: This feature allows us to test the system in simulated bad conditions. Was reverted during last merge, needs to be reimplemented.
+
+Reliable Time Source[WORKING]: RTC is working as an option on STM32F1. A rtc-tick-trained timer provides sub-second precision.
+
+Crypto key derivation [WORKING]: currently using a custom key derivation, should be replaced with standard KDF.
 
 
 # Implemented services
@@ -101,11 +104,21 @@ It's quite a memory hog (around 1.5 kB for the example projects with only 2 sync
 
 # Future : 
 
-Improved Time Source[IN PROGRESS]: current version is working but should be considered a fallback. GPS based time sources or an external time keeping device should be preferred. RTC is also an option on STM32F1.
+Support for other radio drivers [WORK_IN_PROGRESS]: NRF24L01, Ti CC1310.
 
-Support for other radio drivers [WAITING FOR HARDWARE]: NRF24L01 is next.
+SyncSurface Service upgrade to 64 bit blocks: should allow for easier 64 bit native values and more bandwidth efficient sync.
 
-Crypto key derivation [WORKING]: currently using a custom key derivation, should be replaced with standard KDF .
+Slave Device: turn a small micro (or raadio SoC) into a dedicated LoLa endpoint.
+
+Drunk rebuild. Don't ask, I wasn't happy with a lot of stuff, so I changed a lot of stuff. Now nothing works, but it's fine, it will.
+  - Custom radio driver: no more hogging the interrupt.
+  - Fully async packet processing: no more worrying that taking too long to eat a packet will make us lose the next one.
+  - Revamp crypto with modern practices: KDF and standard hashing.
+  - Simplify radio driver model: simplify radio driver implementation.
+  - Optimize blocking operations: reduce the key generations to once per boot or per lifetime.
+  - Reliable sub-second time with RTC: a 16 bit timer provides enough resolution (< 50 us).
+  - Optimize packet map and definitions: less setupy, more constructy.
+  - Improve replay attack protection: eventually I will decide to add a counter/padding to the packets. Not today.
 
 
 
