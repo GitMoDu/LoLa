@@ -5,12 +5,8 @@
 
 
 #include <PacketDriver\LoLaPacketDriver.h>
-
-#include <Services\ILoLaService.h>
-#include <Services\Link\LoLaLinkHostService.h>
-#include <Services\Link\LoLaLinkRemoteService.h>
-
-#include <PacketDriver\LinkIndicator.h>
+#include <Link\LoLaLinkHostService.h>
+#include <Link\LoLaLinkRemoteService.h>
 
 
 class LoLaManager
@@ -32,42 +28,29 @@ public:
 		LoLaDriver = driver;
 	}
 
-	LoLaLinkInfo* GetLinkInfo()
-	{
-		return GetLinkService()->GetLinkInfo();
-	}
-
-	LinkIndicator* GetLinkIndicator()
-	{
-		return GetLinkService()->GetLinkIndicator();
-	}
-
-#ifdef DEBUG_LOLA
-	uint8_t GetLinkState()
-	{
-		return GetLinkService()->GetLinkState();
-	}
-#endif
-
 	void Start()
 	{
-		GetLinkService()->Enable();
+		GetLinkService()->Start();
 	}
 
 	void Stop()
 	{
-		GetLinkService()->Disable();
+		GetLinkService()->Stop();
 	}
 
 	bool Setup()
 	{
-		if (!(GetLinkService() != nullptr) || !GetLinkService()->Setup())
+		if (GetLinkService() == nullptr || !GetLinkService()->Setup())
 		{
+			Serial.println(F("GetLinkService Setup Error"));
+
 			return false;
 		}
 
 		if (!OnSetupServices())
 		{
+			Serial.println(F("Services Setup Error"));
+
 			return false;
 		}
 
@@ -82,9 +65,9 @@ protected:
 	LoLaLinkHostService LinkService;
 
 public:
-	LoLaManagerHost(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* driver)
+	LoLaManagerHost(Scheduler* scheduler, LoLaPacketDriver* driver)
 		: LoLaManager(driver)
-		, LinkService(servicesScheduler, driverScheduler, driver)
+		, LinkService(scheduler, driver)
 	{
 	}
 
@@ -99,9 +82,9 @@ protected:
 	LoLaLinkRemoteService LinkService;
 
 public:
-	LoLaManagerRemote(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* driver)
+	LoLaManagerRemote(Scheduler* scheduler, LoLaPacketDriver* driver)
 		: LoLaManager(driver)
-		, LinkService(servicesScheduler, driverScheduler, driver)
+		, LinkService(scheduler, driver)
 	{
 	}
 

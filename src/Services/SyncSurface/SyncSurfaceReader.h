@@ -3,7 +3,11 @@
 #ifndef _SYNCSURFACEREADER_h
 #define _SYNCSURFACEREADER_h
 
+
+
+
 #include <Services\SyncSurface\SyncSurfaceBase.h>
+
 
 
 template <const uint8_t BasePacketHeader,
@@ -17,7 +21,7 @@ private:
 	uint32_t LastUpdateReceived = 0;
 
 public:
-	SyncSurfaceReader(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
+	SyncSurfaceReader(Scheduler* scheduler, LoLaPacketDriver* driver, ITrackedSurface* trackedSurface)
 		: SyncSurfaceBase(scheduler, driver, trackedSurface, ThrottlePeriodMillis)
 		, SyncMetaDefinition(this)
 		, DataPacketDefinition(this)
@@ -29,56 +33,47 @@ public:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("SyncSurfaceReader"));
+		serial->print(F("SurfaceReader ("));
+		TrackedSurface->PrintName(serial);
+		serial->print(F(")"));
 	}
 #endif
 
 protected:
 	void OnBlockReceived(const uint8_t index, uint8_t* payload)
 	{
-		UpdateBlockData(index, payload);
-		InvalidateLocalHash();
-		TrackedSurface->GetTracker()->ClearBit(index);
-		NotifyDataChanged();
-
 		switch (SyncState)
 		{
+		case AbstractSync::SyncStateEnum::Syncing:
+			UpdateBlockData(index, payload);
+			TrackedSurface->ClearBlockPending(index);
+			TrackedSurface->NotifyDataChanged();
+			LastUpdateReceived = millis();
+			break;
 		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
-			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
-			TrackedSurface->SetDataGood(false);
-			break;
 		case AbstractSync::SyncStateEnum::Synced:
-			TrackedSurface->GetTracker()->SetAll();
-			TrackedSurface->GetTracker()->ClearBit(index);
+			UpdateBlockData(index, payload);
+			TrackedSurface->SetAllPending();
+			TrackedSurface->ClearBlockPending(index);
+			TrackedSurface->NotifyDataChanged();
+			LastUpdateReceived = millis();
 			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			break;
+		case AbstractSync::SyncStateEnum::Disabled:
 		default:
 			break;
 		}
-
-		LastUpdateReceived = millis();
 	}
 
 	void OnStateUpdated(const AbstractSync::SyncStateEnum newState)
 	{
 		switch (newState)
 		{
-		case AbstractSync::SyncStateEnum::Syncing:
-			LastUpdateReceived = 0;
-			TrackedSurface->GetTracker()->SetAll();
-			break;
 		case AbstractSync::SyncStateEnum::Synced:
-			TrackedSurface->GetTracker()->ClearAll();
-			InvalidateLocalHash();
-			UpdateLocalHash();
-			if (!TrackedSurface->IsDataGood())
-			{
-				TrackedSurface->SetDataGood(true);
-				NotifyDataChanged();
-			}
+			TrackedSurface->StampDataIntegrity();
 			break;
 		case AbstractSync::SyncStateEnum::Disabled:
-			TrackedSurface->SetDataGood(false);
+			TrackedSurface->ResetDataIntegrity();
 			break;
 		default:
 			break;
@@ -87,85 +82,104 @@ protected:
 
 	void OnWaitingForServiceDiscovery()
 	{
-		if (GetElapsedSinceStateStart() > ABSTRACT_SURFACE_MAX_ELAPSED_NO_DISCOVERY_MILLIS)
+		if (GetElapsedSinceStateStart() > MAX_ELAPSED_NO_DISCOVERY_MILLIS)
 		{
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 			Serial.println(F("Sync Surface: No service found."));
 #endif
-			Disable();
+			UpdateSyncState(AbstractSync::SyncStateEnum::Disabled);
 		}
-		else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD)
+		else if (GetElapsedSinceLastSent() > DISCOVERY_SEND_PERIOD)
 		{
-			PrepareServiceDiscoveryPacket();
-			RequestSendPacket();
+			SendServiceDiscoveryPacket();
 		}
 		else
 		{
-			SetNextRunDelay(ABSTRACT_SURFACE_SERVICE_DISCOVERY_SEND_PERIOD - GetElapsedSinceLastSent());
+			SetNextRunDelay(DISCOVERY_SEND_PERIOD - GetElapsedSinceLastSent());
 		}
 	}
 
 	void OnSyncActive()
 	{
-		if (LastUpdateReceived != 0 &&
-			(millis() - LastUpdateReceived > ABSTRACT_SURFACE_RECEIVE_FAILED_PERIDO) &&
-			CheckThrottling() &&
-			GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
+		bool SendInvalidate = false;
+
+		if (CheckThrottling())
 		{
-			PrepareInvalidateRequestPacket();
-			RequestSendPacket();
-#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
-			Serial.println(F("Surface Reader Recovery!"));
-#endif
+			if (GetElapsedSinceStateStart() > SLOW_CHECK_PERIOD_MILLIS
+				&& (LastUpdateReceived == 0 ||
+					(millis() - LastUpdateReceived > RECEIVE_FAILED_PERIOD)))
+			{
+				SendInvalidateRequestPacket();
+			}
 		}
 		else
 		{
-			SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+			SetNextRunDelay(FAST_CHECK_PERIOD_MILLIS);
 		}
-
 	}
 
 	void OnUpdateFinishedReceived()
 	{
-		UpdateLocalHash();
-
 		switch (SyncState)
 		{
 		case AbstractSync::SyncStateEnum::Syncing:
-			PrepareUpdateFinishedReplyPacket();
-			RequestSendPacket();
+			SendUpdateFinishedReplyPacket();
 			if (HashesMatch())
 			{
 				UpdateSyncState(AbstractSync::SyncStateEnum::Synced);
 			}
+			LastUpdateReceived = millis();
 			break;
 		case AbstractSync::SyncStateEnum::Synced:
 			if (HashesMatch())
 			{
-				PrepareUpdateFinishedReplyPacket();
-				RequestSendPacket();
+				SendUpdateFinishedReplyPacket();
 			}
 			else
 			{
-				PrepareInvalidateRequestPacket();
-				RequestSendPacket();
+				SendInvalidateRequestPacket();
 				UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			}
+			LastUpdateReceived = millis();
 			break;
 		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
-			PrepareUpdateFinishedReplyPacket();
-			RequestSendPacket();
-			if (HashesMatch())
-			{
-				UpdateSyncState(AbstractSync::SyncStateEnum::Synced);
-			}
-			else
-			{
-				UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
-			}
+			SendInvalidateRequestPacket();
+			TrackedSurface->SetAllPending();
+			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			break;
 		default:
 			break;
+		}
+	}
+
+private:
+	void SendServiceDiscoveryPacket()
+	{
+		SendMetaPacket(SYNC_META_SUB_HEADER_SERVICE_DISCOVERY, GetSurfaceId());
+	}
+
+	void SendUpdateFinishedReplyPacket()
+	{
+		SendMetaHashPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
+	}
+
+	void SendInvalidateRequestPacket()
+	{
+		SendMetaHashPacket(SYNC_META_SUB_HEADER_INVALIDATE_REQUEST);
+#if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
+		Serial.println(F("Surface Reader Recovery!"));
+#endif
+	}
+
+	void UpdateBlockData(const uint8_t blockIndex, uint8_t* payload)
+	{
+		InvalidateLocalHash();
+
+		uint8_t IndexOffset = blockIndex * ITrackedSurface::BytesPerBlock;
+
+		for (uint8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
+		{
+			SurfaceData[IndexOffset + i] = payload[1 + 1 + i];
 		}
 	}
 };

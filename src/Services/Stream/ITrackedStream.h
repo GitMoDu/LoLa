@@ -6,7 +6,8 @@
 #include <BitTracker.h>
 #include <Callback.h>
 
-#include <RingBufCPP.h>
+// https://github.com/rlogiacco/CircularBuffer
+#include <CircularBuffer.h>
 
 
 class ITrackedStream
@@ -51,7 +52,8 @@ template <class DataType, const uint8_t BufferSize>
 class TemplateTrackedStreamBuffer : public ITrackedStream
 {
 private:
-	RingBufCPP<DataType, BufferSize> CircularBuffer;
+
+	CircularBuffer<DataType, BufferSize> CircularBuffer;
 
 	DataType Grunt;
 

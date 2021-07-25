@@ -5,82 +5,85 @@
 
 #include <stdint.h>
 #include <LoLaDefinitions.h>
-#include <IPacketListener.h>
+#include <Packet\ILoLaService.h>
 
 
 
-
-// Packet: [MACCRC1|MACCRC2|HEADER|ID|PAYLOAD]
-
-#define LOLA_PACKET_MACCRC_INDEX				(0)
-#define LOLA_PACKET_MACCRC_SIZE					(LOLA_LINK_CRYPTO_MAC_CRC_SIZE)
-#define LOLA_PACKET_HEADER_INDEX				(LOLA_PACKET_MACCRC_INDEX + LOLA_PACKET_MACCRC_SIZE)
-#define LOLA_PACKET_ID_INDEX					(LOLA_PACKET_HEADER_INDEX + 1)
-#define LOLA_PACKET_PAYLOAD_INDEX				(LOLA_PACKET_ID_INDEX + 1)
-
-#define LOLA_PACKET_MIN_PACKET_SIZE				(LOLA_PACKET_PAYLOAD_INDEX)	//CRC + Header + Id.
-
-#define LOLA_PACKET_MAX_PACKET_SIZE				64
-
-
-class PacketDefinitionHelper
-{
-public:
-	//No size checks.
-	static uint8_t GetContentSizeQuick(const uint8_t unknownTotalSize)
-	{
-		return unknownTotalSize - LOLA_PACKET_HEADER_INDEX;
-	}
-};
+//	Packet:
+//	________
+//	MAC0		MAC/CRC	4 Bytes.
+//	MAC1
+//	MAC2
+//	MAC3
+//	________
+//	ID			Id rolling counter 1 Byte.
+//	________
+//  HEADER		Indexed header 1 Byte.
+//	________
+//	PAYLOAD0	Payload N Bytes.
+//	PAYLOAD1
+//	PAYLOADN
+//	________
 
 class PacketDefinition
 {
 public:
-	///Configurations for packets.
-	static const uint8_t PACKET_DEFINITION_MASK_CUSTOM_7 = B00000010;
-	static const uint8_t PACKET_DEFINITION_MASK_CUSTOM_6 = B00000100;
-	static const uint8_t PACKET_DEFINITION_MASK_CUSTOM_5 = B00001000;
-	static const uint8_t PACKET_DEFINITION_MASK_CUSTOM_4 = B00010000;
-	static const uint8_t PACKET_DEFINITION_MASK_CUSTOM_3 = B00100000;
-	static const uint8_t PACKET_DEFINITION_MASK_CUSTOM_2 = B01000000;
-	static const uint8_t PACKET_DEFINITION_MASK_HAS_ACK = B10000000;
-	static const uint8_t PACKET_DEFINITION_MASK_BASIC = B00000000;
+	static const uint8_t LOLA_PACKET_MACCRC_INDEX = 0;
+	static const uint8_t LOLA_PACKET_MACCRC_SIZE = 4; // sizeof(uint32_t)
+	static const uint8_t LOLA_PACKET_ID_INDEX = (LOLA_PACKET_MACCRC_INDEX + LOLA_PACKET_MACCRC_SIZE);
+	static const uint8_t LOLA_PACKET_HEADER_INDEX = LOLA_PACKET_ID_INDEX + 1;
+	static const uint8_t LOLA_PACKET_PAYLOAD_INDEX = LOLA_PACKET_HEADER_INDEX + 1;
+
+	static const uint8_t LOLA_PACKET_BASE_CONTENT_SIZE = 2;	// Id + Header.
+	static const uint8_t LOLA_PACKET_MIN_PACKET_TOTAL_SIZE = LOLA_PACKET_MACCRC_SIZE + LOLA_PACKET_BASE_CONTENT_SIZE;	// CRC + Id + Header.
+	static const uint8_t LOLA_PACKET_MAX_PACKET_TOTAL_SIZE = 64;
+	static const uint8_t LOLA_PACKET_MAX_CONTENT_SIZE = LOLA_PACKET_MAX_PACKET_TOTAL_SIZE - LOLA_PACKET_BASE_CONTENT_SIZE;
+	static const uint8_t LOLA_PACKET_MAX_PAYLOAD_SIZE = LOLA_PACKET_MAX_PACKET_TOTAL_SIZE - LOLA_PACKET_MIN_PACKET_TOTAL_SIZE;
+
+
+	//Reserved [0] for Ack.
+	static const uint8_t PACKET_DEFINITION_ACK_HEADER = 0x00;
+
+	// Reserved [1;9] for Link service.
+	static const uint8_t PACKET_DEFINITION_LINK_START_HEADER = PACKET_DEFINITION_ACK_HEADER + 1;
+	static const uint8_t PACKET_DEFINITION_LINK_HEADER_COUNT = 9;
+
+	// User Services header start.
+	static const uint8_t PACKET_DEFINITION_USER_HEADERS_START = PACKET_DEFINITION_LINK_START_HEADER + PACKET_DEFINITION_LINK_HEADER_COUNT;
 
 public:
-	const uint8_t Configuration;
+	const bool HasAck;
+
 	const uint8_t Header;
+	const uint8_t ContentSize; // Everything but the MAC/CRC.
 	const uint8_t PayloadSize;
+	const uint8_t TotalSize;
 
-	IPacketListener* Service = nullptr;
+	ILoLaService* Service = nullptr;
 
 public:
-	PacketDefinition(IPacketListener* service, const uint8_t header, const uint8_t payloadSize, const uint8_t configuration = PACKET_DEFINITION_MASK_BASIC)
+	PacketDefinition(ILoLaService* service,
+		const uint8_t header,
+		const uint8_t payloadSize,
+		const uint8_t hasAck = false)
 		: Header(header)
 		, PayloadSize(payloadSize)
-		, Configuration(configuration)
+		, HasAck(hasAck)
+		, ContentSize(LOLA_PACKET_BASE_CONTENT_SIZE + payloadSize)
+		, TotalSize(LOLA_PACKET_MIN_PACKET_TOTAL_SIZE + payloadSize)
+		, Service(service)
 	{
-		Service = service;
 	}
 
-	virtual bool Validate()
+public:
+	static uint8_t GetContentSize(const uint8_t totalSize)
 	{
-		return Service != nullptr;
+		return totalSize - LOLA_PACKET_ID_INDEX;
 	}
 
-	const uint8_t GetContentSize()
+	static constexpr uint8_t GetTotalSize(const uint8_t payloadSize)
 	{
-		return LOLA_PACKET_PAYLOAD_INDEX - LOLA_PACKET_HEADER_INDEX + PayloadSize;
-	}
-
-	const uint8_t GetTotalSize()
-	{
-		return LOLA_PACKET_MIN_PACKET_SIZE + PayloadSize;
-	}
-
-	bool HasACK()
-	{
-		return Configuration > 0;
-		//return Configuration & PACKET_DEFINITION_MASK_HAS_ACK;
+		return LOLA_PACKET_PAYLOAD_INDEX + payloadSize;
 	}
 
 #ifdef DEBUG_LOLA
@@ -94,10 +97,10 @@ public:
 	{
 		PrintName(serial);
 		serial->print(F("\tSize: "));
-		serial->print(GetTotalSize());
+		serial->print(TotalSize);
 		serial->print(F(" \t|"));
-			
-		if (HasACK())
+
+		if (HasAck)
 		{
 			serial->print(F("ACK|"));
 		}

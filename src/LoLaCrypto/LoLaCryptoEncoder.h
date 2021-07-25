@@ -9,33 +9,39 @@
 #include "utility/ProgMemUtil.h"
 
 #include <LoLaDefinitions.h>
-#include <PacketDriver\ILoLaSelector.h>
 #include <LoLaCrypto\CryptoTokenGenerator.h>
 
 
 // Responsible keeping the state of crypto encoding/decoding,
 // MAC hash and key expansion.
+// Encrypt-then-MAC.
 class LoLaCryptoEncoder
 {
 private:
 	static const uint8_t KeySize = 16; // Cypher.keySize()
 	static const uint8_t IVSize = 16; // Cypher.ivSize()
 
-	static const uint8_t MACSize = LOLA_LINK_CRYPTO_MAC_CRC_SIZE;
-
-	// Protocol defined values
-	static const uint8_t CryptoSeedSize = LOLA_LINK_CRYPTO_SEED_SIZE;
-	static const uint8_t ChannelSeedSize = LOLA_LINK_CHANNEL_SEED_SIZE;
-	static const uint8_t CryptoTokenSize = LOLA_LINK_CRYPTO_TOKEN_SIZE;
+	// 4 Byte Message Authentication Code.
+	static const uint8_t MACSize = 4;
 
 private:
+	// If these are changed, update ProtocolVersionCalculator.
+	Ascon128 Cypher;
+	BLAKE2s Hasher; // 32 Byte hasher ouput.
+
+	union ArrayToUint32
+	{
+		byte array[sizeof(uint32_t)];
+		uint32_t uint;
+	};
+
 	// Large enough to generate unique keys for each purpose.
 	struct ExpandedKeyStruct
 	{
 		uint8_t Key[KeySize];
 		uint8_t IV[IVSize];
-		uint8_t CryptoSeed[CryptoSeedSize];
-		uint8_t ChannelSeed[ChannelSeedSize];
+		uint8_t CryptoSeed[sizeof(uint32_t)];
+		uint8_t ChannelSeed[sizeof(uint32_t)];
 	};
 
 	union KeyArray
@@ -44,105 +50,159 @@ private:
 		uint8_t Array[sizeof(ExpandedKeyStruct)];
 	} ExpandedKeySource;
 
-	// If these are changed, update ProtocolVersionCalculator.
-	Ascon128 Cypher;
-	BLAKE2s Hasher;
-
-	union ArrayToUint32
-	{
-		byte array[sizeof(uint32_t)];
-		uint32_t uint;
-	} HasherHelper;
-
-
-	TOTPMillisecondsTokenGenerator<LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_MILLIS, LOLA_LINK_CRYPTO_SEED_SIZE> CryptoTokenGenerator;
-	TOTPMillisecondsTokenGenerator<LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS, LOLA_LINK_CHANNEL_SEED_SIZE> ChannelTokenGenerator;
-
-	TimedHopProvider TimedHopEnabled;
+	// Runtime Flags.
+	bool TokenHopEnabled = false;
+	bool EncryptionEnabled = false;
 
 public:
-	LoLaCryptoEncoder() :
-		Cypher(),
-		Hasher(),
-		CryptoTokenGenerator(),
-		ChannelTokenGenerator()
+	TOTPSecondsTokenGenerator LinkTokenGenerator;
+	TOTPMillisecondsTokenGenerator ChannelTokenGenerator;
+
+public:
+	LoLaCryptoEncoder(ISyncedClock* syncedClock)
+		: Cypher()
+		, Hasher()
+		, LinkTokenGenerator(syncedClock)
+		, ChannelTokenGenerator(syncedClock, LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS)
 	{
 	}
 
-	uint32_t HashArray(uint8_t* array, const uint8_t arrayLength)
+	void StartTokenHop()
 	{
-		Hasher.reset();
-		Hasher.update(array, arrayLength);
-		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
-
-		return HasherHelper.uint;
+#ifdef LOLA_LINK_USE_TOKEN_HOP
+		TokenHopEnabled = true;
+#endif
 	}
 
-	ITokenSource* GetChannelTokenSource()
+	void StartEncryption()
 	{
-		return &ChannelTokenGenerator;
+#ifdef LOLA_LINK_USE_ENCRYPTION
+		EncryptionEnabled = true;
+#endif
 	}
 
-	bool Setup(ISyncedClock* syncedClock)
+	bool Setup()
 	{
-		return CryptoTokenGenerator.Setup(syncedClock, &TimedHopEnabled) &&
-			ChannelTokenGenerator.Setup(syncedClock, &TimedHopEnabled);
-	}
-
-	void EnableTOTP()
-	{
-		TimedHopEnabled.TimedHopEnabled = true;
-	}
-
-	// Returns MAC/CRC.
-	uint32_t Encode(uint8_t* message, const uint8_t messageLength, uint8_t* outputMessage)
-	{
-		ResetCypherBlock();
-		Cypher.encrypt(outputMessage, message, messageLength);
-
-		Hasher.reset();
-		Hasher.update(message, messageLength);
-
-		HasherHelper.uint = CryptoTokenGenerator.GetToken();
-		Hasher.update(HasherHelper.array, CryptoTokenSize);
-
-		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
-
-		return HasherHelper.uint;
-	}
-
-	bool Decode(uint8_t* message, const uint8_t messageLength, const uint32_t macCRC)
-	{
-		HasherHelper.uint = CryptoTokenGenerator.GetToken();
-
-		Hasher.reset();
-		Hasher.update(message, messageLength);
-
-		Hasher.update(HasherHelper.array, CryptoTokenSize);
-
-		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
-
-		if (macCRC == HasherHelper.uint)
-		{
-			ResetCypherBlock();
-			Cypher.decrypt(message, message, messageLength);
-
-			return true;
-		}
+		//TODO: Use this time to source some nice entropy to see the RNG.
+		Clear();
 
 		return true;
 	}
 
+	// Returns MAC/CRC.
+	uint32_t Encode(uint8_t* message, const uint8_t messageLength, const uint8_t forwardsMillis)
+	{
+		ArrayToUint32 Helper;
+
+		// Start MAC.
+		Hasher.reset();
+
+		if (EncryptionEnabled)
+		{
+			ResetCypherBlock();
+			Cypher.encrypt(message, message, messageLength);
+
+			// Message content, encrypted.
+			Hasher.update(message, messageLength);
+
+			// Get MAC key.
+			if (TokenHopEnabled)
+			{
+				Helper.uint = LinkTokenGenerator.GetTokenFromAhead(forwardsMillis);
+			}
+			else
+			{
+				Helper.uint = LinkTokenGenerator.GetSeed();
+			}
+
+			// MAC key.
+			Hasher.update(Helper.array, sizeof(uint32_t));
+		}
+		else
+		{
+			// Message content.
+			Hasher.update(message, messageLength);
+		}
+
+		// MAC ready for output.
+		Hasher.finalize(Helper.array, sizeof(uint32_t));
+
+		return Helper.uint;
+	}
+
+	bool Decode(uint8_t* message, const uint8_t messageLength, const uint32_t macCRC, const uint8_t backwardsMillis)
+	{
+		ArrayToUint32 Helper;
+
+		// Start MAC.
+		Hasher.reset();
+
+		// Message content.
+		Hasher.update(message, messageLength);
+
+		if (EncryptionEnabled)
+		{
+			// Get MAC key.
+			if (TokenHopEnabled)
+			{
+				Helper.uint = LinkTokenGenerator.GetTokenFromEarlier(backwardsMillis);
+			}
+			else
+			{
+				Helper.uint = LinkTokenGenerator.GetSeed();
+			}
+
+			// Crypto Token.
+			Hasher.update(Helper.array, sizeof(uint32_t));
+		}
+
+		// MAC ready for comparison.
+		Hasher.finalize(Helper.array, sizeof(uint32_t));
+
+		if (macCRC == Helper.uint)
+		{
+			if (EncryptionEnabled)
+			{
+				ResetCypherBlock();
+				Cypher.decrypt(message, message, messageLength);
+			}
+			return true;
+		}
+
+		return false;
+	}
+
 	void Clear()
 	{
+		EncryptionEnabled = false;
+		TokenHopEnabled = false;
+
 		for (uint8_t i = 0; i < sizeof(ExpandedKeySource); i++)
 		{
 			((uint8_t*)&ExpandedKeySource)[i] = 0;
 		}
 
-		UpdateSeeds();
+		LinkTokenGenerator.SetSeed(0);
+		ChannelTokenGenerator.SetSeed(0);
+	}
 
-		TimedHopEnabled.TimedHopEnabled = false;
+	const uint32_t SignContentSharedKey(const uint32_t content)
+	{
+		ArrayToUint32 Helper;
+		Helper.uint = content;
+
+		// Start hasher with Shared Key.
+		//Hasher.resetHMAC(ExpandedKeySource.Keys.Key, KeySize);
+		Hasher.reset();
+
+		// Message Content.
+		Hasher.update(Helper.array, sizeof(uint32_t));
+
+		// MAC ready for comparison.
+		//Hasher.finalizeHMAC(Helper.array, sizeof(uint32_t), Helper.array, sizeof(uint32_t));
+		Hasher.finalize(Helper.array, sizeof(uint32_t));
+
+		return Helper.uint;
 	}
 
 	// Expands secret key + salt to fill the Expanded key (and all sub keys).
@@ -154,15 +214,18 @@ public:
 		uint8_t Rounds = 1;
 		uint8_t Chunk = 0;
 
+		ArrayToUint32 HasherHelper;
+
 		while (ByteCount < sizeof(ExpandedKeySource))
 		{
-			Hasher.clear();
+			Hasher.reset();
 
 			// Secret key.
 			Hasher.update(secretKey, KeySize);
 
 			// Salt.
-			// We resalt Round times because we're stretching the original hash state, without directly restoring the state.
+			// We resalt Round times because we're stretching the original hash state,
+			// without directly restoring the state.
 			// Fortunately, our hash is fast.
 			for (uint8_t i = 0; i < Rounds; i++)
 			{
@@ -170,7 +233,7 @@ public:
 				Hasher.update(HasherHelper.array, sizeof(uint32_t));
 			}
 
-			Chunk = min(sizeof(ExpandedKeySource) - ByteCount, Hasher.hashSize());
+			Chunk = min((uint8_t)sizeof(ExpandedKeySource) - ByteCount, (uint8_t)Hasher.hashSize());
 
 			Hasher.finalize(&ExpandedKeySource.Array[ByteCount], Chunk);
 
@@ -185,26 +248,21 @@ public:
 				Rounds++;
 			}
 		}
-		Hasher.clear();
 
-#ifdef DEBUG_LOLA
-		Cypher.clear();
+		// Update seeds for token generators.
+		HasherHelper.array[0] = ExpandedKeySource.Keys.CryptoSeed[0];
+		HasherHelper.array[1] = ExpandedKeySource.Keys.CryptoSeed[1];
+		HasherHelper.array[2] = ExpandedKeySource.Keys.CryptoSeed[2];
+		HasherHelper.array[3] = ExpandedKeySource.Keys.CryptoSeed[3];
 
-		// Test if key is accepted.
-		if (!Cypher.setKey(ExpandedKeySource.Keys.Key, KeySize))
-		{
-			Serial.println(F("Failed to set Key."));
-		}
+		LinkTokenGenerator.SetSeed(HasherHelper.uint);
 
-		// Test setting IV.
-		if (!Cypher.setIV(ExpandedKeySource.Keys.IV, KeySize))
-		{
-			Serial.println(F("Failed to set IV."));
-		}
-		Cypher.clear();
-#endif
+		HasherHelper.array[0] = ExpandedKeySource.Keys.ChannelSeed[0];
+		HasherHelper.array[1] = ExpandedKeySource.Keys.ChannelSeed[1];
+		HasherHelper.array[2] = ExpandedKeySource.Keys.ChannelSeed[2];
+		HasherHelper.array[3] = ExpandedKeySource.Keys.ChannelSeed[3];
 
-		UpdateSeeds();
+		ChannelTokenGenerator.SetSeed(HasherHelper.uint);
 	}
 
 private:
@@ -212,22 +270,6 @@ private:
 	{
 		Cypher.setKey(ExpandedKeySource.Keys.Key, KeySize);
 		Cypher.setIV(ExpandedKeySource.Keys.IV, IVSize);
-		//TODO: Consider adding auth data if performance is ok.
-	}
-
-	void UpdateSeeds()
-	{
-		// Update token seeds for token generators.
-		Hasher.reset();
-		Hasher.update(ExpandedKeySource.Keys.CryptoSeed, CryptoSeedSize);
-		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
-
-		CryptoTokenGenerator.SetSeed(HasherHelper.uint);
-
-		Hasher.reset();
-		Hasher.update(ExpandedKeySource.Keys.ChannelSeed, ChannelSeedSize);
-		Hasher.finalize(HasherHelper.array, CryptoTokenSize);
-		ChannelTokenGenerator.SetSeed(HasherHelper.uint);
 	}
 
 #ifdef DEBUG_LOLA

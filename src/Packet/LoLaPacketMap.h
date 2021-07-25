@@ -3,14 +3,19 @@
 #ifndef _LOLAPACKETMAPPER_h
 #define _LOLAPACKETMAPPER_h
 
-#include <Packet\PacketDefinition.h>
 #include <LoLaDefinitions.h>
-#include <IPacketListener.h>
+#include <Packet\PacketDefinition.h>
+#include <Packet\ILoLaService.h>
 
-
-class ILoLaPacketMap
+class LoLaPacketMap
 {
-protected:
+public:
+	struct WrappedDefinition
+	{
+		PacketDefinition* Definition = nullptr;
+	};
+
+private:
 	uint8_t MaxMappingIndex = 0;
 
 #ifdef DEBUG_LOLA
@@ -31,27 +36,13 @@ public:
 	}
 
 public:
-	virtual bool RegisterMapping(PacketDefinition* packetDefinition)
-	{
-		return false;
-	}
-
-	virtual IPacketListener* GetServiceAt(const uint8_t index)
-	{
-		return nullptr;
-	}
-};
-
-class LoLaPacketMap : public ILoLaPacketMap
-{
-public:
 	class AckPacketDefinition : public PacketDefinition
 	{
 	public:
 		AckPacketDefinition() :
 			PacketDefinition(nullptr,
 				PACKET_DEFINITION_ACK_HEADER,
-				1)//Payload is original Header. Id is optional.
+				2)//Payload is original Header and Id.
 		{
 		}
 
@@ -72,7 +63,7 @@ private:
 	AckPacketDefinition DefinitionACK;
 
 protected:
-	PacketDefinition* Mapping[MAX_MAPPING_SIZE];
+	PacketDefinition* Mapping[UINT8_MAX];
 
 public:
 	LoLaPacketMap() : DefinitionACK()
@@ -82,7 +73,7 @@ public:
 
 	void ResetMapping()
 	{
-		for (uint8_t i = 0; i < MAX_MAPPING_SIZE; i++)
+		for (uint8_t i = 0; i < UINT8_MAX; i++)
 		{
 			Mapping[i] = nullptr;
 		}
@@ -92,16 +83,18 @@ public:
 		UsedMappings = 0;
 #endif
 
-		//Add base mappings.
-		RegisterMapping(&DefinitionACK);
+		Mapping[DefinitionACK.Header] = &DefinitionACK;
+		MaxMappingIndex = DefinitionACK.Header;
+#ifdef DEBUG_LOLA
+		UsedMappings++;
+#endif
 	}
 
 	virtual bool RegisterMapping(PacketDefinition* packetDefinition)
 	{
-		if (packetDefinition->Header < MAX_MAPPING_SIZE &&
-			packetDefinition != nullptr &&
-			Mapping[packetDefinition->Header] == nullptr &&
-			packetDefinition->Validate())
+		if (packetDefinition != nullptr && 
+			packetDefinition->Service != nullptr &&
+			Mapping[packetDefinition->Header] == nullptr)
 		{
 			Mapping[packetDefinition->Header] = packetDefinition;
 
@@ -119,7 +112,7 @@ public:
 		return false;
 	}
 
-	IPacketListener* GetServiceAt(const uint8_t index)
+	ILoLaService* GetServiceAt(const uint8_t index)
 	{
 		if (index <= MaxMappingIndex &&
 			Mapping[index] != nullptr)
@@ -128,6 +121,55 @@ public:
 		}
 
 		return nullptr;
+	}
+
+	ILoLaService* GetServiceNotAckAt(const uint8_t header)
+	{
+		if (header <= MaxMappingIndex &&
+			header != DefinitionACK.Header &&
+			Mapping[header] != nullptr)
+		{
+			return Mapping[header]->Service;
+		}
+
+		return nullptr;
+	}
+
+	PacketDefinition* GetDefinitionNotAck(const uint8_t header)
+	{
+		if (header != DefinitionACK.Header && header <= MaxMappingIndex)
+		{
+			return Mapping[header];
+		}
+		else
+		{
+#ifdef DEBUG_LOLA
+			Serial.println(F("GetDefinition Not Ack index out of bounds."));
+#endif
+			return nullptr;
+		}
+	}
+
+	PacketDefinition* GetAckDefinition()
+	{
+		return &DefinitionACK;
+	}
+
+	const bool TryGetDefinition(const uint8_t header, WrappedDefinition* outDefinition)
+	{
+		if (header <= MaxMappingIndex)
+		{
+			outDefinition->Definition = Mapping[header];
+
+			return outDefinition->Definition != nullptr;
+		}
+		else
+		{
+#ifdef DEBUG_LOLA
+			Serial.println(F("TryGetDefinition index out of bounds."));
+#endif
+			return false;
+		}
 	}
 
 	PacketDefinition* GetDefinition(const uint8_t header)
@@ -149,14 +191,14 @@ public:
 	void Debug(Stream* serial)
 	{
 		serial->print(F("Packet map memory space: "));
-		serial->print(MAX_MAPPING_SIZE * sizeof(PacketDefinition*));
+		serial->print(UINT8_MAX * sizeof(PacketDefinition*));
 		serial->println(F(" bytes."));
 
 		serial->print(F("MaxMappingIndex: "));
 		serial->println(MaxMappingIndex);
 
 		serial->print(F("Packet map usage: "));
-		serial->print((GetCount() * 100) / MAX_MAPPING_SIZE);
+		serial->print((GetCount() * 100) / UINT8_MAX);
 		serial->println(F("% ."));
 
 		serial->print(F("Packet mappings: "));
@@ -164,7 +206,7 @@ public:
 
 		uint8_t MaxServiceHeader = 0;
 
-		for (uint8_t i = 0; i < MAX_MAPPING_SIZE; i++)
+		for (uint8_t i = 0; i < UINT8_MAX; i++)
 		{
 			if (Mapping[i] != nullptr)
 			{
@@ -182,10 +224,10 @@ public:
 		}
 
 		serial->println(F("Services:"));
-		IPacketListener* service = nullptr;
+		ILoLaService* service = nullptr;
 
 		uint8_t ServiceCount = 0;
-		for (uint8_t i = 1; i < MAX_MAPPING_SIZE; i++)
+		for (uint8_t i = 1; i < UINT8_MAX; i++)
 		{
 			if (Mapping[i] != nullptr)
 			{

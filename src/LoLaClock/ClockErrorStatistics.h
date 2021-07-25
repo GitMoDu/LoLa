@@ -3,9 +3,8 @@
 #ifndef _CLOCKERRORSTATISTICS_h
 #define _CLOCKERRORSTATISTICS_h
 
-#include <RingBufCPP.h>
 
-#include <Services\Link\LoLaLinkDefinitions.h>
+#include <Link\LoLaLinkDefinitions.h>
 
 class ClockErrorSample
 {
@@ -30,7 +29,7 @@ public:
 
 	static const uint32_t MAX_CLOCK_ERROR_MICROS = LOLA_LINK_SERVICE_LINKED_CLOCK_OK_ERROR_MICROS;
 
-	RingBufCPP<ClockErrorSample, ERROR_SAMPLE_COUNT> TuneErrorSamples;
+	//RingBufCPP<ClockErrorSample, ERROR_SAMPLE_COUNT> TuneErrorSamples;
 
 	bool NeedsUpdate = 0;
 
@@ -48,18 +47,19 @@ public:
 		Grunt.ErrorMicros = errorMicros;
 		Grunt.PeriodMillis = periodMillis;
 
-		TuneErrorSamples.addForce(Grunt);
+		//TuneErrorSamples.addForce(Grunt);
 		NeedsUpdate = true;
 	}
 
 	bool HasEnoughSamples()
 	{
-		return TuneErrorSamples.numElements() > (ERROR_SAMPLE_COUNT / 2);
+		return false;
+		//return TuneErrorSamples.numElements() > (ERROR_SAMPLE_COUNT / 2);
 	}
 
 	void AddTuneSample(const ClockErrorSample &errorSample)
 	{
-		TuneErrorSamples.addForce(errorSample);
+		//TuneErrorSamples.addForce(errorSample);
 		NeedsUpdate = true;
 	}
 
@@ -70,9 +70,10 @@ public:
 			UpdateStatistics();
 		}
 
-		return (map(TuneErrorSamples.numElements(), 0, ERROR_SAMPLE_COUNT, 0, UINT8_MAX) +
-			map(min(abs(AverageErrorMicros), MAX_CLOCK_ERROR_MICROS), MAX_CLOCK_ERROR_MICROS, 0, 0, UINT8_MAX) +
-			map(min(MaxErrorMicros, MAX_CLOCK_ERROR_MICROS), MAX_CLOCK_ERROR_MICROS, 0, 0, UINT8_MAX)) / 3;
+		return 0;
+		//return (map(TuneErrorSamples.numElements(), 0, ERROR_SAMPLE_COUNT, 0, UINT8_MAX) +
+		//	map(min((uint32_t)abs(AverageErrorMicros), MAX_CLOCK_ERROR_MICROS), MAX_CLOCK_ERROR_MICROS, 0, 0, UINT8_MAX) +
+		//	map(min((uint32_t)MaxErrorMicros, MAX_CLOCK_ERROR_MICROS), MAX_CLOCK_ERROR_MICROS, 0, 0, UINT8_MAX)) / 3;
 	}
 
 	int32_t GetAverageError()
@@ -107,10 +108,10 @@ public:
 
 	void Reset()
 	{
-		while (!TuneErrorSamples.isEmpty())
-		{
-			TuneErrorSamples.pull();
-		}
+		//while (!TuneErrorSamples.isEmpty())
+		//{
+		//	TuneErrorSamples.pull();
+		//}
 		AverageErrorMicros = 0;
 	}
 
@@ -125,7 +126,7 @@ private:
 			AverageErrorMicros = 0;
 			AverageWeightedErrorMicros = 0;
 			WeightedTotalPeriodMillis = 0;
-			while (Count < TuneErrorSamples.numElements())
+			/*while (Count < TuneErrorSamples.numElements())
 			{
 				Grunt = *TuneErrorSamples.peek(Count);
 				AverageErrorMicros += Grunt.ErrorMicros;
@@ -140,7 +141,7 @@ private:
 			}
 
 			AverageErrorMicros /= Count;
-			AverageWeightedErrorMicros = (int32_t)((int64_t)AverageWeightedErrorMicros / (int64_t)WeightedTotalPeriodMillis);
+			AverageWeightedErrorMicros = (int32_t)((int64_t)AverageWeightedErrorMicros / (int64_t)WeightedTotalPeriodMillis);*/
 
 			NeedsUpdate = false;
 		}

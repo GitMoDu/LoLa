@@ -3,236 +3,299 @@
 #ifndef _LOLAPACKETDRIVER_h
 #define _LOLAPACKETDRIVER_h
 
-#include <ILoLaDriver.h>
-#include <LoLaClock\TickTrainedTimerSyncedClock.h>
-#include <PacketDriver\PacketDriverNotify.h>
+#define _TASK_OO_CALLBACKS
+#include <TaskSchedulerDeclarations.h>
 
-class LoLaPacketDriver : public ILoLaDriver
+#include <LoLaDefinitions.h>
+#include <PacketDriver\BaseLoLaDriver.h>
+
+#include <Link\LoLaLinkPowerBalancer.h>
+#include <Link\LoLaLinkChannelManager.h>
+#include <Link\LoLaLinkClockSyncer.h>
+
+
+class LoLaPacketDriver : public BaseLoLaDriver
 {
-private:
-	// Timings.
-	const uint32_t DuplexPeriodMicros = ILOLA_DUPLEX_PERIOD_MILLIS * (uint32_t)1000;
-	const uint32_t HalfDuplexPeriodMicros = DuplexPeriodMicros / 2;
-	const uint32_t BackOffPeriodUnlinkedMillis = LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS;
-	
-	TickTrainedTimerSyncedClock MasterSyncClock;
+public:
+	// Channel manager.
+	LoLaLinkChannelManager ChannelManager;
 
-	// Static helpers.
-	uint32_t DuplexElapsed;
+	// Transmit power manager.
+	LoLaTransmitPowerManager TransmitPowerManager;
 
-	volatile DriverActiveStates DriverActiveState = DriverActiveStates::DriverDisabled;
+public:
+	LoLaPacketDriver(Scheduler* scheduler
+		, LoLaPacketDriverSettings* settings)
+		: BaseLoLaDriver(settings)
+		, TransmitPowerManager(scheduler, this, settings)
+		, ChannelManager(scheduler, this, settings, &CryptoEncoder.ChannelTokenGenerator)
+	{
+	}
 
-	PacketDefinition* AckDefinition = nullptr;
-	NotifiableAckReverseDefinition AckNotifier;
+	uint8_t GetTransmitPower()
+	{
+		return TransmitPowerManager.GetTransmitPower();
+	}
 
-protected:
-	NotifiableIncomingPacket IncomingPacket;
-	NotifiableOutgoingPacket OutgoingPacket;
+	uint8_t GetChannel()
+	{
+		return 10;
+		return ChannelManager.GetChannel();
+	}
 
-protected:
+	virtual bool Setup()
+	{
+		return BaseLoLaDriver::Setup();
+	}
+
+public:
 	// Radio Driver implementation.
-	virtual bool RadioSetup() { return false; }
-	virtual void SetRadioReceive() {}
-	virtual void SetRadioChannel() {}
-	virtual void SetRadioPower() {}
-	virtual bool RadioTransmit() { return false; }
-	virtual void OnStart() {}
 
-public:
-	// Packet Driver implementation.
-	virtual void OnChannelUpdated() {}
-	virtual void OnTransmitPowerUpdated() {}
-
-public:
-	LoLaPacketDriver() : ILoLaDriver(), AckNotifier(), MasterSyncClock()
+	// To be overloaded but still call OnRadioSetToRX.
+	virtual bool SetRadioReceive()
 	{
-		SetSyncedClock(&MasterSyncClock);
-	}
-
-	bool Setup()
-	{
-
-		AckDefinition = PacketMap.GetDefinition(PACKET_DEFINITION_ACK_HEADER);
-
-		if (AckDefinition != nullptr &&
-			MasterSyncClock.Setup() &&
-			AckNotifier.SetAckDefinition(AckDefinition))
-		{
-			return RadioSetup();
-		}
-
-		return false;
-	}
-
-	virtual bool SendPrePopulatedAck()
-	{
-		DriverActiveState = DriverActiveStates::SendingOutgoing;
-
-		OutgoingPacket.SetMACCRC(CryptoEncoder->Encode(OutgoingPacket.GetContent(), OutgoingPacket.GetDefinition()->GetContentSize(), OutgoingPacket.GetContent()));
-
-		return RadioTransmit();
-	}
-
-	virtual bool SendPacket(ILoLaPacket* transmitPacket)
-	{
-		DriverActiveState = DriverActiveStates::SendingOutgoing;
-
-		OutgoingPacket.SetDefinition(transmitPacket->GetDefinition());
-
-		// Store unencrypted Id for later notification.
-		LastValidSentInfo.Id = transmitPacket->GetId();
-
-		OutgoingPacket.SetMACCRC(CryptoEncoder->Encode(transmitPacket->GetContent(), OutgoingPacket.GetDefinition()->GetContentSize(), OutgoingPacket.GetContent()));
-
-		return RadioTransmit();
-	}
-
-	virtual bool AllowedReceive()
-	{
-		if (DriverActiveState != DriverActiveStates::BlockedForIncoming)
-		{
-#ifdef DEBUG_LOLA
-			Serial.print(F("Bad state OnReceiveOk: "));
-			Serial.println(DriverActiveState);
-#endif
-			return false;
-		}
-
+		OnRadioSetToRX();
 		return true;
 	}
 
-protected:
-	///Driver calls.///
-
-	// When radio has been set to RX.
-	void OnRadioSetToRX()
+	// To be overloaded.
+	virtual bool SetRadioChannel()
 	{
-		DriverActiveState = DriverActiveStates::ReadyForAnything;
+		return true;
 	}
 
-	// When RF detects incoming packet.
-	void OnIncoming()
+	// To be overloaded but still restore to RX and call OnRadioSetToRX,
+	// regardless if successfull.
+	virtual bool RadioTransmit(const uint8_t length)
 	{
-		if (DriverActiveState == DriverActiveStates::ReadyForAnything)
+		OnRadioSetToRX();
+		return true;
+	}
+
+	// To be overloaded.
+	virtual bool SetRadioPower()
+	{
+		return true;
+	}
+
+	virtual void Stop()
+	{
+		DriverState = DriverActiveState::DriverDisabled;
+	}
+
+	virtual void Start()
+	{
+		Serial.println(F("LoLa Driver Start"));
+		SetRadioReceive();
+	}
+
+protected:
+	void OnRadioSetToRX()
+	{
+		DriverState = DriverActiveState::ReadyReceiving;
+		Serial.println("RX Ready");
+	}
+
+private:
+	void SendAck(const uint8_t originalHeader, const uint8_t originalId)
+	{
+		DriverState = DriverActiveState::SendingOutgoing;
+
+		// Set Id to original Packet.
+
+		// Update rolling counter Id.
+		OutgoingPacket.SetId(IOInfo.GetNextPacketId());
+
+		// Set header.
+		OutgoingPacket.SetHeader(AckDefinition->Header);
+
+		// Payload is original Header and Id.
+		OutgoingPacket.GetPayload()[0] = originalHeader;
+		OutgoingPacket.GetPayload()[1] = originalId;
+
+		// Encode to outgoing and set MAC.
+		// Assume we're ETTM in the future,
+		// to remove transmition duration from token clock jitter.
+		OutgoingPacket.SetMACCRC(CryptoEncoder.Encode(OutgoingPacket.GetContent(),
+			AckDefinition->ContentSize, IOInfo.ETTMillis));
+
+		if (!RadioTransmit(AckDefinition->TotalSize))
 		{
-			DriverActiveState = DriverActiveStates::BlockedForIncoming;
+			Serial.print(F("Nu nuh: "));
+			Serial.println(DriverState);
+		}
+	}
+
+public:
+	const bool SendPacket(PacketDefinition* definition, uint8_t* packetPayload, uint8_t& sentPacketId)
+	{
+		if (DriverState != DriverActiveState::ReadyReceiving ||
+			definition == nullptr)
+		{
+			return false;
+		}
+
+		DriverState = DriverActiveState::SendingOutgoing;
+
+		// Update rolling counter Id, and write it back for those interested.
+		OutgoingPacket.SetId(IOInfo.GetNextPacketId());
+
+		// Set header.
+		OutgoingPacket.SetHeader(definition->Header);
+
+		// Copy payload.
+		for (uint8_t i = 0; i < definition->PayloadSize; i++)
+		{
+			OutgoingPacket.GetPayload()[i] = packetPayload[i];
+		}
+
+		// Encode to outgoing and set MAC.
+		// Assume we're ETTM in the future,
+		// to remove transmition duration from token clock jitter.
+		OutgoingPacket.SetMACCRC(CryptoEncoder.Encode(OutgoingPacket.GetContent(),
+			definition->ContentSize, IOInfo.ETTMillis));
+
+		if (RadioTransmit(definition->TotalSize))
+		{
+			IOInfo.LastValidSent.Millis = millis();
+#ifdef DEBUG_LOLA
+			IOInfo.TransmitedCount++;
+#endif
+			return true;
 		}
 		else
 		{
-			if (DriverActiveState == DriverActiveStates::SendingOutgoing)
+#ifdef DEBUG_LOLA
+			IOInfo.TransmitFailuresCount++;
+#endif
+			Serial.print(F("Nu huh: "));
+			Serial.println(DriverState);
+
+			return false;
+		}
+	}
+
+public:
+	// When RF detects incoming packet.
+	void OnIncoming(const int16_t rssi, const uint32_t timestampMicros)
+	{
+#ifdef DEBUG_LOLA
+		Serial.print(F("OnIncoming rssi: "));
+		Serial.println(rssi);
+#endif
+		IOInfo.LastReceived.RSSI = rssi;
+		IOInfo.LastReceived.Micros = timestampMicros;
+
+		if (DriverState == DriverActiveState::ReadyReceiving)
+		{
+			DriverState = DriverActiveState::BlockedForIncoming;
+		}
+		else
+		{
+			if (DriverState == DriverActiveState::SendingOutgoing)
 			{
 				// Got packet right after sending one, let's get back to that received packet.
-				DriverActiveState = DriverActiveStates::BlockedForIncoming;
+				DriverState = DriverActiveState::BlockedForIncoming;
 #ifdef DEBUG_LOLA
-				Serial.print(F("Got packet right after sending one, let's get back to that received packet. DriverState:: "));
-				Serial.println(DriverActiveState);
+				Serial.print(F("Got packet right after sending one"));
+				Serial.println(DriverState);
 #endif
 			}
+#ifdef DEBUG_LOLA
 			else
 			{
-				StateCollisionCount++;
-#ifdef DEBUG_LOLA
+				IOInfo.StateCollisionCount++;
 				Serial.print(F("Bad state OnIncoming: "));
-				Serial.println(DriverActiveState);
-#endif
+				Serial.println(DriverState);
 			}
+#endif
 		}
 	}
 
 	// When RF has packet to read, driver calls this, after calling OnIncoming()
 	void OnReceiveOk(const uint8_t packetLength)
 	{
-		bool RestoreToRXOnReceive = true;
-
-		if (!CryptoEncoder->Decode(IncomingPacket.GetContent(), PacketDefinitionHelper::GetContentSizeQuick(packetLength), IncomingPacket.GetMACCRC()))
+		if (DriverState != DriverActiveState::BlockedForIncoming)
 		{
-			// CRC mismatch, packet malformed or not intended for this device.
-		}
-		else if (!IncomingPacket.SetDefinition(PacketMap.GetDefinition(IncomingPacket.GetDataHeader())))
-		{
-			// Packet not mapped, matching service does not exist.
 #ifdef DEBUG_LOLA
-			RejectedCount++;
+			Serial.print(F("Bad state OnReceiveOk: "));
+			Serial.println(DriverState);
+#endif
+			DriverState = DriverActiveState::BlockedForIncoming;
+		}
+
+		const uint8_t ContentSize = PacketDefinition::GetContentSize(packetLength);
+
+		//TODO: Replace with a better solution.
+		LoLaPacketMap::WrappedDefinition DefinitionWrapper;
+
+		if (packetLength < PacketDefinition::LOLA_PACKET_MIN_PACKET_TOTAL_SIZE ||
+			ContentSize > PacketDefinition::LOLA_PACKET_MAX_CONTENT_SIZE)
+		{
+			// Unaceptable packet size.
+#ifdef DEBUG_LOLA
+			IOInfo.UnknownCount++;
+			Serial.println(F("Unaceptable packet size."));
 #endif	
+		}
+		else if (!CryptoEncoder.Decode(IncomingPacket.GetContent(), ContentSize, IncomingPacket.GetMACCRC(), IOInfo.GetElapsedMillisLastReceived()))
+		{
+#ifdef DEBUG_LOLA
+			IOInfo.RejectedCount++;
+			Serial.println(F("MAC/CRC mismatch, packet malformed or not intended for this device."));
+#endif	
+		}
+		else if (LinkInfo.HasLink() && !IOInfo.ValidateNextReceivedCounter(IncomingPacket.GetId()))
+		{
+#ifdef DEBUG_LOLA
+			Serial.println(F("Possible replay attack, Counter Mismatch."));
+#endif	
+		}
+		else if (!PacketMap.TryGetDefinition(IncomingPacket.GetHeader(), &DefinitionWrapper))
+		{
+#ifdef DEBUG_LOLA
+			IOInfo.UnknownCount++;
+			Serial.println(F("Packet mapping does not exist."));
+#endif	
+		}
+		else if (AckNotifier.IsAckHeader(DefinitionWrapper.Definition->Header))
+		{
+			// Is an Ack packet, notify service.
+			AckNotifier.NotifyAckReceived(
+				IncomingPacket.GetPayload()[0],
+				IncomingPacket.GetPayload()[1],
+				IOInfo.LastReceived.Micros);
+
+			Serial.println(F("Got Ack!"));
 		}
 		else
 		{
-			// Is it an Ack packet?
-			if (IncomingPacket.GetDefinition() == AckDefinition)
+			// Non-Ack-Packet received Ok, let's commit that info really quick.
+			IOInfo.PromoteLastReceived();
+			const uint8_t Lost = IOInfo.GetCounterLost();
+			if (Lost > 0)
 			{
-				// Get the reverse definition from the ack packet payload (Header).
-				if (AckNotifier.SetOriginalDefinition(PacketMap.GetDefinition(IncomingPacket.GetPayload()[0])))
-				{
-					// If accepted, notify service.
-					AckNotifier.NotifyAckReceived(IncomingPacket.GetId(), LastReceivedInfo.Micros);
-				}
+				LinkInfo.OnCounterSkip(Lost);
 			}
-			else
-			{
-				// Packet received Ok, let's commit that info really quick.
-				LastValidReceivedInfo.Micros = LastReceivedInfo.Micros;
-				LastValidReceivedInfo.RSSI = LastReceivedInfo.RSSI;
-				ReceivedCount++;
 
 #ifdef DEBUG_LOLA
-				// Check for packet collisions.
-				CheckReceiveCollision(micros() - LastValidReceivedInfo.Micros);
+			// Check for packet collisions.
+			CheckReceiveCollision(IOInfo.LastValidReceived.Micros - micros());
 #endif
 
-				if (IncomingPacket.NotifyPacketReceived(LastValidReceivedInfo.Micros) &&
-					IncomingPacket.GetDefinition()->HasACK())
-				{
-					// If service validation passed and packet has Ack property,
-					// prefill OutgoingPacket and send Ack ASAP.
-					OutgoingPacket.SetDefinition(AckDefinition);
-					OutgoingPacket.GetPayload()[0] = IncomingPacket.GetDefinition()->Header;
-					OutgoingPacket.SetId(IncomingPacket.GetId());
-					if (SendPrePopulatedAck())
-					{
-						// Radio restores to RX after TX, don't restore it manually.
-						RestoreToRXOnReceive = false;
-					}
-					else
-					{
-#ifdef DEBUG_LOLA
-						Serial.println(F("Send Ack failed."));
-#endif				
-					}
-				}
+			if (IncomingPacket.NotifyPacketReceived(DefinitionWrapper.Definition, IOInfo.LastValidReceived.Micros) &&
+				DefinitionWrapper.Definition->HasAck)
+			{
+				// If service validation passed and packet has Ack property, send Ack ASAP.
+				SendAck(IncomingPacket.GetHeader(), IncomingPacket.GetId());
+			}
+
+			if (DriverState != DriverActiveState::SendingOutgoing)
+			{
+				Serial.println("Forced RX");
+				SetRadioReceive();
 			}
 		}
-
-		if (RestoreToRXOnReceive)
-		{
-			SetRadioReceive();
-		}
-	}
-
-	void OnSentOk(const uint32_t timestamp)
-	{
-		if (DriverActiveState != DriverActiveStates::SendingOutgoing)
-		{
-#ifdef DEBUG_LOLA
-			Serial.print(F("Bad state OnSentOk: "));
-			Serial.println(DriverActiveState);
-#endif
-		}
-
-		// When radio is set to receive, State will be restored.
-		SetRadioReceive();
-
-		// Acks don't get transmission notification.
-		if (OutgoingPacket.GetDefinition() != AckDefinition)
-		{
-			LastValidSentInfo.Micros = timestamp;
-			TransmitedCount++;
-			OutgoingPacket.NotifyPacketTransmitted(LastValidSentInfo.Id, timestamp);
-		}
-	}
-
-	void OnBatteryAlarm()
-	{
-		//TODO: Store statistics.
 	}
 
 	// When RF has failed to receive packet.
@@ -240,97 +303,9 @@ protected:
 	{
 #ifdef DEBUG_LOLA
 		Serial.print(F("OnReceiveFail: "));
-		Serial.println(DriverActiveState);
+		Serial.println(DriverState);
 #endif
 		SetRadioReceive();
 	}
-
-	bool AllowedRadioChange()
-	{
-		return DriverActiveState == DriverActiveStates::ReadyForAnything;
-	}
-
-public:
-	bool AllowedSend()
-	{
-		if (DriverActiveState != DriverActiveStates::ReadyForAnything)
-		{
-			return false;
-		}
-		else if (HasLink())
-		{
-			return IsInSendSlot();
-		}
-		else
-		{
-			return GetElapsedMillisLastValidSent() >= BackOffPeriodUnlinkedMillis;
-		}
-	}
-
-#ifdef DEBUG_LOLA
-	virtual void Debug(Stream* serial)
-	{
-		ILoLaDriver::Debug(serial);
-	}
-#endif
-
-private:
-	bool IsInSendSlot()
-	{
-		DuplexElapsed = (SyncedClock->GetSyncMicros() + ETTM) % DuplexPeriodMicros;
-
-		// Even spread of true and false across the DuplexPeriod.
-		if (EvenSlot)
-		{
-			if (DuplexElapsed < HalfDuplexPeriodMicros)
-			{
-				return true;
-			}
-		}
-		else
-		{
-			if (DuplexElapsed >= HalfDuplexPeriodMicros)
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-#ifdef DEBUG_LOLA
-	void CheckReceiveCollision(const uint32_t offsetMicros)
-	{
-		if (HasLink() &&
-			(offsetMicros > LOLA_LINK_COLLISION_SLOT_RANGE_MICROS) ||
-			(!IsInReceiveSlot(offsetMicros)))
-		{
-			TimingCollisionCount++;
-		}
-	}
-
-	bool IsInReceiveSlot(const int32_t offsetMicros)
-	{
-		DuplexElapsed = (SyncedClock->GetSyncMicros() + offsetMicros) % DuplexPeriodMicros;
-
-		//Even spread of true and false across the DuplexPeriod.
-		if (EvenSlot)
-		{
-			if (DuplexElapsed >= HalfDuplexPeriodMicros)
-			{
-				return true;
-			}
-		}
-		else
-		{
-			if (DuplexElapsed <= HalfDuplexPeriodMicros)
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-#endif
 };
 #endif

@@ -24,7 +24,6 @@
 #endif
 
 #define _TASK_OO_CALLBACKS
-#define _TASK_PRIORITY          // Support for layered scheduling priority
 
 
 #include <TaskScheduler.h>
@@ -36,16 +35,20 @@
 #include "RemoteManager.h"
 
 ///Process scheduler.
-Scheduler SchedulerBase, SchedulerHighPriority;
+Scheduler SchedulerBase;
+///
+
+///SPI Master.
+//SPIClass SPIWire(1);
 ///
 
 ///Radio manager and driver.
-LoLaSi446xPacketDriver LoLaDriver(&SchedulerHighPriority);
-RemoteManager LoLaManager(&SchedulerBase, &SchedulerHighPriority, &LoLaDriver);
+LoLaSi446xPacketDriver LoLaDriver(&SchedulerBase);
+RemoteManager LoLaManager(&SchedulerBase, &LoLaDriver);
 ///
 
 ///Communicated Data
-ControllerSurface * ControllerOutput = nullptr;
+//ControllerSurface* ControllerOutput = nullptr;
 ///
 
 void Halt()
@@ -58,35 +61,35 @@ void Halt()
 }
 
 
-void OnLinkStatusUpdated(const LoLaLinkInfo::LinkStateEnum state)
+void OnLinkStatusUpdated(const bool linked)
 {
-#ifdef DEBUG_LOG
-	switch (state)
-	{
-	case LoLaLinkInfo::LinkStateEnum::Setup:
-		Serial.println(F("Link Setup"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-		Serial.println(F("Searching for Host..."));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-		Serial.println(F("Sleeping"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::Linking:
-		Serial.println(F("Linking"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::Linked:
-		Serial.println(F("Linked"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::Disabled:
-		Serial.println(F("Disabled"));
-		break;
-	default:
-		Serial.print(F("Conn what? "));
-		Serial.println(state);
-		break;
-	}
-#endif
+	//#ifdef DEBUG_LOG
+	//	switch (state)
+	//	{
+	//	case LoLaLinkInfo::LinkStateEnum::Setup:
+	//		Serial.println(F("Link Setup"));
+	//		break;
+	//	case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
+	//		Serial.println(F("Searching for Host..."));
+	//		break;
+	//	case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
+	//		Serial.println(F("Sleeping"));
+	//		break;
+	//	case LoLaLinkInfo::LinkStateEnum::Linking:
+	//		Serial.println(F("Linking"));
+	//		break;
+	//	case LoLaLinkInfo::LinkStateEnum::Linked:
+	//		Serial.println(F("Linked"));
+	//		break;
+	//	case LoLaLinkInfo::LinkStateEnum::Disabled:
+	//		Serial.println(F("Disabled"));
+	//		break;
+	//	default:
+	//		Serial.print(F("Conn what? "));
+	//		Serial.println(state);
+	//		break;
+	//	}
+	//#endif
 }
 
 
@@ -102,16 +105,13 @@ void setup()
 	Serial.println(F("Example Remote"));
 #endif
 
-	SchedulerBase.setHighPriorityScheduler(&SchedulerHighPriority);
-
-
 	if (!LoLaManager.Setup())
 	{
 		Halt();
 	}
 
-	FunctionSlot<const LoLaLinkInfo::LinkStateEnum> funcSlot(OnLinkStatusUpdated);
-	LoLaManager.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
+	/*FunctionSlot<const bool> funcSlot(OnLinkStatusUpdated);
+	LoLaDriver.LinkInfo.AttachOnLinkStatusUpdated(funcSlot);
 
 	if (LoLaManager.GetControllerSurface() == nullptr)
 	{
@@ -124,26 +124,28 @@ void setup()
 	ControllerOutput->SetPropulsion(31999);
 	ControllerOutput->SetPropulsionTrim(-99);
 	FunctionSlot<const bool> ptrSlot(OnSurfaceUpdated);
-	ControllerOutput->AttachOnSurfaceUpdated(ptrSlot);
+	ControllerOutput->AttachOnSurfaceUpdated(ptrSlot);*/
 
 #if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
+	Serial.print(F("LoLa Radio Setup with protocol version: "));
+	Serial.println(LoLaDriver.LinkInfo.LinkProtocolVersion);
 	LoLaDriver.Debug(&Serial);
 #endif
 
 	LoLaManager.Start();
-
-#if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	ControllerOutput->NotifyDataChanged();
-#endif
+	Serial.println();
+	//#if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
+	//	ControllerOutput->NotifyDataChanged();
+	//#endif
 }
 
-void OnSurfaceUpdated(const bool dataGood)
-{
-#if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	if (dataGood)
-		ControllerOutput->Debug(&Serial);
-#endif
-}
+//void OnSurfaceUpdated(const bool dataGood)
+//{
+//#if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
+//	if (dataGood)
+//		ControllerOutput->Debug(&Serial);
+//#endif
+//}
 
 void loop()
 {

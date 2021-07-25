@@ -3,52 +3,47 @@
 #ifndef _ITRACKEDSURFACE_h
 #define _ITRACKEDSURFACE_h
 
+//#define DEBUG_TRACKED_SURFACE
+
 #include <BitTracker.h>
 #include <Callback.h>
 #include <FastCRC.h>
 
-#define DEBUG_BIT_TRACKER
+
 
 class ITrackedSurface
 {
 public:
-	//4 bytes per block, enough for a 32 bit value (uint32_t, int32_t)
-	static const uint8_t BytesPerBlock = 4;
+	// 8 bytes per block, enough for a 64 bit value (uint64_t, int64_t)
+	static const uint8_t BytesPerBlock = 8;
+	static const uint8_t BitsPerBlock = BytesPerBlock * 8;
 
 private:
-	//Callback handler.
+	// Callback handler.
 	Signal<const bool> OnSurfaceUpdatedCallback;
 
-	//Data good to use status.
-	bool DataGood = false;
+	// Surface has been completely synced at least once.
+	bool OneGoodSync = false;
 
-	uint8_t LastCRC = 0;
-	boolean HashNeedsUpdate = true;
-
-protected:
-	//CRC Calculator.
-	FastCRC8 CRC8;
-
-protected:
-	inline void OnDataChanged()
-	{
-		OnSurfaceUpdatedCallback.fire(DataGood);
-	}
+	// Block tracker.
+	IBitTracker* BlockTracker = nullptr;
 
 public:
-	ITrackedSurface()
-	{
-		LastCRC = 0;
-	}
+	// Surface data.
+	uint8_t* SurfaceData = nullptr;
 
-	bool IsDataGood()
-	{
-		return DataGood;
-	}
+	// Constants.
+	const uint16_t DataSize;
+	const uint8_t BlockCount;
 
-	void SetDataGood(const bool dataGood)
+
+public:
+	ITrackedSurface(uint8_t* surfaceData, IBitTracker* blockTracker, const uint8_t blockCount)
+		: SurfaceData(surfaceData)
+		, BlockTracker(blockTracker)
+		, BlockCount(blockCount)
+		, DataSize(blockCount* BytesPerBlock)
 	{
-		DataGood = dataGood;
 	}
 
 	void AttachOnSurfaceUpdated(const Slot<const bool>& slot)
@@ -61,47 +56,95 @@ public:
 		OnDataChanged();
 	}
 
-	void UpdateHash()
+	void StampDataIntegrity()
 	{
-		if (HashNeedsUpdate)
+		if (!OneGoodSync)
 		{
-			HashNeedsUpdate = false;
-			LastCRC = CRC8.smbus(GetData(), GetDataSize());
+			OneGoodSync = true;
+			OnDataChanged();
 		}
 	}
 
-	inline void InvalidateHash()
+	void ResetDataIntegrity()
 	{
-		HashNeedsUpdate = true;
+		OneGoodSync = false;
 	}
 
-	//Hash update (if needed) is checked by caller, to avoid multiple redundant checks. 
-	inline uint8_t GetHash()
+	bool HasSynced()
 	{
-		return LastCRC;
+		return OneGoodSync;
 	}
 
-	const uint8_t GetDataSize()
+	IBitTracker* GetBlockTracker()
 	{
-		return  GetBlockCount() * BytesPerBlock;
+		return BlockTracker;
+	}
+
+	void SetAllPending()
+	{
+		BlockTracker->SetAll();
+	}
+
+	void ClearAllPending()
+	{
+		BlockTracker->ClearAll();
+	}
+
+	void ClearBlockPending(const uint8_t blockIndex)
+	{
+		BlockTracker->ClearBit(blockIndex);
+	}
+
+	bool HasAnyPending()
+	{
+		return BlockTracker->HasSet();
+	}
+
+	uint8_t GetNextSetPendingIndex(const uint8_t startingIndex)
+	{
+		if (startingIndex < BlockCount)
+		{
+			return (uint8_t)BlockTracker->GetNextSetIndex(startingIndex);
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+protected:
+	void InvalidateBlock(const uint8_t blockIndex, const bool notify = true)
+	{
+		BlockTracker->SetBit(blockIndex);
+		if (notify)
+		{
+			OnDataChanged();
+		}
+	}
+
+	void OnDataChanged()
+	{
+		if (OneGoodSync)
+		{
+			OnSurfaceUpdatedCallback.fire(false);
+		}
 	}
 
 public:
-	virtual uint8_t* GetData() { return nullptr; }
-	virtual IBitTracker* GetTracker() { return nullptr; };
-	virtual void SetAllPending() {};
-	const virtual uint8_t GetBlockCount() { return 0; };
-
-public:
-#ifdef DEBUG_BIT_TRACKER
+#ifdef DEBUG_TRACKED_SURFACE
 	void Debug(Stream* serial)
 	{
-		serial->print(F("|"));
-		for (uint8_t i = 0; i < (GetBlockCount() * BytesPerBlock); i++)
+		serial->print(F("|||"));
+		for (uint8_t i = 0; i < BlockCount; i++)
 		{
-			serial->print(GetData()[i]);
+			for (uint8_t j = 0; j < BytesPerBlock; j++)
+			{
+				serial->print(SurfaceData[(i * BytesPerBlock) + j]);
+				serial->print(F("|"));
+			}
 			serial->print(F("|"));
 		}
+		serial->print(F("|"));
 		serial->println();
 	}
 
@@ -112,84 +155,72 @@ public:
 #endif 
 };
 
-//BlockCount <= 512
-template <const uint8_t BlockCount>
+// Block count <= 255
+template <const uint8_t Blocks>
 class TemplateTrackedSurface : public ITrackedSurface
 {
+public:
+	static const uint8_t ByteCount = Blocks * BytesPerBlock;
+
 private:
-	uint8_t IndexOffsetGrunt;
-
-	TemplateBitTracker<BlockCount> Tracker;
-
-protected:
-	uint8_t Data[BlockCount * BytesPerBlock];
-
-protected:
-	void InvalidateBlock(const uint8_t blockIndex)
-	{
-		Tracker.SetBit(blockIndex);
-		InvalidateHash();
-		OnDataChanged();
-	}
+	TemplateBitTracker<Blocks> Tracker;
 
 protected:
 	union ArrayToUint64 {
-		byte array[sizeof(uint64_t)];
+		uint8_t array[sizeof(uint64_t)];
 		uint64_t uint64;
-		uint32_t uint32;
-		uint16_t uint16;
-	} ATUI;
+	};
 
+	union ArrayToUint32 {
+		uint8_t array[sizeof(uint32_t)];
+		uint32_t uint32;
+	};
+
+	union ArrayToUint16 {
+		uint8_t array[sizeof(uint16_t)];
+		uint16_t uint16;
+	};
+
+	// First block is dedicated to binary options.
+	static const uint8_t BINARY_BLOCK_ADDRESS = 0;
+
+	uint8_t Data[ByteCount];
 
 public:
-	TemplateTrackedSurface() : ITrackedSurface(), Tracker()
+	TemplateTrackedSurface()
+		: ITrackedSurface(Data, &Tracker, Blocks)
+		, Tracker()
 	{
-		for (uint8_t i = 0; i < GetDataSize(); i++)
-		{
-			Data[i] = 0;
-		}
-		Tracker.ClearAll();
 	}
 
-	uint8_t* GetData()
-	{
-		return Data;
-	}
-
-	IBitTracker* GetTracker()
-	{
-		return &Tracker;
-	}
-
-	const uint8_t GetBlockCount()
-	{
-		return BlockCount;
-	}
-
-	void SetAllPending()
-	{
-		Tracker.SetAll();
-	}
-
-	//Helper methods.
-	//offset [0:3]
-	inline uint8_t Get8(const uint8_t blockIndex, const uint8_t offset)
+protected:
+	uint8_t GetU8(const uint8_t blockIndex, const uint8_t offset)
 	{
 		return Data[(blockIndex * BytesPerBlock) + offset];
 	}
 
-	//offset [0:3]
-	inline void Set8(const uint8_t value, const uint8_t blockIndex, const uint8_t offset)
+	int8_t GetS8(const uint8_t blockIndex, const uint8_t offset)
+	{
+		return (int8_t)(GetU8(blockIndex, offset) - INT8_MAX);
+	}
+
+	void SetU8(const uint8_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
 		Data[(blockIndex * BytesPerBlock) + offset] = value;
 
 		InvalidateBlock(blockIndex);
 	}
 
-	//offset [0:1]
-	inline uint16_t Get16(const uint8_t blockIndex, const uint8_t offset)
+	void SetS8(const int8_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset * sizeof(uint16_t);
+		SetU8((uint8_t)(value + INT8_MAX), blockIndex, offset);
+	}
+
+	uint16_t GetU16(const uint8_t blockIndex, const uint8_t offset)
+	{
+		const uint8_t IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset;
+
+		ArrayToUint16 ATUI;
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -197,10 +228,16 @@ public:
 		return ATUI.uint16;
 	}
 
-	//offset [0:1]
-	inline void Set16(const uint16_t value, const uint8_t blockIndex, const uint8_t offset)
+	int16_t GetS16(const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset * sizeof(uint16_t);
+		return (int16_t)(GetU16(blockIndex, offset) - INT16_MAX);
+	}
+
+	void SetU16(const uint16_t value, const uint8_t blockIndex, const uint8_t offset)
+	{
+		const uint8_t IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset;
+
+		ArrayToUint16 ATUI;
 
 		ATUI.uint16 = value;
 		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
@@ -209,9 +246,16 @@ public:
 		InvalidateBlock(blockIndex);
 	}
 
-	inline uint32_t Get32(const uint8_t blockIndex)
+	void SetS16(const int16_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = blockIndex * BytesPerBlock;
+		SetU16((uint16_t)(value + INT16_MAX), blockIndex, offset);
+	}
+
+	uint32_t GetU32(const uint8_t blockIndex, const uint8_t offset)
+	{
+		const uint8_t IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset;
+
+		ArrayToUint32 ATUI;
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -221,9 +265,16 @@ public:
 		return ATUI.uint32;
 	}
 
-	inline void Set32(const uint32_t value, const uint8_t blockIndex)
+	uint32_t GetS32(const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = blockIndex * BytesPerBlock;
+		return (int32_t)(GetU32(blockIndex, offset) - INT32_MAX);
+	}
+
+	void SetU32(const uint32_t value, const uint8_t blockIndex, const uint8_t offset)
+	{
+		const uint8_t IndexOffsetGrunt = (blockIndex * BytesPerBlock) + offset;
+
+		ArrayToUint32 ATUI;
 
 		ATUI.uint32 = value;
 		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
@@ -234,9 +285,16 @@ public:
 		InvalidateBlock(blockIndex);
 	}
 
-	inline uint64_t Get64(const uint8_t blockIndex)
+	void SetS32(const int16_t value, const uint8_t blockIndex, const uint8_t offset)
 	{
-		IndexOffsetGrunt = blockIndex * BytesPerBlock;
+		SetU32((uint32_t)(value + INT32_MAX), blockIndex, offset);
+	}
+
+	uint64_t GetU64(const uint8_t blockIndex)
+	{
+		const uint8_t IndexOffsetGrunt = blockIndex * BytesPerBlock;
+
+		ArrayToUint64 ATUI;
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -250,9 +308,11 @@ public:
 		return ATUI.uint64;
 	}
 
-	inline void Get64(uint64_t& value, const uint8_t blockIndex)
+	void GetU64(uint64_t& value, const uint8_t blockIndex)
 	{
-		IndexOffsetGrunt = blockIndex * BytesPerBlock;
+		const uint8_t IndexOffsetGrunt = blockIndex * BytesPerBlock;
+
+		ArrayToUint64 ATUI;
 
 		ATUI.array[0] = Data[IndexOffsetGrunt + 0];
 		ATUI.array[1] = Data[IndexOffsetGrunt + 1];
@@ -266,9 +326,11 @@ public:
 		value = ATUI.uint64;
 	}
 
-	inline void Set64(uint64_t& value, const uint8_t blockIndex)
+	void SetU64(uint64_t value, const uint8_t blockIndex)
 	{
-		IndexOffsetGrunt = blockIndex * BytesPerBlock;
+		const uint8_t IndexOffsetGrunt = blockIndex * BytesPerBlock;
+
+		ArrayToUint64 ATUI;
 
 		ATUI.uint64 = value;
 		Data[IndexOffsetGrunt + 0] = ATUI.array[0];
@@ -281,7 +343,21 @@ public:
 		Data[IndexOffsetGrunt + 7] = ATUI.array[7];
 
 		InvalidateBlock(blockIndex);
-		InvalidateBlock(blockIndex + 1);
+	}
+
+	void GetS64(int64_t& value, const uint8_t blockIndex)
+	{
+		value = (int64_t)GetS64(blockIndex);
+	}
+
+	int64_t GetS64(const uint8_t blockIndex)
+	{
+		return (int64_t)(GetU64(blockIndex) - INT64_MAX);
+	}
+
+	void SetS64(int64_t value, const uint8_t blockIndex)
+	{
+		SetU64((uint64_t)(value + INT64_MAX));
 	}
 };
 #endif

@@ -14,6 +14,9 @@
 #include <Services\Link\LoLaLinkTimedHopper.h>
 #include <LoLaClock\TickTrainedTimerSyncedClock.h>
 
+
+#include <LinkedList.h>
+
 Scheduler SchedulerBase;
 
 TickTrainedTimerSyncedClock SyncedClock;

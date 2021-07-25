@@ -3,17 +3,27 @@
 #ifndef _LOLA_CRYPTO_KEY_EXCHANGE_h
 #define _LOLA_CRYPTO_KEY_EXCHANGE_h
 
+#define uECC_RNG_MAX_TRIES 1000
+
 #include <uECC.h>
 #include <LoLaDefinitions.h>
 
 class LoLaCryptoKeyExchanger
 {
 public:
-	static const uint8_t KEY_CURVE_SIZE = 20; //160 bits take 20 bytes.
-	static const uint8_t KEY_MAX_SIZE = KEY_CURVE_SIZE + 1; //Enough for compressed public keys.
+	// 160 bits take 20 bytes.
+	static const uint8_t KEY_CURVE_SIZE = 20;
+
+	// EC points can be compressed to just one coordinate + 1 bit (odd or even)
+	static const uint8_t KEY_MAX_SIZE = KEY_CURVE_SIZE + 1;
+
+	//TODO:
 	static const uint8_t SIGNATURE_LENGTH = (KEY_CURVE_SIZE * 2);
 
 private:
+	// If changed, update ProtocolVersionCalculator.
+	const struct uECC_Curve_t* ECC_CURVE = uECC_secp160r1();
+
 	static int RNG(uint8_t* dest, unsigned size)
 	{
 		// Use the least-significant bits from the ADC for an unconnected pin (or connected to a source of 
@@ -44,7 +54,7 @@ private:
 		return 1;
 	}
 
-	enum PairingStageEnum : uint8_t
+	enum PairingStageEnum
 	{
 		StageClear,
 		StageLocalKey,
@@ -52,29 +62,22 @@ private:
 		StageSharedKey
 	} PairingStage = PairingStageEnum::StageClear;
 
-	const struct uECC_Curve_t* ECC_CURVE = uECC_secp160r1();
-
-
-	uint8_t PartnerPublicKeyCompressed[KEY_CURVE_SIZE + 1];
-	uint8_t LocalPublicKeyCompressed[KEY_CURVE_SIZE + 1];
-	uint8_t PrivateKey[KEY_CURVE_SIZE + 1];
+	uint8_t PartnerPublicKeyCompressed[KEY_MAX_SIZE];
+	uint8_t LocalPublicKeyCompressed[KEY_MAX_SIZE];
+	uint8_t PrivateKey[KEY_MAX_SIZE];
 	uint8_t SharedKey[KEY_CURVE_SIZE];
 
-	//Temporary holder for the uncompressed public keys.
+	// Temporary holder for the uncompressed public keys.
 	uint8_t UncompressedKey[KEY_CURVE_SIZE * 2];
-
-	uint32_t KeyPairLastGenerated = 0;
 
 public:
 	LoLaCryptoKeyExchanger() {}
 
-	bool Setup()
+	void Setup()
 	{
 		uECC_set_rng(&RNG);
 
 		PairingStage = PairingStageEnum::StageClear;
-
-		return true;
 	}
 
 	void Clear()
@@ -99,22 +102,6 @@ public:
 	{
 		return SharedKey;
 	}
-
-	/////Make sure there is room for KEY_SIZE bytes in the destination array.
-	//bool GetSharedKey(uint8_t* keyTarget)
-	//{
-	//	if (PairingStage != PairingStageEnum::StageSharedKey)
-	//	{
-	//		return false;
-	//	}
-
-	//	for (uint8_t i = 0; i < KEY_CURVE_SIZE; i++)
-	//	{
-	//		keyTarget[i] = SharedKey[i];
-	//	}
-
-	//	return true;
-	//}
 
 	uint8_t* GetPartnerPublicKeyCompressed()
 	{
@@ -145,14 +132,14 @@ public:
 		}
 	}
 
-	bool SetPartnerPublicKey(uint8_t* keySource)
+	const bool SetPartnerPublicKey(uint8_t* keySource)
 	{
 		if (PairingStage != PairingStageEnum::StageLocalKey)
 		{
 			return false;
 		}
 
-		for (uint8_t i = 0; i < KEY_CURVE_SIZE + 1; i++)
+		for (uint8_t i = 0; i < KEY_MAX_SIZE; i++)
 		{
 			PartnerPublicKeyCompressed[i] = keySource[i];
 		}
@@ -162,23 +149,12 @@ public:
 		return true;
 	}
 
-	uint32_t GetKeyPairAgeMillis()
-	{
-		if (KeyPairLastGenerated == 0)
-		{
-			return UINT32_MAX;
-		}
-		else
-		{
-			return millis() - KeyPairLastGenerated;
-		}
-	}
-
-	bool GenerateNewKeyPair()
+	const bool GenerateNewKeyPair()
 	{
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_ENCRYPTION)
 		uint32_t SharedKeyTime = micros();
 #endif
+
 		if (uECC_make_key(UncompressedKey, PrivateKey, ECC_CURVE))
 		{
 			uECC_compress(UncompressedKey, LocalPublicKeyCompressed, ECC_CURVE);
@@ -192,15 +168,17 @@ public:
 			Serial.println(F(" us."));
 #endif
 
-			KeyPairLastGenerated = millis();
-
 			return true;
 		}
+
+#if defined(DEBUG_LOLA) 
+		Serial.print(F("Keys generation failed!!!"));
+#endif
 
 		return false;
 	}
 
-	bool GenerateSharedKey()
+	const bool GenerateSharedKey()
 	{
 #if defined(DEBUG_LOLA) && defined(DEBUG_LINK_ENCRYPTION)
 		uint32_t SharedKeyTime = micros();

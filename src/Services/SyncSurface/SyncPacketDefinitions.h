@@ -7,20 +7,19 @@
 #include <Services\SyncSurface\ITrackedSurface.h>
 
 #define PACKET_DEFINITION_SYNC_META_HEADER_OFFSET		0
-#define PACKET_DEFINITION_SYNC_META_PAYLOAD_SIZE		1
 #define PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET		1
-#define PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE		4
 
-#define SYNC_SERVICE_PACKET_DEFINITION_COUNT			2
+#define SYNC_SERVICE_PACKET_DEFINITION_COUNT			(PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET+1)
+#define SYNC_SERVICE_PACKET_MAX_PAYLOAD_SIZE			9 // From SyncDataPacketDefinition
 
 template <const uint8_t BaseHeader>
 class SyncDataPacketDefinition : public PacketDefinition
 {
 public:
-	SyncDataPacketDefinition(IPacketListener* service) :
+	SyncDataPacketDefinition(ILoLaService* service) :
 		PacketDefinition(service,
 			BaseHeader + PACKET_DEFINITION_SYNC_DATA_HEADER_OFFSET,
-			PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE)
+			1 + 8) // 1 Byte for block index and 8 bytes for block data.
 	{}
 
 #ifdef DEBUG_LOLA
@@ -37,10 +36,10 @@ template <const uint8_t BaseHeader>
 class SyncMetaPacketDefinition : public PacketDefinition
 {
 public:
-	SyncMetaPacketDefinition(IPacketListener* service) :
+	SyncMetaPacketDefinition(ILoLaService* service) :
 		PacketDefinition(service,
 			BaseHeader + PACKET_DEFINITION_SYNC_META_HEADER_OFFSET,
-			PACKET_DEFINITION_SYNC_META_PAYLOAD_SIZE)
+			1 + 1) // 1 Byte id
 	{}
 
 #ifdef DEBUG_LOLA

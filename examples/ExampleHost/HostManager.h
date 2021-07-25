@@ -14,27 +14,33 @@
 class HostManager : public LoLaManagerHost
 {
 private:
-	ControllerSurface Controller;
+	//ExampleControllerSurface Controller;
 
-	SyncSurfaceReader<CONTROLLER_SURFACE_BASE_HEADER> Reader;
+	//SyncSurfaceReader<ExampleControllerSurface::Port> ReaderController;
 
 protected:
 	bool OnSetupServices()
 	{
-		return LoLaDriver->GetServices()->Add(&Reader);
+		// Controller.
+		//if (!ReaderController.Setup())
+		//{
+		//	return false;
+		//}
+
+		return true;
 	}
 
 public:
-	HostManager(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* loLa)
-		: LoLaManagerHost(servicesScheduler, driverScheduler, loLa)
-		, Reader(servicesScheduler, loLa, &Controller)
+	HostManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
+		: LoLaManagerHost(scheduler, loLa)
+		//, ReaderController(scheduler, loLa, &Controller)
 	{
 	}
 
-	ControllerSurface* GetControllerSurface()
-	{
-		return &Controller;
-	}
+	//ExampleControllerSurface* GetControllerSurface()
+	//{
+	//	return &Controller;
+	//}
 };
 #endif
 

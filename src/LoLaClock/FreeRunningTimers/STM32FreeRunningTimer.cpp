@@ -1,23 +1,28 @@
 //STM32FreeRunningTimer.cpp
 //
+
+#if defined(ARDUINO_ARCH_STM32F1)
 #include <LoLaClock\FreeRunningTimers\STM32FreeRunningTimer.h>
 
-FreeRunningTimer* StaticTarget = nullptr;
+FreeRunningTimer* StaticFreeRunningTimer = nullptr;
 
-static void StaticOnTimerCompare()
+static void StaticOnFreerunningTimerCompare()
 {
-	StaticTarget->OnCompareInterrupt();
+	StaticFreeRunningTimer->OnCompareInterrupt();
 }
 
-FreeRunningTimer::FreeRunningTimer()
-	: IFreeRunningTimer()
-	, Timer(TimerIndex)
+bool FreeRunningTimer::SetupInterrupts()
 {
-	StaticTarget = this;
+	StaticFreeRunningTimer = this;
 }
 
-void FreeRunningTimer::StartCallbackAfterSteps(const uint32_t steps)
+void FreeRunningTimer::StartCallbackAfterSteps(const uint16_t steps)
 {
-	Timer.setCompare(TimerIndex, (Timer.getCount() + steps) % UINT16_MAX);
-	Timer.attachCompare1Interrupt(StaticOnTimerCompare);
+	if (CallbackTarget != nullptr)
+	{
+		Detach();
+		DeviceTimer.setCompare(TimerChannelIndex, (DeviceTimer.getCount() + steps) % UINT16_MAX);
+		DeviceTimer.attachCompare1Interrupt(StaticOnFreerunningTimerCompare);
+	}
 }
+#endif

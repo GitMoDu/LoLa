@@ -4,23 +4,35 @@
 #define _ARDUINO_MICROS_FREERUNNINGTIMER_h
 
 
-#include <LoLaClock\IClock.h>
+#include <LoLaClock\LoLaClock.h>
 #include <Arduino.h>
 
 
-class ArduinoMicrosFreeRunningTimer : public virtual IFreeRunningTimer
+class FreeRunningTimer
 {
 public:
-	FreeRunningTimer() : IFreeRunningTimer()
+	static const uint32_t TimerRange = UINT32_MAX;
+
+public:
+	FreeRunningTimer()
 	{
 	}
 
-	virtual uint32_t GetCurrentStep() 
+	void SetCallbackTarget(ISyncedCallbackTarget* source)
+	{
+	}
+
+	void StartCallbackAfterSteps(const uint32_t steps)
+	{
+
+	}
+
+	uint32_t GetStep() 
 	{ 
 		return micros(); 
 	}
 
-	virtual bool SetupTimer()
+	bool SetupTimer()
 	{
 		return true; 
 	}

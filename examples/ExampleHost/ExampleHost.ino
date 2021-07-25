@@ -14,121 +14,115 @@
 *
 */
 
-#define DEBUG_LOG
 
-#ifdef DEBUG_LOG
-#define SERIAL_BAUD_RATE 500000
+#define DEBUG_LOLA
+
+
+#ifdef DEBUG_LOLA
+#define DEBUG_TRACKED_SURFACE
 #endif
+
+#define SERIAL_BAUD_RATE 115200
 
 
 #define _TASK_OO_CALLBACKS
-#define _TASK_PRIORITY          // Support for layered scheduling priority
+#define _TASK_SLEEP_ON_IDLE_RUN
 #include <TaskScheduler.h>
+
+
 
 #include <Callback.h>
 #include <LoLaDriverSi446x.h>
+//#include <LoLaDriverNRFL01.h>
 #include "HostManager.h"
+
+#include "ClockTestTaskClass.h"
 
 
 ///Process scheduler.
-Scheduler SchedulerBase, SchedulerHighPriority;
+Scheduler SchedulerBase;
+///
+
+///SPI Master.
+SPIClass SPIWire(1);
 ///
 
 ///Radio manager and driver.
-LoLaSi446xPacketDriver LoLaDriver(&SchedulerHighPriority);
-HostManager LoLaManager(&SchedulerBase, &SchedulerHighPriority, &LoLaDriver);
+//TODO:
+// Pinout:
+// IRQ - (PA3 / D8).
+// SDN - (PB0 / D3) //TODO: Use ShutDown (SDN) pin for power management.
+// CS - (PA4 / D7) Default SPI1.
+// CLK - (PA5 / D6) Default SPI1.
+// MISO - (PA6 / D5) Default SPI1.
+// MOSI - (PA7 / D4) Default SPI1.
+
+//LoLaPacketDriverSettings MockDriverSettings(1000, -20, -80, 10, 0, 127, 1);
+//LoLaAsyncPacketDriver LoLaDriver(&SchedulerBase, &MockDriverSettings);
+//LoLaNRFL01PacketDriver LoLaDriver(&SchedulerBase, &SPIWire, PA4, PB0, PA3);
+LoLaSi446xPacketDriver LoLaDriver(&SchedulerBase);
+HostManager LoLaManager(&SchedulerBase, &LoLaDriver);
 ///
 
 ///Communicated Data
-ControllerSurface * ControllerInput = nullptr;
+//ExampleControllerSurface* ControllerInput = nullptr;
 ///
 
 
+//ClockTestTaskClass TestClockTask(&SchedulerBase, &LoLaDriver);
+
 void Halt()
 {
-#ifdef DEBUG_LOG
 	Serial.println("Critical Error");
 	delay(1000);
-#endif	
+
 	while (1);;
 }
 
 
-void OnLinkStatusUpdated(const LoLaLinkInfo::LinkStateEnum state)
+void OnLinkStatusUpdated(const bool linked)
 {
-#ifdef DEBUG_LOG
-	switch (state)
-	{
-	case LoLaLinkInfo::LinkStateEnum::Setup:
-		Serial.println(F("Link Setup"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::AwaitingLink:
-		Serial.println(F("Broadcasting"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::AwaitingSleeping:
-		Serial.println(F("Sleeping"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::Linking:
-		Serial.println(F("Linking"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::Linked:
-		Serial.println(F("Linked"));
-		break;
-	case LoLaLinkInfo::LinkStateEnum::Disabled:
-		Serial.println(F("Disabled"));
-		break;
-	default:
-		Serial.print(F("Conn what? "));
-		Serial.println(state);
-		break;
-	}
-#endif
 }
 
 void setup()
 {
-#ifdef DEBUG_LOG
 	Serial.begin(SERIAL_BAUD_RATE);
 	while (!Serial)
 		;
 	delay(1000);
 	Serial.println(F("Example Host"));
-#endif	
-
-	SchedulerBase.setHighPriorityScheduler(&SchedulerHighPriority);
-
 
 	if (!LoLaManager.Setup())
 	{
 		Halt();
 	}
+	//
+	//	FunctionSlot<const bool> funcSlot(OnLinkStatusUpdated);
+	//	LoLaDriver.LinkInfo.AttachOnLinkStatusUpdated(funcSlot);
+	//
+	//	if (LoLaManager.GetControllerSurface() == nullptr)
+	//	{
+	//		Halt();
+	//	}
+	//	ControllerInput = LoLaManager.GetControllerSurface();
+	//
+	//	FunctionSlot<const bool> ptrSlot(OnSurfaceUpdated);
+	//	ControllerInput->AttachOnSurfaceUpdated(ptrSlot);
+	//
 
-	FunctionSlot<const LoLaLinkInfo::LinkStateEnum> funcSlot(OnLinkStatusUpdated);
-	LoLaManager.GetLinkInfo()->AttachOnLinkStatusUpdated(funcSlot);
-
-	if (LoLaManager.GetControllerSurface() == nullptr)
-	{
-		Halt();
-	}
-	ControllerInput = LoLaManager.GetControllerSurface();
-
-	FunctionSlot<const bool> ptrSlot(OnSurfaceUpdated);
-	ControllerInput->AttachOnSurfaceUpdated(ptrSlot);
-
-#if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA)
+	Serial.print(F("LoLa Radio Setup with protocol version: "));
+	Serial.println(LoLaDriver.LinkInfo.LinkProtocolVersion);
 	LoLaDriver.Debug(&Serial);
 #endif
 
 	LoLaManager.Start();
-
-#if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
-	ControllerInput->NotifyDataChanged();
-#endif
+	Serial.println();
 }
 
 void OnSurfaceUpdated(const bool dataGood)
 {
-#if defined(DEBUG_LOG) && defined(DEBUG_LOLA)
+#if defined(DEBUG_LOG)
 	if (dataGood)
 		ControllerInput->Debug(&Serial);
 #endif

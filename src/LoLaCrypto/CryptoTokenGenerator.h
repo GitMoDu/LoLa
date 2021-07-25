@@ -3,94 +3,108 @@
 #ifndef _LOLACRYPTOTOKENGENERATOR_h
 #define _LOLACRYPTOTOKENGENERATOR_h
 
-#include <LoLaClock\IClock.h>
+#include <LoLaClock\LoLaClock.h>
 #include <LoLaCrypto\ITokenSource.h>
 #include <LoLaDefinitions.h>
 
-class TimedHopProvider
+class AbstractCryptoTokenGenerator
 {
 public:
-	bool TimedHopEnabled = false;
-};
+	const uint32_t HopPeriod;
 
-template<const uint32_t HopPeriodMillis,
-	const uint8_t SeedSize>
-	class TOTPMillisecondsTokenGenerator : public ITokenSource
-{
 protected:
-	static const uint8_t TokenSize = LOLA_LINK_CRYPTO_TOKEN_SIZE;
-
-	static const uint32_t ONE_MILLI_MICROS = 1000;
-
-	static const uint32_t HopPeriodMicros = HopPeriodMillis * ONE_MILLI_MICROS;
-
 	uint32_t Seed = 0;
-	uint32_t CurrentToken = 0;
-
-	ISyncedClock* SyncedClock = nullptr;
-
-	TimedHopProvider* HopEnabled = nullptr;
-
-protected:
-	virtual uint32_t GetTimeStamp()
-	{
-		return 0;
-	}
+	ISyncedClock* SyncedClock;
 
 public:
-	TOTPMillisecondsTokenGenerator()
+	AbstractCryptoTokenGenerator(ISyncedClock* syncedClock, const uint32_t hopPeriod)
+		: SyncedClock(syncedClock)
+		, HopPeriod(hopPeriod)
 	{
-
 	}
 
-	// Current version only supports uint32_t Seeds and Tokens.
-	bool Setup(ISyncedClock* syncedClock, TimedHopProvider* hopEnabled)
+	const uint32_t GetSeed()
 	{
-		SyncedClock = syncedClock;
-		HopEnabled = hopEnabled;
-
-		if (SyncedClock == nullptr &&
-			HopEnabled == nullptr )
-		{
-			Serial.println(F("Pointers bitch"));
-
-		}
-
-		if (
-			TokenSize != sizeof(uint32_t) &&
-			SeedSize != sizeof(uint32_t))
-		{
-			Serial.println(F("Sizes bitch"));
-
-		}
-
-		return SyncedClock != nullptr &&
-			HopEnabled != nullptr &&
-			TokenSize == sizeof(uint32_t) &&
-			SeedSize == sizeof(uint32_t);
+		return Seed;
 	}
 
 	void SetSeed(const uint32_t seed)
 	{
 		Seed = seed;
 	}
+};
 
-	uint32_t GetToken()
+
+// If changed, update ProtocolVersionCalculator.
+class TOTPMillisecondsTokenGenerator : public AbstractCryptoTokenGenerator
+{
+public:
+	TOTPMillisecondsTokenGenerator(ISyncedClock* syncedClock, const uint32_t hopPeriodMillis)
+		: AbstractCryptoTokenGenerator(syncedClock, hopPeriodMillis)
 	{
-		if (HopEnabled->TimedHopEnabled)
-		{
-			// Using a uint32_t token, we get a rollover period of ~70 minutes.
-			// CurrentTimestamp = (SyncedClock->GetSyncMicros() / HopPeriodMicros) % UINT32_MAX;
-
-			// Token = Seed ^ CurrentTimestamp
-			CurrentToken = Seed ^ ((SyncedClock->GetSyncMicros() / HopPeriodMicros) % UINT32_MAX);
-		}
-		else
-		{
-			CurrentToken = 0;
-		}
-
-		return CurrentToken;
 	}
+
+	const uint32_t GetToken()
+	{
+		const uint32_t HopIndex = SyncedClock->GetSyncMillis() / HopPeriod;
+
+		return Seed ^ HopIndex;
+	}
+
+	const uint32_t GetToken(const int8_t offsetMillis)
+	{
+		const uint32_t HopIndex = (SyncedClock->GetSyncMillis() + offsetMillis) / HopPeriod;
+
+		// If changed, update ProtocolVersionCalculator.
+		return Seed ^ HopIndex;
+	}
+};
+
+// Fixed one second period token generator.
+// If changed, update ProtocolVersionCalculator.
+class TOTPSecondsTokenGenerator : public AbstractCryptoTokenGenerator
+{
+public:
+	TOTPSecondsTokenGenerator(ISyncedClock* syncedClock)
+		: AbstractCryptoTokenGenerator(syncedClock, IClock::ONE_SECOND)
+	{}
+
+	// Timing aware token getter.
+	const uint32_t GetTokenFromEarlier(const uint8_t backwardsMillis)
+	{
+		uint32_t HopIndex;
+		uint16_t Millis;
+		SyncedClock->GetSyncSecondsMillis(HopIndex, Millis);
+
+		if (((int16_t)Millis - backwardsMillis) < 0)
+		{
+			HopIndex--;
+		}
+
+		return Seed ^ HopIndex;
+	}
+
+	// Timing aware token getter.
+	const uint32_t GetTokenFromAhead(const uint8_t forwardsMillis)
+	{
+		uint32_t HopIndex;
+		uint16_t Millis;
+		SyncedClock->GetSyncSecondsMillis(HopIndex, Millis);
+
+		if ((Millis + forwardsMillis) > IClock::ONE_SECOND_MILLIS)
+		{
+			HopIndex++;
+		}
+
+
+		return Seed ^ HopIndex;
+	}
+
+	/*const uint32_t GetToken()
+	{
+		const uint32_t HopIndex = SyncedClock->GetSyncSeconds();
+
+		return Seed ^ HopIndex;
+	}*/
 };
 #endif

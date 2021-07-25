@@ -5,40 +5,18 @@
 
 #include <LoLaClock\LoLaSyncedClock.h>
 
+
 class TickTrainedTimerSyncedClock
 	: public LoLaSyncedClock
 {
 private:
-	enum TrainingStageEnum : uint8_t
-	{
-		WaitingForStart = 0,
-		WaitingForTick = 1,
-		TrainingDone = 2
-	};
-
-	volatile TrainingStageEnum TrainingStage = TrainingStageEnum::WaitingForStart;
-
-	// Training counts.
-	const static uint8_t SetupSampleCount = 30;
-	const static uint8_t TuneSampleCount = 40;
-	const static uint8_t DiscardSampleCount = 3;
-
-	// Head start.
-	static const uint32_t PreTrainedStepsPerSecond = 64960;
-
-	// Static helpers.
-	volatile uint32_t TrainingStep = 0;
-
-	volatile uint8_t TargetSamples = 0;
+	static const uint8_t MinSampleCount = 2;
 
 	// Training data.
-	volatile uint64_t AverageHelper = 0;
 	volatile uint8_t SampleCount = 0;
 
-	// First samples are always iffy, until the clock warms up.
-	volatile uint8_t DiscardCount = 0;
-
-	bool FirstTrainingDone = false;
+	volatile uint32_t LastSecondsStep = 0;
+	volatile uint32_t LastSecondCounter = 0;
 
 public:
 	TickTrainedTimerSyncedClock()
@@ -46,20 +24,25 @@ public:
 	{
 	}
 
-	virtual bool HasTraining()
+	bool HasTraining()
 	{
-		return FirstTrainingDone;
+		return SampleCount >= MinSampleCount;
 	}
 
 	bool Setup()
 	{
 		if (LoLaSyncedClock::Setup())
 		{
-#ifdef DEBUG_LOLA_CLOCK
-			FirstTrainingDone = false;
+
+			LastSecondsStep = 0;
+			StepsPerSecond = TimerSource.PreTrainedStepsPerSecond;
+			SampleCount = 0;
+
+
+#ifdef DEBUG_LOLA_CLOCK_DEBUG_PIN
+			pinMode(DEBUG_LOLA_CLOCK_DEBUG_PIN, OUTPUT);
+			digitalWrite(DEBUG_LOLA_CLOCK_DEBUG_PIN, LOW);
 #endif
-			StepsPerSecond = PreTrainedStepsPerSecond;
-			StartTraining(SetupSampleCount);
 
 			return true;
 		}
@@ -75,90 +58,49 @@ public:
 
 	virtual void StartCallbackAfterMicros(const uint32_t delayMicros)
 	{
-		TimerSource.StartCallbackAfterSteps((delayMicros * StepsPerSecond) / ONE_SECOND_MICROS);
+		// Just pass it along with converted steps from time.
+		TimerSource.StartCallbackAfterSteps((((uint64_t)delayMicros * StepsPerSecond) / ONE_SECOND_MICROS) % UINT16_MAX);
 	}
 
-	// Replaces OnTick(), while training.
-	virtual void OnTrainingTick()
+	// Called on tick interrupt. 
+	// We piggyback the interrupt to update the training values.
+	void OnTick()
 	{
-		OnTick();
+#ifdef DEBUG_LOLA_CLOCK_DEBUG_PIN
+		digitalWrite(DEBUG_LOLA_CLOCK_DEBUG_PIN, !digitalRead(DEBUG_LOLA_CLOCK_DEBUG_PIN));
+#endif
+		// Increment the seconds counter, with rollover and get the current step count.
+		// Interrupts don't need to be stopped because we're dealing with overflows.
+		SecondsCounter++;
+		SecondsStep = TimerSource.GetStep();
+		//
 
-		// We then piggyback the interrupt to update the training values.
-		switch (TrainingStage)
+		// Check sample count, need at least 2 samples (3 ticks).
+		if (SampleCount < MinSampleCount)
 		{
-		case TrainingStageEnum::WaitingForStart:
-			TrainingStep = SecondsStep;
-			TrainingStage = TrainingStageEnum::WaitingForTick;
-			break;
-		case TrainingStageEnum::WaitingForTick:
-			if (DiscardCount >= DiscardSampleCount)
+			SampleCount++;
+		}
+		else
+		{
+			// We can deal with one overflow between ticks, but no more.
+			if (SecondsStep < LastSecondsStep)
 			{
-				// We can deal with one overflow between ticks, but no more.
-				if (SecondsStep < TrainingStep)
-				{
-					// Timer rollover (overflow).
-					AverageHelper += (TimerRange - TrainingStep) + SecondsStep;
-				}
-				else
-				{
-					AverageHelper += SecondsStep - TrainingStep;
-				}
-				SampleCount++;
+				// Timer rollover (overflow).
+				StepsPerSecond = (((TimerRange - LastSecondsStep)) + SecondsStep);
 
-				// Update steps.
-				StepsPerSecond = AverageHelper / SampleCount;
-				if (SampleCount < TargetSamples)
-				{
-
-					TrainingStep = SecondsStep;
-				}
-				else
-				{
-					TrainingStage = TrainingStageEnum::TrainingDone;
-				}
 			}
 			else
 			{
-				TrainingStep = SecondsStep;
-				DiscardCount++;
+				StepsPerSecond = (SecondsStep - LastSecondsStep);
 			}
-			break;
-		case TrainingStageEnum::TrainingDone:
-			FirstTrainingDone = true;
-#ifdef DEBUG_LOLA_CLOCK
-			Serial.print("Timer trained.");
-			Serial.print(ONE_SECOND_NANOS / StepsPerSecond);
-			Serial.println(" ns per Step: ");
-			Serial.print("Steps per Second: ");
-			Serial.println(StepsPerSecond);
-#endif
-			TickerSource.SetupTickInterrupt();
-			break;
-		default:
-			TickerSource.SetupTickInterrupt();
-			break;
 		}
-	}
 
-protected:
-	virtual void OnTuneUpdated()
+		LastSecondsStep = SecondsStep;
+}
+
+	const uint32_t GetStepDurationNanos()
 	{
-		if (TrainingStage = TrainingStageEnum::TrainingDone)
-		{
-			StartTraining(TuneSampleCount);
-		}
-	}
-
-private:
-	void StartTraining(uint8_t targetSamples = SetupSampleCount)
-	{
-		TargetSamples = targetSamples;
-		AverageHelper = 0;
-		SampleCount = 0;
-		DiscardCount = 0;
-
-		TrainingStage = TrainingStageEnum::WaitingForStart;
-		TickerSource.SetupTrainingTickInterrupt();
+		return ONE_SECOND_NANOS / StepsPerSecond;
 	}
 };
 #endif

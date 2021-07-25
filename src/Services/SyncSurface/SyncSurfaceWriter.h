@@ -3,8 +3,8 @@
 #ifndef _SYNCSURFACEWRITER_h
 #define _SYNCSURFACEWRITER_h
 
-
 #include <Services\SyncSurface\SyncSurfaceBase.h>
+
 
 template <const uint8_t BasePacketHeader,
 	const uint32_t ThrottlePeriodMillis = 1>
@@ -16,7 +16,7 @@ private:
 
 
 public:
-	SyncSurfaceWriter(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface)
+	SyncSurfaceWriter(Scheduler* scheduler, LoLaPacketDriver* driver, ITrackedSurface* trackedSurface)
 		: SyncSurfaceBase(scheduler, driver, trackedSurface, ThrottlePeriodMillis)
 		, SyncMetaDefinition(this)
 		, DataPacketDefinition(this)
@@ -28,12 +28,14 @@ public:
 #ifdef DEBUG_LOLA
 	void PrintName(Stream* serial)
 	{
-		serial->print(F("SyncSurfaceWriter"));
+		serial->print(F("SurfaceWriter ("));
+		TrackedSurface->PrintName(serial);
+		serial->print(F(")"));
 	}
 #endif
 
 private:
-	enum SyncWriterState : uint8_t
+	enum SyncWriterState
 	{
 		UpdatingBlocks = 0,
 		SendingBlock = 1,
@@ -43,12 +45,12 @@ private:
 	uint8_t SurfaceSendingIndex = 0;
 
 protected:
-	void OnTransmitted(const uint8_t header, const uint8_t id, const uint32_t transmitDuration, const uint32_t sendDuration)
+	void OnSendOk(const uint8_t header, const uint8_t id, const uint32_t transmitDuration, const uint32_t sendDuration)
 	{
 		if (SyncState == AbstractSync::SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
 		{
-			TrackedSurface->GetTracker()->ClearBit(SurfaceSendingIndex);
-			SurfaceSendingIndex++;
+			TrackedSurface->ClearBlockPending(SurfaceSendingIndex);
+			SurfaceSendingIndex++; // Forces next block even if current block is quickly set pending from outside.
 		}
 		SetNextRunASAP();
 	}
@@ -57,9 +59,6 @@ protected:
 	{
 		switch (newState)
 		{
-		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
-			InvalidateRemoteHash();
-			Disable();
 		case AbstractSync::SyncStateEnum::Syncing:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
@@ -98,8 +97,6 @@ protected:
 
 	void OnUpdateFinishedReplyReceived()
 	{
-		UpdateLocalHash();
-
 		switch (SyncState)
 		{
 		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
@@ -108,7 +105,7 @@ protected:
 			switch (WriterState)
 			{
 			case SyncWriterState::SendingFinished:
-				if (TrackedSurface->GetTracker()->HasSet())
+				if (TrackedSurface->HasAnyPending())
 				{
 					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 				}
@@ -118,7 +115,7 @@ protected:
 				}
 				else
 				{
-					TrackedSurface->GetTracker()->SetAll();
+					TrackedSurface->SetAllPending();
 					UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 				}
 				break;
@@ -129,7 +126,7 @@ protected:
 		case AbstractSync::SyncStateEnum::Synced:
 			if (!HashesMatch())
 			{
-				TrackedSurface->GetTracker()->SetAll();
+				TrackedSurface->SetAllPending();
 				UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			}
 			break;
@@ -147,11 +144,11 @@ protected:
 		case AbstractSync::SyncStateEnum::WaitingForServiceDiscovery:
 			break;
 		case AbstractSync::SyncStateEnum::Syncing:
-			TrackedSurface->GetTracker()->SetAll();
+			TrackedSurface->SetAllPending();
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
 		case AbstractSync::SyncStateEnum::Synced:
-			TrackedSurface->GetTracker()->SetAll();
+			TrackedSurface->SetAllPending();
 			UpdateSyncState(AbstractSync::SyncStateEnum::Syncing);
 			break;
 		case AbstractSync::SyncStateEnum::Disabled:
@@ -166,56 +163,46 @@ protected:
 		switch (WriterState)
 		{
 		case SyncWriterState::UpdatingBlocks:
-			if (TrackedSurface->GetTracker()->HasSet())
+			if (TrackedSurface->HasAnyPending())
 			{
 				if (CheckThrottling())
 				{
-					PrepareNextPendingBlockPacket();
-					RequestSendPacket();
+					SendNextPendingBlockPacket();
 					UpdateSyncingState(SyncWriterState::SendingBlock);
 				}
 				else
 				{
-					SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+					SetNextRunDelay(FAST_CHECK_PERIOD_MILLIS);
 				}
 			}
 			else
 			{
 				UpdateSyncingState(SyncWriterState::SendingFinished);
 				ResetLastSentTimeStamp();
-				SetNextRunDelay(ABSTRACT_SURFACE_UPDATE_BACK_OFF_PERIOD_MILLIS);
+				SetNextRunDelay(UPDATE_BACK_OFF_PERIOD_MILLIS);
 			}
 			break;
 		case SyncWriterState::SendingBlock:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
-			SetNextRunDelay(ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS);
+			SetNextRunDelay(FAST_CHECK_PERIOD_MILLIS);
 			break;
 		case SyncWriterState::SendingFinished:
-			if (TrackedSurface->GetTracker()->HasSet())
+			if (TrackedSurface->HasAnyPending())
 			{
 				UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			}
-			else if (GetElapsedSinceLastSent() > ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS)
+			else if (GetElapsedSinceLastSent() > SYNC_CONFIRM_RESEND_PERIOD_MILLIS)
 			{
-				PrepareUpdateFinishedPacket();
-				RequestSendPacket();
+				SendUpdateFinishedPacket();
 			}
 			else
 			{
-				SetNextRunDelay(ABSTRACT_SURFACE_SYNC_CONFIRM_SEND_PERIOD_MILLIS - GetElapsedSinceLastSent());
+				SetNextRunDelay(SYNC_CONFIRM_RESEND_PERIOD_MILLIS - GetElapsedSinceLastSent());
 			}
 			break;
 		default:
 			UpdateSyncingState(SyncWriterState::UpdatingBlocks);
 			break;
-		}
-	}
-
-	void OnSendDelayed()
-	{
-		if (SyncState == AbstractSync::SyncStateEnum::Syncing && WriterState == SyncWriterState::SendingBlock)
-		{
-			UpdatePendingBlockPacketPayload();//Update packet payload with latest live data.
 		}
 	}
 
@@ -251,6 +238,7 @@ private:
 				Serial.println(F("SendingBlock"));
 #endif
 				InvalidateRemoteHash();
+				ForceUpdateLocalHash();
 				break;
 			case SyncWriterState::SendingFinished:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
@@ -265,20 +253,51 @@ private:
 		}
 	}
 
-	inline void UpdatePendingBlockPacketPayload()
+	void UpdatePendingBlockPacketPayload()
 	{
-		PrepareBlockPacketPayload(SurfaceSendingIndex, Packet->GetPayload());
+		GetOutPayload()[1] = GetLocalHash();
+		FillBlockPacketData(OutMessage[0]);
 	}
 
-	void PrepareNextPendingBlockPacket()
+	void SendNextPendingBlockPacket()
 	{
-		if (SurfaceSendingIndex >= TrackedSurface->GetBlockCount())
+		SurfaceSendingIndex = TrackedSurface->GetNextSetPendingIndex(SurfaceSendingIndex);
+		SendBlockPacketHeader(SurfaceSendingIndex);
+		
+	}
+
+	// BlockPacketPayload is called separately because we can do last minute update to payload.
+	void FillBlockPacketData(const uint8_t index)
+	{
+		const uint8_t IndexOffset = index * ITrackedSurface::BytesPerBlock;
+
+		for (uint8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
 		{
-			SurfaceSendingIndex = 0;
+			GetOutPayload()[1 + 1 + i] = SurfaceData[IndexOffset + i];
 		}
-		SurfaceSendingIndex = TrackedSurface->GetTracker()->GetNextSetIndex(SurfaceSendingIndex);
-		PrepareBlockPacketHeader(SurfaceSendingIndex);
-		PrepareBlockPacketPayload(SurfaceSendingIndex, Packet->GetPayload());
+	}
+
+	void SendUpdateFinishedPacket()
+	{
+		SendMetaHashPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED);
+	}
+
+	bool SendBlockPacketHeader(const uint8_t index)
+	{
+		if (index < TrackedSurface->BlockCount)
+		{
+			GetOutPayload()[0] = index;
+			GetOutPayload()[1] = GetLocalHash();
+			FillBlockPacketData(index);
+
+			RequestSendPacket(DataDefinition->Header);
+
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 };
 #endif

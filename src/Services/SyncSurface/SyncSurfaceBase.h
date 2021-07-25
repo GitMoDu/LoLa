@@ -5,7 +5,6 @@
 
 #include <LoLaDefinitions.h>
 #include <Services\SyncSurface\AbstractSync.h>
-#include <Services\SyncSurface\SyncPacketDefinitions.h>
 #include <Packet\LoLaPacket.h>
 #include <Packet\PacketDefinition.h>
 #include <Packet\LoLaPacketMap.h>
@@ -19,25 +18,23 @@ private:
 	static const uint8_t SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY = 2;
 	static const uint8_t SYNC_META_SUB_HEADER_INVALIDATE_REQUEST = 3;
 
-	union ArrayToUint32 {
-		byte array[4];
-		uint32_t uint;
-	} ATUI;
-
-	TemplateLoLaPacket<LOLA_PACKET_MIN_PACKET_SIZE + PACKET_DEFINITION_SYNC_DATA_PAYLOAD_SIZE> PacketHolder;
-
 
 protected:
 	PacketDefinition* MetaDefinition = nullptr;
 	PacketDefinition* DataDefinition = nullptr;
 
-	uint32_t ThrottlePeriodMillis = 0;
+
+	uint8_t* SurfaceData = nullptr;
+
+	const uint32_t ThrottlePeriodMillis = 0;
+
 
 public:
-	SyncSurfaceBase(Scheduler* scheduler, ILoLaDriver* driver, ITrackedSurface* trackedSurface, const uint32_t throttlePeriodMillis = 1)
-		: AbstractSync(scheduler, ABSTRACT_SURFACE_FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface, &PacketHolder)
+	SyncSurfaceBase(Scheduler* scheduler, LoLaPacketDriver* driver, ITrackedSurface* trackedSurface, const uint32_t throttlePeriodMillis)
+		: AbstractSync(scheduler, FAST_CHECK_PERIOD_MILLIS, driver, trackedSurface)
+		, SurfaceData(trackedSurface->SurfaceData)
+		, ThrottlePeriodMillis(throttlePeriodMillis)
 	{
-		ThrottlePeriodMillis = throttlePeriodMillis;
 	}
 
 	bool Setup()
@@ -47,8 +44,8 @@ public:
 			return false;
 		}
 
-		if (!LoLaDriver->GetPacketMap()->RegisterMapping(MetaDefinition) ||
-			!LoLaDriver->GetPacketMap()->RegisterMapping(DataDefinition))
+		if (!LoLaDriver->PacketMap.RegisterMapping(MetaDefinition) ||
+			!LoLaDriver->PacketMap.RegisterMapping(DataDefinition))
 		{
 			return false;
 		}
@@ -71,9 +68,8 @@ protected:
 protected:
 	bool CheckThrottling()
 	{
-		if (LastSyncMillis == 0
-			||
-			(millis() - LastSyncMillis > ThrottlePeriodMillis))
+		if ((millis() - LastSyncMillis > ThrottlePeriodMillis)
+			|| LastSyncMillis == 0)
 		{
 
 			return true;
@@ -83,15 +79,15 @@ protected:
 			return false;
 		}
 	}
-
-	bool OnPacketReceived(const uint8_t header, const uint8_t id, const uint32_t timestamp, uint8_t* payload)
+	bool OnPacketReceived(const uint8_t header, const uint32_t timestamp, uint8_t* payload)
 	{
 		if (header == DataDefinition->Header)
 		{
 			//To Reader.
 			if (SyncState != SyncStateEnum::Disabled)
 			{
-				OnBlockReceived(id, payload);
+				SetRemoteHash(payload[1]);
+				OnBlockReceived(payload[0], &payload[1 + 1]);
 			}
 
 			return true;
@@ -100,14 +96,14 @@ protected:
 		{
 			if (SyncState != SyncStateEnum::Disabled)
 			{
-				switch (id)
+				switch (payload[0])
 				{
 					//To Reader.
 				case SYNC_META_SUB_HEADER_UPDATE_FINISHED:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnUpdateFinishedReceived"));
 #endif
-					SetRemoteHash(payload[0]);
+					SetRemoteHash(payload[1]);
 					OnUpdateFinishedReceived();
 					break;
 
@@ -116,21 +112,21 @@ protected:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnUpdateFinishedReplyReceived"));
 #endif
-					SetRemoteHash(payload[0]);
+					SetRemoteHash(payload[1]);
 					OnUpdateFinishedReplyReceived();
 					break;
 				case SYNC_META_SUB_HEADER_INVALIDATE_REQUEST:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnInvalidateReceived"));
 #endif
-					SetRemoteHash(payload[0]);
+					SetRemoteHash(payload[1]);
 					OnInvalidateRequestReceived();
 					break;
 				case SYNC_META_SUB_HEADER_SERVICE_DISCOVERY:
 #if defined(DEBUG_LOLA) && defined(LOLA_SYNC_FULL_DEBUG)
 					Serial.println(F("OnServiceDiscoveryReceived"));
 #endif
-					OnServiceDiscoveryReceived(payload[0]);
+					OnServiceDiscoveryReceived(payload[1]);
 					break;
 				default:
 					break;
@@ -143,75 +139,17 @@ protected:
 		return false;
 	}
 
-	void UpdateBlockData(const uint8_t blockIndex, uint8_t* payload)
+	void SendMetaHashPacket(const uint8_t subHeader)
 	{
-		uint8_t IndexOffset = blockIndex * ITrackedSurface::BytesPerBlock;
-
-		for (uint8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
-		{
-			TrackedSurface->GetData()[IndexOffset + i] = payload[i];
-		}
+		SendMetaPacket(subHeader, GetLocalHash());
 	}
 
-	void PrepareBlockPacketPayload(const uint8_t index, uint8_t* payload)
+	void SendMetaPacket(const uint8_t subHeader, const uint8_t value)
 	{
-		uint8_t IndexOffset = index * ITrackedSurface::BytesPerBlock;
+		GetOutPayload()[0] = subHeader;
+		GetOutPayload()[1] = value;
 
-		for (uint8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
-		{
-			payload[i] = TrackedSurface->GetData()[IndexOffset + i];
-		}
-	}
-
-	inline void PrepareMetaHashPacket(const uint8_t subHeader)
-	{
-		Packet->SetDefinition(MetaDefinition);
-		Packet->SetId(subHeader);
-		UpdateLocalHash();
-		Packet->GetPayload()[0] = GetLocalHash();
-	}
-
-	inline void PrepareMetaPacket(const uint8_t subHeader, const uint8_t hash)
-	{
-		Packet->SetDefinition(MetaDefinition);
-		Packet->SetId(subHeader);
-		Packet->GetPayload()[0] = hash;
-	}
-
-	//Writer
-	void PrepareUpdateFinishedPacket()
-	{
-		PrepareMetaHashPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED);
-	}
-
-	bool PrepareBlockPacketHeader(const uint8_t index)
-	{
-		if (index < TrackedSurface->GetBlockCount())
-		{
-			Packet->SetDefinition(DataDefinition);
-			Packet->SetId(index);
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	//Reader
-	inline void PrepareServiceDiscoveryPacket()
-	{
-		PrepareMetaPacket(SYNC_META_SUB_HEADER_SERVICE_DISCOVERY, GetSurfaceId());
-	}
-
-	inline void PrepareUpdateFinishedReplyPacket()
-	{
-		PrepareMetaHashPacket(SYNC_META_SUB_HEADER_UPDATE_FINISHED_REPLY);
-	}
-
-	inline void PrepareInvalidateRequestPacket()
-	{
-		PrepareMetaHashPacket(SYNC_META_SUB_HEADER_INVALIDATE_REQUEST);
+		RequestSendPacket(MetaDefinition->Header);
 	}
 };
 #endif

@@ -3,9 +3,13 @@
 #ifndef _LOLADEFINITIONS_h
 #define _LOLADEFINITIONS_h
 
+#ifdef DEBUG_LOG
 #define DEBUG_LOLA
+#define DEBUG_TRACKED_SURFACE
+#endif
 
 #ifdef DEBUG_LOLA
+#define DEBUG_LINK_SERVICE
 #define DEBUG_LINK_ENCRYPTION
 #define DEBUG_RADIO_DRIVER
 //DEBUG_LINK_FREQUENCY_HOP
@@ -29,96 +33,56 @@
 
 //#define RADIO_USE_DMA
 
-#define LOLA_LINK_ENTROPY_SOURCE_ANALOG_PIN					PA1 // Free analog(?) pin to capture noise.
-#define LOLA_CLOCK_TIMER_INDEX								1 // Timer 1 does not conflict with SPI.
+#define LOLA_LINK_ENTROPY_SOURCE_ANALOG_PIN					PA0 // Free analog(?) pin to capture noise.
 //#define LOLA_CLOCK_TICK_FROM_GPS // TODO:							
 #define LOLA_CLOCK_TICK_FROM_RTC							
 
-#define LOLA_LINK_USE_TOKEN_HOP
-#define LOLA_LINK_USE_CHANNEL_HOP
-
-#define MAX_MAPPING_SIZE									20 // Reduce this to the highest header value in the mapping, to reduce memory usage.
-
-//Reserved [0;1] for Ack.
-#define PACKET_DEFINITION_ACK_HEADER						0x00
-
-//Reserved [1;5] for Link service.
-#define PACKET_DEFINITION_LINK_START_HEADER					(PACKET_DEFINITION_ACK_HEADER + 1)
-
-//User services range start.
-#define PACKET_DEFINITION_USER_HEADERS_START				(PACKET_DEFINITION_LINK_START_HEADER + 5)
-
-#define LOLA_LINK_DEBUG_UPDATE_SECONDS						60
-
-
-
+//#define LOLA_LINK_USE_ENCRYPTION
+//#define LOLA_LINK_USE_TOKEN_HOP
+//#define LOLA_LINK_USE_CHANNEL_HOP
 
 
 // 100 High latency, high bandwitdh.
 // 10 Low latency, lower bandwidth.
-#define ILOLA_DUPLEX_PERIOD_MILLIS					10
+#define ILOLA_DUPLEX_PERIOD_MILLIS							10
 
 
 // Packet collision avoidance.
 #define LOLA_LINK_UNLINKED_BACK_OFF_DURATION_MILLIS			(ILOLA_DUPLEX_PERIOD_MILLIS/2)
 #define LOLA_LINK_COLLISION_SLOT_RANGE_MICROS				(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*4*1000)
 
-#define RADIO_POWER_BALANCER_RSSI_SAMPLE_COUNT				4
-#define LATENCY_SERVICE_MAX_LATENCY_SAMPLES					10
+// How long to stay on a channel/token.
+// Higher periods decrease rollover periods.
+#define LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_SECONDS	(uint32_t)(1) // Fixed period, tied to TOTPSecondsTokenGenerator.
+#define LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS	(uint32_t)(50) // Better or faster response radio allows this value to go lower.
 
-
-
-
-//Driver constants.
+// Mock packet lost constants.
 #define MOCK_PACKET_LOSS_SOFT								8
 #define MOCK_PACKET_LOSS_HARD								12
 #define MOCK_PACKET_LOSS_SMOKE_SIGNALS						35
 #define MOCK_PACKET_LOSS_LINKING							MOCK_PACKET_LOSS_HARD
 #define MOCK_PACKET_LOSS_LINKED								MOCK_PACKET_LOSS_SOFT
 
-// Crypto protocol constants.
-
-// Size of the MAC/CRC for messages.
-#define LOLA_LINK_CRYPTO_MAC_CRC_SIZE						sizeof(uint32_t) // A bit overkill, but can't get more future proof without serious rework.
-
-// TODO: deprecate. Replace with direct DH-KE.
-//#define LOLA_LINK_INFO_DEVICE_MAC_LENGTH					8 // Following MAC-64, because why not?
-
-// The size of seeds and tokens, in bytes.
-#define LOLA_LINK_CRYPTO_SEED_SIZE							4
-#define LOLA_LINK_CHANNEL_SEED_SIZE							4
-#define LOLA_LINK_CRYPTO_TOKEN_SIZE							sizeof(uint32_t) // Not configurable.
-#define LOLA_LINK_CHANNEL_TOKEN_SIZE						1 // Enough for 256 channels. Nice.
-
-// How long to stay on a channel/token.
-// Higher periods decrease rollover periods.
-#define LOLA_LINK_SERVICE_LINKED_TOKEN_HOP_PERIOD_MILLIS	(uint32_t)(100) // Ideally should be the same as the duplex period, if the clock sync is good enough.
-#define LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS	(uint32_t)(50) // Better or faster response radio allows this value to go lower.
 
 // Link constants.
-#define LOLA_LINK_SERVICE_TRANSACTION_LIFETIME				(uint32_t)(35)
+//#define LOLA_LINK_SERVICE_TRANSACTION_LIFETIME				(uint32_t)(35)
 
 //Not linked.
 #define LOLA_LINK_SERVICE_UNLINK_MIN_CLOCK_SAMPLES			(uint8_t)(2)
-#define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKE_CANCEL		(uint32_t)(200) //Typical value is ~ 200 ms
-#define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL	(uint32_t)(100) //Typical value is ~ 100 ms
+//#define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_PKE_CANCEL		(uint32_t)(200) //Typical value is ~ 200 ms
+#define LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL	(uint32_t)(200) //Typical value is ~ 100 ms
 //#define LOLA_LINK_SERVICE_UNLINK_REMOTE_MAX_BEFORE_SLEEP	(uint32_t)(30000)
 #define LOLA_LINK_SERVICE_UNLINK_HOST_SLEEP_PERIOD			(uint32_t)(UINT32_MAX)
 #define LOLA_LINK_SERVICE_UNLINK_REMOTE_SLEEP_PERIOD		(uint32_t)(UINT32_MAX)
-#define LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD				(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS/2)
+#define LOLA_LINK_SERVICE_UNLINK_REMOTE_CHANNEL_HOP_PERIOD	(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*3)
+#define LOLA_LINK_SERVICE_UNLINK_RESEND_PERIOD				(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS)
 //#define LOLA_LINK_SERVICE_UNLINK_RESEND_LONG_PERIOD		(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*3)
 //#define LOLA_LINK_SERVICE_UNLINK_BROADCAST_PERIOD			(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*5)
 #define LOLA_LINK_SERVICE_UNLINK_SEARCH_TIMEOUT				(uint32_t)(300000) // Around 5 minutes and we give up, by default.
-#define LOLA_LINK_SERVICE_UNLINK_SEARCH_ID_TIMEOUT			(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*2)
+#define LOLA_LINK_SERVICE_UNLINK_SEARCH_RETRY_PERIOD		(2000) //(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*2) We wait for 1 duplex before trying again.
 #define LOLA_LINK_SERVICE_UNLINK_SEARCH_EASE_TIMEOUT		(uint32_t)(30000)
 #define LOLA_LINK_SERVICE_UNLINK_SEARCH_PERIOD_MIN			(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*2)
 #define LOLA_LINK_SERVICE_UNLINK_SEARCH_PERIOD_MAX			(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*10)
-//#define LOLA_LINK_SERVICE_UNLINK_MAX_LATENCY_SAMPLES		(uint8_t)(LOLA_LINK_SERVICE_UNLINK_MIN_LATENCY_SAMPLES+1)
-//#define LOLA_LINK_SERVICE_UNLINK_SESSION_LIFETIME			(uint32_t)(LOLA_LINK_SERVICE_UNLINK_HOST_MAX_BEFORE_SLEEP/2)
-
-// Key pairs lifetime in seconds.
-// 0 for single issue.
-#define LOLA_LINK_SERVICE_UNLINK_KEY_PAIR_LIFETIME			(uint32_t)(0) 
 //
 
 //Linked.
@@ -130,7 +94,6 @@
 #define LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD			(uint32_t)((LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT*5)/10)
 #define LOLA_LINK_SERVICE_LINKED_INFO_STALE_PERIOD			(uint32_t)(LOLA_LINK_SERVICE_LINKED_PERIOD_INTERVENTION)
 #define LOLA_LINK_SERVICE_LINKED_POWER_UPDATE_PERIOD		(uint32_t)((LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT*1)/10)
-#define LOLA_LINK_SERVICE_LINKED_UPDATE_RANDOM_JITTER_MAX	(uint32_t)(15) //Some timing variety.
 //
 
 //Clock sync.
@@ -155,7 +118,7 @@
 //
 
 //Timings.
-#define LOLA_LINK_SEND_FAIL_RETRY_PERIOD					(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS*5)
+#define LOLA_LINK_SEND_FAIL_RETRY_PERIOD					(uint32_t)(ILOLA_DUPLEX_PERIOD_MILLIS/2)
 #define LOLA_LINK_SERVICE_CHECK_PERIOD						(uint32_t)(1)
 #define LOLA_LINK_SERVICE_IDLE_PERIOD						(uint32_t)(LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT/500)
 //

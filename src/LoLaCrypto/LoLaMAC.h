@@ -42,7 +42,7 @@ private:
 			}
 		}
 
-		//Use remaining entropy of ID by hashing the last unused bytes
+		// Use remaining entropy of ID by hashing the last unused bytes
 		// into the last byte of the MAC.
 		if (MACLength < IdProvider.GetUUIDLength())
 		{
@@ -56,7 +56,7 @@ private:
 		UpdateMACHash();
 	}
 
-	inline void UpdateMACHash()
+	void UpdateMACHash()
 	{
 		MACHash = CRC8.smbus(&MAC[0], sizeof(uint8_t));
 		MACHash += CRC8.smbus_upd(&MAC[1], sizeof(uint8_t)) << 8;
@@ -64,27 +64,27 @@ private:
 		MACHash += CRC8.smbus_upd(&MAC[3], sizeof(uint8_t)) << 24;
 	}
 
-	inline void LazyLoad()
+	void LazyLoad()
 	{
 		//Lazy loaded MAC.
 		if (!Cached)
 		{
-			//It is not the MAC generator's job to get enough entropy.
+			// It is not the MAC generator's job to get enough entropy.
 			if (MACLength <= IdProvider.GetUUIDLength())
 			{
 				UpdateMAC();
 				Cached = true;
-			}			
+			}
 		}
 	}
 
 public:
-	bool Match(uint8_t * mac)
+	bool Match(uint8_t* mac)
 	{
 		return Match((uint8_t*)&MAC, mac);
 	}
 
-	bool Match(uint8_t * mac1, uint8_t* mac2)
+	bool Match(uint8_t* mac1, uint8_t* mac2)
 	{
 		for (uint8_t i = 0; i < MACLength; i++)
 		{
@@ -92,7 +92,7 @@ public:
 			{
 				return false;
 			}
-		}		
+		}
 
 		return true;
 	}
@@ -110,5 +110,24 @@ public:
 
 		return MAC;
 	}
+
+#ifdef DEBUG_LOLA
+	void PrintMac(Stream* serial)
+	{
+		PrintMac(serial, GetMACPointer());
+	}
+
+	void PrintMac(Stream* serial, uint8_t* mac)
+	{
+		for (uint8_t i = 0; i < MACLength; i++)
+		{
+			serial->print(mac[i], HEX);
+			if (i < MACLength - 1)
+			{
+				serial->print(':');
+			}
+		}
+	}
+#endif // DEBUG_LOLA
 };
 #endif

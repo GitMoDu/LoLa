@@ -5,7 +5,7 @@
 
 #include <LoLaManagerInclude.h>
 
-#include "ExampleControllerSurface.h"
+//#include "ExampleControllerSurface.h"
 #include <Services\SyncSurface\SyncSurfaceReader.h>
 #include <Services\SyncSurface\SyncSurfaceWriter.h>
 
@@ -14,26 +14,27 @@
 class RemoteManager : public LoLaManagerRemote
 {
 private:
-	ControllerSurface Controller;
+	//ControllerSurface Controller;
 
-	SyncSurfaceWriter<CONTROLLER_SURFACE_BASE_HEADER> Writer;
+	//SyncSurfaceWriter<CONTROLLER_SURFACE_BASE_HEADER> Writer;
 
 protected:
 	bool OnSetupServices()
 	{
-		return LoLaDriver->GetServices()->Add(&Writer);
+		//return LoLaDriver->GetServices()->Add(&Writer);
+		return true;
 	}
 
 public:
-	RemoteManager(Scheduler* servicesScheduler, Scheduler* driverScheduler, LoLaPacketDriver* loLa)
-		: LoLaManagerRemote(servicesScheduler, driverScheduler, loLa)
-		, Writer(servicesScheduler, loLa, &Controller)
+	RemoteManager(Scheduler* scheduler, LoLaPacketDriver* loLa)
+		: LoLaManagerRemote(scheduler, loLa)
+		//, Writer(servicesScheduler, loLa, &Controller)
 	{
 	}
 
-	ControllerSurface* GetControllerSurface()
-	{
-		return &Controller;
-	}
+	//ControllerSurface* GetControllerSurface()
+	//{
+	//	return &Controller;
+	//}
 };
 #endif

@@ -16,7 +16,7 @@
 	#if defined(ARDUINO_ARCH_STM32F1)
 			#include <LoLaClock\ClockTickers\STM32RTCClockTicker.h>
 	#else
-		#error No precision timer for this platform.
+			#include <LoLaClock\ClockTickers\TimerOneClockTicker.h>
 	#endif
 #else
 	#error No precision timer available.

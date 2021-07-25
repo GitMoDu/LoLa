@@ -10,8 +10,8 @@
 #include <RingBufCPP.h>
 #include <Services\Stream\ITrackedStream.h>
 
-#define ABSTRACT_STREAM_RETRY_PERIDO					((uint32_t)50)
-#define ABSTRACT_STREAM_REPLY_CHECK_PERIOD				(ABSTRACT_STREAM_RETRY_PERIDO*2)
+#define ABSTRACT_STREAM_RETRY_PERIOD					((uint32_t)50)
+#define ABSTRACT_STREAM_REPLY_CHECK_PERIOD				(ABSTRACT_STREAM_RETRY_PERIOD*2)
 
 template <class DataType, const uint8_t BufferSize>
 class AbstractStreamBuffer : public IPacketSendService
@@ -24,7 +24,7 @@ private:
 protected:
 	ITrackedStream * TrackedStream = nullptr;
 
-	enum StreamStateEnum : uint8_t
+	enum StreamStateEnum
 	{
 		WaitingForServiceDiscovery = 0,
 		Active = 1,
@@ -186,7 +186,7 @@ protected:
 	void OnWaitingForServiceDiscovery()
 	{
 		if (LastSent != ILOLA_INVALID_MILLIS ||
-			Millis() - LastSent > ABSTRACT_STREAM_RETRY_PERIDO)
+			Millis() - LastSent > ABSTRACT_STREAM_RETRY_PERIOD)
 		{
 			PrepareServiceDiscoveryPacket();
 			RequestSendPacket();

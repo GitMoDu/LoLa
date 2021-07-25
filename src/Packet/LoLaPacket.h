@@ -6,98 +6,122 @@
 #include <Arduino.h>
 #include <Packet\PacketDefinition.h>
 
-class ILoLaPacket
+class LoLaPacket
 {
 private:
-	PacketDefinition * Definition = nullptr;
+	union ArrayToUint32
+	{
+		byte array[sizeof(uint32_t)];
+		uint32_t uint;
+	};
 
-	union ArrayToUint16 {
-		byte array[sizeof(uint16_t)];
-		uint16_t uint;
-	} ATUI;
+protected:
+	uint8_t* Raw = nullptr;
 
 public:
-	virtual uint8_t * GetRaw() { return nullptr; }
 	virtual uint8_t GetMaxSize() { return 0; }
 
 public:
-	inline PacketDefinition * GetDefinition()
+	LoLaPacket(uint8_t* raw) : Raw(raw)
 	{
-		return Definition;
 	}
 
-	void ClearDefinition()
+	uint8_t* GetRaw()
 	{
-		Definition = nullptr;
-	}
-	
-	uint8_t GetId()
-	{
-		return GetRaw()[LOLA_PACKET_ID_INDEX];
+		return Raw;
 	}
 
-	void SetId(const uint8_t id)
+	void SetHeader(const uint8_t header)
 	{
-		GetRaw()[LOLA_PACKET_ID_INDEX] = id;
+		Raw[PacketDefinition::LOLA_PACKET_HEADER_INDEX] = header;
 	}
 
-	uint16_t GetMACCRC()
+	const uint32_t GetMACCRC()
 	{
-		ATUI.array[0] = GetRaw()[LOLA_PACKET_MACCRC_INDEX];
-		ATUI.array[1] = GetRaw()[LOLA_PACKET_MACCRC_INDEX+1];
+		ArrayToUint32 ATUI;
+		ATUI.array[0] = Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 0];
+		ATUI.array[1] = Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 1];
+		ATUI.array[2] = Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 2];
+		ATUI.array[3] = Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 3];
 
 		return ATUI.uint;
 	}
 
-	void SetMACCRC(const uint16_t crcValue)
+	void SetMACCRC(const uint32_t crcValue)
 	{
+		ArrayToUint32 ATUI;
+
 		ATUI.uint = crcValue;
-		GetRaw()[LOLA_PACKET_MACCRC_INDEX] = ATUI.array[0];
-		GetRaw()[LOLA_PACKET_MACCRC_INDEX + 1] = ATUI.array[1];
+		Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 0] = ATUI.array[0];
+		Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 1] = ATUI.array[1];
+		Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 2] = ATUI.array[2];
+		Raw[PacketDefinition::LOLA_PACKET_MACCRC_INDEX + 3] = ATUI.array[3];
 	}
 
-	uint8_t GetDataHeader()
+	const uint8_t GetHeader()
 	{
-		return GetRaw()[LOLA_PACKET_HEADER_INDEX];
+		return Raw[PacketDefinition::LOLA_PACKET_HEADER_INDEX];
 	}
 
-	bool SetDefinition(PacketDefinition* definition)
+	// Special getter for Id, can only be read by services.
+	const uint8_t GetId()
 	{
-		Definition = definition;
-		if (Definition != nullptr)
-		{
-			return true;
-		}
-
-		return false;
+		return Raw[PacketDefinition::LOLA_PACKET_ID_INDEX];
 	}
 
+	// Everything but the MAC/CRC.
 	uint8_t* GetContent()
 	{
-		return &GetRaw()[LOLA_PACKET_HEADER_INDEX];
+		return &Raw[PacketDefinition::LOLA_PACKET_ID_INDEX];
 	}
 
 	uint8_t* GetPayload()
 	{
-		return &GetRaw()[LOLA_PACKET_PAYLOAD_INDEX];
+		return &Raw[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX];
 	}
 };
 
-template <const uint8_t DataSize>
-class TemplateLoLaPacket : public ILoLaPacket
+template <const uint8_t PayloadSize>
+class TemplateLoLaPacket : public LoLaPacket
 {
 private:
-	uint8_t Data[DataSize];
+	static const uint8_t TotalSize = PacketDefinition::GetTotalSize(PayloadSize);
+
+	uint8_t Data[TotalSize];
 
 public:
-	uint8_t* GetRaw()
+	TemplateLoLaPacket() : LoLaPacket(Data)
 	{
-		return Data;
 	}
 
-	uint8_t GetMaxSize()
+	const uint8_t GetTotalSize()
 	{
-		return DataSize;
+		return TotalSize;
+	}
+};
+
+class NotifiableIncomingPacket : public TemplateLoLaPacket<PacketDefinition::LOLA_PACKET_MAX_PAYLOAD_SIZE>
+{
+public:
+	NotifiableIncomingPacket()
+		: TemplateLoLaPacket<PacketDefinition::LOLA_PACKET_MAX_PAYLOAD_SIZE>()
+	{}
+
+	bool NotifyPacketReceived(PacketDefinition* definition, const uint32_t timestamp)
+	{
+		return definition->Service->OnPacketReceived(GetHeader(), timestamp, GetPayload());
+	}
+};
+
+class OutgoingIdPacket : public TemplateLoLaPacket<PacketDefinition::LOLA_PACKET_MAX_PAYLOAD_SIZE>
+{
+public:
+	OutgoingIdPacket() : TemplateLoLaPacket<PacketDefinition::LOLA_PACKET_MAX_PAYLOAD_SIZE>() {}
+
+	// Special setter for Id, can only be writen by the driver.
+	void SetId(const uint8_t id)
+	{
+		Raw[PacketDefinition::LOLA_PACKET_ID_INDEX] = id;
 	}
 };
 #endif
