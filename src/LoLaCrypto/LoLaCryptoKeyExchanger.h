@@ -6,7 +6,9 @@
 #define uECC_RNG_MAX_TRIES 1000
 
 #include <uECC.h>
-#include <LoLaDefinitions.h>
+//#include <LoLaDefinitions.h>
+
+#define LOLA_LINK_ENTROPY_SOURCE_ANALOG_PIN A3
 
 class LoLaCryptoKeyExchanger
 {

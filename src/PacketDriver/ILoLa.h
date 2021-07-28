@@ -43,6 +43,8 @@ public:
 
 	virtual const bool DriverTransmit(uint8_t* data, const uint8_t length) { return false; }
 
+	virtual void DriverSetChannel(const uint8_t channel) { }
+
 	// [0:255] How good was the last reception?
 	virtual const uint8_t GetLastRssiIndicator() { return 0; }
 
@@ -56,10 +58,10 @@ public:
 class ILoLaLink
 {
 public:
-	const bool SendPacket(uint8_t* payload, const uint8_t payloadSize, const uint8_t header, const bool hasAck) { return false; }
+	virtual const bool SendPacket(uint8_t* payload, const uint8_t payloadSize, const uint8_t header, const bool hasAck) { return false; }
 
-	const bool RegisterLinkListener(ILoLaLinkListener* listener) { return false; }
-	const bool RegisterLinkPacketListener(const uint8_t header, ILoLaLinkPacketListener* listener) { return false; }
+	virtual const bool RegisterLinkListener(ILoLaLinkListener* listener) { return false; }
+	virtual const bool RegisterLinkPacketListener(const uint8_t header, ILoLaLinkPacketListener* listener) { return false; }
 };
 
 

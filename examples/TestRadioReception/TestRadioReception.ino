@@ -9,21 +9,21 @@
 #include <LoLaDriverPIM.h>
 
 
-#include <Link\LoLaLinkService.h>
+#include <LoLaLink\LoLaLinkHost.h>
 //#include "ReceptionTester.h"
 
 // Process scheduler.
 Scheduler SchedulerBase;
 //
 
-
 const uint8_t MaxPacketSize = 8;
+
 // Radio driver.
 LoLaPIMPacketDriver<MaxPacketSize, 2, 7> PIMDriver(&SchedulerBase);
 
 // LoLaLink
-LoLaLinkService<MaxPacketSize> LoLaLink(&SchedulerBase, &PIMDriver);
-//ReceptionTester Tester(&SchedulerBase, &LoLaDriver);
+LoLaLinkHost<MaxPacketSize, 2, 2> LoLaLink(&SchedulerBase, &PIMDriver);
+//ReceptionTester Tester(&SchedulerBase, &LoLaLink);
 
 void Halt()
 {

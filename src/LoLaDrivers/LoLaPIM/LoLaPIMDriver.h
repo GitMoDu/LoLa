@@ -11,21 +11,21 @@
 #include <PulsePacketTaskDriver.h>
 
 
-template<const uint8_t MaxPacketSize, const uint8_t ReadPin, const uint8_t WritePin, const uint32_t MinimumSilenceInterval = 20000>
+template<const uint8_t MaxPacketSize, const uint8_t ReadPin, const uint8_t WritePin>
 class LoLaPIMPacketDriver
-	: public PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin, MinimumSilenceInterval>
+	: public PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin>
 	, public virtual ILoLaPacketDriver
 {
 private:
 	ILoLaPacketListener* PacketListener = nullptr;
 
-	using PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin, MinimumSilenceInterval>::IncomingPacket;
-	using PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin, MinimumSilenceInterval>::Start;
-	using PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin, MinimumSilenceInterval>::Stop;
+	using PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin>::IncomingPacket;
+	using PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin>::Start;
+	using PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin>::Stop;
 
 public:
 	LoLaPIMPacketDriver(Scheduler* scheduler)
-		: PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin, MinimumSilenceInterval>(scheduler)
+		: PulsePacketTaskDriver<MaxPacketSize, ReadPin, WritePin>(scheduler)
 		, ILoLaPacketDriver()
 	{
 	}
@@ -67,6 +67,7 @@ public:
 
 	virtual const bool DriverCanTransmit()
 	{
+		// Make sure we wait at least a bit over a pre amble before sending again.
 		return CanSend();
 	}
 
