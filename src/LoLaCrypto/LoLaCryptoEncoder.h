@@ -8,8 +8,8 @@
 #include <Ascon128.h>
 #include "utility/ProgMemUtil.h"
 
-#include <LoLaDefinitions.h>
-#include <LoLaCrypto\CryptoTokenGenerator.h>
+//#include <LoLaDefinitions.h>
+//#include <LoLaCrypto\CryptoTokenGenerator.h>
 
 
 // Responsible keeping the state of crypto encoding/decoding,
@@ -33,7 +33,7 @@ private:
 	{
 		byte array[sizeof(uint32_t)];
 		uint32_t uint;
-	};
+	} Helper;
 
 	// Large enough to generate unique keys for each purpose.
 	struct ExpandedKeyStruct
@@ -50,79 +50,39 @@ private:
 		uint8_t Array[sizeof(ExpandedKeyStruct)];
 	} ExpandedKeySource;
 
-	// Runtime Flags.
-	bool TokenHopEnabled = false;
-	bool EncryptionEnabled = false;
-
 public:
-	TOTPSecondsTokenGenerator LinkTokenGenerator;
-	TOTPMillisecondsTokenGenerator ChannelTokenGenerator;
-
-public:
-	LoLaCryptoEncoder(ISyncedClock* syncedClock)
+	LoLaCryptoEncoder()
 		: Cypher()
 		, Hasher()
-		, LinkTokenGenerator(syncedClock)
-		, ChannelTokenGenerator(syncedClock, LOLA_LINK_SERVICE_LINKED_CHANNEL_HOP_PERIOD_MILLIS)
+		, Helper()
+		, ExpandedKeySource()
 	{
-	}
-
-	void StartTokenHop()
-	{
-#ifdef LOLA_LINK_USE_TOKEN_HOP
-		TokenHopEnabled = true;
-#endif
-	}
-
-	void StartEncryption()
-	{
-#ifdef LOLA_LINK_USE_ENCRYPTION
-		EncryptionEnabled = true;
-#endif
 	}
 
 	bool Setup()
 	{
-		//TODO: Use this time to source some nice entropy to see the RNG.
+		//TODO: Use this time to source some nice entropy to seed the RNG.
 		Clear();
 
 		return true;
 	}
 
-	// Returns MAC/CRC.
-	uint32_t Encode(uint8_t* message, const uint8_t messageLength, const uint8_t forwardsMillis)
-	{
-		ArrayToUint32 Helper;
 
+	// Returns MAC/CRC.
+	const uint32_t NoEncode(const uint32_t token, uint8_t* message, const uint8_t messageLength)
+	{
 		// Start MAC.
 		Hasher.reset();
 
-		if (EncryptionEnabled)
-		{
-			ResetCypherBlock();
-			Cypher.encrypt(message, message, messageLength);
+		// Message content, plaintext.
+		Hasher.update(message, messageLength);
 
-			// Message content, encrypted.
-			Hasher.update(message, messageLength);
+		// Fixed MAC key.
+		Helper.uint = token;
+		Hasher.update(Helper.array, sizeof(uint32_t));
 
-			// Get MAC key.
-			if (TokenHopEnabled)
-			{
-				Helper.uint = LinkTokenGenerator.GetTokenFromAhead(forwardsMillis);
-			}
-			else
-			{
-				Helper.uint = LinkTokenGenerator.GetSeed();
-			}
-
-			// MAC key.
-			Hasher.update(Helper.array, sizeof(uint32_t));
-		}
-		else
-		{
-			// Message content.
-			Hasher.update(message, messageLength);
-		}
+		// Message content.
+		Hasher.update(message, messageLength);
 
 		// MAC ready for output.
 		Hasher.finalize(Helper.array, sizeof(uint32_t));
@@ -130,7 +90,28 @@ public:
 		return Helper.uint;
 	}
 
-	bool Decode(uint8_t* message, const uint8_t messageLength, const uint32_t macCRC, const uint8_t backwardsMillis)
+	const uint32_t Encode(const uint32_t token, uint8_t* message, const uint8_t messageLength)
+	{
+		// Start MAC.
+		Hasher.reset();
+
+		ResetCypherBlock();
+		Cypher.encrypt(message, message, messageLength);
+
+		// Message content, encrypted.
+		Hasher.update(message, messageLength);
+
+		// MAC key.
+		Helper.uint = token;
+		Hasher.update(Helper.array, sizeof(uint32_t));
+
+		// MAC ready for output.
+		Hasher.finalize(Helper.array, sizeof(uint32_t));
+
+		return Helper.uint;
+	}
+
+	const bool Decode(const uint32_t macCRC, const uint32_t token, uint8_t* message, const uint8_t messageLength)
 	{
 		ArrayToUint32 Helper;
 
@@ -140,50 +121,57 @@ public:
 		// Message content.
 		Hasher.update(message, messageLength);
 
-		if (EncryptionEnabled)
-		{
-			// Get MAC key.
-			if (TokenHopEnabled)
-			{
-				Helper.uint = LinkTokenGenerator.GetTokenFromEarlier(backwardsMillis);
-			}
-			else
-			{
-				Helper.uint = LinkTokenGenerator.GetSeed();
-			}
+		// Get MAC key.
+		Helper.uint = token;
 
-			// Crypto Token.
-			Hasher.update(Helper.array, sizeof(uint32_t));
-		}
+		// Crypto Token.
+		Hasher.update(Helper.array, sizeof(uint32_t));
 
 		// MAC ready for comparison.
 		Hasher.finalize(Helper.array, sizeof(uint32_t));
 
 		if (macCRC == Helper.uint)
 		{
-			if (EncryptionEnabled)
-			{
-				ResetCypherBlock();
-				Cypher.decrypt(message, message, messageLength);
-			}
+			ResetCypherBlock();
+			Cypher.decrypt(message, message, messageLength);
+
 			return true;
 		}
 
 		return false;
 	}
 
+	const bool NoDecode(const uint32_t macCRC, const uint32_t token, uint8_t* message, const uint8_t messageLength)
+	{
+		ArrayToUint32 Helper;
+
+		// Start MAC.
+		Hasher.reset();
+
+		// Message content.
+		Hasher.update(message, messageLength);
+
+		// Get MAC key.
+		Helper.uint = token;
+
+		// Crypto Token.
+		Hasher.update(Helper.array, sizeof(uint32_t));
+
+		// MAC ready for comparison.
+		Hasher.finalize(Helper.array, sizeof(uint32_t));
+
+		return macCRC == Helper.uint;
+	}
+
 	void Clear()
 	{
-		EncryptionEnabled = false;
-		TokenHopEnabled = false;
-
 		for (uint8_t i = 0; i < sizeof(ExpandedKeySource); i++)
 		{
 			((uint8_t*)&ExpandedKeySource)[i] = 0;
 		}
 
-		LinkTokenGenerator.SetSeed(0);
-		ChannelTokenGenerator.SetSeed(0);
+		/*	LinkTokenGenerator.SetSeed(0);
+			ChannelTokenGenerator.SetSeed(0);*/
 	}
 
 	const uint32_t SignContentSharedKey(const uint32_t content)
@@ -255,14 +243,14 @@ public:
 		HasherHelper.array[2] = ExpandedKeySource.Keys.CryptoSeed[2];
 		HasherHelper.array[3] = ExpandedKeySource.Keys.CryptoSeed[3];
 
-		LinkTokenGenerator.SetSeed(HasherHelper.uint);
+		//LinkTokenGenerator.SetSeed(HasherHelper.uint);
 
 		HasherHelper.array[0] = ExpandedKeySource.Keys.ChannelSeed[0];
 		HasherHelper.array[1] = ExpandedKeySource.Keys.ChannelSeed[1];
 		HasherHelper.array[2] = ExpandedKeySource.Keys.ChannelSeed[2];
 		HasherHelper.array[3] = ExpandedKeySource.Keys.ChannelSeed[3];
 
-		ChannelTokenGenerator.SetSeed(HasherHelper.uint);
+		//ChannelTokenGenerator.SetSeed(HasherHelper.uint);
 	}
 
 private:

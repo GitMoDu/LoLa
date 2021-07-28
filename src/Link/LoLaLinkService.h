@@ -4,64 +4,151 @@
 #define _LOLA_LINK_SERVICE_h
 
 
-#include <Link\AbstractLinkService.h>
+#include <Link\LoLaPacketService.h>
 
 
-class LoLaLinkService : public AbstractLinkService
+template<const uint8_t MaxPacketSize, const uint8_t MaxLinkListeners = 4, const uint8_t MaxPacketListeners = 8>
+class LoLaLinkService : public LoLaCryptoSendReceive<MaxPacketSize>, public virtual ILoLaLink
 {
 private:
 	// Link report tracking.
-	bool ReportPending = false;
-
-protected:
-	// Shared Sub state helpers.
-	enum LinkingStagesEnum
-	{
-		ChallengeStage = 0,
-		ClockSyncStage = 1,
-		LinkProtocolSwitchOver = 2,
-		LinkingDone = 3
-	} LinkingState = LinkingStagesEnum::ChallengeStage;
-
-	enum ProcessingDHEnum
-	{
-		GeneratingSecretKey = 0,
-		ExpandingKey = 1
-	} ProcessingDHState = ProcessingDHEnum::GeneratingSecretKey;
-
-
-protected:
-
-	// Internal housekeeping.
-	virtual void OnStateChanged() {}
-	virtual uint32_t GetSleepDelay() { return LOLA_LINK_SERVICE_CHECK_PERIOD; }
-	virtual void ResetLinkingState() {}
-
-	// Host packet handling.
-	virtual void OnPKERequestReceived(const uint32_t protocolCode, uint8_t* remotePublicKey) {}
-	virtual bool OnChallengeRequestReceived(const uint32_t signedSessionId) { return false; }
-	virtual bool OnLinkSwitchOverReceived() { return false; }
-
-	// Remote packet handling.
-	virtual bool OnPKEResponseReceived(const uint32_t sessionSalt, uint8_t* hostPublicKey) { return false; }
-
-	// Runtime handlers.
-	virtual void OnLinking() { SetNextRunDelay(LOLA_LINK_SERVICE_CHECK_PERIOD); }
-	virtual void OnAwaitingLink() {}
-	virtual void OnKeepingLink() { SetNextRunDelay(LOLA_LINK_SERVICE_IDLE_PERIOD); }
+	//bool ReportPending = false;
 
 public:
-	LoLaLinkService(Scheduler* scheduler, LoLaPacketDriver* driver, LoLaLinkClockSyncer* clockSyncer)
-		: AbstractLinkService(scheduler, driver, clockSyncer)
+	//// Shared Sub state helpers.
+	//enum LinkingStagesEnum
+	//{
+	//	ChallengeStage = 0,
+	//	ClockSyncStage = 1,
+	//	LinkProtocolSwitchOver = 2,
+	//	LinkingDone = 3
+	//} LinkingState = LinkingStagesEnum::ChallengeStage;
+
+	//enum ProcessingDHEnum
+	//{
+	//	GeneratingSecretKey = 0,
+	//	ExpandingKey = 1
+	//} ProcessingDHState = ProcessingDHEnum::GeneratingSecretKey;
+
+
+	ILoLaLinkListener* LinkListeners[MaxLinkListeners];
+
+	struct PacketListenerWrapper
 	{
+		ILoLaLinkPacketListener* Listener;
+		uint8_t Header = 0;
+	};
+	PacketListenerWrapper LinkPacketListeners[MaxPacketListeners];
+
+	using LoLaCryptoSendReceive<MaxPacketSize>::InMessage;
+	using LoLaCryptoSendReceive<MaxPacketSize>::OutMessage;
+	using LoLaCryptoSendReceive<MaxPacketSize>::ReceiveTimeTimestamp;
+	using LoLaCryptoSendReceive<MaxPacketSize>::CanSendPacket;
+	using LoLaCryptoSendReceive<MaxPacketSize>::SendPacket;
+	using LoLaCryptoSendReceive<MaxPacketSize>::DecodeInputContent;
+	using LoLaCryptoSendReceive<MaxPacketSize>::EncodeOutputContent;
+
+	uint8_t ExpectedAckId = 0;
+
+
+private:
+	const uint8_t CountLinkListeners()
+	{
+		uint8_t count = 0;
+		for (uint8_t i = 0; i < MaxLinkListeners; i++)
+		{
+			if (LinkListeners[i] != nullptr)
+			{
+				count++;
+			}
+		}
+
+		return count;
 	}
 
-	virtual bool Setup()
+	const uint8_t CountLinkPacketListeners()
 	{
-		if (AbstractLinkService::Setup())
+		uint8_t count = 0;
+		for (uint8_t i = 0; i < MaxPacketListeners; i++)
 		{
-			ClearSession();
-			ResetStateStartTime();
+			if (LinkPacketListeners[i].Listener != nullptr)
+			{
+				count++;
+			}
+		}
+
+		return count;
+
+	}
+
+protected:
+	// To be overriden.
+	virtual void OnLinkReceiveAck(const uint8_t header) { }
+	virtual void OnLinkReceiveNack(const uint8_t header) { }
+	virtual void OnLinkReceive(const uint8_t header, const uint8_t contentSize) { }
+
+public:
+	LoLaLinkService(Scheduler* scheduler, ILoLaPacketDriver* driver)
+		: LoLaCryptoSendReceive<MaxPacketSize>(scheduler, driver)
+	{
+		for (uint8_t i = 0; i < MaxLinkListeners; i++)
+		{
+			LinkListeners[i] = nullptr;
+		}
+		for (uint8_t i = 0; i < MaxPacketListeners; i++)
+		{
+			LinkPacketListeners[i].Listener = nullptr;
+			LinkPacketListeners[i].Header = 0;
+		}
+	}
+
+	const bool RegisterLinkListener(ILoLaLinkListener* listener)
+	{
+		const uint8_t count = CountLinkListeners();
+
+		if (count < MaxLinkListeners)
+		{
+			// Add in the first free slot.
+			for (uint8_t i = 0; i < MaxLinkListeners; i++)
+			{
+				if (LinkListeners[i] == nullptr)
+				{
+					LinkListeners[i] = listener;
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	const bool RegisterLinkPacketListener(const uint8_t header, ILoLaLinkPacketListener* listener)
+	{
+		const uint8_t count = CountLinkPacketListeners();
+
+		if (count < MaxPacketListeners)
+		{
+			// Add in the first free slot.
+			for (uint8_t i = 0; i < MaxPacketListeners; i++)
+			{
+				if (LinkPacketListeners[i].Listener == nullptr)
+				{
+					LinkPacketListeners[i].Header = header;
+					LinkPacketListeners[i].Listener = listener;
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	virtual const bool Setup()
+	{
+		if (LoLaCryptoSendReceive<MaxPacketSize>::Setup())
+		{
+			//ClearSession();
+			//ResetStateStartTime();
 
 			return true;
 
@@ -70,273 +157,181 @@ public:
 		return false;
 	}
 
-	void Start()
+	virtual void OnReceive(const uint8_t contentSize)
 	{
-		LoLaDriver->Start();
+		//// Get MAC key.
+		const uint32_t token = 0;
+
+		//if (TokenHopEnabled)
+		//{
+		//	token = LinkTokenGenerator.GetTokenFromAhead(forwardsMillis);
+		//}
+		//else
+		//{
+		//	token = LinkTokenGenerator.GetSeed();
+		//}
+
+		// If linked, decrypt content.
+		if (DecodeInputContent(token, contentSize))
+		{
+			// Packet refused on decoding.
+			return;
+		}
+
+		const uint8_t header = InMessage[PacketDefinition::LOLA_PACKET_HEADER_INDEX];
+
+		// Handle reserved link headers first, then fall through normal operation.
+		switch (header)
+		{
+		case PacketDefinition::PACKET_DEFINITION_LINK_START_HEADER ... PacketDefinition::PACKET_DEFINITION_LINK_END_HEADER:
+			OnLinkReceive(header, contentSize);
+			break;
+		case PacketDefinition::PACKET_DEFINITION_ACK_HEADER:
+			// Does the ack id match our expected id?
+			if (ExpectedAckId == InMessage[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX + 1])
+			{
+				// Handle reserved link acks first, then fall through normal operation.
+				if (InMessage[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX] > PacketDefinition::PACKET_DEFINITION_LINK_START_HEADER - 1)
+				{
+					OnLinkReceiveAck(header);
+				}
+				else
+				{
+					// Search LinkPacketListeners for this Ack listener.
+					for (uint8_t i = 0; i < MaxPacketListeners; i++)
+					{
+						// Original header is in payload.
+						if (LinkPacketListeners[i].Header = InMessage[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX] &&
+							LinkPacketListeners[i].Listener != nullptr)
+						{
+							LinkPacketListeners[i].Listener->OnPacketAckReceived(
+								ReceiveTimeTimestamp,
+								InMessage[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX]);
+							break;
+						}
+					}
+				}
+			}
+			else
+			{
+				// Unexpected Ack Id.
+				//TODO: log to statistics.
+				OnAckFailed();
+				break;
+			}
+			break;
+		default:
+			// Search LinkPacketListeners for this Header listener.
+			for (uint8_t i = 0; i < MaxPacketListeners; i++)
+			{
+				if (LinkPacketListeners[i].Header = header && LinkPacketListeners[i].Listener != nullptr)
+				{
+					// Registered listener found.
+					if (LinkPacketListeners[i].Listener->OnPacketReceived(
+						&InMessage[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX],
+						ReceiveTimeTimestamp,
+						header,
+						PacketDefinition::GetPayloadSizeFromContentSize(contentSize)))
+					{
+						// Listener has requested we return an ack.
+						// Sending Ack immediately, without check.
+						// TODO: delaying until possible might work,
+						// but then the receiver should know the ack was delayed.
+						SendAck(header, InMessage[PacketDefinition::LOLA_PACKET_ID_INDEX]);
+						break;
+					}
+				}
+			}
+			break;
+		}
+	}
+
+	// Task Service will be blocked until packet is Sent, and receives ack or nack.
+	// Concurrent requests to send will be denied.
+	// Receiving is still on.
+	const bool SendPacket(uint8_t* payload, const uint8_t payloadSize, const uint8_t header, const bool hasAck)
+	{
+		const uint8_t totalSize = PacketDefinition::GetTotalSize(payloadSize);
+
+		if (totalSize <= MaxPacketSize && CanSendPacket())
+		{
+			// Set header.
+			OutMessage[PacketDefinition::LOLA_PACKET_HEADER_INDEX] = header;
+
+			// Copy payload.
+			for (uint8_t i = 0; i < payloadSize; i++)
+			{
+				OutMessage[i + PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX] = payload[i];
+			}
+
+			// Set rolling id.
+			SetOutId();
+
+			if (hasAck)
+			{
+				ExpectedAckId = OutMessage[PacketDefinition::LOLA_PACKET_ID_INDEX];
+			}
+
+			// Assume we're ETTM in the future,
+			// to remove transmition duration from token clock jitter.
+			const uint8_t ettm = 0;
+			const uint32_t token = 0;
+
+			// If we are linked, encrypt packet and update mac.
+			EncodeOutputContent(token, PacketDefinition::GetContentSize(totalSize));
+
+			// Packet is formed and ready to attempt transmit.
+			return SendPacket(totalSize, hasAck);
+		}
+		else
+		{
+			// Turns out we can send right now, try again later.
+			return false;
+		}
+	}
+
+	/*void Start()
+	{
+		Driver->DriverStart();
 		UpdateLinkState(LinkStateEnum::AwaitingLink);
 	}
 
 	void Stop()
 	{
 		UpdateLinkState(LinkStateEnum::Disabled);
-	}
-
-	virtual bool OnPacketReceived(const uint8_t header, const uint32_t timestamp, uint8_t* payload)
-	{
-		ArrayToUint32 ATUI;
-
-		// Switch the packet to the appropriate method.
-		switch (header)
-		{
-		case LinkPackets::PKE_REQUEST:
-			// To Host. Unencrypted packet.
-			ATUI.array[0] = payload[0];
-			ATUI.array[1] = payload[1];
-			ATUI.array[2] = payload[2];
-			ATUI.array[3] = payload[3];
-			OnPKERequestReceived(ATUI.uint, &payload[sizeof(uint32_t)]);
-			break;
-		case LinkPackets::PKE_RESPONSE:
-			// To remote. Unencrypted packet.
-			ATUI.array[0] = payload[0];
-			ATUI.array[1] = payload[1];
-			ATUI.array[2] = payload[2];
-			ATUI.array[3] = payload[3];
-			return OnPKEResponseReceived(ATUI.uint, &payload[sizeof(uint32_t)]);
-		case LinkPackets::LINK_START:
-			return OnLinkSwitchOverReceived();
-			break;
-		case LinkPackets::CHALLENGE:
-			ATUI.array[0] = payload[0];
-			ATUI.array[1] = payload[1];
-			ATUI.array[2] = payload[2];
-			ATUI.array[3] = payload[3];
-			return OnChallengeRequestReceived(ATUI.uint);
-			break;
-		case LinkPackets::CLOCK_SYNC:
-			OnClockSyncReceived(timestamp, payload);
-			break;
-		case LinkPackets::REPORT:
-			OnInfoReportReceived(payload);
-			break;
-		default:
-			break;
-		}
-
-		return true;
-	}
-
-protected:
-	void OnClockSyncReceived(const uint32_t timestamp, uint8_t* payload)
-	{
-		switch (LinkState)
-		{
-		case LinkStateEnum::Disabled:
-			break;
-		case LinkStateEnum::AwaitingLink:
-			break;
-		case LinkStateEnum::AwaitingSleeping:
-			break;
-		case LinkStateEnum::Linking:
-			ClockSyncer->OnReceivedLinking(timestamp, payload);
-			SetNextRunASAP();
-			break;
-		case LinkStateEnum::Linked:
-			ClockSyncer->OnReceivedLinked(timestamp, payload);
-			SetNextRunASAP();
-			break;
-		default:
-			break;
-		}
-	}
-
-	void OnChallengeReceived(const uint32_t timestamp, uint8_t* payload)
-	{
-		//TODO:
-	}
-
-	void OnInfoReportReceived(uint8_t* payload)
-	{
-		switch (LinkState)
-		{
-		case LinkStateEnum::Linking:
-		case LinkStateEnum::Linked:
-			ReportPending |= payload[0] > 0;
-
-			LinkInfo->UpdatePartnerInfo(payload[1]);
-			SetNextRunASAP();
-			break;
-		default:
-			break;
-		}
-	}
-
-	virtual void OnService()
-	{
-		switch (LinkState)
-		{
-		case LinkStateEnum::AwaitingSleeping:
-			UpdateLinkState(LinkStateEnum::AwaitingLink);
-			break;
-		case LinkStateEnum::AwaitingLink:
-			OnAwaitingLink();
-			break;
-		case LinkStateEnum::Linking:
-			if (GetElapsedMillisSinceStateStart() > LOLA_LINK_SERVICE_UNLINK_MAX_BEFORE_LINKING_CANCEL)
-			{
-				UpdateLinkState(LinkStateEnum::AwaitingLink);
-			}
-			else
-			{
-				OnLinking();
-			}
-			break;
-		case LinkStateEnum::Linked:
-			if (LoLaDriver->IOInfo.GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_MAX_BEFORE_DISCONNECT)
-			{
-				UpdateLinkState(LinkStateEnum::AwaitingLink);
-			}
-			else
-			{
-				if (ProcessReportInfo())
-				{
-					// Sending packet.
-				}
-				else if (ProcessClockSync())
-				{
-					// Sending packet.
-				}
-				else
-				{
-					OnKeepingLink();
-				}
-			}
-			break;
-		case LinkStateEnum::Disabled:
-		default:
-			Disable();
-			return;
-		}
-	}
+	}*/
 
 private:
-	bool ProcessReportInfo()
+	void SendAck(const uint8_t originalHeader, const uint8_t originalId)
 	{
-		if (ReportPending  // Keep link info up to date.
-			|| LinkInfo->GetLastLocalInfoSentElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD) // Check for local report overdue.
-		{
-			ReportPending = false;
-			SendLinkReport(LinkInfo->GetPartnerLastUpdateElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD);
-		}
-		else if (IOInfo->GetElapsedMillisLastValidReceived() > LOLA_LINK_SERVICE_LINKED_PERIOD_INTERVENTION // Check for no received packets in a while.
-			|| LinkInfo->GetPartnerLastUpdateElapsed() > LOLA_LINK_SERVICE_LINKED_INFO_UPDATE_PERIOD) // Check for partner report overdue.
-		{
-			ReportPending = false;
-			SendLinkReport(true);
-		}
-		else
-		{
-			return false;
-		}
+		// Ack has 2 byte of payload.
+		// - Original header.
+		// - Original id.
+		const uint8_t totalSize = PacketDefinition::GetTotalSize(2);
 
-		return true;
-	}
+		// Set Ack header.
+		OutMessage[PacketDefinition::LOLA_PACKET_HEADER_INDEX] = PacketDefinition::PACKET_DEFINITION_ACK_HEADER;
 
+		// Set original header.
+		OutMessage[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX] = originalHeader;
 
-protected:
-	void ClearSession()
-	{
-		// Disables encryption and token hop.
-		LoLaDriver->CryptoEncoder.Clear();
+		// Set original id.
+		OutMessage[PacketDefinition::LOLA_PACKET_PAYLOAD_INDEX + 1] = originalId;
 
-		LoLaDriver->ChannelManager.StopHopping();
-		LoLaDriver->TransmitPowerManager.SetMaxPower();
+		// Set rolling id.
+		SetOutId();
 
-		KeyExchanger.ClearPartner();
-		ClockSyncer->Clear();
+		// Assume we're ETTM in the future,
+		// to remove transmition duration from token clock jitter.
+		const uint8_t ettm = 0;
+		const uint32_t token = 0;
 
-		LinkInfo->Reset();
+		// If we are linked, encrypt packet and update mac.
+		EncodeOutputContent(token, PacketDefinition::GetContentSize(totalSize));
 
-		ReportPending = false;
-	}
-
-	bool ProcessClockSync()
-	{
-		if (ClockSyncer->HasResponse())
-		{
-			ClockSyncer->GetResponse(GetOutPayload());
-			RequestSendPacket(LinkPackets::CLOCK_SYNC);
-
-			return true;
-		}
-
-		return false;
-	}
-
-	void UpdateLinkState(const LinkStateEnum newState)
-	{
-		if (LinkState != newState)
-		{
-			Serial.print(F("UpdateLinkState: "));
-			Serial.println(newState);
-
-			ResetStateStartTime();
-			ResetLastSentTimeStamp();
-
-			ArrayToUint32 ATUI;
-
-			switch (newState)
-			{
-			case LinkStateEnum::AwaitingLink:
-				ClearSession();
-				Enable();
-				SetNextRunASAP();
-				break;
-			case LinkStateEnum::AwaitingSleeping:
-				ClearSession();
-				SetNextRunDelay(GetSleepDelay());
-				break;
-			case LinkStateEnum::Linking:
-				LinkInfo->SetSessionIdSignature(LoLaDriver->CryptoEncoder.SignContentSharedKey(LinkInfo->GetSessionId()));
-				ResetLinkingState();
-				LoLaDriver->CryptoEncoder.StartEncryption();
-				SetNextRunASAP();
-				break;
-			case LinkStateEnum::Linked:
-				LoLaDriver->CryptoEncoder.SetKeyWithSalt(KeyExchanger.GetSharedKey(), LinkInfo->GetSessionId());
-				LoLaDriver->CryptoEncoder.StartTokenHop();
-				LoLaDriver->ChannelManager.StartHopping();
-				ClockSyncer->StampSynced();
-				LinkInfo->StampLinkStarted();
-				SetNextRunASAP();
-				break;
-			case LinkStateEnum::Disabled:
-				ClearSession();
-				LoLaDriver->Stop();
-				Disable();
-			default:
-				break;
-			}
-
-			LinkState = newState;
-			OnStateChanged();
-
-			// If link status changed, 
-			// notify all link dependent services they can start/stop.
-			if (LinkInfo->UpdateLinkStatus(LinkState == LinkStateEnum::Linked))
-			{
-				LoLaDriver->NotifyServicesLinkStatusChanged();
-			}
-		}
-	}
-
-protected:
-	// Info Report packet.
-	void SendLinkReport(const bool requestReply)
-	{
-		GetOutPayload()[0] = requestReply ? UINT8_MAX : 0;
-		GetOutPayload()[1] = LoLaDriver->IOInfo.GetRSSINormalized();
-		RequestSendPacket(LinkPackets::REPORT);
+		// Packet is formed and ready to transmit.
+		// Ignoring send fails.
+		SendPacket(totalSize, false);
 	}
 };
 #endif

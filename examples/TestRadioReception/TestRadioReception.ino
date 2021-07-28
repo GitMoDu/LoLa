@@ -1,28 +1,29 @@
 #define WAIT_FOR_LOGGER
 
-#define SERIAL_BAUD_RATE 250000
+#define SERIAL_BAUD_RATE 115200
 
 
 #define _TASK_OO_CALLBACKS
-#define _TASK_SLEEP_ON_IDLE_RUN
 
 #include <TaskScheduler.h>
-#include <LoLaDriverSi446x.h>
-#include <SPI.h>
-#include "ReceptionTester.h"
+#include <LoLaDriverPIM.h>
 
-///Process scheduler.
+
+#include <Link\LoLaLinkService.h>
+//#include "ReceptionTester.h"
+
+// Process scheduler.
 Scheduler SchedulerBase;
-///
+//
 
-///SPI Master.
-SPIClass SPIWire(1);
-///
 
-///Radio manager and driver.
-LoLaSi446xPacketTaskDriver LoLaDriver(&SchedulerBase, &SPIWire, PA4, PB0, PA3);
+const uint8_t MaxPacketSize = 8;
+// Radio driver.
+LoLaPIMPacketDriver<MaxPacketSize, 2, 7> PIMDriver(&SchedulerBase);
 
-ReceptionTester Tester(&SchedulerBase, &LoLaDriver);
+// LoLaLink
+LoLaLinkService<MaxPacketSize> LoLaLink(&SchedulerBase, &PIMDriver);
+//ReceptionTester Tester(&SchedulerBase, &LoLaDriver);
 
 void Halt()
 {
@@ -45,22 +46,22 @@ void setup()
 	Serial.println(F("LoLa Reception Test Setup"));
 
 
-	if (!Tester.Setup()) 
+	/*if (!Tester.Setup())
 	{
 		Serial.println(F("Tester Setup Failed."));
 		Halt();
-	}
+	}*/
 
-	if (!LoLaDriver.Setup())
+	if (!LoLaLink.Setup())
 	{
-		Serial.println(F("LoLaDriver Setup Failed."));
+		Serial.println(F("LoLaLink Setup Failed."));
 		Halt();
 	}
 
 
-	LoLaDriver.Debug(&Serial);
+	/*LoLaDriver.Debug(&Serial);
 
-	Tester.Enable();
+	Tester.Enable();*/
 
 	Serial.println();
 	Serial.println(F("LoLa Reception Test Start."));
