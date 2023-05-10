@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33627.172
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PeripheralTests", "PeripheralTests.vcxproj", "{E78148E4-32F3-4278-AFAC-0C157F76879B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|ARM64 = Debug|ARM64
+		Release|ARM = Release|ARM
+		Release|ARM64 = Release|ARM64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Debug|ARM.ActiveCfg = Debug|ARM
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Debug|ARM.Build.0 = Debug|ARM
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Debug|ARM.Deploy.0 = Debug|ARM
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Debug|ARM64.Build.0 = Debug|ARM64
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Release|ARM.ActiveCfg = Release|ARM
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Release|ARM.Build.0 = Release|ARM
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Release|ARM.Deploy.0 = Release|ARM
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Release|ARM64.ActiveCfg = Release|ARM64
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Release|ARM64.Build.0 = Release|ARM64
+		{E78148E4-32F3-4278-AFAC-0C157F76879B}.Release|ARM64.Deploy.0 = Release|ARM64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6474E340-9269-43D6-8E42-194D2B84130F}
+	EndGlobalSection
+EndGlobal

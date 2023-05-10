@@ -1,0 +1,285 @@
+// AbstractLoLaReceiver.h
+
+#ifndef _ABSTRACT_LOLA_RECEIVER_
+#define _ABSTRACT_LOLA_RECEIVER_
+
+#include "AbstractLoLaSender.h"
+
+
+template<const uint8_t MaxPayloadLinkSend,
+	const uint8_t MaxPacketReceiveListeners = 10,
+	const uint8_t MaxLinkListeners = 10>
+class AbstractLoLaReceiver : public AbstractLoLaSender<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>
+{
+private:
+	using BaseClass = AbstractLoLaSender<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
+
+protected:
+	using BaseClass::SyncClock;
+
+	using BaseClass::RawInPacket;
+	using BaseClass::ZeroTimestamp;
+	using BaseClass::InData;
+	using BaseClass::Duplex;
+
+	using BaseClass::PacketService;
+
+	using BaseClass::AckSend;
+	using BaseClass::LinkStage;
+
+
+	using BaseClass::OnEvent;
+	using BaseClass::RequestSendAck;
+	using BaseClass::NotifyPacketReceived;
+
+protected:
+	// Rolling counter.
+	uint8_t LastValidReceivedCounter = 0;
+
+private:
+	/// <summary>
+	/// Timestamp in millis().
+	/// </summary>
+	uint32_t LastValidReceived = 0;
+
+	volatile uint8_t ReceivingDataSize = 0;
+
+private:
+	Timestamp ReceiveTimestamp;
+
+	uint8_t ReceiveCounter = 0;
+
+protected:
+	/// <summary>
+	/// Packet parser for Link implementation classes. Only fires when link is not active.
+	///// </summary>
+	/// <param name="startTimestamp"></param>
+	/// <param name="payload"></param>
+	/// <param name="payloadSize"></param>
+	/// <param name="port"></param>
+	/// <returns></returns>
+	virtual const bool OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter) { return false; }
+
+	/// <summary>
+	/// Inform any Link class of packet loss detection.
+	/// </summary>
+	/// <param name="lostCount"></param>
+	/// <returns></returns>
+	virtual void OnReceiveLossDetected(const uint8_t lostCount)
+	{
+#if defined(DEBUG_LOLA)
+		this->Owner();
+		Serial.print(F("Link detected lost packets: "));
+		Serial.println(lostCount);
+#endif
+	}
+
+	/// <summary>
+	/// Decode RawIn packet to InData, if valid.
+	/// </summary>
+	/// <param name="counter"></param>
+	/// <param name="dataSize"></param>
+	/// <returns>True if received packet was valid.</returns>
+	virtual const bool DecodeInPacket(uint8_t& counter, const uint8_t dataSize) { return false; }
+	virtual const bool DecodeInPacket(Timestamp& timestamp, uint8_t& counter, const uint8_t dataSize) { return false; }
+
+public:
+	AbstractLoLaReceiver(Scheduler& scheduler,
+		ILoLaPacketDriver* driver,
+		IEntropySource* entropySource,
+		IClockSource* clockSource,
+		ITimerSource* timerSource,
+		IDuplex* duplex,
+		IChannelHop* hop)
+		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop)
+		, ReceiveTimestamp()
+	{}
+
+public:
+	// IPacketServiceListener
+	virtual void OnAckDropped(const uint32_t startTimestamp) final
+	{
+		OnEvent(PacketEventEnum::ReceiveRejectedAck);
+	}
+
+	virtual void OnLost(const uint32_t startTimestamp) final
+	{
+		OnEvent(PacketEventEnum::ReceiveRejectedDriver);
+	}
+
+	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
+	{
+		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
+		{
+			OnEvent(PacketEventEnum::ReceiveRejectedInvalid);
+			return;
+		}
+		else if (ReceivingDataSize != 0)
+		{
+			OnEvent(PacketEventEnum::ReceiveRejectedDropped);
+			return;
+		}
+
+		ReceivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
+
+
+		uint8_t d = 0;
+		switch (LinkStage)
+		{
+		case LinkStageEnum::Disabled:
+			return;
+			//case LinkStageEnum::TransitionToLinking:
+		case LinkStageEnum::AwaitingLink:
+			if (DecodeInPacket(ReceiveCounter, ReceivingDataSize))
+			{
+				// Save last received counter, ready for switch for next stage.
+				LastValidReceivedCounter = ReceiveCounter;
+			}
+			else
+			{
+				ReceivingDataSize = 0;
+				OnEvent(PacketEventEnum::ReceiveRejectedMac);
+				return;
+			}
+			break;
+			//case LinkStageEnum::TransitionToLinked:
+		case LinkStageEnum::Linking:
+			// Update MAC with implicit addressing but without token.
+			if (DecodeInPacket(ZeroTimestamp, ReceiveCounter, ReceivingDataSize))
+			{
+				if (ValidateCounter(ReceiveCounter))
+				{
+					// Counter accepted, update local tracker.
+					LastValidReceivedCounter = ReceiveCounter;
+				}
+				else
+				{
+					ReceivingDataSize = 0;
+					OnEvent(PacketEventEnum::ReceiveRejectedCounter);
+					return;
+				}
+			}
+			else
+			{
+				// We can try a fallback decode here while in this state.
+				// Try Recover only after sending an acknowledgment/crypto transition.
+				ReceivingDataSize = 0;
+				OnEvent(PacketEventEnum::ReceiveRejectedMac);
+				return;
+			}
+			break;
+		case LinkStageEnum::Linked:
+			SyncClock.GetTimestamp(ReceiveTimestamp);
+			ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
+			if (DecodeInPacket(ReceiveTimestamp, ReceiveCounter, ReceivingDataSize))
+			{
+				if (ValidateCounter(ReceiveCounter))
+				{
+					// Counter accepted, update local tracker.
+					LastValidReceivedCounter = ReceiveCounter;
+				}
+				else
+				{
+					ReceivingDataSize = 0;
+					// Event will trigger a report request, that should synchronize counters.
+					OnEvent(PacketEventEnum::ReceiveRejectedCounter);
+					return;
+				}
+			}
+			else
+			{
+				ReceivingDataSize = 0;
+				OnEvent(PacketEventEnum::ReceiveRejectedMac);
+				return;
+			}
+			break;
+		default:
+			return;
+			break;
+		}
+
+		/// <summary>
+		/// From here forward, the packet has validated:
+		/// - Data integrity.
+		/// - Source authenticity.
+		/// - Replay/Echo denied.
+		/// </summary>
+		const uint_least8_t port = InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
+
+		if (port == AckDefinition::PORT)
+		{
+			OnEvent(PacketEventEnum::ReceivedAck);
+			PacketService.NotifyAckReceived(receiveTimestamp, AckSend.Handle);
+			AckSend.Clear();
+		}
+		else
+		{
+			OnEvent(PacketEventEnum::Received);
+
+			const uint_least8_t payloadSize = LoLaPacketDefinition::GetPayloadSize(packetSize);
+
+			if (LinkStage == LinkStageEnum::Linked)
+			{
+				LastValidReceived = millis();
+
+				NotifyPacketReceived(receiveTimestamp, port, payloadSize);
+			}
+			else
+			{
+				if (LinkStage != LinkStageEnum::Disabled &&
+					OnUnlinkedPacketReceived(receiveTimestamp,
+						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+						payloadSize,
+						port,
+						ReceiveCounter))
+				{
+					RequestSendAck(port, ReceiveCounter);
+				}
+			}
+		}
+
+		ReceivingDataSize = 0;
+	}
+
+protected:
+	/// <summary>
+	/// Time since a valid packet was received.
+	/// </summary>
+	/// <returns>Elapsed time in milliseconds</returns>
+	const uint32_t GetElapsedSinceLastValidReceived()
+	{
+		return millis() - LastValidReceived;
+	}
+
+	/// <summary>
+	/// Restart the tracking, assume our last valid packet was just now.
+	/// </summary>
+	void ResetLastValidReceived()
+	{
+		LastValidReceived = millis();
+	}
+
+private:
+	const bool ValidateCounter(const uint8_t counter)
+	{
+		const uint8_t counterRoll = counter - LastValidReceivedCounter;
+		if (counterRoll > 0
+			&& counterRoll < LoLaLinkDefinition::ROLLING_COUNTER_ERROR)
+		{
+			// Counter accepted, update local tracker.
+			LastValidReceivedCounter = counter;
+
+			if (counterRoll > 1)
+			{
+				OnReceiveLossDetected(counterRoll - 1);
+			}
+
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
+#endif
