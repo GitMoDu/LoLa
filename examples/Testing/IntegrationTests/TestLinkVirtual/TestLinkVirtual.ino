@@ -229,9 +229,8 @@ void setup()
 	}
 
 	// Start Link instances.
-	if (Host.Start()
-		&& Remote.Start()
-		)
+	if (Host.Start() &&
+		Remote.Start())
 	{
 		Serial.print(millis());
 		Serial.println(F("\tLoLa Links have started."));
@@ -247,11 +246,11 @@ void setup()
 
 void loop()
 {
-	//#ifdef SCHEDULER_TEST_PIN
-	//	digitalWrite(SCHEDULER_TEST_PIN, HIGH);
-	//#endif
-	//#ifdef SCHEDULER_TEST_PIN
-	//	digitalWrite(SCHEDULER_TEST_PIN, LOW);
-	//#endif
+#ifdef SCHEDULER_TEST_PIN
+	digitalWrite(SCHEDULER_TEST_PIN, HIGH);
+#endif
+#ifdef SCHEDULER_TEST_PIN
+	digitalWrite(SCHEDULER_TEST_PIN, LOW);
+#endif
 	SchedulerBase.execute();
 }
