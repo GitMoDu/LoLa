@@ -24,9 +24,6 @@ private:
 	using Linking = LoLaLinkDefinition::Linking;
 	using Linked = LoLaLinkDefinition::Linked;
 
-	static constexpr uint16_t CALIBRATION_ROUNDS = (F_CPU / (4000000L));
-
-	static constexpr uint32_t LINK_TIME_OUT_MILLIS = 1500;
 
 protected:
 	using BaseClass::Driver;
@@ -36,6 +33,7 @@ protected:
 	using BaseClass::LastValidReceivedCounter;
 	using BaseClass::SendCounter;
 	using BaseClass::SyncClock;
+	using BaseClass::LastReceivedRssi;
 
 	using BaseClass::Session;
 
@@ -55,6 +53,15 @@ protected:
 	using BaseClass::GetElapsedSinceLastValidReceived;
 
 private:
+	static constexpr uint16_t CALIBRATION_ROUNDS = (F_CPU / (3333000L));
+
+	static constexpr uint32_t LINK_TIME_OUT_MILLIS = 1500;
+
+	/// <summary>
+	/// Slow value, let the main services hog the CPU.
+	/// </summary>
+	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
+
 	/// <summary>
 	/// Slow value, let the main services hog the link.
 	/// </summary>
@@ -65,30 +72,30 @@ private:
 	/// </summary>
 	static constexpr uint32_t REPORT_UPDATE_PERIOD = 333;
 
+	/// <summary>
+	/// REPORT_UPDATE_PERIOD with a small tolerance for at least 2 sends.
+	/// </summary>
 	static constexpr uint32_t REPORT_UPDATE_TIMEOUT = REPORT_UPDATE_PERIOD + (REPORT_MIN_RESEND_PERIOD * 2);
+
+	/// <summary>
+	/// Slow value, let the main services hog the link.
+	/// </summary>
+	static constexpr uint32_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 150;
 
 	// 3 counts: +1 for sender sending report, +1 for local offset, +1 for margin.
 	static constexpr uint8_t ROLLING_COUNTER_TOLERANCE = 3;
 
-	struct ReportTrackingStruct
-	{
-		uint32_t ScheduleReport = 0;
-		uint32_t ReportLastReceived = 0;
 
-		bool ReportBackRequested = false;
-		bool ReportRequested = false;
-	};
-
+private:
 	uint32_t LinkStartSeconds = 0;
 
-
-	uint32_t ScheduleReport = 0;
+	uint32_t ReportLastSent = 0;
 	uint32_t ReportLastReceived = 0;
+
+	uint32_t ReportSendJitter = 0;
 	uint8_t PartnerRssi = 0;
 
-	uint8_t LocalRssi = 0;
 
-	bool ReportBackRequested = false;
 	bool ReportRequested = false;
 
 
@@ -151,7 +158,6 @@ public:
 				if (payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
 				{
 					// Dismiss internal request for back report, as we just got one.
-					ReportBackRequested = false;
 					ReportLastReceived = millis();
 
 					// Keep track of partner's RSSI, for output gain management.
@@ -170,10 +176,9 @@ public:
 					}
 
 					// Check if partner is requesting a report back.
-					if (!ReportRequested
-						&& (payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] > 0))
+					if (payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] > 0)
 					{
-						RequestReportUpdate(false);
+						RequestReportUpdate(true);
 					}
 				}
 				break;
@@ -259,13 +264,14 @@ protected:
 			break;
 		case LinkStageEnum::AwaitingLink:
 			Session.RandomSource.RandomReseed();
+			LastReceivedRssi = 0;
 			break;
 		case LinkStageEnum::Linking:
 			break;
 		case LinkStageEnum::Linked:
 			LinkStartSeconds = SyncClock.GetSeconds(0);
-			RequestReportUpdate(true);
 			ResetLastValidReceived();
+			RequestReportUpdate(false);
 			break;
 		default:
 			break;
@@ -310,7 +316,7 @@ protected:
 			case LinkStageEnum::Booting:
 				Session.RandomSource.RandomReseed();
 				SyncClock.Start();
-				//SyncClock.SetSeconds(0);
+				SyncClock.ShiftSeconds(Session.RandomSource.GetRandomLong());
 				if (Driver->DriverStart())
 				{
 					UpdateLinkStage(LinkStageEnum::AwaitingLink);
@@ -342,7 +348,7 @@ protected:
 				}
 				else
 				{
-					Task::enableDelayed(1);
+					Task::enableDelayed(LINK_CHECK_PERIOD);
 				}
 				break;
 			default:
@@ -354,6 +360,16 @@ protected:
 	virtual void OnEvent(const PacketEventEnum packetEvent)
 	{
 		BaseClass::OnEvent(packetEvent);
+
+
+		switch (packetEvent)
+		{
+		case PacketEventEnum::ReceiveRejectedCounter:
+			RequestReportUpdate(true);
+			break;
+		default:
+			break;
+		}
 
 #if defined(DEBUG_LOLA)
 		switch (packetEvent)
@@ -415,77 +431,59 @@ protected:
 		}
 #endif
 
-		switch (packetEvent)
-		{
-		case PacketEventEnum::ReceiveRejectedCounter:
-			RequestReportUpdate(true);
-			break;
-		default:
-			break;
-		}
 	}
 
 	/// <summary>
-	/// Schedule next report for immediate dispatch.
+	/// Schedule next report for dispatch.
 	/// </summary>
-	/// <param name="reportBack"></param>
-	void RequestReportUpdate(const bool reportBack)
+	void RequestReportUpdate(const bool isUrgent)
 	{
 		ReportRequested = true;
-		ReportBackRequested = reportBack;
-		ScheduleReport = millis();
+		if (isUrgent)
+		{
+			ReportSendJitter = (REPORT_MIN_RESEND_PERIOD / 2) + Session.RandomSource.GetRandomShort(REPORT_MIN_RESEND_PERIOD / 2);
+		}
+		else
+		{
+			ReportSendJitter = REPORT_MIN_RESEND_PERIOD + Session.RandomSource.GetRandomShort(REPORT_MIN_RESEND_PERIOD);
+		}
+
 		Task::enable();
 	}
 
-private:
-	/// <summary>
-	/// Checks if the latest received RSSI is low enough to trigger a Report update request.
-	/// </summary>
-	void CheckForRssiUpdate()
-	{
-	}
-
+protected:
 	/// <summary>
 	/// Sends update Report, if needed.
 	/// </summary>
 	/// <returns>True if a report update is due or pending to send.</returns>
-	const bool CheckForReportUpdate()
+	virtual const bool CheckForReportUpdate() final
 	{
 		const uint32_t timestamp = millis();
 
-		CheckForRssiUpdate();
-
-		ReportBackRequested |= ((timestamp - ReportLastReceived) > REPORT_UPDATE_TIMEOUT);
-
-		ReportRequested |= ReportBackRequested || (timestamp > ScheduleReport);
-
 		if (ReportRequested)
 		{
-			if ((millis() > ScheduleReport) && CanRequestSend())
+			if (CanRequestSend() && ((timestamp - ReportLastSent) > ReportSendJitter))
 			{
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.Payload[Linked::ReportUpdate::SUB_HEADER_INDEX] = Linked::ReportUpdate::SUB_HEADER;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = 0;//TODO: Fill in average RSSI.
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = LastReceivedRssi;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] = LastValidReceivedCounter;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = ReportBackRequested;
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = IsBackReportNeeded(timestamp);
 
 				if (RequestSendPacket(Linked::ReportUpdate::PAYLOAD_SIZE))
 				{
 					ReportRequested = false;
-
-					// Add some entropy to vary send timing.
-					if (ReportBackRequested)
-					{
-						// Urgency in reply.
-						ScheduleReport = millis() + Session.RandomSource.GetRandomShort(REPORT_MIN_RESEND_PERIOD);
-					}
-					else
-					{
-						// Operating nominally.
-						ScheduleReport = millis() + REPORT_UPDATE_PERIOD + Session.RandomSource.GetRandomShort(REPORT_MIN_RESEND_PERIOD);
-					}
+					ReportLastSent = millis();
 				}
 			}
+
+			Task::enableIfNot();
+
+			return true;
+		}
+		else if (IsReportNeeded(timestamp))
+		{
+			RequestReportUpdate(false);
 
 			Task::enableIfNot();
 
@@ -494,6 +492,22 @@ private:
 
 		return false;
 	}
+
+private:
+	const bool IsReportNeeded(const uint32_t timestamp)
+	{
+		//TODO: Check if the latest received RSSI is low enough to trigger a Report update request.
+		return (timestamp - ReportLastSent > REPORT_UPDATE_PERIOD)
+			|| ((timestamp - ReportLastSent > REPORT_MIN_RESEND_PERIOD)
+				&& IsBackReportNeeded(timestamp));
+	}
+
+	const bool IsBackReportNeeded(const uint32_t timestamp)
+	{
+		return (timestamp - ReportLastReceived > REPORT_UPDATE_TIMEOUT)
+			|| GetElapsedSinceLastValidReceived() > REPORT_PARTNER_SILENCE_TRIGGER_PERIOD;
+	}
+
 
 	/// <summary>
 	/// Calibrate CPU dependent durations.
