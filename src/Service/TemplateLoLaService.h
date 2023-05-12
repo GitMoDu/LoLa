@@ -84,10 +84,12 @@ public:
 
 	virtual bool Callback() final
 	{
+		// Busy loop waiting send availability.
 		if (RequestPending)
 		{
 			if (LoLaLink->CanSendPacket(RequestPayloadSize))
 			{
+				// Send is ready, last moment callback before transmission.
 				OnPreSend(SendHandle);
 
 				if (LoLaLink->SendPacket(this, SendHandle, OutPacket.Data, RequestPayloadSize))
@@ -103,6 +105,7 @@ public:
 			}
 			else if (millis() - RequestStart > SendRequestTimeout)
 			{
+				// Send timed out.
 				RequestPending = false;
 				OnSendRequestFail(OutPacket.GetPort());
 			}
