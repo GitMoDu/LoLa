@@ -228,11 +228,9 @@ private:
 		// Set MAC/CRC and handle link mode.
 		switch (LinkStage)
 		{
-			//case LinkStageEnum::TransitionToLinking:
 		case LinkStageEnum::AwaitingLink:
 			EncodeOutPacket(AckPacket.Data, SendCounter, AckDefinition::DATA_SIZE);
 			break;
-			//case LinkStageEnum::TransitionToLinked:
 		case LinkStageEnum::Linking:
 			EncodeOutPacket(AckPacket.Data, ZeroTimestamp, SendCounter, AckDefinition::DATA_SIZE);
 			break;
@@ -276,12 +274,10 @@ private:
 
 		switch (LinkStage)
 		{
-			//case LinkStageEnum::TransitionToLinking:
 		case LinkStageEnum::AwaitingLink:
 			// Encode packet with no encryption and CRC.
 			EncodeOutPacket(data, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 			break;
-			//case LinkStageEnum::TransitionToLinked:
 		case LinkStageEnum::Linking:
 			// Encrypt packet without token.
 			EncodeOutPacket(data, ZeroTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));

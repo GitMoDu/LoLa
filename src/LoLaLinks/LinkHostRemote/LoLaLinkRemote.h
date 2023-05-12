@@ -411,13 +411,9 @@ protected:
 			SearchChannelTryCount = 0;
 			SetHopperFixedChannel(SearchChannel);
 			break;
-		//case LinkStageEnum::TransitionToLinking:
-		//	break;
 		case LinkStageEnum::Linking:
 			LinkingSubState = (uint8_t)RemoteLinkingEnum::WaitingForAuthenticationRequest;
 			break;
-		//case LinkStageEnum::TransitionToLinked:
-		//	break;
 		case LinkStageEnum::Linked:
 			LastKnownBroadCastChannel = SearchChannel;
 			break;

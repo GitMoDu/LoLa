@@ -112,7 +112,6 @@ public:
 		{
 		case LinkStageEnum::Disabled:
 			return;
-			//case LinkStageEnum::TransitionToLinking:
 		case LinkStageEnum::AwaitingLink:
 			if (DecodeInPacket(ReceiveCounter, ReceivingDataSize))
 			{
@@ -126,7 +125,6 @@ public:
 				return;
 			}
 			break;
-			//case LinkStageEnum::TransitionToLinked:
 		case LinkStageEnum::Linking:
 			// Update MAC with implicit addressing but without token.
 			if (DecodeInPacket(ZeroTimestamp, ReceiveCounter, ReceivingDataSize))

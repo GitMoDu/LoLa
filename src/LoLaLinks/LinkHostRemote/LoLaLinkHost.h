@@ -355,14 +355,10 @@ protected:
 		case LinkStageEnum::AwaitingLink:
 			SubState = (uint8_t)HostAwaitingLinkEnum::Sleeping;
 			break;
-			//case LinkStageEnum::TransitionToLinking:
-			//	break;
 		case LinkStageEnum::Linking:
 			SubState = (uint8_t)HostLinkingEnum::AuthenticationRequest;
 			ClockReplyPending = false;
 			break;
-			//case LinkStageEnum::TransitionToLinked:
-			//	break;
 		case LinkStageEnum::Linked:
 			break;
 		default:

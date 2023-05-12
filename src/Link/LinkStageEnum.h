@@ -8,9 +8,7 @@ enum LinkStageEnum
 	Disabled,
 	Booting,
 	AwaitingLink,
-	//TransitionToLinking,
 	Linking,
-	//TransitionToLinked,
 	Linked
 };
 #endif
