@@ -355,7 +355,6 @@ protected:
 	{
 		BaseClass::OnEvent(packetEvent);
 
-
 #if defined(DEBUG_LOLA)
 		switch (packetEvent)
 		{
@@ -403,8 +402,7 @@ protected:
 			break;
 		case PacketEventEnum::ReceiveLossDetected:
 			this->Owner();
-			Serial.print(F("Link detected lost packets: "));
-			Serial.println(lostCount);
+			Serial.println(F("Link detected and recovered from lost packets."));
 			break;
 		case PacketEventEnum::Sent:
 			break;
