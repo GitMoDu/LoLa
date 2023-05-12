@@ -79,10 +79,6 @@ public:
 			Serial.print('_');
 		}
 
-		//Serial.print(F("CH-"));
-
-		//Serial.print('\t');
-		//Serial.println(channelScaled);
 		Serial.println();
 	}
 #endif

@@ -200,20 +200,18 @@ public:
 		{
 			OnEvent(PacketEventEnum::Received);
 
-			const uint_least8_t payloadSize = LoLaPacketDefinition::GetPayloadSize(packetSize);
-
 			if (LinkStage == LinkStageEnum::Linked)
 			{
 				LastValidReceived = millis();
 
-				NotifyPacketReceived(receiveTimestamp, port, payloadSize);
+				NotifyPacketReceived(receiveTimestamp, port, LoLaPacketDefinition::GetPayloadSize(packetSize));
 			}
 			else
 			{
 				if (LinkStage != LinkStageEnum::Disabled &&
 					OnUnlinkedPacketReceived(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
-						payloadSize,
+						LoLaPacketDefinition::GetPayloadSize(packetSize),
 						port,
 						ReceiveCounter))
 				{

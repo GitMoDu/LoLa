@@ -160,16 +160,14 @@ public:
 		{
 			Task::enable();
 
-			
+			return true;
 		}
 		else
 		{
 			Task::disable();
 
-			//return false;
+			return false;
 		}
-
-		return true;
 	}
 
 public:
@@ -227,7 +225,7 @@ public:
 			return false;
 		}
 
-		
+
 		TxTracking.SetSize(packetSize);
 		TxTracking.Channel = channel % Config::ChannelCount;
 		TxTracking.Started = timestamp;
@@ -363,9 +361,9 @@ public:
 			PrintName();
 			Serial.println(F("Corruption attack!"));
 #endif
-	}
+		}
 #endif
-}
+	}
 
 	const uint32_t GetRxDuration(const uint8_t size)
 	{
@@ -379,5 +377,5 @@ private:
 		IVirtualPacketDriver::LogChannel(CurrentChannel, Config::ChannelCount, 1);
 #endif
 	}
-};
+	};
 #endif

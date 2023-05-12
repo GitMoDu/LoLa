@@ -44,6 +44,8 @@ private:
 
 	SynchronizedClock* SyncClock = nullptr;
 
+	Timestamp CheckTimestamp{};
+
 	uint32_t LastHopIndex = 0;
 	uint32_t HopIndex = 0;
 
@@ -129,7 +131,6 @@ public:
 #pragma endregion
 
 
-	Timestamp CheckTimestamp{};
 
 	virtual bool Callback() final
 	{
