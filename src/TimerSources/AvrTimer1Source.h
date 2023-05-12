@@ -21,7 +21,7 @@ public:
 public:
 	virtual const uint32_t GetCounter() final
 	{
-		return micros() + Offset;
+		return micros();
 	}
 
 	virtual const uint32_t GetDefaultRollover() final
