@@ -41,10 +41,10 @@ private:
 	static constexpr uint32_t SEND_CHECK_PERIOD_MILLIS = 1;
 
 private:
+	IPacketServiceListener* ServiceListener;
+
 	uint8_t* RawInPacket = nullptr;
 	uint8_t* RawOutPacket = nullptr;
-
-	IPacketServiceListener* ServiceListener;
 
 	ILinkPacketSender* SendListener = nullptr;
 
@@ -320,21 +320,9 @@ public:
 	/// <returns></returns>
 	const bool SendPacketWithAck(ILinkPacketSender* callback, const uint8_t handle, uint8_t* data, const uint8_t size, const uint8_t channel)
 	{
-
 		if (Driver->DriverTx(data, size, channel))
 		{
 			SendOutTimestamp = micros();
-			/*const uint32_t timestamp = micros();
-			const uint32_t transmitDuration = Driver->GetTransmitDurationMicros(size);
-			SendTimeoutTimestamp = timestamp
-				+ LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS
-				+ transmitDuration;
-
-			ReplyTimeoutTimestamp = timestamp
-				+ LoLaLinkDefinition::REPLY_BASE_TIMEOUT_MICROS
-				+ transmitDuration
-				+ transmitDuration;*/
-
 			State = StateEnum::SendingWithAck;
 			SendListener = callback;
 			SentHandle = handle;

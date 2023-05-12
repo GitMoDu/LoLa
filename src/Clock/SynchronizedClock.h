@@ -179,7 +179,6 @@ public:
 			error.Seconds++;
 		}
 
-		//return;
 #if defined(DEBUG_LOLA)
 		Serial.print(F("\tComparing estimation:"));
 		Serial.print(estimation.Seconds);
@@ -200,9 +199,6 @@ public:
 		}
 		Serial.print(error.SubSeconds);
 		Serial.println(F("us"));
-		//Serial.print(F("\t("));
-		//Serial.print(error.GetMicrosError());
-		//Serial.println(F(" delta us)"));
 #endif
 	}
 };
