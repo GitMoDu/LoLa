@@ -18,6 +18,7 @@ enum PacketEventEnum
 	ReceiveRejectedOutOfSlot,
 	ReceiveRejectedAck,
 	ReceiveRejectedMac,
-	ReceiveRejectedCounter
+	ReceiveRejectedCounter,
+	ReceiveLossDetected
 };
 #endif

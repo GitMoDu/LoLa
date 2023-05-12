@@ -401,6 +401,11 @@ protected:
 			this->Owner();
 			Serial.println(F("@Link Event: SendCollision: Failed"));
 			break;
+		case PacketEventEnum::ReceiveLossDetected:
+			this->Owner();
+			Serial.print(F("Link detected lost packets: "));
+			Serial.println(lostCount);
+			break;
 		case PacketEventEnum::Sent:
 			break;
 		case PacketEventEnum::SentAck:
