@@ -3,34 +3,15 @@
 #ifndef _ABSTRACT_LOLA_SENDER_
 #define _ABSTRACT_LOLA_SENDER_
 
-#include "AbstractLoLaLinkPacket.h"
+#include "AbstractLoLa.h"
 
 template<const uint8_t MaxPayloadLinkSend,
 	const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLaSender : public AbstractLoLaLinkPacket<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractLoLaSender : public AbstractLoLa<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractLoLaLinkPacket<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
-
-protected:
-	using BaseClass::Driver;
-	using BaseClass::SyncClock;
-	using BaseClass::LinkStage;
-	using BaseClass::PacketService;
-
-	using BaseClass::OutPacket;
-
-	using BaseClass::RawOutPacket;
-	using BaseClass::ZeroTimestamp;
-
-	using BaseClass::OnEvent;
-	using BaseClass::GetTxChannel;
-	using BaseClass::GetSendDuration;
-
-private:
-	const uint32_t AckSendDuration = GetSendDuration(AckDefinition::PAYLOAD_SIZE);
-
+	using BaseClass = AbstractLoLa<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
 
 	struct AckRequestStruct
 	{
@@ -64,11 +45,27 @@ private:
 		}
 	};
 
+protected:
+	using BaseClass::PacketService;
+	using BaseClass::Driver;
+	using BaseClass::SyncClock;
+	using BaseClass::LinkStage;
+
+	using BaseClass::RawOutPacket;
+	using BaseClass::ZeroTimestamp;
+
+	using BaseClass::OnEvent;
+
+private:
+	AckRequestStruct AckRequest;
+	Timestamp SendTimestamp{};
 
 	TemplateLoLaOutDataPacket<AckDefinition::PAYLOAD_SIZE> AckPacket;
-	AckRequestStruct AckRequest;
 
-	Timestamp SendTimestamp;
+private:
+	// Send duration estimation helpers.
+	uint32_t SendShortDurationMicros = 0;
+	uint32_t SendVariableDurationMicros = 0;
 
 
 protected:
@@ -80,6 +77,8 @@ protected:
 
 protected:
 	virtual void OnAckSent(const uint8_t port, const uint8_t id) {	}
+
+	virtual const uint8_t GetTxChannel(const uint32_t rollingMicros) { return 0; }
 
 	/// <summary>
 	/// Encode data to RawOutPacket.
@@ -102,17 +101,10 @@ protected:
 
 
 public:
-	AbstractLoLaSender(Scheduler& scheduler,
-		ILoLaPacketDriver* driver,
-		IEntropySource* entropySource,
-		IClockSource* clockSource,
-		ITimerSource* timerSource,
-		IDuplex* duplex,
-		IChannelHop* hop)
-		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop)
+	AbstractLoLaSender(Scheduler& scheduler, ILoLaPacketDriver* driver, IClockSource* clockSource, ITimerSource* timerSource)
+		: BaseClass(scheduler, driver, clockSource, timerSource)
 		, AckPacket(AckDefinition::PORT)
 		, AckRequest()
-		, SendTimestamp()
 		, AckSend()
 	{}
 
@@ -122,30 +114,23 @@ public:
 	}
 
 protected:
-	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
+	const bool SetSendCalibration(const uint32_t shortDuration, const uint32_t longDuration)
 	{
-		BaseClass::UpdateLinkStage(linkStage);
-
-		switch (linkStage)
+		if (shortDuration > 0 && longDuration > shortDuration)
 		{
-		case LinkStageEnum::Disabled:
-			break;
-		case LinkStageEnum::Booting:
-			break;
-		case LinkStageEnum::AwaitingLink:
-			SendCounter = 0;
-			break;
-			//case LinkStageEnum::TransitionToLinking:
-				//break;
-		case LinkStageEnum::Linking:
-			break;
-			//case LinkStageEnum::TransitionToLinked:
-				//break;
-		case LinkStageEnum::Linked:
-			break;
-		default:
-			break;
+			SendShortDurationMicros = shortDuration;
+			SendVariableDurationMicros = longDuration - shortDuration;
+			return true;
 		}
+
+		return false;
+	}
+
+	const uint32_t GetSendDuration(const uint8_t payloadSize)
+	{
+		return SendShortDurationMicros
+			+ ((SendVariableDurationMicros * payloadSize) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE)
+			+ Driver->GetTransmitDurationMicros(LoLaPacketDefinition::GetTotalSize(payloadSize));
 	}
 
 protected:

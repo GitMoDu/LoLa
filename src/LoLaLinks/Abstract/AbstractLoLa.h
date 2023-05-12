@@ -4,10 +4,17 @@
 #define _ABSTRACT_LOLA_
 
 
+#include "..\..\Service\TemplateLoLaService.h"
 
+#include "..\..\Link\LinkStageEnum.h"
+#include "..\..\Link\PacketEventEnum.h"
+
+#include "..\..\Link\LoLaPacketService.h"
+
+#include "..\..\Clock\SynchronizedClock.h"
 
 #include "..\..\Link\ILoLaLink.h"
-#include "..\..\Service\TemplateLoLaService.h"
+#include "..\..\Link\LoLaPacketDefinition.h"
 
 /// <summary>
 /// LoLa Link base is a special case of a LoLaService,
@@ -20,8 +27,9 @@
 template<const uint8_t MaxPayloadLinkSend,
 	const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLa : public TemplateLoLaService<MaxPayloadLinkSend>
+class AbstractLoLa : protected TemplateLoLaService<MaxPayloadLinkSend>
 	, public virtual ILoLaLink
+	, public virtual IPacketServiceListener
 {
 private:
 	using BaseClass = TemplateLoLaService<MaxPayloadLinkSend>;
@@ -33,11 +41,19 @@ private:
 	};
 
 protected:
+	// Static value with all zeros.
+	Timestamp ZeroTimestamp{};
+
+protected:
 	LinkPacketServiceWrapper LinkPacketServiceListeners[MaxPacketReceiveListeners];
 	uint8_t PacketServiceListenersCount = 0;
 
-	ILinkListener* LinkListeners[MaxLinkListeners];
+	ILinkListener* LinkListeners[MaxLinkListeners]{};
 	uint8_t LinkListenersCount = 0;
+
+
+	// Packet service instance, templated to max packet size and reference low latency timeouts.
+	LoLaPacketService<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> PacketService;
 
 	// The outgoing content is encrypted and MAC'd here before being sent to the driver for transmission.
 	uint8_t RawOutPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
@@ -48,17 +64,33 @@ protected:
 	// The incoming plaintext content is decrypted to here, from the RawInPacket.
 	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
-#if defined(DEBUG_LOLA)
-	virtual void Owner() {}
-#endif
+
+	ILoLaPacketDriver* Driver;
+
+	// Duplex, Channel Hop and Cryptography depend on a synchronized clock between host and remote.
+	SynchronizedClock SyncClock;
+
+	// Current Link Stage for packet handling.
+	volatile LinkStageEnum LinkStage = LinkStageEnum::Disabled;
+
+protected:
+	virtual void OnEvent(const PacketEventEnum packetEvent) {}
 
 public:
-	AbstractLoLa(Scheduler& scheduler)
+	AbstractLoLa(Scheduler& scheduler, ILoLaPacketDriver* driver, IClockSource* clockSource, ITimerSource* timerSource)
 		: BaseClass(scheduler, this)
 		, ILoLaLink()
+		, IPacketServiceListener()
 		, LinkPacketServiceListeners()
-		, LinkListeners()
+		, Driver(driver)
+		, SyncClock(clockSource, timerSource)
+		, PacketService(scheduler, this, driver, RawInPacket, RawOutPacket)
 	{}
+
+	virtual const bool Setup()
+	{
+		return Driver != nullptr && PacketService.Setup() && SyncClock.Setup();
+	}
 
 public:
 	virtual const bool RegisterLinkListener(ILinkListener* listener) final
@@ -139,6 +171,6 @@ protected:
 		{
 			return false;
 		}
-	}	
+	}
 };
 #endif

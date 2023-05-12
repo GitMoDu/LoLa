@@ -66,24 +66,8 @@ protected:
 	using BaseClass::GetElapsedSinceLastValidReceived;
 	using BaseClass::GetSendDuration;
 	using BaseClass::SendPacket;
-	using BaseClass::SendPacketWithAck;
-	//using BaseClass::SetSessionId;
-	//using BaseClass::SetRandomSessionId;
-	//using BaseClass::CopySessionIdTo;
-	//using BaseClass::SessionIsCached;
 	using BaseClass::SetHopperFixedChannel;
 	using BaseClass::PreLinkResendDelayMillis;
-	//using BaseClass::RandomSource;
-	//using BaseClass::DecompressPartnerPublicKeyFrom;
-	//using BaseClass::CompressPublicKeyTo;
-	//using BaseClass::LinkingTokenMatches;
-	//using BaseClass::CalculatePke;
-	//using BaseClass::ResetPke;
-	//using BaseClass::PublicKeyCollision;
-	//using BaseClass::CopyLocalChallengeTo;
-	//using BaseClass::SetPartnerChallenge;
-	//using BaseClass::SignPartnerChallengeTo;
-	//using BaseClass::VerifyChallengeSignature;
 
 private:
 	Timestamp OutEstimate;
@@ -103,9 +87,10 @@ private:
 	uint8_t SearchChannel = 0;
 	uint8_t SearchChannelTryCount = 0;
 	uint8_t LastKnownBroadCastChannel = INT8_MAX + 1;
+
 protected:
 #if defined(DEBUG_LOLA)
-	void Owner()
+	virtual void Owner() final
 	{
 		Serial.print(millis());
 		Serial.print(F("\t[R] "));

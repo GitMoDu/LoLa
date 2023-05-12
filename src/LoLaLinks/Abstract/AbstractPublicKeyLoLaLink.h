@@ -3,10 +3,8 @@
 #ifndef _ABSTRACT_PUBLIC_KEY_LOLA_LINK_
 #define _ABSTRACT_PUBLIC_KEY_LOLA_LINK_
 
-// https://github.com/kmackay/micro-ecc .
-#include <uECC.h>
+#include "AbstractLoLaLinkPacket.h"
 
-#include "AbstractLoLaReceiver.h"
 
 /// <summary>
 /// Elliptic-curve Diffie–Hellman public key exchange.
@@ -17,10 +15,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class AbstractPublicKeyLoLaLink : public AbstractLoLaReceiver<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractPublicKeyLoLaLink : public AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractLoLaReceiver<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>;
 
 protected:
 	using BaseClass::Session;

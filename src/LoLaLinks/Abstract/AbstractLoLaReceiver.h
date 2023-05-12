@@ -20,7 +20,6 @@ protected:
 	using BaseClass::RawInPacket;
 	using BaseClass::ZeroTimestamp;
 	using BaseClass::InData;
-	using BaseClass::Duplex;
 
 	using BaseClass::PacketService;
 
@@ -65,14 +64,7 @@ protected:
 	/// </summary>
 	/// <param name="lostCount"></param>
 	/// <returns></returns>
-	virtual void OnReceiveLossDetected(const uint8_t lostCount)
-	{
-#if defined(DEBUG_LOLA)
-		this->Owner();
-		Serial.print(F("Link detected lost packets: "));
-		Serial.println(lostCount);
-#endif
-	}
+	virtual void OnReceiveLossDetected(const uint8_t lostCount) {}
 
 	/// <summary>
 	/// Decode RawIn packet to InData, if valid.
@@ -84,14 +76,8 @@ protected:
 	virtual const bool DecodeInPacket(Timestamp& timestamp, uint8_t& counter, const uint8_t dataSize) { return false; }
 
 public:
-	AbstractLoLaReceiver(Scheduler& scheduler,
-		ILoLaPacketDriver* driver,
-		IEntropySource* entropySource,
-		IClockSource* clockSource,
-		ITimerSource* timerSource,
-		IDuplex* duplex,
-		IChannelHop* hop)
-		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop)
+	AbstractLoLaReceiver(Scheduler& scheduler, ILoLaPacketDriver* driver, IClockSource* clockSource, ITimerSource* timerSource)
+		: BaseClass(scheduler, driver, clockSource, timerSource)
 		, ReceiveTimestamp()
 	{}
 
@@ -122,8 +108,6 @@ public:
 
 		ReceivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
 
-
-		uint8_t d = 0;
 		switch (LinkStage)
 		{
 		case LinkStageEnum::Disabled:

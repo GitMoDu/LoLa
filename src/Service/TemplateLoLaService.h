@@ -10,9 +10,9 @@
 #include "..\Link\LoLaPacketDefinition.h"
 
 template<const uint8_t MaxSendPayloadSize>
-class TemplateLoLaService : protected Task,
-	public virtual ILinkPacketReceiver,
-	public virtual ILinkPacketSender
+class TemplateLoLaService : protected Task
+	, public virtual ILinkPacketReceiver
+	, public virtual ILinkPacketSender
 {
 private:
 	using ILinkPacketSender::SendResultEnum;

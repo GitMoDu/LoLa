@@ -50,34 +50,16 @@ protected:
 	using BaseClass::LinkStage;
 	using BaseClass::OutPacket;
 	using BaseClass::SyncClock;
+	using BaseClass::Session;
 
 	using BaseClass::PacketService;
 
-	using BaseClass::SendPacket;
-	using BaseClass::SendPacketWithAck;
-	using BaseClass::PreLinkResendDelayMillis;
 	using BaseClass::ResetStageStartTime;
+	using BaseClass::PreLinkResendDelayMillis;
 	using BaseClass::GetSendDuration;
-	using BaseClass::Session;
-	//using BaseClass::SetSessionId;
-	//using BaseClass::SetRandomSessionId;
-	//using BaseClass::CopySessionIdTo;
-	//using BaseClass::CopyLinkingTokenTo;
-	//using BaseClass::SessionIdMatches;
+	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
-
-	/*using BaseClass::DecompressPartnerPublicKeyFrom;
-	using BaseClass::CompressPublicKeyTo;
-	using BaseClass::PublicKeyCollision;
-	using BaseClass::SessionIsCached;
-	using BaseClass::CalculatePke;
-	using BaseClass::ResetPke;*/
-
-	/*using BaseClass::SetPartnerChallenge;
-	using BaseClass::SignPartnerChallengeTo;
-	using BaseClass::SignLocalChallengeTo;
-	using BaseClass::CopyLocalChallengeTo;
-	*/
+	using BaseClass::SendPacketWithAck;
 
 
 private:
@@ -98,7 +80,7 @@ private:
 
 protected:
 #if defined(DEBUG_LOLA)
-	void Owner()
+	virtual void Owner() final
 	{
 		Serial.print(millis());
 		Serial.print(F("\t[H] "));
@@ -396,7 +378,7 @@ protected:
 			this->Owner();
 			Serial.println(F("OnAwaitingLink timed out. Going to sleep."));
 #endif
-			
+
 			SubState = (uint8_t)HostAwaitingLinkEnum::Sleeping;
 		}
 
@@ -553,8 +535,7 @@ protected:
 			}
 			break;
 		case HostLinkingEnum::ClockSyncing:
-			if (ClockReplyPending && PacketService.CanSendPacket()
-				&& (millis() > PreLinkPacketSchedule))
+			if (ClockReplyPending && PacketService.CanSendPacket() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkStartDeniedReply::SUB_HEADER_INDEX] = Linking::LinkStartDeniedReply::SUB_HEADER;
@@ -582,8 +563,7 @@ protected:
 			Task::enable();
 			break;
 		case HostLinkingEnum::SwitchingToLinked:
-			if (PacketService.CanSendPacket()
-				&& (millis() > PreLinkPacketSchedule))
+			if (PacketService.CanSendPacket() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkSwitchOver::SUB_HEADER_INDEX] = Linking::LinkSwitchOver::SUB_HEADER;

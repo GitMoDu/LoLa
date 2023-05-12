@@ -209,6 +209,22 @@ public:
 	}
 
 protected:
+#if defined(DEBUG_LOLA)
+	virtual void Owner() {}
+#endif
+
+protected:
+	/// <summary>
+	/// Inform any Link class of packet loss detection,
+	/// due to skipped counter.
+	/// </summary>
+	/// <param name="lostCount"></param>
+	/// <returns></returns>
+	virtual void OnReceiveLossDetected(const uint8_t lostCount)
+	{
+		OnEvent(PacketEventEnum::ReceiveLossDetected);
+	}
+
 	/// <summary>
 	/// Calculates a re-send delay, with a random jitter if Duplex is not full.
 	/// Since we are in a pre-link state, jitter is added for collision avoidance.
