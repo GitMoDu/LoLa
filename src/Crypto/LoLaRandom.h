@@ -21,27 +21,24 @@ private:
 		uint32_t UInt = 0;
 	};
 
-private:
 	static constexpr uint8_t ENTROPY_POOL_SIZE = 8;
+	static constexpr uint8_t INTEGER_SIZE = 4;
 
 	HasherType& Hasher;
 
 	IEntropySource* EntropySource; // Entropy source for CSPRNG.
 
 private:
-	uint8_t EntropyPool[ENTROPY_POOL_SIZE];
-	ArrayToUint32 EntropySalt;
-	ArrayToUint32 RandomHelper;
+	uint8_t EntropyPool[ENTROPY_POOL_SIZE]{};
+
+	ArrayToUint32 EntropySalt{};
+	ArrayToUint32 RandomHelper{};
 
 public:
 	LoLaRandom(HasherType& hasher, IEntropySource* entropySource)
 		: Hasher(hasher)
 		, EntropySource(entropySource)
-		, EntropyPool()
-		, EntropySalt()
-		, RandomHelper()
-	{
-	}
+	{}
 
 	const bool Setup()
 	{
@@ -61,17 +58,18 @@ public:
 	/// <returns></returns>
 	const uint32_t GetNextRandom()
 	{
-		EntropySalt.Array[0] += 2;
-		Hasher.reset(sizeof(uint32_t));
-		Hasher.update(EntropySalt.Array, sizeof(uint32_t));
+		Hasher.reset(INTEGER_SIZE);
+		Hasher.update(EntropySalt.Array, INTEGER_SIZE);
 		Hasher.update(EntropyPool, ENTROPY_POOL_SIZE);
-		Hasher.finalize(RandomHelper.Array, sizeof(uint32_t));
+		Hasher.finalize(RandomHelper.Array, INTEGER_SIZE);
 
-		EntropySalt.Array[0] -= 1;
+		EntropySalt.UInt += 1;
 		Hasher.reset(ENTROPY_POOL_SIZE);
-		Hasher.update(EntropySalt.Array, sizeof(uint32_t));
+		Hasher.update(EntropySalt.Array, INTEGER_SIZE);
 		Hasher.update(EntropyPool, ENTROPY_POOL_SIZE);
-		Hasher.finalize(EntropyPool, ENTROPY_POOL_SIZE);
+		Hasher.finalize(EntropyPool, INTEGER_SIZE);
+
+		EntropySalt.UInt += 1;
 
 		return RandomHelper.UInt;
 	}
@@ -103,7 +101,7 @@ public:
 	/// <typeparam name="size">Max size 32.</typeparam>
 	void GetRandomStreamCrypto(uint8_t* target, const uint8_t size)
 	{
-		static ArrayToUint32 helper{};
+		ArrayToUint32 helper;
 		helper.UInt = GetRandomLong();
 
 		Hasher.reset(size);
@@ -122,44 +120,45 @@ private:
 		uint8_t idSize = 0;
 		const uint8_t* uniqueId = EntropySource->GetUniqueId(idSize);
 
-		Hasher.reset(ENTROPY_POOL_SIZE);
 		EntropySalt.UInt = EntropySource->GetNoise();
-		Hasher.update(EntropySalt.Array, sizeof(uint32_t));
 
+		Hasher.reset(ENTROPY_POOL_SIZE);
+		Hasher.update(EntropySalt.Array, sizeof(uint32_t));
 		if (uniqueId != nullptr && idSize > 0)
 		{
 			Hasher.update(uniqueId, idSize);
 		}
-
 		Hasher.finalize(EntropyPool, ENTROPY_POOL_SIZE);
 
 #if defined(DEBUG_LOLA)
 		Serial.println(F("Random Seeding complete."));
 		if (idSize > 0)
 		{
-			Serial.print(F("Unique Id ("));
+			Serial.print(F("\tUnique Id ("));
 			Serial.print(idSize);
-			Serial.print(F("bytes)"));
+			Serial.println(F("bytes):"));
 
-			//Serial.println('\t');
-			//Serial.print('|');
-			//Serial.print('|');
-			//for (size_t i = 0; i < idSize; i++)
-			//{
-			//	Serial.print(F("0x"));
-			//	if (uniqueId[i] < 0x10)
-			//	{
-			//		Serial.print(0);
-			//	}
-			//	Serial.print(uniqueId[i], HEX);
-			//	Serial.print('|');
-			//}
-			//Serial.println('|');
+			Serial.println('\t');
+			Serial.print('|');
+			Serial.print('|');
+			for (size_t i = 0; i < idSize; i++)
+			{
+				Serial.print(F("0x"));
+				if (uniqueId[i] < 0x10)
+				{
+					Serial.print(0);
+				}
+				Serial.print(uniqueId[i], HEX);
+				Serial.print('|');
+			}
+			Serial.println('|');
 		}
 
-		Serial.print(F("\t\tSeed noise:"));
+		Serial.print(F("\tSeed noise:"));
 		Serial.println(EntropySalt.UInt);
 #endif
+
+		EntropySalt.UInt++;
 	}
 };
 #endif
