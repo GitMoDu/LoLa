@@ -32,8 +32,16 @@ protected:
 	using BaseClass::NotifyPacketReceived;
 
 protected:
-	// Rolling counter.
+	/// <summary>
+	/// Rolling packet counter.
+	/// </summary>
 	uint8_t LastValidReceivedCounter = 0;
+
+	/// <summary>
+	/// RSSI (Received Signal Strenght Indicator) for Link quality evaluation.
+	/// Unitless scale -> [0, UINT8_MAX].
+	/// </summary>
+	uint8_t LastReceivedRssi = 0;
 
 private:
 	/// <summary>
@@ -41,12 +49,11 @@ private:
 	/// </summary>
 	uint32_t LastValidReceived = 0;
 
-	volatile uint8_t ReceivingDataSize = 0;
 
 private:
-	Timestamp ReceiveTimestamp;
+	Timestamp ReceiveTimestamp{};
 
-	uint8_t ReceiveCounter = 0;
+	uint8_t ReceivingCounter = 0;
 
 protected:
 	/// <summary>
@@ -78,7 +85,6 @@ protected:
 public:
 	AbstractLoLaReceiver(Scheduler& scheduler, ILoLaPacketDriver* driver, IClockSource* clockSource, ITimerSource* timerSource)
 		: BaseClass(scheduler, driver, clockSource, timerSource)
-		, ReceiveTimestamp()
 	{}
 
 public:
@@ -100,43 +106,47 @@ public:
 			OnEvent(PacketEventEnum::ReceiveRejectedInvalid);
 			return;
 		}
-		else if (ReceivingDataSize != 0)
-		{
-			OnEvent(PacketEventEnum::ReceiveRejectedDropped);
-			return;
-		}
 
-		ReceivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
+		const uint8_t receivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
 
 		switch (LinkStage)
 		{
 		case LinkStageEnum::Disabled:
 			return;
 		case LinkStageEnum::AwaitingLink:
-			if (DecodeInPacket(ReceiveCounter, ReceivingDataSize))
+			// Update MAC without implicit addressing or token.
+			// Addressing must be explicit in payload.
+			if (DecodeInPacket(ReceivingCounter, receivingDataSize))
 			{
 				// Save last received counter, ready for switch for next stage.
-				LastValidReceivedCounter = ReceiveCounter;
+				LastValidReceivedCounter = ReceivingCounter;
+				LastReceivedRssi = rssi;
 			}
 			else
 			{
-				ReceivingDataSize = 0;
 				OnEvent(PacketEventEnum::ReceiveRejectedMac);
 				return;
 			}
 			break;
 		case LinkStageEnum::Linking:
 			// Update MAC with implicit addressing but without token.
-			if (DecodeInPacket(ZeroTimestamp, ReceiveCounter, ReceivingDataSize))
+			if (DecodeInPacket(ZeroTimestamp, ReceivingCounter, receivingDataSize))
 			{
-				if (ValidateCounter(ReceiveCounter))
+				if (ValidateCounter(ReceivingCounter))
 				{
 					// Counter accepted, update local tracker.
-					LastValidReceivedCounter = ReceiveCounter;
+					LastValidReceivedCounter = ReceivingCounter;
+					LastReceivedRssi = rssi;
 				}
 				else
 				{
-					ReceivingDataSize = 0;
+					// Only downgrade link quality, 
+					// to slightly prevent denial of service by RSSI lying.
+					if (rssi < LastReceivedRssi)
+					{
+						LastReceivedRssi = rssi;
+					}
+
 					OnEvent(PacketEventEnum::ReceiveRejectedCounter);
 					return;
 				}
@@ -145,7 +155,6 @@ public:
 			{
 				// We can try a fallback decode here while in this state.
 				// Try Recover only after sending an acknowledgment/crypto transition.
-				ReceivingDataSize = 0;
 				OnEvent(PacketEventEnum::ReceiveRejectedMac);
 				return;
 			}
@@ -153,16 +162,15 @@ public:
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestamp(ReceiveTimestamp);
 			ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
-			if (DecodeInPacket(ReceiveTimestamp, ReceiveCounter, ReceivingDataSize))
+			if (DecodeInPacket(ReceiveTimestamp, ReceivingCounter, receivingDataSize))
 			{
-				if (ValidateCounter(ReceiveCounter))
+				if (ValidateCounter(ReceivingCounter))
 				{
 					// Counter accepted, update local tracker.
-					LastValidReceivedCounter = ReceiveCounter;
+					LastValidReceivedCounter = ReceivingCounter;
 				}
 				else
 				{
-					ReceivingDataSize = 0;
 					// Event will trigger a report request, that should synchronize counters.
 					OnEvent(PacketEventEnum::ReceiveRejectedCounter);
 					return;
@@ -170,7 +178,6 @@ public:
 			}
 			else
 			{
-				ReceivingDataSize = 0;
 				OnEvent(PacketEventEnum::ReceiveRejectedMac);
 				return;
 			}
@@ -186,7 +193,7 @@ public:
 		/// - Source authenticity.
 		/// - Replay/Echo denied.
 		/// </summary>
-		const uint_least8_t port = InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
+		const uint_fast8_t port = InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
 
 		if (port == AckDefinition::PORT)
 		{
@@ -211,14 +218,11 @@ public:
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
 						LoLaPacketDefinition::GetPayloadSize(packetSize),
 						port,
-						ReceiveCounter))
-				{
-					RequestSendAck(port, ReceiveCounter);
+						ReceivingCounter)) {
+					RequestSendAck(port, ReceivingCounter);
 				}
 			}
 		}
-
-		ReceivingDataSize = 0;
 	}
 
 protected:
