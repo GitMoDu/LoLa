@@ -97,7 +97,14 @@ public:
 	/// </summary>
 	static constexpr uint8_t NONCE_EFFECTIVE_SIZE = 4;
 
-	static constexpr bool TIME_NONCE_ENABLED = true;
+	/// <summary>
+	/// Random challenge to be solved by the partner,
+	/// before granting access to next Linking Step..
+	/// Uses a simple hash with the Challenge and ACCESS_CONTROL_PASSWORD,
+	/// instead of a slow (but more secure) certificate-signature.
+	/// </summary>
+	static constexpr uint8_t CHALLENGE_CODE_SIZE = 4;
+	static constexpr uint8_t CHALLENGE_SIGNATURE_SIZE = 4;
 
 
 	/// <summary>

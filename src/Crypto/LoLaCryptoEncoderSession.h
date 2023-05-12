@@ -69,24 +69,12 @@ public:
 		//AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = (tokenRoll % UINT8_MAX) ^ RawInPacket[LoLaPacketDefinition::ID_INDEX];
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[LoLaPacketDefinition::ID_INDEX];
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
-		if (LoLaCryptoDefinition::TIME_NONCE_ENABLED)
-		{
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = (uint8_t)(tokenRoll);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = (uint8_t)(tokenRoll >> 8);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = (uint8_t)(timestamp.Seconds);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (uint8_t)(timestamp.Seconds >> 8);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (uint8_t)(timestamp.Seconds >> 16);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (uint8_t)(timestamp.Seconds >> 24);
-		}
-		else
-		{
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = 0;
-		}
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = (uint8_t)(tokenRoll);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = (uint8_t)(tokenRoll >> 8);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = (uint8_t)(timestamp.Seconds);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (uint8_t)(timestamp.Seconds >> 8);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (uint8_t)(timestamp.Seconds >> 16);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (uint8_t)(timestamp.Seconds >> 24);
 		/*****************/
 		// Start HMAC with 16 byte Auth Key.
 		CryptoHasher.reset(ExpandedKey.MacKey);
@@ -232,24 +220,12 @@ public:
 		// Set packet authentication tag.
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = counter;
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
-		if (LoLaCryptoDefinition::TIME_NONCE_ENABLED)
-		{
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = (uint8_t)(tokenRoll);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = (uint8_t)(tokenRoll >> 8);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = (uint8_t)(timestamp.Seconds);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (uint8_t)(timestamp.Seconds >> 8);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (uint8_t)(timestamp.Seconds >> 16);
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (uint8_t)(timestamp.Seconds >> 24);
-		}
-		else
-		{
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = 0;
-			AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = 0;
-		}
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = (uint8_t)(tokenRoll);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = (uint8_t)(tokenRoll >> 8);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = (uint8_t)(timestamp.Seconds);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (uint8_t)(timestamp.Seconds >> 8);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (uint8_t)(timestamp.Seconds >> 16);
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (uint8_t)(timestamp.Seconds >> 24);
 		/*****************/
 
 		/*****************/

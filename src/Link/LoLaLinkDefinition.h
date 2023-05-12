@@ -65,15 +65,6 @@ public:
 	/// </summary>
 	static const uint8_t ACCESS_CONTROL_PASSWORD_SIZE = 8;
 
-	/// <summary>
-	/// Random challenge to be solved by the partner,
-	/// before granting access to next Linking Step..
-	/// Uses a simple hash with the Challenge and ACCESS_CONTROL_PASSWORD,
-	/// instead of a slow (but more secure) certificate-signature.
-	/// </summary>
-
-	static constexpr uint8_t CHALLENGE_CODE_SIZE = 4;
-	static constexpr uint8_t CHALLENGE_SIGNATURE_SIZE = 4;
 
 	/// <summary>
 	/// Timestamps are in 32 bit UTC seconds or microseconds.
@@ -247,7 +238,7 @@ public:
 		/// ||ChallengeCode||
 		/// </summary>
 		//using LinkChallenge = TemplateSubHeaderDefinition<0, CHALLENGE_REQUEST_SIZE>;
-		struct HostChallengeRequest : public TemplateSubHeaderDefinition<0, CHALLENGE_CODE_SIZE>
+		struct HostChallengeRequest : public TemplateSubHeaderDefinition<0, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
 			static const uint8_t PAYLOAD_CHALLENGE_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
@@ -255,16 +246,16 @@ public:
 		/// <summary>
 		/// ||SignedCode|ChallengeCode||
 		/// </summary>
-		struct RemoteChallengeReplyRequest : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, CHALLENGE_SIGNATURE_SIZE + CHALLENGE_CODE_SIZE>
+		struct RemoteChallengeReplyRequest : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
 			static const uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
-			static const uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + CHALLENGE_SIGNATURE_SIZE;
+			static const uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE;
 		};
 
 		/// <summary>
 		/// ||SignedCode||
 		/// </summary>
-		struct HostChallengeReply : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, CHALLENGE_SIGNATURE_SIZE>
+		struct HostChallengeReply : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE>
 		{
 			static const uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};

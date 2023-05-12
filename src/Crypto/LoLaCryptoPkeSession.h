@@ -27,9 +27,9 @@ private:
 
 private:
 	uint8_t PartnerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE];
-	uint8_t LocalChallengeCode[LoLaLinkDefinition::CHALLENGE_CODE_SIZE];
-	uint8_t PartnerChallengeCode[LoLaLinkDefinition::CHALLENGE_CODE_SIZE];
-	uint8_t PartnerChallengeSignature[LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE];
+	uint8_t LocalChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE];
+	uint8_t PartnerChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE];
+	uint8_t PartnerChallengeSignature[LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE];
 
 	/// <summary>
 	/// Shared secret key.
@@ -145,18 +145,18 @@ public:
 
 	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
 	{
-		KeyHasher.reset(LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE);
-		KeyHasher.update(challenge, LoLaLinkDefinition::CHALLENGE_CODE_SIZE);
+		KeyHasher.reset(LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
+		KeyHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
 		KeyHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 
-		KeyHasher.finalize(signatureTarget, LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE);
+		KeyHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
 	}
 
 	const bool VerifyChallengeSignature(const uint8_t* signatureSource)
 	{
 		GetChallengeSignature(LocalChallengeCode, AccessPassword, PartnerChallengeSignature);
 
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE; i++)
 		{
 			if (PartnerChallengeSignature[i] != signatureSource[i])
 			{
@@ -169,7 +169,7 @@ public:
 
 	void SetPartnerChallenge(const uint8_t* challengeSource)
 	{
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::CHALLENGE_CODE_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::CHALLENGE_CODE_SIZE; i++)
 		{
 			PartnerChallengeCode[i] = challengeSource[i];
 		}
@@ -177,7 +177,7 @@ public:
 
 	void CopyLocalChallengeTo(uint8_t* challengeTarget)
 	{
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::CHALLENGE_CODE_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::CHALLENGE_CODE_SIZE; i++)
 		{
 			challengeTarget[i] = LocalChallengeCode[i];
 		}
@@ -195,7 +195,7 @@ public:
 
 	void GenerateLocalChallenge()
 	{
-		RandomSource.GetRandomStreamCrypto(LocalChallengeCode, LoLaLinkDefinition::CHALLENGE_CODE_SIZE);
+		RandomSource.GetRandomStreamCrypto(LocalChallengeCode, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
 	}
 };
 #endif
