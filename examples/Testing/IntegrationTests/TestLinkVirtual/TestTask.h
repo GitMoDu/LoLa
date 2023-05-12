@@ -21,7 +21,7 @@ private:
 	static const uint8_t Port = 0x42;
 	static const uint8_t PayloadSize = 0;
 	static const uint32_t HearBeatPeriod = 1000;
-	static const uint32_t PingPeriod = 3;
+	static const uint32_t PingPeriod = 500;
 
 	ILoLaLink* Host;
 	ILoLaLink* Remote;
@@ -97,14 +97,17 @@ public:
 				LastPing = timestamp;
 #if defined(PRINT_TEST_PACKETS)
 				PrintTag('H');
-				Serial.print(F("Sending: "));
-				Serial.print(F(" ("));
-				//Serial.print(OutContent.Payload[0]);
-				Serial.println(')');
+				Serial.print(F("Sending... "));
 #endif
 				if (Host->SendPacket(this, Handle, OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
 				{
 					LastPing = timestamp;
+#if defined(PRINT_TEST_PACKETS)
+					Serial.println(F("Ok."));
+#endif
+				}
+				else
+				{
 #if defined(PRINT_TEST_PACKETS)
 					Serial.println(F(" Failed!"));
 #endif
