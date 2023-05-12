@@ -99,6 +99,7 @@ public:
 				{
 					// Unable to transmit, try again until timeout.
 				}
+				Task::enable();
 			}
 			else if (millis() - RequestStart > SendRequestTimeout)
 			{
@@ -116,7 +117,7 @@ public:
 			OnService();
 		}
 
-		return false;
+		return true;
 	}
 
 protected:
