@@ -58,6 +58,7 @@ public:
 	/// <returns></returns>
 	const uint32_t GetNextRandom()
 	{
+		EntropySalt.UInt += 1;
 		Hasher.reset(INTEGER_SIZE);
 		Hasher.update(EntropySalt.Array, INTEGER_SIZE);
 		Hasher.update(EntropyPool, ENTROPY_POOL_SIZE);
@@ -67,9 +68,7 @@ public:
 		Hasher.reset(ENTROPY_POOL_SIZE);
 		Hasher.update(EntropySalt.Array, INTEGER_SIZE);
 		Hasher.update(EntropyPool, ENTROPY_POOL_SIZE);
-		Hasher.finalize(EntropyPool, INTEGER_SIZE);
-
-		EntropySalt.UInt += 1;
+		Hasher.finalize(EntropyPool, ENTROPY_POOL_SIZE);
 
 		return RandomHelper.UInt;
 	}
