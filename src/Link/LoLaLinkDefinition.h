@@ -134,7 +134,7 @@ public:
 	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
-	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 150;
+	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 200;
 
 	/// <summary>
 	/// How long to wait before timing out a send, under idealized conditions.
