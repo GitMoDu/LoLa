@@ -80,7 +80,7 @@ public:
 
 	const uint8_t GetRandomShort(const uint8_t maxValue)
 	{
-		return GetNextRandom() % (maxValue + 1);
+		return GetRandomShort() % (maxValue + 1);
 	}
 
 	const uint32_t GetRandomLong()
