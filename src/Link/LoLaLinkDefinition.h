@@ -41,7 +41,7 @@ public:
 	/// <summary>
 	/// Implicit addressing key size.
 	/// </summary>
-	static constexpr uint8_t ADDRESS_KEY_SIZE = 8;
+	static constexpr uint8_t ADDRESS_KEY_SIZE = 4;
 
 	/// <summary>
 	/// Implicit addressing entropy size.
@@ -58,7 +58,7 @@ public:
 	/// One time linking token.
 	/// Hash mix of SessionId and Public Key pairs.
 	/// </summary>
-	static constexpr uint8_t LINKING_TOKEN_SIZE = 8;
+	static constexpr uint8_t LINKING_TOKEN_SIZE = 4;
 
 	/// <summary>
 	/// A static password that's required to access a device.
