@@ -4,7 +4,7 @@
 
 
 #include "AbstractPublicKeyLoLaLink.h"
-#include "..\..\Link\LoLaLinkReportTracker.h"
+#include "..\..\Link\ReportTracker.h"
 
 
 /// <summary>
@@ -62,12 +62,10 @@ private:
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
 
-
-
 private:
-	LoLaLinkReportTracker<LoLaLinkDefinition::REPORT_UPDATE_PERIOD,
+	ReportTracker<LoLaLinkDefinition::REPORT_UPDATE_PERIOD,
 		LoLaLinkDefinition::REPORT_RESEND_PERIOD,
-		LoLaLinkDefinition::REPORT_PARTNER_SILENCE_TRIGGER_PERIOD> ReportTracker;
+		LoLaLinkDefinition::REPORT_PARTNER_SILENCE_TRIGGER_PERIOD> ReportTracking;
 
 	uint32_t LinkStartSeconds = 0;
 
@@ -99,7 +97,7 @@ public:
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
 		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
-		, ReportTracker()
+		, ReportTracking()
 	{}
 
 	virtual const bool Setup()
@@ -131,7 +129,7 @@ public:
 				if (payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
 				{
 					// Keep track of partner's RSSI, for output gain management.
-					ReportTracker.OnReportReceived(millis(), payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX]);
+					ReportTracking.OnReportReceived(millis(), payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX]);
 
 					// Update send counter, to prevent mismatches.
 					if ((SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX]) > LoLaLinkDefinition::ROLLING_COUNTER_TOLERANCE)
@@ -411,26 +409,26 @@ protected:
 	virtual const bool CheckForReportUpdate() final
 	{
 		const uint32_t timestamp = millis();
-		if (ReportTracker.IsRequested(timestamp))
+		if (ReportTracking.IsRequested(timestamp))
 		{
-			if (ReportTracker.IsSendRequested(timestamp))
+			if (ReportTracking.IsSendRequested(timestamp))
 			{
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.Payload[Linked::ReportUpdate::SUB_HEADER_INDEX] = Linked::ReportUpdate::SUB_HEADER;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = LastReceivedRssi;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] = LastValidReceivedCounter;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = ReportTracker.IsBackReportNeeded(timestamp, GetElapsedSinceLastValidReceived());
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = ReportTracking.IsBackReportNeeded(timestamp, GetElapsedSinceLastValidReceived());
 
 				if (RequestSendPacket(Linked::ReportUpdate::PAYLOAD_SIZE))
 				{
-					ReportTracker.OnReportSent(timestamp);
+					ReportTracking.OnReportSent(timestamp);
 				}
 			}
 
 			Task::enableIfNot();
 			return true;
 		}
-		else if (ReportTracker.IsReportNeeded(timestamp, GetElapsedSinceLastValidReceived()))
+		else if (ReportTracking.IsReportNeeded(timestamp, GetElapsedSinceLastValidReceived()))
 		{
 			RequestReportUpdate();
 			Task::enableIfNot();

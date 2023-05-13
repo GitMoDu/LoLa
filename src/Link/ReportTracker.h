@@ -1,16 +1,15 @@
-// LoLaLinkReportTracker.h
+// ReportTracker.h
 
-#ifndef _LOLA_LINK_REPORT_TRACKER_h
-#define _LOLA_LINK_REPORT_TRACKER_h
+#ifndef _REPORT_TRACKER_h
+#define _REPORT_TRACKER_h
 
 
 #include <stdint.h>
-//#include "LoLaLinkDefinition.h"
 
 template<const uint32_t UpdatePeriod,
 	const uint8_t ResendPeriod,
 	const uint32_t SilenceMaxPeriod	>
-class LoLaLinkReportTracker
+class ReportTracker
 {
 private:
 	/// <summary>
@@ -45,9 +44,8 @@ private:
 	bool Requested = false;
 
 public:
-	LoLaLinkReportTracker()
-	{
-	}
+	ReportTracker()
+	{}
 
 	void Reset()
 	{
