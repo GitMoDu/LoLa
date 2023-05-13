@@ -289,9 +289,11 @@ public:
 		/// </summary>
 		static const uint8_t PORT = Linking::PORT - 1;
 
+		/// <summary>
+		/// ||Average RSSI|ReceiveCounter|REQUEST_REPLY||
+		/// </summary>
 		struct ReportUpdate : public TemplateSubHeaderDefinition<0, 3>
 		{
-			// |||Average RSSI|ReceiveCounter|REQUEST_REPLY|
 			static const uint8_t PAYLOAD_RSSI_INDEX = SUB_PAYLOAD_INDEX;
 			static const uint8_t PAYLOAD_RECEIVE_COUNTER_INDEX = PAYLOAD_RSSI_INDEX + 1;
 			static const uint8_t PAYLOAD_REQUEST_INDEX = PAYLOAD_RECEIVE_COUNTER_INDEX + 1;
