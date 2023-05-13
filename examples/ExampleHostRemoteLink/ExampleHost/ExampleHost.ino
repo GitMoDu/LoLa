@@ -1,129 +1,129 @@
-/**
-* LoLa Example Host
-*
-* LoLa depends on:
-* [DEPRECATED]Radio Driver for Si446x: https://github.com/zkemble/Si446x
-* OO TaskScheduler: https://github.com/arkhipenko/TaskScheduler
-* FrankBoesing/FastCRC https://github.com/FrankBoesing/FastCRC
-* Micro Elyptic Curve Cryptography: https://github.com/kmackay/micro-ecc
-* Crypto Library for Ascon128: https://github.com/rweather/arduinolibs
-* Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git
+/* LoLa Link Host tester.
+* Creates instances for host.
+* Used to testing and developing the LoLa Link protocol.
 *
 */
+
+#define DEBUG
+
+#define SERIAL_BAUD_RATE 115200
+
 
 
 #define DEBUG_LOLA
 
 
-#ifdef DEBUG_LOLA
-#define DEBUG_TRACKED_SURFACE
+
+#define _TASK_SCHEDULE_NC // Disable task catch-up.
+#define _TASK_OO_CALLBACKS
+
+#ifndef ARDUINO_ARCH_ESP32
+#define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
 #endif
 
-#define SERIAL_BAUD_RATE 115200
-
-
-#define _TASK_OO_CALLBACKS
-#define _TASK_SLEEP_ON_IDLE_RUN
 #include <TaskScheduler.h>
 
+#include <ILoLaInclude.h>
 
 
-#include <LoLaPacketDriversInclude.h>
-//#include <LoLaDriverNRFL01.h>
-#include <LoLaLinkInclude.h>
-
-
-//#include "ClockTestTaskClass.h"
-
-
-///Process scheduler.
+// Process scheduler.
 Scheduler SchedulerBase;
-///
-
-///SPI Master.
-//SPI SPIWire(1);
-///
-
-///Radio manager and driver.
-//TODO:
-// Pinout:
-// IRQ - (PA3 / D8).
-// SDN - (PB0 / D3) //TODO: Use ShutDown (SDN) pin for power management.
-// CS - (PA4 / D7) Default SPI1.
-// CLK - (PA5 / D6) Default SPI1.
-// MISO - (PA6 / D5) Default SPI1.
-// MOSI - (PA7 / D4) Default SPI1.
-
-// Link Constants.
-static const uint32_t DuplexPeriod = 4;
-static const uint32_t MaxPayloadSize = 32;
-
-//LoLaAsyncPacketDriver LoLaDriver(&SchedulerBase, &MockDriverSettings);
-//LoLaNRFL01PacketDriver LoLaDriver(&SchedulerBase, &SPIWire, PA4, PB0, PA3);
-//LoLaSi446xPacketDriver LoLaDriver(&SchedulerBase);
-SerialLoLaPacketDriver<MaxPayloadSize, HardwareSerial, 115200> SerialDriver(SchedulerBase, &Serial2);
-PIMLoLaPacketDriver<MaxPayloadSize> PIMDriver(SchedulerBase, 2, 3, 1, 0);
-
-ArduinoSynchronizedClock HostClock;
-HalfDuplex<DuplexPeriod, true> HostDuplex;
-ITokenSource HopToken;
-
-LoLaLinkHost<MaxPayloadSize> LinkHost(SchedulerBase, &PIMDriver, &HostClock, &HostDuplex, &HopToken);
-///
+//
 
 
-//ClockTestTaskClass TestClockTask(&SchedulerBase, &LoLaDriver);
+// Diceware created access control password.
+static uint8_t Password[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+//
 
-void Halt()
+// Created offline using PublicPrivateKeyGenerator example project.
+static uint8_t HostPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x88,0x64,0x9C,0xFE,0x38,0xFA,0xFE,0xB9,0x41,0xA8,0xD1,0xB7,0xAC,0xA0,0x23,0x82,0x97,0xFB,0x5B,0xD1,0xC4,0x75,0x94,0x68,0x41,0x6D,0xEE,0x57,0x6B,0x07,0xF5,0xC0,0x95,0x78,0x10,0xCC,0xEA,0x08,0x0D,0x8F };
+static uint8_t HostPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x2E,0xBD,0x81,0x6E,0x56,0x59,0xDF,0x1D,0x77,0x83,0x0D,0x85,0xCE,0x59,0x61,0xE8,0x74,0x52,0xD7,0x98 };
+//
+
+// Shared Link configuration.
+static const uint16_t DuplexPeriod = 10000;
+static const uint32_t ChannelHopPeriod = 20000;
+
+// Use best available sources.
+#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+Stm32EntropySource EntropySource;
+#elif defined(ARDUINO_ARCH_ESP8266)
+Esp8266EntropySource EntropySource;
+#else 
+ArduinoEntropySource EntropySource;
+#endif
+
+
+ArduinoTaskTimerClockSource<> SharedTimerClockSource(SchedulerBase);
+IClockSource* HostClock = &SharedTimerClockSource;
+ITimerSource* HostTimer = &SharedTimerClockSource;
+
+
+// Link host and its required instances.
+NoHopNoChannel HostChannelHop;
+HalfDuplex<DuplexPeriod, false> HostDuplex;
+LoLaLinkHost<> Host(SchedulerBase,
+	nullptr,
+	&EntropySource,
+	HostClock,
+	HostTimer,
+	&HostDuplex,
+	&HostChannelHop,
+	HostPublicKey,
+	HostPrivateKey,
+	Password);
+
+
+void BootError()
 {
+#ifdef DEBUG
 	Serial.println("Critical Error");
+#endif  
 	delay(1000);
-
-
 	while (1);;
 }
 
 void setup()
 {
+#ifdef DEBUG
 	Serial.begin(SERIAL_BAUD_RATE);
 	while (!Serial)
 		;
 	delay(1000);
-	Serial.println(F("Example Host"));
+#endif
 
-	if (!LinkHost.Setup())
-	{
-		Halt();
-	}
-
-	if (LinkHost.Start())
+	// Setup Link instance.
+	if (!Host.Setup())
 	{
 #ifdef DEBUG
-		SerialOut.println(F("LoLa Link Virtual Tester Start!"));
+		Serial.println(F("Host Link Setup Failed."));
 #endif
+		BootError();
+	}
+
+
+	// Start Link intance.
+	if (Host.Start())
+	{
+		Serial.print(millis());
+		Serial.println(F("\tLoLa Links have started."));
 	}
 	else
 	{
 #ifdef DEBUG
-		SerialOut.println(F("Link Start Failed."));
+		Serial.println(F("Link Start Failed."));
 #endif
+		BootError();
 	}
-
-	//#if defined(DEBUG_LOLA)
-	//	Serial.print(F("LoLa Radio Setup with protocol version: "));
-	//	Serial.println(LoLaDriver.LinkInfo.LinkProtocolVersion);
-	//	LoLaDriver.Debug(&Serial);
-	//#endif
-	Serial.println();
 }
 
 void loop()
 {
+#ifdef SCHEDULER_TEST_PIN
+	digitalWrite(SCHEDULER_TEST_PIN, HIGH);
+#endif
+#ifdef SCHEDULER_TEST_PIN
+	digitalWrite(SCHEDULER_TEST_PIN, LOW);
+#endif
 	SchedulerBase.execute();
-}
-
-
-void serialEvent()
-{
-	SerialDriver.OnSerialEvent();
 }

@@ -26,8 +26,6 @@
 
 #define SCHEDULER_TEST_PIN TEST_PIN_0
 
-//#define CRYPTO_TEST_PIN
-
 #define HOP_TEST_PIN TEST_PIN_3
 #define HOP_TEST_PIN_2 TEST_PIN_4
 
@@ -111,13 +109,11 @@ ArduinoEntropySource EntropySource;
 
 
 #if !defined(LINK_USE_TIMER_AND_RTC)
-ArduinoTaskTimerClockSource<> HostTimerClockSource(SchedulerBase);
-ArduinoTaskTimerClockSource<123456789> RemoteTimerClockSource(SchedulerBase);
-IClockSource* HostClock = &HostTimerClockSource;
-ITimerSource* HostTimer = &HostTimerClockSource;
-
-IClockSource* RemoteClock = &RemoteTimerClockSource;
-ITimerSource* RemoteTimer = &RemoteTimerClockSource;
+ArduinoTaskTimerClockSource<> SharedTimerClockSource(SchedulerBase);
+IClockSource* HostClock = &SharedTimerClockSource;
+ITimerSource* HostTimer = &SharedTimerClockSource;
+IClockSource* RemoteClock = &SharedTimerClockSource;
+ITimerSource* RemoteTimer = &SharedTimerClockSource;
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
 Stm32TimerSource HostTimerSource(1, 'A');
@@ -146,7 +142,6 @@ NoHopNoChannel RemoteChannelHop;
 
 
 // Link host and its required instances.
-//VirtualHalfDuplexDriver<ChannelCount, TxBase, TxByteNanos, RxBase, RxByteNanos, 'H', false> HostDriver(SchedulerBase);
 VirtualHalfDuplexDriver<TestRadioConfig, 'H', TX_HOST_TEST_PIN, false> HostDriver(SchedulerBase);
 HalfDuplex<DuplexPeriod, false> HostDuplex;
 LoLaLinkHost<> Host(SchedulerBase,
