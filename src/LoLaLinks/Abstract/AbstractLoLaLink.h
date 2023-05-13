@@ -444,7 +444,7 @@ private:
 	/// </summary>
 	void RequestReportUpdate()
 	{
-		ReportTracker.RequestReportUpdate(Session.RandomSource.GetRandomShort() - INT8_MAX);
+		ReportTracking.RequestReportUpdate(Session.RandomSource.GetRandomShort() - INT8_MAX);
 		Task::enableIfNot();
 	}
 
