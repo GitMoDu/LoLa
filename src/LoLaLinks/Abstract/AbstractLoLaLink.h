@@ -4,6 +4,7 @@
 
 
 #include "AbstractPublicKeyLoLaLink.h"
+#include "..\..\Link\LoLaLinkReportTracker.h"
 
 
 /// <summary>
@@ -87,17 +88,11 @@ private:
 
 
 private:
+	LoLaLinkReportTracker<LoLaLinkDefinition::REPORT_UPDATE_PERIOD,
+		LoLaLinkDefinition::REPORT_RESEND_PERIOD,
+		LoLaLinkDefinition::REPORT_PARTNER_SILENCE_TRIGGER_PERIOD> ReportTracker;
+
 	uint32_t LinkStartSeconds = 0;
-
-	uint32_t ReportLastSent = 0;
-	uint32_t ReportLastReceived = 0;
-
-	uint32_t ReportSendJitter = 0;
-	uint8_t PartnerRssi = 0;
-
-
-	bool ReportRequested = false;
-
 
 protected:
 	/// <summary>
@@ -127,6 +122,7 @@ public:
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
 		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
+		, ReportTracker()
 	{}
 
 	virtual const bool Setup()
@@ -157,11 +153,8 @@ public:
 			case Linked::ReportUpdate::SUB_HEADER:
 				if (payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
 				{
-					// Dismiss internal request for back report, as we just got one.
-					ReportLastReceived = millis();
-
 					// Keep track of partner's RSSI, for output gain management.
-					PartnerRssi = payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX];
+					ReportTracker.OnReportReceived(millis(), payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX]);
 
 					// Update send counter, to prevent mismatches.
 					if ((SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX]) > ROLLING_COUNTER_TOLERANCE)
@@ -178,7 +171,7 @@ public:
 					// Check if partner is requesting a report back.
 					if (payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] > 0)
 					{
-						RequestReportUpdate(true);
+						RequestReportUpdate();
 					}
 				}
 				break;
@@ -271,7 +264,7 @@ protected:
 		case LinkStageEnum::Linked:
 			LinkStartSeconds = SyncClock.GetSeconds(0);
 			ResetLastValidReceived();
-			RequestReportUpdate(false);
+			RequestReportUpdate();
 			break;
 		default:
 			break;
@@ -365,7 +358,7 @@ protected:
 		switch (packetEvent)
 		{
 		case PacketEventEnum::ReceiveRejectedCounter:
-			RequestReportUpdate(true);
+			RequestReportUpdate();
 			break;
 		default:
 			break;
@@ -433,24 +426,6 @@ protected:
 
 	}
 
-	/// <summary>
-	/// Schedule next report for dispatch.
-	/// </summary>
-	void RequestReportUpdate(const bool isUrgent)
-	{
-		ReportRequested = true;
-		if (isUrgent)
-		{
-			ReportSendJitter = (REPORT_MIN_RESEND_PERIOD / 2) + Session.RandomSource.GetRandomShort(REPORT_MIN_RESEND_PERIOD / 2);
-		}
-		else
-		{
-			ReportSendJitter = REPORT_MIN_RESEND_PERIOD + Session.RandomSource.GetRandomShort(REPORT_MIN_RESEND_PERIOD);
-		}
-
-		Task::enable();
-	}
-
 protected:
 	/// <summary>
 	/// Sends update Report, if needed.
@@ -459,34 +434,29 @@ protected:
 	virtual const bool CheckForReportUpdate() final
 	{
 		const uint32_t timestamp = millis();
-
-		if (ReportRequested)
+		if (ReportTracker.IsRequested(timestamp))
 		{
-			if (CanRequestSend() && ((timestamp - ReportLastSent) > ReportSendJitter))
+			if (ReportTracker.IsSendRequested(timestamp))
 			{
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.Payload[Linked::ReportUpdate::SUB_HEADER_INDEX] = Linked::ReportUpdate::SUB_HEADER;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = LastReceivedRssi;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] = LastValidReceivedCounter;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = IsBackReportNeeded(timestamp);
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = ReportTracker.IsBackReportNeeded(timestamp, GetElapsedSinceLastValidReceived());
 
 				if (RequestSendPacket(Linked::ReportUpdate::PAYLOAD_SIZE))
 				{
-					ReportRequested = false;
-					ReportLastSent = millis();
+					ReportTracker.OnReportSent(timestamp);
 				}
 			}
 
 			Task::enableIfNot();
-
 			return true;
 		}
-		else if (IsReportNeeded(timestamp))
+		else if (ReportTracker.IsReportNeeded(timestamp, GetElapsedSinceLastValidReceived()))
 		{
-			RequestReportUpdate(false);
-
+			RequestReportUpdate();
 			Task::enableIfNot();
-
 			return true;
 		}
 
@@ -494,20 +464,14 @@ protected:
 	}
 
 private:
-	const bool IsReportNeeded(const uint32_t timestamp)
+	/// <summary>
+	/// Schedule next report for dispatch.
+	/// </summary>
+	void RequestReportUpdate()
 	{
-		//TODO: Check if the latest received RSSI is low enough to trigger a Report update request.
-		return (timestamp - ReportLastSent > REPORT_UPDATE_PERIOD)
-			|| ((timestamp - ReportLastSent > REPORT_MIN_RESEND_PERIOD)
-				&& IsBackReportNeeded(timestamp));
+		ReportTracker.RequestReportUpdate(Session.RandomSource.GetRandomShort() - INT8_MAX);
+		Task::enableIfNot();
 	}
-
-	const bool IsBackReportNeeded(const uint32_t timestamp)
-	{
-		return (timestamp - ReportLastReceived > REPORT_UPDATE_TIMEOUT)
-			|| GetElapsedSinceLastValidReceived() > REPORT_PARTNER_SILENCE_TRIGGER_PERIOD;
-	}
-
 
 	/// <summary>
 	/// Calibrate CPU dependent durations.

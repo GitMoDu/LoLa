@@ -146,6 +146,21 @@ public:
 	/// </summary>
 	static constexpr uint32_t REPLY_BASE_TIMEOUT_MICROS = (TRANSMIT_BASE_TIMEOUT_MICROS * 2) + 5000;
 
+	/// <summary>
+	/// Report target update rate. Slow value, let the main services hog the link.
+	/// </summary>
+	static constexpr uint32_t REPORT_UPDATE_PERIOD = 333;
+
+	/// <summary>
+	/// If no other service is getting messages, how long to trigger a report back.
+	/// </summary>
+	static constexpr uint32_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 100;
+
+	/// <summary>
+	/// Report (average) send back off period.
+	/// </summary>
+	static constexpr uint8_t REPORT_RESEND_PERIOD = 40;
+
 private:
 	template<const uint8_t SubHeader>
 	struct BroadcastDefinition : public TemplateSubHeaderDefinition<SubHeader, SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
