@@ -75,6 +75,8 @@ public:
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (uint8_t)(timestamp.Seconds >> 8);
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (uint8_t)(timestamp.Seconds >> 16);
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (uint8_t)(timestamp.Seconds >> 24);
+
+
 		/*****************/
 		// Start HMAC with 16 byte Auth Key.
 		CryptoHasher.reset(ExpandedKey.MacKey);
@@ -85,7 +87,7 @@ public:
 		// Content.
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
-		// Implicit addressing. [Receiver|Sender]
+		// Implicit addressing.
 		CryptoHasher.update(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
 		// HMAC finalized with short nonce and copied to MatchMac.
@@ -96,6 +98,7 @@ public:
 		//CryptoHasher->clear();
 		/*****************/
 
+		/*****************/
 		// Reject if plaintext MAC from packet mismatches.
 		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAC_SIZE; i++)
 		{
@@ -105,8 +108,10 @@ public:
 				return false;
 			}
 		}
+		/*****************/
 
-		// Write back counter.
+		/*****************/
+		// Write back the encrypted counter from the packet id.
 		counter = AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
 
 		// Reset entropy.
@@ -116,7 +121,7 @@ public:
 		// Set the cypher counter with the AuthTag.
 		CryptoCypher.setCounter(AuthTag, LoLaCryptoDefinition::CYPHER_TAG_SIZE);
 
-		// Decrypt everything but the id.
+		// Decrypt everything but the packet id.
 		CryptoCypher.decrypt(data, &inPacket[LoLaPacketDefinition::DATA_INDEX], dataSize);
 
 		// Clear cypher from sensitive material. Disabled for performance.
@@ -226,13 +231,13 @@ public:
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (uint8_t)(timestamp.Seconds >> 8);
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (uint8_t)(timestamp.Seconds >> 16);
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (uint8_t)(timestamp.Seconds >> 24);
-		/*****************/
 
 		/*****************/
 		// Write encrypted the counter.
 		//RawOutPacket[LoLaPacketDefinition::ID_INDEX] = (tokenRoll % UINT8_MAX) ^ AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
 		outPacket[LoLaPacketDefinition::ID_INDEX] = AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
 
+		/*****************/	
 		// Reset entropy.
 		CryptoCypher.setKey(ExpandedKey.CypherKey, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
 		CryptoCypher.setIV(ExpandedKey.CypherIv, LoLaCryptoDefinition::CYPHER_IV_SIZE);
@@ -246,7 +251,9 @@ public:
 		// Clear cypher from sensitive material. Disabled for performance.
 		// CryptoCypher->clear();
 
+		/*****************/
 
+		/*****************/
 		// Start HMAC.
 		CryptoHasher.reset(ExpandedKey.MacKey);
 
@@ -270,6 +277,7 @@ public:
 #ifdef CRYPTO_TEST_PIN
 		digitalWrite(CRYPTO_TEST_PIN, LOW);
 #endif
+		/*****************/
 	}
 };
 #endif

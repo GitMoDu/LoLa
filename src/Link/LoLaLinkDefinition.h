@@ -56,7 +56,7 @@ public:
 
 	/// <summary>
 	/// One time linking token.
-	/// Hash mix of SessionId, Public Key pairs and secret key.
+	/// Hash mix of SessionId and Public Key pairs.
 	/// </summary>
 	static constexpr uint8_t LINKING_TOKEN_SIZE = 8;
 
