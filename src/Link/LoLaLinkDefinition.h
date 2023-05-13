@@ -19,8 +19,8 @@ public:
 	/// Link uses up 3 ports, below Ack (0xFF).
 	/// Reserved 0xFC, 0xFD, 0xFE.
 	/// </summary>
-	static const uint8_t LINK_PORT_ALLOCATION = 3;
-	static const uint8_t MAX_DEFINITION_PORT = AckDefinition::PORT - LINK_PORT_ALLOCATION;
+	static constexpr uint8_t LINK_PORT_ALLOCATION = 3;
+	static constexpr uint8_t MAX_DEFINITION_PORT = AckDefinition::PORT - LINK_PORT_ALLOCATION;
 
 	/// <summary>
 	/// Link uses up 3 ports, below Ack (0xFF).
@@ -63,7 +63,7 @@ public:
 	/// <summary>
 	/// A static password that's required to access a device.
 	/// </summary>
-	static const uint8_t ACCESS_CONTROL_PASSWORD_SIZE = 8;
+	static constexpr uint8_t ACCESS_CONTROL_PASSWORD_SIZE = 8;
 
 
 	/// <summary>
@@ -206,7 +206,7 @@ public:
 	struct Unlinked
 	{
 	public:
-		static const uint8_t PORT = AckDefinition::PORT - 1;
+		static constexpr uint8_t PORT = AckDefinition::PORT - 1;
 
 		/// <summary>
 		/// ||Partner Acknowledged.||
@@ -214,7 +214,7 @@ public:
 		/// </summary>
 		struct PartnerDiscovery : public TemplateSubHeaderDefinition<0, 1>
 		{
-			static const uint8_t PAYLOAD_PARTNER_ACKNOWLEDGED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_PARTNER_ACKNOWLEDGED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 
 		/// <summary>
@@ -250,13 +250,13 @@ public:
 		/// </summary>
 		struct LinkingSwitchOver : public TemplateSubHeaderDefinition<LinkingStartRequest::SUB_HEADER + 1, LINKING_TOKEN_SIZE>
 		{
-			static const uint8_t PAYLOAD_SESSION_TOKEN_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 	};
 
 	struct Linking
 	{
-		static const uint8_t PORT = Unlinked::PORT - 1;
+		static constexpr uint8_t PORT = Unlinked::PORT - 1;
 
 		/// <summary>
 		/// ||ChallengeCode||
@@ -264,7 +264,7 @@ public:
 		//using LinkChallenge = TemplateSubHeaderDefinition<0, CHALLENGE_REQUEST_SIZE>;
 		struct HostChallengeRequest : public TemplateSubHeaderDefinition<0, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
-			static const uint8_t PAYLOAD_CHALLENGE_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 
 		/// <summary>
@@ -272,8 +272,8 @@ public:
 		/// </summary>
 		struct RemoteChallengeReplyRequest : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
-			static const uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
-			static const uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE;
+			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE;
 		};
 
 		/// <summary>
@@ -281,7 +281,7 @@ public:
 		/// </summary>
 		struct HostChallengeReply : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE>
 		{
-			static const uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 
 		/// <summary>
@@ -311,16 +311,16 @@ public:
 		/// <summary>
 		/// Linked and Unlinked share the same port. Maybe not?
 		/// </summary>
-		static const uint8_t PORT = Linking::PORT - 1;
+		static constexpr uint8_t PORT = Linking::PORT - 1;
 
 		/// <summary>
 		/// ||Average RSSI|ReceiveCounter|REQUEST_REPLY||
 		/// </summary>
 		struct ReportUpdate : public TemplateSubHeaderDefinition<0, 3>
 		{
-			static const uint8_t PAYLOAD_RSSI_INDEX = SUB_PAYLOAD_INDEX;
-			static const uint8_t PAYLOAD_RECEIVE_COUNTER_INDEX = PAYLOAD_RSSI_INDEX + 1;
-			static const uint8_t PAYLOAD_REQUEST_INDEX = PAYLOAD_RECEIVE_COUNTER_INDEX + 1;
+			static constexpr uint8_t PAYLOAD_RSSI_INDEX = SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_RECEIVE_COUNTER_INDEX = PAYLOAD_RSSI_INDEX + 1;
+			static constexpr uint8_t PAYLOAD_REQUEST_INDEX = PAYLOAD_RECEIVE_COUNTER_INDEX + 1;
 		};
 
 		using ClockTuneMicrosRequest = ClockSyncDefinition<ReportUpdate::SUB_HEADER + 1 >;
@@ -330,6 +330,6 @@ public:
 	/// <summary>
 	/// Largest Link Packets will be the Broadcast packets, that contain the SessionId+PublicKey(compressed).
 	/// </summary>
-	static const uint8_t LARGEST_PAYLOAD = BroadcastDefinition<0>::PAYLOAD_SIZE;
+	static constexpr uint8_t LARGEST_PAYLOAD = BroadcastDefinition<0>::PAYLOAD_SIZE;
 };
 #endif

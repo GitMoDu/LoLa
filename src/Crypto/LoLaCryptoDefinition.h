@@ -20,7 +20,7 @@ public:
 	/// Public key.
 	/// Uncompressed size is 40 bytes.
 	/// </summary>
-	static const uint8_t PUBLIC_KEY_SIZE = 40;
+	static constexpr uint8_t PUBLIC_KEY_SIZE = 40;
 
 	/// <summary>
 	/// Compressed Public key to be exchanged.
@@ -32,7 +32,7 @@ public:
 	/// Private key size.
 	/// 161 bits take 21 bytes.
 	/// </summary>
-	static const uint8_t PRIVATE_KEY_SIZE = COMPRESSED_KEY_SIZE;
+	static constexpr uint8_t PRIVATE_KEY_SIZE = COMPRESSED_KEY_SIZE;
 
 #pragma endregion
 #pragma region Encryption
