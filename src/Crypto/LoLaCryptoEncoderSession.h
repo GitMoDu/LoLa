@@ -18,16 +18,14 @@ private:
 	///  - counter for Cypher.
 	///  - IV and AuthTag for HMAC.
 	/// </summary>
-	uint8_t AuthTag[LoLaCryptoDefinition::MAC_KEY_SIZE];
-	uint8_t MatchMac[LoLaPacketDefinition::MAC_SIZE];
+	uint8_t AuthTag[LoLaCryptoDefinition::MAC_KEY_SIZE]{};
+	uint8_t MatchMac[LoLaPacketDefinition::MAC_SIZE]{};
 
 public:
 	LoLaCryptoEncoderSession(IEntropySource* entropySource)
 		: LoLaCryptoPkeSession(entropySource)
 		, CryptoHasher()
 		, CryptoCypher(LoLaCryptoDefinition::CYPHER_ROUNDS)
-		, AuthTag()
-		, MatchMac()
 	{
 		// Set tag zero values, above the tag size.
 		for (uint_fast8_t i = LoLaCryptoDefinition::CYPHER_TAG_SIZE; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
@@ -38,11 +36,6 @@ public:
 
 	virtual const bool Setup()
 	{
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, LOW);
-		pinMode(CRYPTO_TEST_PIN, OUTPUT);
-#endif
-
 		return LoLaCryptoPkeSession::Setup() &&
 			CryptoCypher.keySize() == LoLaCryptoDefinition::CYPHER_KEY_SIZE &&
 			CryptoCypher.ivSize() == LoLaCryptoDefinition::CYPHER_IV_SIZE &&
@@ -60,14 +53,10 @@ public:
 	/// <returns>True if packet was accepted.</returns>
 	const bool DecodeInPacket(const uint8_t* inPacket, uint8_t* data, Timestamp& timestamp, uint8_t& counter, const uint8_t dataSize)
 	{
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, HIGH);
-#endif
 		const uint16_t tokenRoll = timestamp.GetRollingMicros() / LoLaLinkDefinition::SUB_TOKEN_PERIOD_MICROS;
 
 		// Set packet authentication tag.
-		//AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = (tokenRoll % UINT8_MAX) ^ RawInPacket[LoLaPacketDefinition::ID_INDEX];
-		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[LoLaPacketDefinition::ID_INDEX];
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = ExpandedKey.IdKey[0] ^ ((uint8_t)tokenRoll) ^ inPacket[LoLaPacketDefinition::ID_INDEX];
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = (uint8_t)(tokenRoll);
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = (uint8_t)(tokenRoll >> 8);
@@ -84,8 +73,8 @@ public:
 		// Add upper nonce to hash content, as it is discarded on finalization truncation.
 		CryptoHasher.update(&AuthTag[LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE], LoLaCryptoDefinition::CYPHER_TAG_SIZE - LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE);
 
-		// Content.
-		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
+		// Data.
+		CryptoHasher.update(&inPacket[LoLaPacketDefinition::DATA_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Implicit addressing.
 		CryptoHasher.update(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
@@ -128,10 +117,6 @@ public:
 		// CryptoCypher->clear();
 		/*****************/
 
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, LOW);
-#endif
-
 		return true;
 	}
 
@@ -143,9 +128,6 @@ public:
 	/// <returns>True if packet was accepted.</returns>
 	const bool DecodeInPacket(const uint8_t* inPacket, uint8_t* data, uint8_t& counter, const uint8_t dataSize)
 	{
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, HIGH);
-#endif
 		// Calculate MAC from content.
 		CryptoHasher.reset(EmptyKey);
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
@@ -170,9 +152,6 @@ public:
 			data[i] = inPacket[i + LoLaPacketDefinition::DATA_INDEX];
 		}
 
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, LOW);
-#endif
 		return true;
 	}
 
@@ -185,9 +164,6 @@ public:
 	/// <param name="dataSize"></param>
 	void EncodeOutPacket(const uint8_t* data, uint8_t* outPacket, const uint8_t counter, const uint8_t dataSize)
 	{
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, HIGH);
-#endif
 		// Plaintext copy of data to output.
 		for (uint_fast8_t i = 0; i < dataSize; i++)
 		{
@@ -201,10 +177,6 @@ public:
 		CryptoHasher.reset(EmptyKey);
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 		CryptoHasher.finalize(EmptyKey, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
-
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, HIGH);
-#endif
 	}
 
 	/// <summary>
@@ -217,9 +189,6 @@ public:
 	/// <param name="dataSize"></param>
 	void EncodeOutPacket(const uint8_t* data, uint8_t* outPacket, Timestamp& timestamp, const uint8_t counter, const uint8_t dataSize)
 	{
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, HIGH);
-#endif
 		const uint16_t tokenRoll = timestamp.GetRollingMicros() / LoLaLinkDefinition::SUB_TOKEN_PERIOD_MICROS;
 
 		// Set packet authentication tag.
@@ -232,10 +201,6 @@ public:
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (uint8_t)(timestamp.Seconds >> 16);
 		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (uint8_t)(timestamp.Seconds >> 24);
 
-		/*****************/
-		// Write encrypted the counter.
-		//RawOutPacket[LoLaPacketDefinition::ID_INDEX] = (tokenRoll % UINT8_MAX) ^ AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
-		outPacket[LoLaPacketDefinition::ID_INDEX] = AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
 
 		/*****************/	
 		// Reset entropy.
@@ -251,6 +216,8 @@ public:
 		// Clear cypher from sensitive material. Disabled for performance.
 		// CryptoCypher->clear();
 
+		// Write encrypted counter as packet id.
+		outPacket[LoLaPacketDefinition::ID_INDEX] = ExpandedKey.IdKey[0] ^ ((uint8_t)tokenRoll) ^ AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
 		/*****************/
 
 		/*****************/
@@ -260,8 +227,8 @@ public:
 		// Add upper nonce to hash content, as it is discarded on finalization truncation.
 		CryptoHasher.update(&AuthTag[LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE], LoLaCryptoDefinition::CYPHER_TAG_SIZE - LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE);
 
-		// Content.
-		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX],
+		// Data.
+		CryptoHasher.update(&outPacket[LoLaPacketDefinition::DATA_INDEX],
 			LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Implicit addressing.
@@ -273,10 +240,6 @@ public:
 
 		// Clear hasher from sensitive material. Disabled for performance.
 		//CryptoHasher->clear();
-
-#ifdef CRYPTO_TEST_PIN
-		digitalWrite(CRYPTO_TEST_PIN, LOW);
-#endif
 		/*****************/
 	}
 };
