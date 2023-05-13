@@ -56,35 +56,12 @@ protected:
 private:
 	static constexpr uint16_t CALIBRATION_ROUNDS = (F_CPU / (3333000L));
 
-	static constexpr uint32_t LINK_TIME_OUT_MILLIS = 1500;
-
 	/// <summary>
 	/// Slow value, let the main services hog the CPU.
 	/// </summary>
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
-	/// <summary>
-	/// Slow value, let the main services hog the link.
-	/// </summary>
-	static constexpr uint8_t REPORT_MIN_RESEND_PERIOD = 33;
 
-	/// <summary>
-	/// Slow value, let the main services hog the link.
-	/// </summary>
-	static constexpr uint32_t REPORT_UPDATE_PERIOD = 333;
-
-	/// <summary>
-	/// REPORT_UPDATE_PERIOD with a small tolerance for at least 2 sends.
-	/// </summary>
-	static constexpr uint32_t REPORT_UPDATE_TIMEOUT = REPORT_UPDATE_PERIOD + (REPORT_MIN_RESEND_PERIOD * 2);
-
-	/// <summary>
-	/// Slow value, let the main services hog the link.
-	/// </summary>
-	static constexpr uint32_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 150;
-
-	// 3 counts: +1 for sender sending report, +1 for local offset, +1 for margin.
-	static constexpr uint8_t ROLLING_COUNTER_TOLERANCE = 3;
 
 
 private:
@@ -157,15 +134,15 @@ public:
 					ReportTracker.OnReportReceived(millis(), payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX]);
 
 					// Update send counter, to prevent mismatches.
-					if ((SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX]) > ROLLING_COUNTER_TOLERANCE)
+					if ((SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX]) > LoLaLinkDefinition::ROLLING_COUNTER_TOLERANCE)
 					{
 						// Recover send counter to report provided.
 #if defined(DEBUG_LOLA)
 						this->Owner();
 						Serial.print(F("Report recovered counter delta: "));
-						Serial.println(SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] - ROLLING_COUNTER_TOLERANCE);
+						Serial.println(SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] - LoLaLinkDefinition::ROLLING_COUNTER_TOLERANCE);
 #endif
-						SendCounter = payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] + ROLLING_COUNTER_TOLERANCE + 1;
+						SendCounter = payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] + LoLaLinkDefinition::ROLLING_COUNTER_TOLERANCE + 1;
 					}
 
 					// Check if partner is requesting a report back.
@@ -326,7 +303,7 @@ protected:
 				OnLinking(GetStageElapsedMillis());
 				break;
 			case LinkStageEnum::Linked:
-				if (GetElapsedSinceLastValidReceived() > LINK_TIME_OUT_MILLIS)
+				if (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::LINK_STAGE_TIMEOUT)
 				{
 					UpdateLinkStage(LinkStageEnum::AwaitingLink);
 				}

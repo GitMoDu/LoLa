@@ -121,6 +121,11 @@ public:
 
 public:
 	/// <summary>
+	/// 3 counts: +1 for sender sending report, +1 for local offset, +1 for margin.
+	/// </summary>
+	static constexpr uint8_t ROLLING_COUNTER_TOLERANCE = 3;
+
+	/// <summary>
 	/// Link will tolerate up to ~20% dropped packets without any correction.
 	/// </summary>
 	static constexpr uint8_t ROLLING_COUNTER_ERROR = UINT8_MAX / 5;
@@ -135,9 +140,13 @@ public:
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
 	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 200;
+	/// <summary>
+	/// How long without an input message from partner before disconnect.
+	/// </summary>
+	static constexpr uint32_t LINK_STAGE_TIMEOUT = 1500;
 
 	/// <summary>
-	/// How long to wait before timing out a send, under idealized conditions.
+	/// How long to wait before timing out a send.
 	/// </summary>
 	static constexpr uint32_t TRANSMIT_BASE_TIMEOUT_MICROS = 2000;
 
