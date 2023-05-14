@@ -64,7 +64,7 @@ protected:
 	// The incoming plaintext content is decrypted to here, from the RawInPacket.
 	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
-
+	// Rx/Tx Driver for PHY.
 	ILoLaPacketDriver* Driver;
 
 	// Duplex, Channel Hop and Cryptography depend on a synchronized clock between host and remote.

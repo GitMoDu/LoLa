@@ -202,7 +202,7 @@ protected:
 			LoLaPacketDefinition::GetDataSize(packetSize));*/
 
 			// Call Packet Service Send (mock) to include the call overhead.
-		if (PacketService.MockSendPacket(
+		if (PacketService.MockSend(
 			callback,
 			handle,
 			packetSize,
@@ -242,7 +242,7 @@ private:
 		}
 
 		// Transmit without callback.
-		if (PacketService.SendPacket(
+		if (PacketService.Send(
 			nullptr,
 			SendCounter,
 			AckDefinition::PACKET_SIZE,
@@ -295,7 +295,7 @@ private:
 
 		if (HasAck)
 		{
-			if (PacketService.SendPacketWithAck(callback,
+			if (PacketService.SendWithAck(callback,
 				handle,
 				RawOutPacket,
 				packetSize,
@@ -308,7 +308,7 @@ private:
 				return true;
 			}
 		}
-		else if (PacketService.SendPacket(callback,
+		else if (PacketService.Send(callback,
 			handle,
 			packetSize,
 			GetTxChannel(SendTimestamp.GetRollingMicros())))

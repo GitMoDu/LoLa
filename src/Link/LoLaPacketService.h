@@ -263,7 +263,7 @@ public:
 	/// <param name="handle"></param>
 	/// <param name="size"></param>
 	/// <returns></returns>
-	const bool SendPacket(ILinkPacketSender* callback, const uint8_t handle, const uint8_t size, const uint8_t channel)
+	const bool Send(ILinkPacketSender* callback, const uint8_t handle, const uint8_t size, const uint8_t channel)
 	{
 		if (Driver->DriverTx(RawOutPacket, size, channel))
 		{
@@ -294,7 +294,7 @@ public:
 	/// <param name="size"></param>
 	/// <param name="channel"></param>
 	/// <returns></returns>
-	const bool MockSendPacket(ILinkPacketSender* callback, const uint8_t handle, const uint8_t size, const uint8_t channel)
+	const bool MockSend(ILinkPacketSender* callback, const uint8_t handle, const uint8_t size, const uint8_t channel)
 	{
 		// Mock internal "DriverTx".
 		if ((size > 0 && channel == 0) || (size >= 0))
@@ -318,7 +318,7 @@ public:
 	/// <param name="data"></param>
 	/// <param name="size"></param>
 	/// <returns></returns>
-	const bool SendPacketWithAck(ILinkPacketSender* callback, const uint8_t handle, uint8_t* data, const uint8_t size, const uint8_t channel)
+	const bool SendWithAck(ILinkPacketSender* callback, const uint8_t handle, uint8_t* data, const uint8_t size, const uint8_t channel)
 	{
 		if (Driver->DriverTx(data, size, channel))
 		{
