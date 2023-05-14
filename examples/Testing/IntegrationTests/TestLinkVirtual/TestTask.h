@@ -58,8 +58,6 @@ public:
 	}
 
 	uint8_t Payload = 0;
-	uint8_t Handle = 0;
-
 	virtual bool Callback() final
 	{
 		bool workDone = false;
@@ -99,7 +97,7 @@ public:
 				PrintTag('H');
 				Serial.print(F("Sending... "));
 #endif
-				if (Host->SendPacket(this, Handle, OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
+				if (Host->SendPacket(this, OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
 				{
 					LastPing = timestamp;
 #if defined(PRINT_TEST_PACKETS)
@@ -128,20 +126,15 @@ private:
 	}
 
 public:
-	virtual void OnPacketAckReceived(const uint32_t startTimestamp, const uint8_t handle) final {	}
-	virtual void OnAckTimeout(const uint32_t startTimestamp, const uint8_t handle) final { }
-
-	virtual void OnSendComplete(const SendResultEnum result, const uint8_t handle) final
+	virtual void OnSendComplete(const SendResultEnum result) final
 	{
 #if defined(PRINT_TEST_PACKETS)
-		/*	PrintTag('H');
-			Serial.print(port);
-			Serial.print(F("OnSendComplete:"));*/
+		Serial.print(F("OnSendComplete: "));
 
 		switch (Success)
 		{
 		case SendResultEnum::Success:
-			//Serial.println(F(" Success"));
+			Serial.println(F(" Success"));
 			break;
 		case SendResultEnum::SendTimeout:
 			Serial.println(F(" SendTimeout"));
@@ -149,16 +142,12 @@ public:
 		case SendResultEnum::SendCollision:
 			Serial.println(F(" SendCollision"));
 			break;
-		case SendResultEnum::AckTimeout:
-			Serial.println(F(" AckTimeout"));
-			break;
 		case SendResultEnum::Error:
 			Serial.println(F(" Error"));
 			break;
 		default:
 			break;
 		}
-		//Serial.println((uint8_t)result);
 #endif
 	}
 

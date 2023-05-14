@@ -23,12 +23,10 @@ protected:
 
 	using BaseClass::PacketService;
 
-	using BaseClass::AckSend;
 	using BaseClass::LinkStage;
 
 
 	using BaseClass::OnEvent;
-	using BaseClass::RequestSendAck;
 	using BaseClass::NotifyPacketReceived;
 
 protected:
@@ -63,8 +61,7 @@ protected:
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
 	/// <param name="port"></param>
-	/// <returns></returns>
-	virtual const bool OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter) { return false; }
+	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter) { }
 
 	/// <summary>
 	/// Inform any Link class of packet loss detection.
@@ -89,11 +86,6 @@ public:
 
 public:
 	// IPacketServiceListener
-	virtual void OnAckDropped(const uint32_t startTimestamp) final
-	{
-		OnEvent(PacketEventEnum::ReceiveRejectedAck);
-	}
-
 	virtual void OnLost(const uint32_t startTimestamp) final
 	{
 		OnEvent(PacketEventEnum::ReceiveRejectedDriver);
@@ -195,32 +187,23 @@ public:
 		/// </summary>
 		const uint_fast8_t port = InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
 
-		if (port == AckDefinition::PORT)
+		OnEvent(PacketEventEnum::Received);
+
+		if (LinkStage == LinkStageEnum::Linked)
 		{
-			OnEvent(PacketEventEnum::ReceivedAck);
-			PacketService.NotifyAckReceived(receiveTimestamp, AckSend.Handle);
-			AckSend.Clear();
+			LastValidReceived = millis();
+
+			NotifyPacketReceived(receiveTimestamp, port, LoLaPacketDefinition::GetPayloadSize(packetSize));
 		}
 		else
 		{
-			OnEvent(PacketEventEnum::Received);
-
-			if (LinkStage == LinkStageEnum::Linked)
+			if (LinkStage != LinkStageEnum::Disabled)
 			{
-				LastValidReceived = millis();
-
-				NotifyPacketReceived(receiveTimestamp, port, LoLaPacketDefinition::GetPayloadSize(packetSize));
-			}
-			else
-			{
-				if (LinkStage != LinkStageEnum::Disabled &&
-					OnUnlinkedPacketReceived(receiveTimestamp,
-						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
-						LoLaPacketDefinition::GetPayloadSize(packetSize),
-						port,
-						ReceivingCounter)) {
-					RequestSendAck(port, ReceivingCounter);
-				}
+				OnUnlinkedPacketReceived(receiveTimestamp,
+					&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+					LoLaPacketDefinition::GetPayloadSize(packetSize),
+					port,
+					ReceivingCounter);
 			}
 		}
 	}

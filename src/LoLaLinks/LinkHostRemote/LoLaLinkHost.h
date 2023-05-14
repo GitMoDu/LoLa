@@ -51,6 +51,7 @@ protected:
 	using BaseClass::OutPacket;
 	using BaseClass::SyncClock;
 	using BaseClass::Session;
+	using BaseClass::Driver;
 
 	using BaseClass::PacketService;
 
@@ -59,7 +60,7 @@ protected:
 	using BaseClass::GetSendDuration;
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
-	using BaseClass::SendPacketWithAck;
+	//using BaseClass::SendPacketWithAck;
 
 
 private:
@@ -76,9 +77,6 @@ private:
 	TimestampError EstimateErrorReply{};
 
 	uint8_t SubState = 0;
-
-	uint8_t LooseHandle = 0;
-	uint8_t SwitchOverHandle = 0;
 
 	bool SearchReplyPending = false;
 	bool ClockReplyPending = false;
@@ -123,38 +121,17 @@ public:
 	{}
 public:
 #pragma region Packet Handling
-	virtual void OnPacketAckReceived(const uint32_t startTimestamp, const uint8_t handle) final
-	{
-		switch (LinkStage)
-		{
-		case LinkStageEnum::AwaitingLink:
-			break;
-		case LinkStageEnum::Linking:
-			if (SubState == (uint8_t)HostLinkingEnum::SwitchingToLinked
-				&& SwitchOverHandle == handle)
-			{
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Got Link SwitchOver ack."));
-#endif
-				UpdateLinkStage(LinkStageEnum::Linked);
-
-				return;
-			}
-			break;
-		default:
-			break;
-		}
-
-#if defined(DEBUG_LOLA)
-		this->Owner();
-		Serial.println(F("Rejected SwitchOver ack."));
-#endif
-	}
-
 protected:
-	virtual const bool OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter)
+	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter)
 	{
+		//#if defined(DEBUG_LOLA)
+		//		this->Owner();
+		//		Serial.print(F("Rx| LinkStage("));
+		//		Serial.print(LinkStage);
+		//		Serial.print(F(") SubState("));
+		//		Serial.print(SubState);
+		//		Serial.println(')');
+		//#endif
 		switch (port)
 		{
 		case Unlinked::PORT:
@@ -222,8 +199,7 @@ protected:
 				case Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER:
 					if (payloadSize == Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE
 						&& SubState == (uint8_t)HostAwaitingLinkEnum::SwitchingToLinking
-						&& Session.LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX])
-						)
+						&& Session.LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]))
 					{
 						StateTransition.OnReceived();
 #if defined(DEBUG_LOLA)
@@ -273,7 +249,6 @@ protected:
 							break;
 						case HostLinkingEnum::AuthenticationReply:
 							SubState = (uint8_t)HostLinkingEnum::ClockSyncing;
-							ClockReplyPending = false;
 							PreLinkPacketSchedule = millis();
 							Task::enable();
 #if defined(DEBUG_LOLA)
@@ -282,15 +257,14 @@ protected:
 #endif
 							break;
 						case HostLinkingEnum::SwitchingToLinked:
-							//SubState = (uint8_t)HostLinkingEnum::ClockSyncing;
-							//ClockReplyPending = false;
+							SubState = (uint8_t)HostLinkingEnum::ClockSyncing;
 #if defined(DEBUG_LOLA)
 							this->Owner();
 							Serial.println(F("Re-Started Clock sync"));
 #endif
 							break;
 						default:
-							return false;
+							break;
 						}
 
 						InEstimate.Seconds = payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX];
@@ -311,31 +285,47 @@ protected:
 							Serial.print(InTimestamp.SubSeconds);
 							Serial.println(F("us. "));
 #endif
-							return false;
+							ClockReplyPending = false;
+							break;
 						}
 
-						if (InEstimateWithinTolerance(startTimestamp))
-						{
+						CalculateInEstimateErrorReply(startTimestamp);
+						ClockReplyPending = true;
+						Task::enable();
+					}
+					break;
+				case Linking::StartLinkRequest::SUB_HEADER:
+					if (payloadSize == Linking::StartLinkRequest::PAYLOAD_SIZE
+						&& SubState == HostLinkingEnum::ClockSyncing)
+					{
+
 #if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.print(F("Clock sync error: "));
-							Serial.print(EstimateErrorReply.ErrorMicros());
-							Serial.println(F("us Accepted!"));
+						this->Owner();
+						Serial.println(F("Got Link Start Request."));
 #endif
-							SubState = (uint8_t)HostLinkingEnum::SwitchingToLinked;
-							ClockReplyPending = false;
-						}
-						else
-						{
+						SubState = (uint8_t)HostLinkingEnum::SwitchingToLinked;
+						StateTransition.OnStart(micros());
+						Task::enableIfNot();
+					}
 #if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.print(F("Link start clock error: "));
-							Serial.print(EstimateErrorReply.ErrorMicros());
-							Serial.println(F("us"));
+					else
+					{
+						this->Owner();
+						Serial.println(F("Link Start rejected."));
+					}
 #endif
-							ClockReplyPending = true;
-						}
-						PreLinkPacketSchedule = millis();
+					break;
+				case Linking::LinkTimedSwitchOverAck::SUB_HEADER:
+					if (payloadSize == Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE
+						&& SubState == (uint8_t)HostLinkingEnum::SwitchingToLinked)
+					{
+						StateTransition.OnReceived();
+#if defined(DEBUG_LOLA)
+						this->Owner();
+						Serial.print(F("StateTransition Server got Ack: "));
+						Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
+						Serial.println(F("us remaining."));
+#endif
 						Task::enable();
 					}
 					break;
@@ -347,7 +337,6 @@ protected:
 		default:
 			break;
 		}
-		return false;
 	}
 #pragma endregion
 #pragma region Linking
@@ -401,7 +390,7 @@ protected:
 			Task::enable();
 			break;
 		case HostAwaitingLinkEnum::BroadcastingSession:
-			if (PacketService.CanSendPacket() && (millis() > PreLinkPacketSchedule))
+			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
 			{
 				// Session broadcast packet.
 				OutPacket.SetPort(Unlinked::PORT);
@@ -409,7 +398,7 @@ protected:
 				{
 					OutPacket.Payload[Unlinked::SearchReply::SUB_HEADER_INDEX] = Unlinked::SearchReply::SUB_HEADER;
 
-					if (SendPacket(this, LooseHandle, OutPacket.Data, Unlinked::SearchReply::PAYLOAD_SIZE))
+					if (SendPacket(this, OutPacket.Data, Unlinked::SearchReply::PAYLOAD_SIZE))
 					{
 						SearchReplyPending = false;
 						PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
@@ -425,7 +414,7 @@ protected:
 					Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::SessionBroadcast::PAYLOAD_SESSION_ID_INDEX]);
 					Session.CompressPublicKeyTo(&OutPacket.Payload[Unlinked::SessionBroadcast::PAYLOAD_PUBLIC_KEY_INDEX]);
 
-					if (SendPacket(this, LooseHandle, OutPacket.Data, Unlinked::SessionBroadcast::PAYLOAD_SIZE))
+					if (SendPacket(this, OutPacket.Data, Unlinked::SessionBroadcast::PAYLOAD_SIZE))
 					{
 						PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
 #if defined(DEBUG_LOLA)
@@ -491,21 +480,18 @@ protected:
 					Task::enable();
 				}
 			}
-			else if ((millis() > PreLinkPacketSchedule)
-				&& StateTransition.IsSendRequested(micros())
-				&& PacketService.CanSendPacket())
+			else if (StateTransition.IsSendRequested(micros()) && Driver->DriverCanTransmit())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOver::SUB_HEADER;
 				Session.CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
 				StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
-				if (SendPacket(this, LooseHandle, OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
+				if (SendPacket(this, OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
-					//PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE);
 #if defined(DEBUG_LOLA)
 					this->Owner();
-					Serial.print(F("Sent Linking SwitchOver:"));
+					Serial.print(F("Sent Linking SwitchOver: "));
 					Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
 					Serial.println(F("us remaining."));
 #endif
@@ -538,13 +524,13 @@ protected:
 		switch (SubState)
 		{
 		case HostLinkingEnum::AuthenticationRequest:
-			if (PacketService.CanSendPacket() && (millis() > PreLinkPacketSchedule))
+			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::HostChallengeRequest::SUB_HEADER_INDEX] = Linking::HostChallengeRequest::SUB_HEADER;
 				Session.CopyLocalChallengeTo(&OutPacket.Payload[Linking::HostChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
-				if (SendPacket(this, LooseHandle, OutPacket.Data, Linking::HostChallengeRequest::PAYLOAD_SIZE))
+				if (SendPacket(this, OutPacket.Data, Linking::HostChallengeRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeRequest::PAYLOAD_SIZE);
 #if defined(DEBUG_LOLA)
@@ -555,13 +541,13 @@ protected:
 			}
 			break;
 		case HostLinkingEnum::AuthenticationReply:
-			if (PacketService.CanSendPacket() && (millis() > PreLinkPacketSchedule))
+			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::HostChallengeReply::SUB_HEADER_INDEX] = Linking::HostChallengeReply::SUB_HEADER;
 				Session.SignPartnerChallengeTo(&OutPacket.Payload[Linking::HostChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
-				if (SendPacket(this, LooseHandle, OutPacket.Data, Linking::HostChallengeReply::PAYLOAD_SIZE))
+				if (SendPacket(this, OutPacket.Data, Linking::HostChallengeReply::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeReply::PAYLOAD_SIZE);
 #if defined(DEBUG_LOLA)
@@ -572,51 +558,87 @@ protected:
 			}
 			break;
 		case HostLinkingEnum::ClockSyncing:
-			if (ClockReplyPending && PacketService.CanSendPacket() && (millis() > PreLinkPacketSchedule))
+			if (ClockReplyPending && Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::SUB_HEADER_INDEX] = Linking::ClockSyncDeniedReply::SUB_HEADER;
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SECONDS_INDEX + 0] = EstimateErrorReply.Seconds;
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SECONDS_INDEX + 1] = EstimateErrorReply.Seconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SECONDS_INDEX + 2] = EstimateErrorReply.Seconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SECONDS_INDEX + 3] = EstimateErrorReply.Seconds >> 24;
+				OutPacket.Payload[Linking::ClockSyncReply::SUB_HEADER_INDEX] = Linking::ClockSyncReply::SUB_HEADER;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 0] = EstimateErrorReply.Seconds;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] = EstimateErrorReply.Seconds >> 8;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] = EstimateErrorReply.Seconds >> 16;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 3] = EstimateErrorReply.Seconds >> 24;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 0] = EstimateErrorReply.SubSeconds;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 1] = EstimateErrorReply.SubSeconds >> 8;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 2] = EstimateErrorReply.SubSeconds >> 16;
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 3] = EstimateErrorReply.SubSeconds >> 24;
+				if (InEstimateWithinTolerance())
+				{
+					OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] = UINT8_MAX;
+				}
+				else
+				{
+					OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] = 0;
+				}
 
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SUB_SECONDS_INDEX + 0] = EstimateErrorReply.SubSeconds;
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SUB_SECONDS_INDEX + 1] = EstimateErrorReply.SubSeconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SUB_SECONDS_INDEX + 2] = EstimateErrorReply.SubSeconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncDeniedReply::PAYLOAD_SUB_SECONDS_INDEX + 3] = EstimateErrorReply.SubSeconds >> 24;
-
-				if (SendPacket(this, LooseHandle, OutPacket.Data, Linking::ClockSyncDeniedReply::PAYLOAD_SIZE))
+				if (SendPacket(this, OutPacket.Data, Linking::ClockSyncReply::PAYLOAD_SIZE))
 				{
 					// Only send a time reply once.
 					ClockReplyPending = false;
 
 #if defined(DEBUG_LOLA)
 					this->Owner();
-					Serial.println(F("Sent Clock Error "));
+					Serial.print(F("Sent Clock Error:"));
+					if (InEstimateWithinTolerance())
+					{
+						Serial.println(F("Accepted."));
+					}
+					else
+					{
+						Serial.println(F("Rejected."));
+					}
 #endif
 				}
 			}
-			Task::enable();
+			Task::enableIfNot();
 			break;
 		case HostLinkingEnum::SwitchingToLinked:
-			if (PacketService.CanSendPacket() && (millis() > PreLinkPacketSchedule))
+			if (StateTransition.HasTimedOut(micros()))
 			{
-				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::LinkSwitchOver::SUB_HEADER_INDEX] = Linking::LinkSwitchOver::SUB_HEADER;
-
-				if (SendPacketWithAck(this, SwitchOverHandle, OutPacket.Data, Linking::LinkSwitchOver::PAYLOAD_SIZE))
+				if (StateTransition.HasAcknowledge())
 				{
-					PreLinkPacketSchedule = millis() + GetSendDuration(Linking::LinkSwitchOver::PAYLOAD_SIZE);
 #if defined(DEBUG_LOLA)
 					this->Owner();
-					Serial.println(F("Sent Link SwitchOver."));
+					Serial.println(F("StateTransition success."));
+#endif
+					UpdateLinkStage(LinkStageEnum::Linked);
+				}
+				else
+				{
+					// No Ack before time out.
+					SubState = (uint8_t)HostLinkingEnum::ClockSyncing;
+					ClockReplyPending = false;
+					PreLinkPacketSchedule = millis();
+					Task::enable();
+				}
+			}
+			else if (StateTransition.IsSendRequested(micros()) && Driver->DriverCanTransmit())
+			{
+				OutPacket.SetPort(Linking::PORT);
+				OutPacket.Payload[Linking::LinkTimedSwitchOver::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOver::SUB_HEADER;
+				StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+				if (SendPacket(this, OutPacket.Data, Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
+				{
+					StateTransition.OnSent(micros());
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.print(F("Sent Link SwitchOver: "));
+					Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
+					Serial.println(F("us remaining."));
 #endif
 				}
 			}
 			else
 			{
-				Task::enable();
+				Task::enableIfNot();
 			}
 			break;
 		default:
@@ -627,12 +649,21 @@ protected:
 
 #pragma endregion
 private:
-	const bool InEstimateWithinTolerance(const uint32_t receiveTimestamp)
+	void CalculateInEstimateErrorReply(const uint32_t receiveTimestamp)
 	{
 		const int32_t elapsedSinceReceived = micros() - receiveTimestamp;
 
 		SyncClock.CalculateError(EstimateErrorReply, InEstimate, -elapsedSinceReceived);
 
+#if defined(DEBUG_LOLA)
+		this->Owner();
+		Serial.print(F("\tError: "));
+		Serial.println(EstimateErrorReply.ErrorMicros());
+#endif
+	}
+
+	const bool InEstimateWithinTolerance()
+	{
 		const int32_t errorMicros = EstimateErrorReply.ErrorMicros();
 
 		if (errorMicros >= 0)

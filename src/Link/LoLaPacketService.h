@@ -31,10 +31,7 @@ private:
 	{
 		Done,
 		Sending,
-		SendingWithAck,
 		SendingSuccess,
-		SendingSuccessAck,
-		WaitingForAck,
 		SendingError
 	};
 
@@ -55,8 +52,6 @@ private:
 	volatile uint8_t PendingReceiveRssi = 0;
 
 	volatile StateEnum State = StateEnum::Done;
-
-	uint8_t SentHandle = 0;
 
 public:
 	ILoLaPacketDriver* Driver = nullptr;
@@ -96,43 +91,18 @@ public:
 			Task::enable();
 			if (SendListener != nullptr)
 			{
-				SendListener->OnSendComplete(SendResultEnum::Success, SentHandle);
+				SendListener->OnSendComplete(SendResultEnum::Success);
 			}
 			break;
 		case StateEnum::Sending:
-		case StateEnum::SendingWithAck:
 			if (micros() - SendOutTimestamp > LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)
 			{
 				// Send timeout.
 				Task::enable();
 				if (SendListener != nullptr)
 				{
-					SendListener->OnSendComplete(SendResultEnum::SendTimeout, SentHandle);
+					SendListener->OnSendComplete(SendResultEnum::SendTimeout);
 				}
-				State = StateEnum::Done;
-			}
-			else
-			{
-				Task::delay(SEND_CHECK_PERIOD_MILLIS);
-			}
-			break;
-		case StateEnum::SendingSuccessAck:
-			State = StateEnum::WaitingForAck;
-			Task::delay(SEND_CHECK_PERIOD_MILLIS);
-			if (SendListener != nullptr)
-			{
-				SendListener->OnSendComplete(SendResultEnum::Success, SentHandle);
-			}
-			break;
-		case StateEnum::WaitingForAck:
-			if (micros() - SendOutTimestamp > LoLaLinkDefinition::REPLY_BASE_TIMEOUT_MICROS)
-			{
-				if (SendListener != nullptr)
-				{
-
-					SendListener->OnAckTimeout(ReceiveTimestamp, SentHandle);
-				}
-				Task::enable();
 				State = StateEnum::Done;
 			}
 			else
@@ -143,7 +113,7 @@ public:
 		case StateEnum::SendingError:
 			if (SendListener != nullptr)
 			{
-				SendListener->OnSendComplete(SendResultEnum::Error, SentHandle);
+				SendListener->OnSendComplete(SendResultEnum::Error);
 			}
 			Task::enable();
 			State = StateEnum::Done;
@@ -193,59 +163,13 @@ public:
 		}
 	}
 
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="startTimestamp"></param>
-	/// <param name="handle"></param>
-	void NotifyAckReceived(const uint32_t startTimestamp, const uint8_t handle)
-	{
-		bool dropped = true;
-
-		switch (State)
-		{
-		case StateEnum::SendingWithAck:
-#if defined(DEBUG_LOLA)
-			Serial.println(F("Packet Send service got an ack before onTransmitted."));
-#endif
-			// Recover from an early Ack.
-			State = StateEnum::WaitingForAck;
-			if (SendListener != nullptr)
-			{
-				SendListener->OnSendComplete(SendResultEnum::SendCollision, SentHandle);
-			}
-			dropped = false;
-			NotifyAckReceived(startTimestamp, handle);
-			break;
-		case StateEnum::WaitingForAck:
-			if (SentHandle == handle)
-			{
-				if (SendListener != nullptr)
-				{
-					SendListener->OnPacketAckReceived(startTimestamp, SentHandle);
-				}
-				dropped = false;
-			}
-			Task::enable();
-			State = StateEnum::Done;
-			break;
-		default:
-			break;
-		}
-
-		if (dropped)
-		{
-			ServiceListener->OnAckDropped(startTimestamp);
-		}
-	}
-
 	void ClearSendRequest()
 	{
 		if (State != StateEnum::Done)
 		{
 			if (SendListener != nullptr)
 			{
-				SendListener->OnSendComplete(SendResultEnum::SendTimeout, SentHandle);
+				SendListener->OnSendComplete(SendResultEnum::SendTimeout);
 			}
 #if defined(DEBUG_LOLA)
 			Serial.println(F("\tPrevious Send request cancelled."));
@@ -260,16 +184,14 @@ public:
 	/// So the MCU packet prepare duration does not influence the Tx channel precision.
 	/// </summary>
 	/// <param name="callback"></param>
-	/// <param name="handle"></param>
 	/// <param name="size"></param>
 	/// <returns></returns>
-	const bool Send(ILinkPacketSender* callback, const uint8_t handle, const uint8_t size, const uint8_t channel)
+	const bool Send(ILinkPacketSender* callback, const uint8_t size, const uint8_t channel)
 	{
 		if (Driver->DriverTx(RawOutPacket, size, channel))
 		{
 			SendOutTimestamp = micros();
 			SendListener = callback;
-			SentHandle = handle;
 			Task::enable();
 			State = StateEnum::Sending;
 
@@ -290,56 +212,22 @@ public:
 	/// for calibration/testing purposes.
 	/// </summary>
 	/// <param name="callback"></param>
-	/// <param name="handle"></param>
 	/// <param name="size"></param>
 	/// <param name="channel"></param>
 	/// <returns></returns>
-	const bool MockSend(ILinkPacketSender* callback, const uint8_t handle, const uint8_t size, const uint8_t channel)
+	const bool MockSend(ILinkPacketSender* callback, const uint8_t size, const uint8_t channel)
 	{
 		// Mock internal "DriverTx".
 		if ((size > 0 && channel == 0) || (size >= 0))
 		{
 			// Mock driver call.
-			if (((Driver->GetTransmitDurationMicros(size) > 0) || handle == 0) || handle > 0)
+			if (((Driver->GetTransmitDurationMicros(size) > 0)))
 			{
 				return true;
 			}
 		}
 		return false;
 
-	}
-
-	/// <summary>
-	/// Using the late call for getting Tx channel, only transmission duration error will affect the precision.
-	/// So the MCU packet prepare duration does not influence the Tx channel precision.
-	/// </summary>
-	/// <param name="callback"></param>
-	/// <param name="handle"></param>
-	/// <param name="data"></param>
-	/// <param name="size"></param>
-	/// <returns></returns>
-	const bool SendWithAck(ILinkPacketSender* callback, const uint8_t handle, uint8_t* data, const uint8_t size, const uint8_t channel)
-	{
-		if (Driver->DriverTx(data, size, channel))
-		{
-			SendOutTimestamp = micros();
-			State = StateEnum::SendingWithAck;
-			SendListener = callback;
-			SentHandle = handle;
-			Task::enable();
-
-			return true;
-		}
-		else
-		{
-			// Turns out we can't send right now, try again later.
-			if (callback != nullptr)
-			{
-				callback->OnSendComplete(SendResultEnum::SendCollision, handle);
-			}
-
-			return false;
-		}
 	}
 
 	/// <summary>
@@ -384,10 +272,6 @@ public:
 		{
 		case StateEnum::Sending:
 			State = StateEnum::SendingSuccess;
-			Task::enable();
-			break;
-		case StateEnum::SendingWithAck:
-			State = StateEnum::SendingSuccessAck;
 			Task::enable();
 			break;
 		default:

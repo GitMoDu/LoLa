@@ -6,9 +6,7 @@
 enum PacketEventEnum
 {
 	Received,
-	ReceivedAck,
 	Sent,
-	SentWithAck,
 	SentAck,
 	SendAckFailed,
 	SendCollisionFailed,
@@ -16,7 +14,6 @@ enum PacketEventEnum
 	ReceiveRejectedDropped,
 	ReceiveRejectedInvalid,
 	ReceiveRejectedOutOfSlot,
-	ReceiveRejectedAck,
 	ReceiveRejectedMac,
 	ReceiveRejectedCounter,
 	ReceiveLossDetected

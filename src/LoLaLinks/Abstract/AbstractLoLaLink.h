@@ -48,8 +48,6 @@ protected:
 	using BaseClass::ResetLastValidReceived;
 	using BaseClass::SetSendCalibration;
 
-	using BaseClass::CheckPendingAck;
-
 	using BaseClass::PostLinkState;
 	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::GetElapsedSinceLastValidReceived;
@@ -274,55 +272,52 @@ protected:
 
 	virtual void OnService() final
 	{
-		if (!CheckPendingAck())
+		switch (LinkStage)
 		{
-			switch (LinkStage)
+		case LinkStageEnum::Disabled:
+			SyncClock.Stop();
+			Task::disable();
+			break;
+		case LinkStageEnum::Booting:
+			Session.RandomSource.RandomReseed();
+			SyncClock.Start();
+			SyncClock.ShiftSeconds(Session.RandomSource.GetRandomLong());
+			if (Driver->DriverStart())
 			{
-			case LinkStageEnum::Disabled:
-				SyncClock.Stop();
-				Task::disable();
-				break;
-			case LinkStageEnum::Booting:
-				Session.RandomSource.RandomReseed();
-				SyncClock.Start();
-				SyncClock.ShiftSeconds(Session.RandomSource.GetRandomLong());
-				if (Driver->DriverStart())
-				{
-					UpdateLinkStage(LinkStageEnum::AwaitingLink);
-				}
-				else
-				{
-					UpdateLinkStage(LinkStageEnum::Disabled);
-				}
-				break;
-			case LinkStageEnum::AwaitingLink:
-				OnAwaitingLink(GetStageElapsedMillis());
-				break;
-			case LinkStageEnum::Linking:
-				OnLinking(GetStageElapsedMillis());
-				break;
-			case LinkStageEnum::Linked:
-				if (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::LINK_STAGE_TIMEOUT)
-				{
-					UpdateLinkStage(LinkStageEnum::AwaitingLink);
-				}
-				else if (CheckForReportUpdate())
-				{
-					// Sending report packet.
-					// Report takes priority over clock, as it refers to counters and RSSI.
-				}
-				else if (CheckForClockSyncUpdate())
-				{
-					// Sending clock sync packet.
-				}
-				else
-				{
-					Task::enableDelayed(LINK_CHECK_PERIOD);
-				}
-				break;
-			default:
-				break;
+				UpdateLinkStage(LinkStageEnum::AwaitingLink);
 			}
+			else
+			{
+				UpdateLinkStage(LinkStageEnum::Disabled);
+			}
+			break;
+		case LinkStageEnum::AwaitingLink:
+			OnAwaitingLink(GetStageElapsedMillis());
+			break;
+		case LinkStageEnum::Linking:
+			OnLinking(GetStageElapsedMillis());
+			break;
+		case LinkStageEnum::Linked:
+			if (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::LINK_STAGE_TIMEOUT)
+			{
+				UpdateLinkStage(LinkStageEnum::AwaitingLink);
+			}
+			else if (CheckForReportUpdate())
+			{
+				// Sending report packet.
+				// Report takes priority over clock, as it refers to counters and RSSI.
+			}
+			else if (CheckForClockSyncUpdate())
+			{
+				// Sending clock sync packet.
+			}
+			else
+			{
+				Task::enableDelayed(LINK_CHECK_PERIOD);
+			}
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -344,14 +339,6 @@ protected:
 		switch (packetEvent)
 		{
 		case PacketEventEnum::Received:
-			break;
-		case PacketEventEnum::ReceivedAck:
-			this->Owner();
-			Serial.println(F("@Link Event: Received: Ack"));
-			break;
-		case PacketEventEnum::ReceiveRejectedAck:
-			this->Owner();
-			Serial.println(F("@Link Event: ReceiveRejected: Ack"));
 			break;
 		case PacketEventEnum::ReceiveRejectedCounter:
 			this->Owner();
@@ -392,8 +379,6 @@ protected:
 		case PacketEventEnum::Sent:
 			break;
 		case PacketEventEnum::SentAck:
-			break;
-		case PacketEventEnum::SentWithAck:
 			break;
 		default:
 			break;
@@ -468,10 +453,9 @@ private:
 		}
 
 		start = micros();
-		uint8_t handle = 0;
 		for (uint_least16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			if (!BaseClass::MockSendPacket(this, handle, OutPacket.Data, 0))
+			if (!BaseClass::MockSendPacket(this, OutPacket.Data, 0))
 			{
 				// Calibration failed.
 #if defined(DEBUG_LOLA)
@@ -479,15 +463,13 @@ private:
 #endif
 				return false;
 			}
-			handle++;
 		}
 		shortDuration = ((micros() - start) / CALIBRATION_ROUNDS);
 
 		start = micros();
 		for (uint_least16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			uint8_t handle = 0;
-			if (!BaseClass::MockSendPacket(this, handle, OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
+			if (!BaseClass::MockSendPacket(this, OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
 			{
 				// Calibration failed.
 #if defined(DEBUG_LOLA)

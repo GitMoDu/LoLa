@@ -38,36 +38,16 @@ public:
 		Success,
 		SendTimeout,
 		SendCollision,
-		AckTimeout,
 		Error
 	};
 
 public:
 	/// <summary>
 	/// Optional callback.
-	/// Only exists for Link during pre-link.
-	/// Will not be called for Service senders, as there are no Acks during link-time.
-	/// </summary>
-	/// <param name="startTimestamp"></param>
-	/// <param name="handle"></param>
-	virtual void OnPacketAckReceived(const uint32_t startTimestamp, const uint8_t handle) { }
-
-	/// <summary>
-	/// Optional callback.
-	/// Only exists for Link during pre-link.
-	/// Will not be called for Service senders, as there are no Acks during link-time.
-	/// </summary>
-	/// <param name="startTimestamp"></param>
-	/// <param name="handle"></param>
-	virtual void OnAckTimeout(const uint32_t startTimestamp, const uint8_t handle) { }
-
-	/// <summary>
-	/// Optional callback.
 	/// Let's the Sender know the transmission/transmission-ack is complete or failed.
 	/// </summary>
 	/// <param name="result"></param>
-	/// <param name="handle"></param>
-	virtual void OnSendComplete(const SendResultEnum result, const uint8_t handle) {}
+	virtual void OnSendComplete(const SendResultEnum result) {}
 };
 
 class ILoLaLink
@@ -109,10 +89,9 @@ public:
 	/// 
 	/// </summary>
 	/// <param name="callback">Optional, can let the caller know when the transmission finished or failed.</param>
-	/// <param name="handle">Volatile handle for packet identification on callback.</param>
 	/// <param name="payloadSize"></param>
 	/// <returns>True on successfull transmission.</returns>
-	virtual const bool SendPacket(ILinkPacketSender* callback, uint8_t& handle, const uint8_t* data, const uint8_t payloadSize) { return false; }
+	virtual const bool SendPacket(ILinkPacketSender* callback, const uint8_t* data, const uint8_t payloadSize) { return false; }
 
 	/// <summary>
 	/// 

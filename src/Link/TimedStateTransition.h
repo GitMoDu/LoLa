@@ -105,23 +105,22 @@ public:
 		remaining += (uint32_t)source[2] << 16;
 		remaining += (uint32_t)source[3] << 24;
 
-		if (remaining <= TransitionTimeout)
-		{
-			State = ClientTransitionStateEnum::TransitionAcknowledging;
 
+		State = ClientTransitionStateEnum::TransitionAcknowledging;
+		if (remaining < (TransitionTimeout * 2))
+		{
 			TransitionEnd = receiveTimestamp + remaining;
-			LastSent = receiveTimestamp - ResendPeriod;
 		}
+		else
+		{
+			TransitionEnd = TransitionTimeout;
+		}
+		LastSent = receiveTimestamp - ResendPeriod;
 	}
 
-	void OnStart(const uint32_t receiveTimestamp, const uint8_t* source)
+	void OnStart()
 	{
-		uint32_t remaining = source[0];
-		remaining += (uint16_t)source[1] << 8;
-		remaining += (uint32_t)source[2] << 16;
-		remaining += (uint32_t)source[3] << 24;
-
-		OnReceived(receiveTimestamp, source);
+		State = ClientTransitionStateEnum::WaitingForTransitionStart;
 	}
 
 	void OnSent(const uint32_t timestamp)

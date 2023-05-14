@@ -33,15 +33,6 @@ public:
 	virtual void OnDropped(const uint32_t startTimestamp, const uint8_t packetSize) {  }
 
 	/// <summary>
-	/// The Packet Service caught an invalid Ack.
-	/// Can be due to out-of-order id or Packet Service state.
-	/// </summary>
-	/// <param name="startTimestamp"></param>
-	/// <param name="size"></param>
-	/// <returns></returns>
-	virtual void OnAckDropped(const uint32_t startTimestamp) {  }
-
-	/// <summary>
 	/// The Physical Driver failed to receive an integral packet.
 	/// </summary>
 	/// <param name="startTimestamp"></param>

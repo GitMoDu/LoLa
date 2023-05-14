@@ -31,8 +31,6 @@ private:
 	uint32_t LastRequestSent = 0;
 
 	uint8_t RequestPayloadSize = 0;
-	uint8_t SendHandle = 0;
-
 	bool RequestPending = 0;
 
 protected:
@@ -40,21 +38,18 @@ protected:
 	/// Last second opportunity to update payload.
 	/// To be overriden by user class.
 	/// </summary>
-	/// <param name="handle">Packet request id handle.</param>
-	virtual void OnPreSend(const uint8_t handle) { }
+	virtual void OnPreSend() { }
 
 	/// <summary>
 	/// The requested packet to send has failed.
 	/// To be overriden by user class.
 	/// </summary>
-	/// <param name="handle">Packet request id handle.</param>
-	virtual void OnSendRequestFail(const uint8_t handle) { }
+	virtual void OnSendRequestFail() { }
 
 	/// <summary>
 	/// The user class can ride this task's callback, when no sending is being performed.
 	/// Useful for in-line services (expected to block flow until send is complete).
 	/// </summary>
-	/// <param name="handle">Packet request id handle.</param>
 	virtual void OnService() { }
 
 
@@ -90,9 +85,9 @@ public:
 			if (LoLaLink->CanSendPacket(RequestPayloadSize))
 			{
 				// Send is ready, last moment callback before transmission.
-				OnPreSend(SendHandle);
+				OnPreSend();
 
-				if (LoLaLink->SendPacket(this, SendHandle, OutPacket.Data, RequestPayloadSize))
+				if (LoLaLink->SendPacket(this, OutPacket.Data, RequestPayloadSize))
 				{
 					RequestPending = false;
 					LastRequestSent = millis();
@@ -107,7 +102,7 @@ public:
 			{
 				// Send timed out.
 				RequestPending = false;
-				OnSendRequestFail(OutPacket.GetPort());
+				OnSendRequestFail();
 			}
 			else
 			{
