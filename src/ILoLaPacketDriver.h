@@ -15,7 +15,8 @@ public:
 	/// <param name="receiveTimestamp">Accurate timestamp (micros()) of incoming packet start.</param>
 	/// <param name="packetSize">Packet size.</param>
 	/// <param name="rssi">Normalized RX RSSI [0:255].</param>
-	virtual void OnReceived(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) {}
+	/// <returns>True if packet was successfully consumed. False, try again later.</returns>
+	virtual const bool OnReceived(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) {}
 
 	/// <summary>
 	/// Driver was receiveing a packet but couldn't read it or finish it.

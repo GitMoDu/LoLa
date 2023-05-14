@@ -149,7 +149,15 @@ public:
 				// Rx duration has elapsed since the packet incoming start triggered.
 				if (PacketListener != nullptr)
 				{
-					PacketListener->OnReceived(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2);
+					if (!PacketListener->OnReceived(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
+					{
+#if defined(DEBUG_LOLA)
+						Serial.print(millis());
+						Serial.print('\t');
+						PrintName();
+						Serial.println(F("Rx Collision. Packet Service rejected."));
+#endif
+					}
 				}
 
 				Incoming.Clear();

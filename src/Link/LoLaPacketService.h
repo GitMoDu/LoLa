@@ -233,12 +233,14 @@ public:
 	/// ILoLaPacketDriverListener overrides.
 	/// </summary>
 public:
-	virtual void OnReceived(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
+	virtual const bool OnReceived(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
 		if (PendingReceiveSize > 0)
 		{
 			// We still have a pending packet, drop this one.
 			ServiceListener->OnDropped(receiveTimestamp, packetSize);
+
+			return false;
 		}
 		else
 		{
@@ -257,6 +259,8 @@ public:
 			}
 
 			Task::enable();
+
+			return true;
 		}
 	}
 
