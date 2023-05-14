@@ -5,6 +5,7 @@
 
 #include "AbstractPublicKeyLoLaLink.h"
 #include "..\..\Link\ReportTracker.h"
+#include "..\..\Link\TimedStateTransition.h"
 
 
 /// <summary>

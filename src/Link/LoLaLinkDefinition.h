@@ -137,6 +137,11 @@ public:
 	static constexpr int32_t LINKING_CLOCK_TOLERANCE = 60;
 
 	/// <summary>
+	/// </summary>
+	static constexpr int32_t LINKING_TRANSITION_PERIOD_MICROS = 30000;
+	static constexpr int32_t LINKING_TRANSITION_RESEND_PERIOD_MICROS = 10000;
+
+	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
 	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 200;
@@ -179,6 +184,12 @@ private:
 		/// </summary>
 		static constexpr uint8_t PAYLOAD_SESSION_ID_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		static constexpr uint8_t PAYLOAD_PUBLIC_KEY_INDEX = PAYLOAD_SESSION_ID_INDEX + SESSION_ID_SIZE;
+	};
+
+	template<const uint8_t SubHeader, const uint8_t ExtraSize>
+	struct BroadcastSwitchOverDefinition : public TemplateSubHeaderDefinition<SubHeader, LINKING_TOKEN_SIZE + ExtraSize>
+	{
+		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 	};
 
 	/// <summary>
@@ -246,12 +257,19 @@ public:
 		using LinkingStartRequest = BroadcastDefinition<SessionBroadcast::SUB_HEADER + 1>;
 
 		/// <summary>
+		/// ||SessionToken|Remaining||
+		/// </summary>
+		struct LinkingTimedSwitchOver : public BroadcastSwitchOverDefinition<LinkingStartRequest::SUB_HEADER + 1, TIME_SIZE>
+		{
+			using BaseClass = BroadcastSwitchOverDefinition<LinkingStartRequest::SUB_HEADER + 1, TIME_SIZE>;
+
+			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_SESSION_TOKEN_INDEX + LINKING_TOKEN_SIZE;
+		};
+
+		/// <summary>
 		/// ||SessionToken||
 		/// </summary>
-		struct LinkingSwitchOver : public TemplateSubHeaderDefinition<LinkingStartRequest::SUB_HEADER + 1, LINKING_TOKEN_SIZE>
-		{
-			static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
-		};
+		using LinkingTimedSwitchOverAck = BroadcastSwitchOverDefinition<LinkingTimedSwitchOver::SUB_HEADER + 1, 0>;
 	};
 
 	struct Linking
@@ -289,19 +307,30 @@ public:
 		/// Seconds in full UTC seconds.
 		/// Sub-seconds in microseconds [-999999; +999999]
 		/// </summary>
-		using LinkStartRequest = ClockTimestampDefinition<HostChallengeReply::SUB_HEADER + 1>;
+		using ClockSyncRequest = ClockTimestampDefinition<HostChallengeReply::SUB_HEADER + 1>;
+
+		/// <summary>
+		/// ||Seconds|SubSeconds|||
+		/// Seconds in full UTC seconds.
+		/// Sub-seconds in microseconds [-999999; +999999]
+		/// </summary>
+		using ClockSyncDeniedReply = ClockTimestampDefinition<ClockSyncRequest::SUB_HEADER + 1>;
 
 		/// <summary>
 		/// ||SecondsError|SubSecondsError||
+		/// Sub-seconds in microseconds [-999999; +999999]
 		/// </summary>
-		using LinkStartDeniedReply = ClockTimestampDefinition<LinkStartRequest::SUB_HEADER + 1>;
+		struct ClockSyncAcceptedReply : public TemplateSubHeaderDefinition<ClockSyncDeniedReply::SUB_HEADER + 1, 0>
+		{
+			static constexpr uint8_t PAYLOAD_SUB_SECONDS_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+		};
 
 		/// <summary>
 		/// ||RollingMicros||
 		/// </summary>
-		struct LinkSwitchOver : public TemplateSubHeaderDefinition<LinkStartDeniedReply::SUB_HEADER + 1, TIME_SIZE>
+		struct LinkSwitchOver : public TemplateSubHeaderDefinition<ClockSyncAcceptedReply::SUB_HEADER + 1, 0>
 		{
-			static constexpr uint8_t PAYLOAD_SUB_SECONDS_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			//static constexpr uint8_t PAYLOAD_SUB_SECONDS_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 	};
 
