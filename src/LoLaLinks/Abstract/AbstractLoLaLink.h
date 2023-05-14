@@ -412,7 +412,7 @@ protected:
 		const uint32_t timestamp = millis();
 		if (ReportTracking.IsRequested(timestamp))
 		{
-			if (ReportTracking.IsSendRequested(timestamp))
+			if (CanRequestSend() && ReportTracking.IsSendRequested(timestamp))
 			{
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.Payload[Linked::ReportUpdate::SUB_HEADER_INDEX] = Linked::ReportUpdate::SUB_HEADER;
