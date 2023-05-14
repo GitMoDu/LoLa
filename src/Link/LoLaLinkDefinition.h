@@ -16,17 +16,11 @@ class LoLaLinkDefinition
 {
 public:
 	// <summary>
-	/// Link uses up 3 ports, below Ack (0xFF).
-	/// Reserved 0xFC, 0xFD, 0xFE.
+	/// When linked, top port is reserved.
+	/// When unlinked, top 2 ports are reserved.
 	/// </summary>
-	static constexpr uint8_t LINK_PORT_ALLOCATION = 3;
-	static constexpr uint8_t MAX_DEFINITION_PORT = AckDefinition::PORT - LINK_PORT_ALLOCATION;
-
-	/// <summary>
-	/// Link uses up 3 ports, below Ack (0xFF).
-	/// Reserved 0xFC, 0xFD, 0xFE.
-	/// </summary>
-	static constexpr uint8_t LINK_PORT_COUNT = LINK_PORT_ALLOCATION;
+	static constexpr uint8_t LINK_PORT_ALLOCATION = 1;
+	static constexpr uint8_t MAX_DEFINITION_PORT = UINT8_MAX - LINK_PORT_ALLOCATION;
 
 	/// <summary>
 	/// 32 bit session id.
@@ -216,12 +210,10 @@ public:
 	/// <summary>
 	/// Abstract struct just to expose generic size and payload indexes of time messages.
 	/// </summary>
-	//using TimePacket = ClockSyncDefinition<0>;
-
 	struct Unlinked
 	{
 	public:
-		static constexpr uint8_t PORT = AckDefinition::PORT - 1;
+		static constexpr uint8_t PORT = UINT8_MAX;
 
 		/// <summary>
 		/// ||Partner Acknowledged.||

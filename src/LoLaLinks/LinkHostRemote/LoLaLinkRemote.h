@@ -115,14 +115,6 @@ public:
 protected:
 	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter)
 	{
-		//#if defined(DEBUG_LOLA)
-		//		this->Owner();
-		//		Serial.print(F("Rx| LinkStage("));
-		//		Serial.print(LinkStage);
-		//		Serial.print(F(") SubState("));
-		//		Serial.print(SubState);
-		//		Serial.println(')');
-		//#endif
 		switch (port)
 		{
 		case Unlinked::PORT:

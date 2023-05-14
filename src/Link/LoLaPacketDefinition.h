@@ -89,16 +89,6 @@ struct TemplateDefinition
 	static constexpr uint8_t DATA_SIZE = LoLaPacketDefinition::GetDataSize(PACKET_SIZE);
 };
 
-/// <summary>
-/// Port: Reserved [0xFF] for Ack.
-/// Payload: ||Port|Id||
-/// </summary>
-struct AckDefinition : public TemplateDefinition<UINT8_MAX, 2>
-{
-	static const uint8_t PORT_OFFSET = 0;
-	static const uint8_t ID_OFFSET = 1;
-};
-
 struct SubHeaderDefinition
 {
 	static const uint8_t SUB_HEADER_INDEX = 0;

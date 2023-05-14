@@ -124,7 +124,7 @@ public:
 public:
 	virtual const bool RegisterPacketReceiver(ILinkPacketReceiver* listener, const uint8_t port) final
 	{
-		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
+		if (port < LoLaLinkDefinition::MAX_DEFINITION_PORT)
 		{
 			return RegisterPacketReceiverInternal(listener, port);
 		}
@@ -265,11 +265,6 @@ protected:
 	void ResetStageStartTime()
 	{
 		StageStartTime = millis();
-	}
-
-	const uint32_t GetReplyDuration(const uint8_t requestPayloadSize, const uint8_t replyPayloadSize)
-	{
-		return LoLaLinkDefinition::REPLY_BASE_TIMEOUT_MICROS + GetSendDuration(requestPayloadSize) + GetSendDuration(replyPayloadSize);
 	}
 
 	void SetHopperFixedChannel(const uint8_t channel)

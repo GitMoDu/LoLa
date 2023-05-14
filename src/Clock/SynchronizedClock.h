@@ -180,25 +180,25 @@ public:
 		}
 
 #if defined(DEBUG_LOLA)
-		Serial.print(F("\tComparing estimation:"));
-		Serial.print(estimation.Seconds);
-		Serial.print('s');
-		Serial.print(estimation.SubSeconds);
-		Serial.println(F("us"));
-		Serial.print(F("\tto "));
-		Serial.print(timestamp.Seconds);
-		Serial.print('s');
-		Serial.print(timestamp.SubSeconds);
-		Serial.println(F("us"));
+		//Serial.print(F("\tComparing estimation:"));
+		//Serial.print(estimation.Seconds);
+		//Serial.print('s');
+		//Serial.print(estimation.SubSeconds);
+		//Serial.println(F("us"));
+		//Serial.print(F("\tto "));
+		//Serial.print(timestamp.Seconds);
+		//Serial.print('s');
+		//Serial.print(timestamp.SubSeconds);
+		//Serial.println(F("us"));
 
-		Serial.print(F("\tResult: "));
-		Serial.print(error.Seconds);
-		Serial.print('s');
-		if (error.SubSeconds >= 0) {
-			Serial.print('+');
-		}
-		Serial.print(error.SubSeconds);
-		Serial.println(F("us"));
+		//Serial.print(F("\tResult: "));
+		//Serial.print(error.Seconds);
+		//Serial.print('s');
+		//if (error.SubSeconds >= 0) {
+		//	Serial.print('+');
+		//}
+		//Serial.print(error.SubSeconds);
+		//Serial.println(F("us"));
 #endif
 	}
 };

@@ -18,7 +18,6 @@
 /// Properties:
 ///		Content abstract.
 ///		Buffers input packets, so packet driver is free to receive more while the service processes it.
-///		ACKs must come in order, otherwise the SendWithAck process is aborted.
 /// </summary>
 /// <param name="MaxPacketSize">The maximum raw packet size.</param>
 template<const uint8_t MaxPacketSize>

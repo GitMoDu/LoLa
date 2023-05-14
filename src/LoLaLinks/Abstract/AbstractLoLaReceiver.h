@@ -93,7 +93,7 @@ public:
 
 	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
-		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
+		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE || packetSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
 			OnEvent(PacketEventEnum::ReceiveRejectedInvalid);
 			return;
@@ -185,7 +185,7 @@ public:
 		/// - Source authenticity.
 		/// - Replay/Echo denied.
 		/// </summary>
-		const uint_fast8_t port = InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
+		const uint8_t port = InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
 
 		OnEvent(PacketEventEnum::Received);
 
