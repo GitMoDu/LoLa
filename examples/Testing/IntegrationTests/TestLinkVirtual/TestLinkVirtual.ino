@@ -8,6 +8,10 @@
 
 #define DEBUG
 
+#if defined(DEBUG)
+#define DEBUG_LOLA
+#endif
+
 #define SERIAL_BAUD_RATE 115200
 
 #if !defined(LED_BUILTIN) && defined(ARDUINO_ARCH_ESP32)
@@ -47,7 +51,7 @@
 #define HOST_DROP_LINK_TEST 3
 
 //#define PRINT_CHANNEL_HOP
-//#define PRINT_TEST_PACKETS
+#define PRINT_TEST_PACKETS
 //#define PRINT_LINK_HEARBEAT 1
 
 #define LINK_USE_CHANNEL_HOP
