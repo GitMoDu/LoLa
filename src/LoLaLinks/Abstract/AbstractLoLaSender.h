@@ -151,7 +151,7 @@ protected:
 			SendCounter,
 			LoLaPacketDefinition::GetDataSize(packetSize));*/
 
-			// Call Packet Service Send (mock) to include the call overhead.
+		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(
 			callback,
 			packetSize,

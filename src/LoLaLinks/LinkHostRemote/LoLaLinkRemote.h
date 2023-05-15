@@ -581,7 +581,7 @@ protected:
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
-				Serial.println(F("WaitingForAuthenticationRequestd timed out!"));
+				Serial.println(F("WaitingForAuthenticationRequest timed out!"));
 #endif
 				UpdateLinkStage(LinkStageEnum::AwaitingLink);
 			}
