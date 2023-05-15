@@ -19,8 +19,8 @@
 /// <typeparam name="LogChannelHop">Enables current channel logging, when DEBUG_LOLA is defined.</typeparam>
 template<typename Config,
 	const char OnwerName,
-	const uint8_t PinTestTx = 0,
-	const bool LogChannelHop = false
+	const bool LogChannelHop = false,
+	const uint8_t PinTestTx = 0
 >
 class VirtualHalfDuplexDriver
 	: private Task
@@ -28,9 +28,32 @@ class VirtualHalfDuplexDriver
 	, public virtual ILoLaPacketDriver
 {
 private:
-	static const uint32_t MaxPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
+	template<const uint8_t MaxPacketSize>
+	struct IoPacketStruct
+	{
+		uint8_t Buffer[MaxPacketSize]{};
+		uint32_t Started = 0;
+		uint8_t Size = 0;
+		const bool HasPending()
+		{
+			return Size > 0;
+		}
 
-private:
+		void Clear()
+		{
+			Size = 0;
+		}
+	};
+
+	template<const uint8_t MaxPacketSize>
+	struct InPacketStruct : public IoPacketStruct<MaxPacketSize> {};
+
+	template<const uint8_t MaxPacketSize>
+	struct DelayPacketStruct : IoPacketStruct<MaxPacketSize>
+	{
+		uint8_t Channel = 0;
+	};
+
 	struct TxTrackingStruct
 	{
 		uint32_t Started = 0;
@@ -82,8 +105,8 @@ private:
 
 
 private:
-	IVirtualPacketDriver::DelayPacketStruct<MaxPacketSize> OutPartner{};
-	IVirtualPacketDriver::InPacketStruct<MaxPacketSize> Incoming{};
+	DelayPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> OutPartner{};
+	InPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> Incoming{};
 
 	TxTrackingStruct TxTracking{};
 
@@ -110,6 +133,8 @@ public:
 	{
 
 	}
+
+
 
 public:
 	virtual bool Callback() final
@@ -213,7 +238,7 @@ public:
 	{
 		const uint32_t timestamp = micros();
 
-		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE || packetSize > MaxPacketSize)
+		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE || packetSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
 #if defined(DEBUG_LOLA)
 			PrintName();
@@ -382,8 +407,63 @@ private:
 	void LogChannel()
 	{
 #ifdef DEBUG_LOLA
-		IVirtualPacketDriver::LogChannel(CurrentChannel, Config::ChannelCount, 1);
+		LogChannel(CurrentChannel, Config::ChannelCount, 1);
 #endif
 	}
-	};
+
+#if defined(DEBUG_LOLA)
+	void LogChannel(const uint8_t channel, const uint8_t channelCount, const uint8_t channelDivisor)
+	{
+		const uint_fast8_t channelScaled = channel % channelCount;
+
+		for (uint_fast8_t i = 0; i < channelScaled; i++)
+		{
+			Serial.print('_');
+		}
+
+
+		Serial.print('/');
+		Serial.print('\\');
+
+		for (uint_fast8_t i = (channelScaled + 1); i < channelCount; i++)
+		{
+			Serial.print('_');
+		}
+
+		Serial.println();
+	}
+#endif
+
+#if defined(PRINT_PACKETS)
+	void PrintPacket(uint8_t* data, const uint8_t size)
+	{
+		Serial.println();
+		Serial.print('|');
+		Serial.print('|');
+
+		uint32_t mac = data[0];
+		mac += data[1] << 8;
+		mac += (uint32_t)data[2] << 16;
+		mac += (uint32_t)data[3] << 24;
+		Serial.print(mac);
+		Serial.print('|');
+
+		Serial.print(data[4]);
+		Serial.print('|');
+
+		for (uint8_t i = 5; i < size; i++)
+		{
+			Serial.print('0');
+			Serial.print('x');
+			if (data[i] < 0x10)
+			{
+				Serial.print(0);
+			}
+			Serial.print(data[i], HEX);
+			Serial.print('|');
+		}
+		Serial.println('|');
+	}
+#endif
+};
 #endif

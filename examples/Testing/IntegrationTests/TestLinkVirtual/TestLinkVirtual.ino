@@ -15,6 +15,8 @@
 #endif // !LED_BUILTIN
 
 
+// Test pins for logic analyser.
+#if defined(ARDUINO_ARCH_STM32F1)
 #define TEST_PIN_0 15
 #define TEST_PIN_1 16
 #define TEST_PIN_2 17
@@ -28,14 +30,13 @@
 
 #define HOP_TEST_PIN TEST_PIN_3
 #define HOP_TEST_PIN_2 TEST_PIN_4
-
+//
 #define TX_HOST_TEST_PIN TEST_PIN_1
 #define TX_REMOTE_TEST_PIN TEST_PIN_2
+#endif
 
 
 
-
-#define DEBUG_LOLA
 
 // Medium Simulation error chances, out 255, for every call.
 //#define PRINT_PACKETS
@@ -142,7 +143,7 @@ NoHopNoChannel RemoteChannelHop;
 
 
 // Link host and its required instances.
-VirtualHalfDuplexDriver<TestRadioConfig, 'H', TX_HOST_TEST_PIN, false> HostDriver(SchedulerBase);
+VirtualHalfDuplexDriver<TestRadioConfig, 'H', false, TX_HOST_TEST_PIN> HostDriver(SchedulerBase);
 HalfDuplex<DuplexPeriod, false> HostDuplex;
 LoLaLinkHost<> Host(SchedulerBase,
 	&HostDriver,
@@ -161,7 +162,7 @@ static const bool LogHop = true;
 #else
 static const bool LogHop = false;
 #endif
-VirtualHalfDuplexDriver<TestRadioConfig, 'R', TX_REMOTE_TEST_PIN, LogHop> RemoteDriver(SchedulerBase);
+VirtualHalfDuplexDriver<TestRadioConfig, 'R', LogHop, TX_REMOTE_TEST_PIN> RemoteDriver(SchedulerBase);
 HalfDuplex<DuplexPeriod, true> RemoteDuplex;
 LoLaLinkRemote<> Remote(SchedulerBase,
 	&RemoteDriver,
