@@ -145,11 +145,6 @@ protected:
 
 		// Encrypt packet with token based on time.
 		EncodeOutPacket(data, SendTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
-		/*EncodeOutPacket(data,
-			SendTimestamp.Seconds,
-			SendTimestamp.GetRollingMicros() / LoLaLinkDefinition::SUB_TOKEN_PERIOD_MICROS,
-			SendCounter,
-			LoLaPacketDefinition::GetDataSize(packetSize));*/
 
 		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(

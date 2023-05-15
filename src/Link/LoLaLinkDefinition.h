@@ -216,15 +216,6 @@ public:
 		static constexpr uint8_t PORT = UINT8_MAX;
 
 		/// <summary>
-		/// ||Partner Acknowledged.||
-		/// Has received a previous discovery from the sender.
-		/// </summary>
-		struct PartnerDiscovery : public TemplateSubHeaderDefinition<0, 1>
-		{
-			static constexpr uint8_t PAYLOAD_PARTNER_ACKNOWLEDGED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
-		};
-
-		/// <summary>
 		/// Broadcast to search for available partners.
 		/// TODO: Add support for search for specific Host Id or Device category.
 		/// </summary>
