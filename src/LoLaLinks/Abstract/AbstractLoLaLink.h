@@ -345,8 +345,8 @@ protected:
 			Serial.println(F("@Link Event: ReceiveRejected: Counter"));
 			break;
 		case PacketEventEnum::ReceiveRejectedDriver:
-			//this->Owner();
-			//Serial.println(F("@Link Event: ReceiveRejected: Driver"));
+			this->Owner();
+			Serial.println(F("@Link Event: ReceiveRejected: Driver"));
 			break;
 		case PacketEventEnum::ReceiveRejectedDropped:
 			this->Owner();
@@ -361,8 +361,8 @@ protected:
 			Serial.println(F("@Link Event: ReceiveRejected: OutOfSlot"));
 			break;
 		case PacketEventEnum::ReceiveRejectedMac:
-			//this->Owner();
-			//Serial.println(F("@Link Event: ReceiveRejectedMAC"));
+			this->Owner();
+			Serial.println(F("@Link Event: ReceiveRejectedMAC"));
 			break;
 		case PacketEventEnum::SendAckFailed:
 			this->Owner();
