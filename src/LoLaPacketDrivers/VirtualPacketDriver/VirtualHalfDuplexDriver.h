@@ -20,8 +20,7 @@
 template<typename Config,
 	const char OnwerName,
 	const bool LogChannelHop = false,
-	const uint8_t PinTestTx = 0
->
+	const uint8_t PinTestTx = 0>
 class VirtualHalfDuplexDriver
 	: private Task
 	, public virtual IVirtualPacketDriver
@@ -34,67 +33,22 @@ private:
 		uint8_t Buffer[MaxPacketSize]{};
 		uint32_t Started = 0;
 		uint8_t Size = 0;
-		const bool HasPending()
-		{
-			return Size > 0;
-		}
-
-		void Clear()
-		{
-			Size = 0;
-		}
-	};
-
-	template<const uint8_t MaxPacketSize>
-	struct InPacketStruct : public IoPacketStruct<MaxPacketSize> {};
-
-	template<const uint8_t MaxPacketSize>
-	struct DelayPacketStruct : IoPacketStruct<MaxPacketSize>
-	{
-		uint8_t Channel = 0;
-	};
-
-	struct TxTrackingStruct
-	{
-		uint32_t Started = 0;
-		uint8_t Size = 0;
-		uint8_t Channel = 0;
 
 		const bool HasPending()
 		{
 			return Size > 0;
 		}
 
-		void SetSize(const uint8_t size)
+		virtual void Clear()
 		{
-			if (PinTestTx > 0 && size > 0)
-			{
-				digitalWrite(PinTestTx, HIGH);
-			}
-			if (PinTestTx > 0)
-			{
-				digitalWrite(PinTestTx, LOW);
-			}
-			Size = size;
-		}
-
-		void Clear()
-		{
-			if (PinTestTx > 0)
-			{
-				digitalWrite(PinTestTx, LOW);
-			}
 			Size = 0;
 		}
+	};
 
-		TxTrackingStruct()
-		{
-			if (PinTestTx > 0)
-			{
-				digitalWrite(PinTestTx, LOW);
-				pinMode(PinTestTx, OUTPUT);
-			}
-		}
+	template<const uint8_t MaxPacketSize>
+	struct OutPacketStruct : public IoPacketStruct<MaxPacketSize>
+	{
+		uint8_t Channel = 0;
 	};
 
 private:
@@ -105,10 +59,8 @@ private:
 
 
 private:
-	DelayPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> OutPartner{};
-	InPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> Incoming{};
-
-	TxTrackingStruct TxTracking{};
+	IoPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> Incoming{};
+	OutPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> OutGoing{};
 
 	uint8_t CurrentChannel = 0;
 
@@ -131,65 +83,44 @@ public:
 		, IVirtualPacketDriver()
 		, ILoLaPacketDriver()
 	{
-
 	}
-
-
 
 public:
 	virtual bool Callback() final
 	{
-		if (OutPartner.HasPending() && ((micros() - OutPartner.Started) > GetTransmitDurationMicros(OutPartner.Size)))
+		// Simulate transmit delay, from request to on-air start.
+		if (OutGoing.HasPending() && (micros() - OutGoing.Started > GetTransmitDurationMicros(OutGoing.Size)))
 		{
-			ProcessOutPartner();
-		}
-
-		if (TxTracking.HasPending() && ((micros() - TxTracking.Started) > GetTransmitDurationMicros(TxTracking.Size)))
-		{
-			TxTracking.Clear();
-
-			if ((CurrentChannel != TxTracking.Channel % Config::ChannelCount))
-			{
-				CurrentChannel = TxTracking.Channel % Config::ChannelCount;
-				if (LogChannelHop)
-				{
-					LogChannel();
-				}
-			}
-
-
-
-			// Tx duration has elapsed, release send mode.
-			// This is where some radios automatically set back to RX.
+			// Tx duration has elapsed.
+			UpdateChannel(OutGoing.Channel);
+			Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
+			OutGoing.Clear();
 			if (PacketListener != nullptr)
 			{
 				PacketListener->OnSent(true);
 			}
 		}
 
-		if (Incoming.HasPending())
+		// Simulate delay from start event to received packet buffer.
+		if (Incoming.HasPending() && (micros() - Incoming.Started > GetRxDuration(Incoming.Size)))
 		{
-			if (micros() - Incoming.Started > GetRxDuration(Incoming.Size))
+			// Rx duration has elapsed since the packet incoming start triggered.
+			if (PacketListener != nullptr)
 			{
-				// Rx duration has elapsed since the packet incoming start triggered.
-				if (PacketListener != nullptr)
+				if (!PacketListener->OnReceived(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
 				{
-					if (!PacketListener->OnReceived(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
-					{
 #if defined(DEBUG_LOLA)
-						Serial.print(millis());
-						Serial.print('\t');
-						PrintName();
-						Serial.println(F("Rx Collision. Packet Service rejected."));
+					Serial.print(millis());
+					Serial.print('\t');
+					PrintName();
+					Serial.println(F("Rx Collision. Packet Service rejected."));
 #endif
-					}
 				}
-
-				Incoming.Clear();
 			}
+			Incoming.Clear();
 		}
 
-		if (TxTracking.HasPending() || OutPartner.HasPending() || Incoming.HasPending())
+		if (OutGoing.HasPending() || Incoming.HasPending())
 		{
 			Task::enable();
 
@@ -214,8 +145,7 @@ public:
 	virtual const bool DriverStart() final
 	{
 		Incoming.Clear();
-		OutPartner.Clear();
-		TxTracking.Clear();
+		OutGoing.Clear();
 
 		CurrentChannel = 0;
 		DriverEnabled = true;
@@ -238,18 +168,27 @@ public:
 	{
 		const uint32_t timestamp = micros();
 
+		if (!DriverEnabled)
+		{
+#if defined(DEBUG_LOLA)
+			PrintName();
+			Serial.println(F("Tx failed. Driver disabled."));
+#endif
+			return false;
+		}
+
 		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE || packetSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
 #if defined(DEBUG_LOLA)
 			PrintName();
-			Serial.print(F("Transmit failed. Invalid packet Size ("));
+			Serial.print(F("Tx failed. Invalid packet Size ("));
 			Serial.print(packetSize);
 			Serial.println(F(") bytes."));
 #endif
 			return false;
 		}
 
-		if (TxTracking.HasPending())
+		if (OutGoing.HasPending())
 		{
 #if defined(DEBUG_LOLA)
 			PrintName();
@@ -258,27 +197,22 @@ public:
 			return false;
 		}
 
+		OutGoing.Size = packetSize;
+		OutGoing.Channel = channel;
+		for (uint_fast8_t i = 0; i < packetSize; i++)
+		{
+			OutGoing.Buffer[i] = data[i];
+		}
+		OutGoing.Started = micros();
 
-		TxTracking.SetSize(packetSize);
-		TxTracking.Channel = channel % Config::ChannelCount;
-		TxTracking.Started = timestamp;
 		Task::enable();
-
-		Partner->ReceivePacket(data, packetSize, channel % Config::ChannelCount);
 
 		return true;
 	}
 
 	virtual void DriverRx(const uint8_t channel) final
 	{
-		if ((CurrentChannel != channel % Config::ChannelCount))
-		{
-			CurrentChannel = channel % Config::ChannelCount;
-			if (LogChannelHop)
-			{
-				LogChannel();
-			}
-		}
+		UpdateChannel(channel);
 	}
 
 	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) final
@@ -288,7 +222,7 @@ public:
 
 	virtual const bool DriverCanTransmit() final
 	{
-		return DriverEnabled && !Incoming.HasPending() && !TxTracking.HasPending();
+		return DriverEnabled && !OutGoing.HasPending() && !Incoming.HasPending();
 	}
 
 public:
@@ -297,12 +231,11 @@ public:
 		Partner = partner;
 	}
 
-
 	virtual void ReceivePacket(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		const uint32_t timestamp = micros();
 
-		if (OutPartner.HasPending())
+		if (Incoming.HasPending())
 		{
 			if (PacketListener != nullptr)
 			{
@@ -312,28 +245,12 @@ public:
 			Serial.print(millis());
 			Serial.print('\t');
 			PrintName();
-			Serial.println(F("Rx Collision. Was already receiving."));
+			Serial.println(F("Virtual Rx Collision."));
 #endif
 			return;
 		}
 
-		// Copy packet to temporary local copy of partner output.
-		// This will be distributed as Incoming after TransmitDuration,
-		// simulating the transmit delay without async calls.
-		OutPartner.Started = timestamp;
-		OutPartner.Size = packetSize;
-		OutPartner.Channel = channel;
-		for (uint_fast8_t i = 0; i < packetSize; i++)
-		{
-			OutPartner.Buffer[i] = data[i];
-		}
-
-		Task::enable();
-	}
-
-	void ProcessOutPartner()
-	{
-		if (CurrentChannel != OutPartner.Channel)
+		if (CurrentChannel != channel)
 		{
 #if defined(DEBUG_LOLA)
 			Serial.print(millis());
@@ -342,50 +259,21 @@ public:
 			Serial.print(F("Channel Miss: Rx:"));
 			Serial.print(CurrentChannel);
 			Serial.print(F(" Tx:"));
-			Serial.println(OutPartner.Channel);
+			Serial.println(channel);
 #endif
 			return;
 		}
 
-		if (TxTracking.HasPending())
+		// Copy packet to temporary local copy of partner output.
+		// This will be distributed as Incoming after TransmitDuration,
+		// simulating the transmit delay without async calls.
+		Incoming.Started = timestamp;
+		Incoming.Size = packetSize;
+		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
-			if (PacketListener != nullptr)
-			{
-				PacketListener->OnReceiveLost(OutPartner.Started + GetTransmitDurationMicros(OutPartner.Size));
-			}
-#if defined(DEBUG_LOLA)
-			Serial.print(millis());
-			Serial.print('\t');
-			PrintName();
-			Serial.println(F("Rx Collision. Was Sending."));
-#endif
-			return;
+			Incoming.Buffer[i] = data[i];
 		}
 
-		if (Incoming.HasPending())
-		{
-			if (PacketListener != nullptr)
-			{
-				PacketListener->OnReceiveLost(OutPartner.Started + GetTransmitDurationMicros(OutPartner.Size));
-			}
-#if defined(DEBUG_LOLA)
-			Serial.print(millis());
-			Serial.print('\t');
-			PrintName();
-			Serial.println(F("Rx Collision. Was processing."));
-#endif
-			return;
-		}
-
-		Incoming.Size = OutPartner.Size;
-		Incoming.Started = OutPartner.Started + GetTransmitDurationMicros(OutPartner.Size);
-		for (uint_fast8_t i = 0; i < OutPartner.Size; i++)
-		{
-			Incoming.Buffer[i] = OutPartner.Buffer[i];
-		}
-
-		OutPartner.Clear();
-		Task::enable();
 #if defined(CORRUPT_CHANCE)
 		if (random(UINT8_MAX) < CORRUPT_CHANCE)
 		{
@@ -396,6 +284,7 @@ public:
 #endif
 		}
 #endif
+		Task::enable();
 	}
 
 	const uint32_t GetRxDuration(const uint8_t size)
@@ -404,16 +293,26 @@ public:
 	}
 
 private:
-	void LogChannel()
+	void UpdateChannel(const uint8_t channel)
 	{
-#ifdef DEBUG_LOLA
-		LogChannel(CurrentChannel, Config::ChannelCount, 1);
-#endif
+		if (CurrentChannel != (channel % Config::ChannelCount))
+		{
+			CurrentChannel = channel % Config::ChannelCount;
+			if (LogChannelHop)
+			{
+				LogChannel();
+			}
+		}
 	}
 
-#if defined(DEBUG_LOLA)
+	void LogChannel()
+	{
+		LogChannel(CurrentChannel, Config::ChannelCount, 1);
+	}
+
 	void LogChannel(const uint8_t channel, const uint8_t channelCount, const uint8_t channelDivisor)
 	{
+#if defined(DEBUG_LOLA)
 		const uint_fast8_t channelScaled = channel % channelCount;
 
 		for (uint_fast8_t i = 0; i < channelScaled; i++)
@@ -431,8 +330,8 @@ private:
 		}
 
 		Serial.println();
-	}
 #endif
+	}
 
 #if defined(PRINT_PACKETS)
 	void PrintPacket(uint8_t* data, const uint8_t size)
