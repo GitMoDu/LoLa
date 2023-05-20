@@ -4,41 +4,27 @@
 #define _LOLA_RANDOM_h
 
 #include "LoLaCryptoDefinition.h"
+#include "PCG.h"
 
 
 /// <summary>
 /// LoLa Random number generator.
 /// Re-uses crypto hasher from LoLaEncoder, hence the template and constructor parameter.
 /// </summary>
-/// <typeparam name="HasherType">Hasher must output at least 32 bytes.</typeparam>
-template<typename HasherType>
 class LoLaRandom
 {
 private:
-	union ArrayToUint32
-	{
-		uint8_t Array[sizeof(uint32_t)];
-		uint32_t UInt = 0;
-	};
+	PCG::pcg32_random_t Rng;
 
-	static constexpr uint8_t ENTROPY_POOL_SIZE = 8;
-	static constexpr uint8_t INTEGER_SIZE = 4;
-
-	HasherType& Hasher;
 
 	IEntropySource* EntropySource; // Entropy source for CSPRNG.
 
-private:
-	uint8_t EntropyPool[ENTROPY_POOL_SIZE]{};
-
-	ArrayToUint32 EntropySalt{};
-	ArrayToUint32 RandomHelper{};
-
 public:
-	LoLaRandom(HasherType& hasher, IEntropySource* entropySource)
-		: Hasher(hasher)
-		, EntropySource(entropySource)
-	{}
+	LoLaRandom(IEntropySource* entropySource)
+		: EntropySource(entropySource)
+		, Rng()
+	{
+	}
 
 	const bool Setup()
 	{
@@ -50,27 +36,6 @@ public:
 		}
 
 		return false;
-	}
-
-	/// <summary>
-	/// Inspired by random.c (Linux).
-	/// </summary>
-	/// <returns></returns>
-	const uint32_t GetNextRandom()
-	{
-		EntropySalt.UInt += 1;
-		Hasher.reset(INTEGER_SIZE);
-		Hasher.update(EntropySalt.Array, INTEGER_SIZE);
-		Hasher.update(EntropyPool, ENTROPY_POOL_SIZE);
-		Hasher.finalize(RandomHelper.Array, INTEGER_SIZE);
-
-		EntropySalt.UInt += 1;
-		Hasher.reset(ENTROPY_POOL_SIZE);
-		Hasher.update(EntropySalt.Array, INTEGER_SIZE);
-		Hasher.update(EntropyPool, ENTROPY_POOL_SIZE);
-		Hasher.finalize(EntropyPool, ENTROPY_POOL_SIZE);
-
-		return RandomHelper.UInt;
 	}
 
 	const uint8_t GetRandomShort()
@@ -97,15 +62,13 @@ public:
 	/// 
 	/// </summary>
 	/// <typeparam name="target"></typeparam>
-	/// <typeparam name="size">Max size 32.</typeparam>
+	/// <typeparam name="size"></typeparam>
 	void GetRandomStreamCrypto(uint8_t* target, const uint8_t size)
 	{
-		ArrayToUint32 helper;
-		helper.UInt = GetRandomLong();
-
-		Hasher.reset(size);
-		Hasher.update(helper.Array, sizeof(uint32_t));
-		Hasher.finalize(target, size);
+		for (uint_fast8_t i = 0; i < size; i++)
+		{
+			target[i] = GetRandomShort();
+		}
 	}
 
 	void RandomReseed()
@@ -114,20 +77,27 @@ public:
 	}
 
 private:
+	const uint32_t GetNextRandom()
+	{
+		return PCG::pcg32_random_r(&Rng);
+	}
+
 	void RandomSeed()
 	{
 		uint8_t idSize = 0;
 		const uint8_t* uniqueId = EntropySource->GetUniqueId(idSize);
 
-		EntropySalt.UInt = EntropySource->GetNoise();
-
-		Hasher.reset(ENTROPY_POOL_SIZE);
-		Hasher.update(EntropySalt.Array, sizeof(uint32_t));
+		Rng.state = 0;
+		Rng.inc = 0;
 		if (uniqueId != nullptr && idSize > 0)
 		{
-			Hasher.update(uniqueId, idSize);
+			for (uint_least8_t i = 0; i < idSize; i++)
+			{
+				Rng.state += ((uint64_t)uniqueId[i] << (8 * (i % sizeof(uint64_t))));
+			}
 		}
-		Hasher.finalize(EntropyPool, ENTROPY_POOL_SIZE);
+		Rng.state += EntropySource->GetNoise();
+		PCG::pcg32_random_r(&Rng);
 
 #if defined(DEBUG_LOLA)
 		Serial.println(F("Random Seeding complete."));
@@ -153,11 +123,28 @@ private:
 			Serial.println('|');
 		}
 
-		Serial.print(F("\tSeed noise:"));
-		Serial.println(EntropySalt.UInt);
-#endif
+		//Serial.print(F("\tSeed noise: "));
+		//Serial.println(EntropySource->GetNoise());
+		//Serial.print(F("\tFirst Random: "));
+		//Serial.println(GetNextRandom());
 
-		EntropySalt.UInt++;
+		//uint32_t sum = 0;
+		//const uint32_t start = micros();
+		//static const uint32_t samples = 1000;
+		//for (uint32_t i = 0; i < samples; i++)
+		//{
+		//	sum += GetRandomShort();
+		//}
+		//const uint32_t duration = micros() - start;
+
+		//Serial.println(F("\tBenchmark "));
+		//Serial.print(samples);
+		//Serial.println(F(" samples took  "));
+		//Serial.print(duration);
+		//Serial.print(F(" us ("));
+		//Serial.print(((uint64_t)duration * 1000) / samples);
+		//Serial.println(F(" ns/byte )"));
+#endif
 	}
 };
 #endif

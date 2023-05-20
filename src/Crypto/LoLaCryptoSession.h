@@ -26,7 +26,7 @@ protected:
 	LoLaCryptoPrimitives::KeyHashType KeyHasher; // HKDF and Random hasher.
 
 public:
-	LoLaRandom<LoLaCryptoPrimitives::KeyHashType> RandomSource; // Cryptographic Secure(ish) Random Number Generator.
+	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
 
 	/// <summary>
 	/// HKDF Expanded key, with extra seeds.
@@ -56,7 +56,7 @@ private:
 public:
 	LoLaCryptoSession(IEntropySource* entropySource)
 		: LoLaLinkSession()
-		, RandomSource(KeyHasher, entropySource)
+		, RandomSource(entropySource)
 		, KeyExpander()
 		, FastHasher()
 		, ExpandedKey()
