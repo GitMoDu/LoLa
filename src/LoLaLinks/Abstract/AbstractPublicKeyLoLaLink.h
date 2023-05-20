@@ -22,6 +22,7 @@ private:
 
 protected:
 	using BaseClass::Session;
+	using BaseClass::RandomSource;
 
 	using BaseClass::RawOutPacket;
 	using BaseClass::RawInPacket;
@@ -56,7 +57,7 @@ protected:
 		switch (linkStage)
 		{
 		case LinkStageEnum::Linking:
-			Session.GenerateLocalChallenge();
+			Session.GenerateLocalChallenge(&RandomSource);
 			break;
 		default:
 			break;

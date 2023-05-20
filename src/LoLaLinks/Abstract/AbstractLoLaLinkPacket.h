@@ -55,6 +55,8 @@ protected:
 protected:
 	LoLaCryptoEncoderSession Session;
 
+	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
+
 protected:
 	// Collision avoidance time slotting.
 	IDuplex* Duplex;
@@ -80,7 +82,8 @@ public:
 		, Duplex(duplex)
 		, ChannelHopper(hop)
 		, IsLinkHopper(hop->IsHopper())
-		, Session(entropySource)
+		, Session()
+		, RandomSource(entropySource)
 		, HopTimestamp()
 	{}
 
@@ -93,7 +96,8 @@ public:
 
 	virtual const bool Setup()
 	{
-		if (ChannelHopper != nullptr &&
+		if (RandomSource.Setup() && 
+			ChannelHopper != nullptr &&
 			ChannelHopper->Setup(this, &SyncClock, GetSendDuration(0)))
 		{
 			return BaseClass::Setup();
@@ -205,7 +209,7 @@ protected:
 				Task::disable();
 				break;
 			case LinkStageEnum::AwaitingLink:
-				SendCounter = Session.RandomSource.GetRandomShort();
+				SendCounter = RandomSource.GetRandomShort();
 				PacketService.RefreshChannel();
 				break;
 			case LinkStageEnum::Linking:

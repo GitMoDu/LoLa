@@ -51,6 +51,7 @@ protected:
 	using BaseClass::OutPacket;
 	using BaseClass::SyncClock;
 	using BaseClass::Session;
+	using BaseClass::RandomSource;
 	using BaseClass::Driver;
 
 	using BaseClass::PacketService;
@@ -342,7 +343,7 @@ protected:
 		case LinkStageEnum::Disabled:
 			break;
 		case LinkStageEnum::Booting:
-			SetHopperFixedChannel(Session.RandomSource.GetRandomShort());
+			SetHopperFixedChannel(RandomSource.GetRandomShort());
 			break;
 		case LinkStageEnum::AwaitingLink:
 			SubState = (uint8_t)HostAwaitingLinkEnum::Sleeping;
@@ -373,8 +374,8 @@ protected:
 		switch (SubState)
 		{
 		case HostAwaitingLinkEnum::NewSessionStart:
-			Session.SetRandomSessionId();
-			SyncClock.ShiftSeconds(Session.RandomSource.GetRandomLong());
+			Session.SetRandomSessionId(&RandomSource);
+			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 
 			SubState = (uint8_t)HostAwaitingLinkEnum::BroadcastingSession;
 			PreLinkPacketSchedule = millis();

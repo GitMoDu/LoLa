@@ -61,6 +61,7 @@ protected:
 	using BaseClass::OutPacket;
 	using BaseClass::SyncClock;
 	using BaseClass::Session;
+	using BaseClass::RandomSource;
 	using BaseClass::Driver;
 
 	using BaseClass::PacketService;
@@ -369,9 +370,9 @@ protected:
 		case LinkStageEnum::Disabled:
 			break;
 		case LinkStageEnum::Booting:
-			Session.SetRandomSessionId();
-			SyncClock.ShiftSeconds(Session.RandomSource.GetRandomLong());
-			LastKnownBroadCastChannel = Session.RandomSource.GetRandomShort();
+			Session.SetRandomSessionId(&RandomSource);
+			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
+			LastKnownBroadCastChannel = RandomSource.GetRandomShort();
 			break;
 		case LinkStageEnum::AwaitingLink:
 			SubState = (uint8_t)RemoteAwaitingLinkEnum::SearchingHost;
@@ -427,7 +428,7 @@ protected:
 					// TODO: Add support for search for specific Host Id.
 					if (SendPacket(this, OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
-						PreLinkPacketSchedule = millis() + CHANNEL_SEARCH_PERIOD_MILLIS + Session.RandomSource.GetRandomShort(CHANNEL_SEARCH_JITTER_MILLIS);
+						PreLinkPacketSchedule = millis() + CHANNEL_SEARCH_PERIOD_MILLIS + RandomSource.GetRandomShort(CHANNEL_SEARCH_JITTER_MILLIS);
 						SearchChannelTryCount++;
 #if defined(DEBUG_LOLA)
 						this->Owner();

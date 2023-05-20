@@ -38,6 +38,8 @@ protected:
 	using BaseClass::LastReceivedRssi;
 
 	using BaseClass::Session;
+	using BaseClass::RandomSource;
+	using BaseClass::PacketService;
 
 	using BaseClass::RegisterPort;
 	using BaseClass::RegisterPacketReceiver;
@@ -215,7 +217,7 @@ protected:
 		else
 		{
 
-			return duration + Session.RandomSource.GetRandomLong(duration);
+			return duration + RandomSource.GetRandomLong(duration);
 		}
 	}
 
@@ -230,7 +232,7 @@ protected:
 		case LinkStageEnum::Booting:
 			break;
 		case LinkStageEnum::AwaitingLink:
-			Session.RandomSource.RandomReseed();
+			RandomSource.RandomReseed();
 			LastReceivedRssi = 0;
 			break;
 		case LinkStageEnum::Linking:
@@ -279,9 +281,8 @@ protected:
 			Task::disable();
 			break;
 		case LinkStageEnum::Booting:
-			Session.RandomSource.RandomReseed();
 			SyncClock.Start();
-			SyncClock.ShiftSeconds(Session.RandomSource.GetRandomLong());
+			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 			if (Driver->DriverStart())
 			{
 				UpdateLinkStage(LinkStageEnum::AwaitingLink);
@@ -430,7 +431,7 @@ private:
 	/// </summary>
 	void RequestReportUpdate()
 	{
-		ReportTracking.RequestReportUpdate(Session.RandomSource.GetRandomShort() - INT8_MAX);
+		ReportTracking.RequestReportUpdate(RandomSource.GetRandomShort() - INT8_MAX);
 		Task::enableIfNot();
 	}
 

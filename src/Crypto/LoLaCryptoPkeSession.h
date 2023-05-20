@@ -42,8 +42,8 @@ private:
 	const uint8_t* AccessPassword = nullptr;
 
 public:
-	LoLaCryptoPkeSession(IEntropySource* entropySource)
-		: LoLaCryptoSession(entropySource)
+	LoLaCryptoPkeSession()
+		: LoLaCryptoSession()
 		, ECC_CURVE(uECC_secp160r1())
 	{
 	}
@@ -60,10 +60,9 @@ public:
 		return;
 	}
 
-	virtual const bool Setup()
+	const bool Setup()
 	{
-		return LoLaCryptoSession::Setup() &&
-			LocalPublicKey != nullptr && LocalPrivateKey != nullptr && AccessPassword != nullptr;
+		return LocalPublicKey != nullptr && LocalPrivateKey != nullptr && AccessPassword != nullptr;
 	}
 
 	const bool SessionIsCached()
@@ -193,9 +192,9 @@ public:
 		GetChallengeSignature(LocalChallengeCode, AccessPassword, signatureTarget);
 	}
 
-	void GenerateLocalChallenge()
+	void GenerateLocalChallenge(LoLaRandom* randomSource)
 	{
-		RandomSource.GetRandomStreamCrypto(LocalChallengeCode, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
+		randomSource->GetRandomStreamCrypto(LocalChallengeCode, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
 	}
 };
 #endif

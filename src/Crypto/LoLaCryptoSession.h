@@ -18,7 +18,7 @@ class LoLaCryptoSession : public LoLaLinkSession
 {
 private:
 	HKDF<LoLaCryptoPrimitives::KeyHashType> KeyExpander; // N-Bytes key expander HKDF.
-
+		
 private:
 	LoLaCryptoPrimitives::FastHashType FastHasher; // 32 bit fast hasher for PRNG.
 
@@ -26,8 +26,6 @@ protected:
 	LoLaCryptoPrimitives::KeyHashType KeyHasher; // HKDF and Random hasher.
 
 public:
-	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
-
 	/// <summary>
 	/// HKDF Expanded key, with extra seeds.
 	/// </summary>
@@ -54,9 +52,8 @@ private:
 	uint8_t SessionToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE];
 
 public:
-	LoLaCryptoSession(IEntropySource* entropySource)
+	LoLaCryptoSession()
 		: LoLaLinkSession()
-		, RandomSource(entropySource)
 		, KeyExpander()
 		, FastHasher()
 		, ExpandedKey()
@@ -64,11 +61,6 @@ public:
 		, OutputKey()
 		, SessionToken()
 	{}
-
-	virtual const bool Setup()
-	{
-		return RandomSource.Setup();
-	}
 
 public:
 	virtual const uint8_t GetPrngHopChannel(const uint32_t tokenIndex) final
@@ -81,9 +73,9 @@ public:
 	}
 
 public:
-	void SetRandomSessionId()
+	void SetRandomSessionId(LoLaRandom* randomSource)
 	{
-		RandomSource.GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}
 
 	/// <summary>

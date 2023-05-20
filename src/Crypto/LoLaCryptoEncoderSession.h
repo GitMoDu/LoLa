@@ -22,8 +22,8 @@ private:
 	uint8_t MatchMac[LoLaPacketDefinition::MAC_SIZE]{};
 
 public:
-	LoLaCryptoEncoderSession(IEntropySource* entropySource)
-		: LoLaCryptoPkeSession(entropySource)
+	LoLaCryptoEncoderSession()
+		: LoLaCryptoPkeSession()
 		, CryptoHasher()
 		, CryptoCypher(LoLaCryptoDefinition::CYPHER_ROUNDS)
 	{
