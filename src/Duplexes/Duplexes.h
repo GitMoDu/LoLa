@@ -32,7 +32,8 @@ public:
 /// <typeparam name="IsOddSlot">First or Second half of duplex.</typeparam>
 template<const uint16_t DuplexPeriodMicros,
 	const uint16_t SwitchOver,
-	const bool IsOddSlot>
+	const bool IsOddSlot,
+	const uint32_t DeadZoneMicros = 0>
 class TemplateHalfDuplex : public IDuplex
 {
 public:
@@ -47,11 +48,11 @@ public:
 		// Check if remainder is before or after the switchover time.
 		if (IsOddSlot)
 		{
-			return remainder >= SwitchOver;
+			return (remainder >= SwitchOver + DeadZoneMicros) && (remainder < DuplexPeriodMicros - DeadZoneMicros);
 		}
 		else
 		{
-			return remainder < SwitchOver;
+			return (remainder <= SwitchOver - DeadZoneMicros) && (remainder > DeadZoneMicros);
 		}
 	}
 
@@ -68,11 +69,13 @@ public:
 /// <typeparam name="DuplexPeriodMicros">[2;65535]</typeparam>
 /// <typeparam name="IsOddSlot">First or Second half of duplex.</typeparam>
 template<const uint16_t DuplexPeriodMicros,
-	const bool IsOddSlot>
+	const bool IsOddSlot,
+	const uint32_t DeadZoneMicros = 0>
 class HalfDuplex : public TemplateHalfDuplex<
 	DuplexPeriodMicros,
 	DuplexPeriodMicros / 2,
-	IsOddSlot>
+	IsOddSlot,
+	DeadZoneMicros>
 {};
 
 
@@ -86,11 +89,13 @@ class HalfDuplex : public TemplateHalfDuplex<
 /// <typeparam name="IsLongSlot"></typeparam>
 template<const uint16_t DuplexPeriodMicros,
 	const uint8_t LongSlotRatio,
-	const bool IsLongSlot>
+	const bool IsLongSlot,
+	const uint32_t DeadZoneMicros = 0>
 class HalfDuplexAsymmetric : public TemplateHalfDuplex<
 	DuplexPeriodMicros,
 	((uint32_t)LongSlotRatio* DuplexPeriodMicros) / UINT8_MAX,
-	IsLongSlot>
+	IsLongSlot, 
+	DeadZoneMicros>
 {};
 
 /// <summary>
