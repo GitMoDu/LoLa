@@ -114,6 +114,24 @@ public:
 
 		return false;
 	}
+	virtual void OnSendComplete(const ILinkPacketSender::SendResultEnum result)
+	{
+		switch (LinkStage)
+		{
+		case LinkStageEnum::Disabled:
+			break;
+		case LinkStageEnum::AwaitingLink:
+		case LinkStageEnum::Linking:
+			// Before Link starts, packet service is not handling sends.
+			// So we need to manually reset RxTxDriver to Rx (also updates channel).
+			PacketService.RefreshChannel();
+			break;
+		case LinkStageEnum::Linked:
+			break;
+		default:
+			break;
+		}
+	}
 
 	virtual const uint32_t GetLinkDuration() final
 	{
@@ -233,6 +251,7 @@ protected:
 			break;
 		case LinkStageEnum::AwaitingLink:
 			RandomSource.RandomReseed();
+			PacketService.RefreshChannel();
 			LastReceivedRssi = 0;
 			break;
 		case LinkStageEnum::Linking:
@@ -241,6 +260,7 @@ protected:
 			LinkStartSeconds = SyncClock.GetSeconds(0);
 			ResetLastValidReceived();
 			RequestReportUpdate();
+			PacketService.RefreshChannel();
 			break;
 		default:
 			break;
