@@ -19,6 +19,9 @@ class LoLaCryptoSession : public LoLaLinkSession
 protected:
 	LoLaCryptoPrimitives::KeyHashType KeyHasher; // HKDF and Signature hasher.
 
+private:
+	HKDF<LoLaCryptoPrimitives::KeyHashType> KeyExpander; // N-Bytes key expander HKDF.
+
 public:
 	///// <summary>
 	///// HKDF Expanded key, with extra seeds.
@@ -49,12 +52,32 @@ public:
 	LoLaCryptoSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey)
 		: LoLaLinkSession()
 		, ExpandedKey(expandedKey)
+		, KeyExpander()
 	{}
 
 public:
 	void SetRandomSessionId(LoLaRandom* randomSource)
 	{
 		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+	}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="key">sizeof = LoLaCryptoDefinition::CYPHER_KEY_SIZE</param>
+	void SetSecretKey(const uint8_t* key)
+	{
+		// Populate crypto keys with HKDF from secret key.
+		KeyExpander.setKey((uint8_t*)(key), LoLaCryptoDefinition::CYPHER_KEY_SIZE, SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+	}
+
+	void CalculateExpandedKey()
+	{
+		// Populate crypto keys with HKDF from secret key.
+		KeyExpander.extract(((uint8_t*)(ExpandedKey)), LoLaLinkDefinition::HKDFSize);
+
+		// Clear hasher from sensitive material. Disabled for performance.
+		//KeyExpander.clear();
 	}
 
 	/// <summary>

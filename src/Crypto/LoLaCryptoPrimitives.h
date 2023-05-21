@@ -11,11 +11,6 @@
 #include <Poly1305.h>
 #include <ChaCha.h>
 
-/*
-* https://github.com/kmackay/micro-ecc
-*/ 
-#include <uECC.h>
-
 
 class LoLaCryptoPrimitives
 {
