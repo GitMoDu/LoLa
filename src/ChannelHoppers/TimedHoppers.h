@@ -165,9 +165,6 @@ public:
 				if (PinTestHop > 0)
 				{
 					digitalWrite(PinTestHop, HIGH);
-				}
-				if (PinTestHop > 0)
-				{
 					digitalWrite(PinTestHop, LOW);
 				}
 				Listener->OnChannelHopTime();
