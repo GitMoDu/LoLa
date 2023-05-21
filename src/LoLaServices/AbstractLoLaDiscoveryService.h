@@ -91,8 +91,7 @@ protected:
 	/// Fires when the user class's packet send request
 	///  failed after transmission request.
 	/// </summary>
-	/// <param name="port">The requested sent port.</param>
-	virtual void OnDiscoveredSendRequestFail(const uint8_t port) { }
+	virtual void OnDiscoveredSendRequestFail() { }
 
 
 	/// <summary>
@@ -276,7 +275,7 @@ protected:
 		}
 	}
 
-	virtual void OnSendRequestFail(const uint8_t port) final
+	virtual void OnSendRequestFail() final
 	{
 		switch (DiscoveryState)
 		{
@@ -286,7 +285,7 @@ protected:
 			ResetLastSent();
 			break;
 		case DiscoveryStateEnum::Running:
-			OnDiscoveredSendRequestFail(port);
+			OnDiscoveredSendRequestFail();
 			break;
 		default:
 			break;
