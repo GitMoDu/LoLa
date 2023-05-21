@@ -140,7 +140,7 @@ public:
 public:
 	virtual const bool RegisterPacketReceiver(ILinkPacketReceiver* listener, const uint8_t port) final
 	{
-		if (port < LoLaLinkDefinition::MAX_DEFINITION_PORT)
+		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
 		{
 			return RegisterPacketReceiverInternal(listener, port);
 		}
