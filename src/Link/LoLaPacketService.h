@@ -91,6 +91,7 @@ public:
 			if (SendListener != nullptr)
 			{
 				SendListener->OnSendComplete(SendResultEnum::Success);
+				SendListener = nullptr;
 			}
 			break;
 		case StateEnum::Sending:
@@ -101,6 +102,7 @@ public:
 				if (SendListener != nullptr)
 				{
 					SendListener->OnSendComplete(SendResultEnum::SendTimeout);
+					SendListener = nullptr;
 				}
 				State = StateEnum::Done;
 			}
@@ -113,6 +115,7 @@ public:
 			if (SendListener != nullptr)
 			{
 				SendListener->OnSendComplete(SendResultEnum::Error);
+				SendListener = nullptr;
 			}
 			Task::enable();
 			State = StateEnum::Done;
@@ -174,6 +177,7 @@ public:
 			Serial.println(F("\tPrevious Send request cancelled."));
 #endif
 			Task::enable();
+			ServiceListener = nullptr;
 			State = StateEnum::Done;
 		}
 	}
