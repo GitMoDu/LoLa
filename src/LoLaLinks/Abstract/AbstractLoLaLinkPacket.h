@@ -16,6 +16,10 @@
 #include "..\..\Link\LoLaLinkSession.h"
 
 
+/*
+* https://github.com/FrankBoesing/FastCRC
+*/
+#include <FastCRC.h>
 
 
 
@@ -58,6 +62,8 @@ protected:
 
 	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
 
+	FastCRC8 FastHasher; // 8 bit fast hasher for deterministic PRNG.
+
 protected:
 	// Collision avoidance time slotting.
 	IDuplex* Duplex;
@@ -88,6 +94,7 @@ public:
 		, Duplex(duplex)
 		, ChannelHopper(hop)
 		, IsLinkHopper(hop->IsHopper())
+		, FastHasher()
 		, RandomSource(entropySource)
 		, HopTimestamp()
 	{}
@@ -101,7 +108,7 @@ public:
 
 	virtual const bool Setup()
 	{
-		if (RandomSource.Setup() && 
+		if (RandomSource.Setup() &&
 			ChannelHopper != nullptr &&
 			ChannelHopper->Setup(this, &SyncClock, GetSendDuration(0)))
 		{
@@ -172,7 +179,7 @@ public:
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
-				return Session.GetPrngHopChannel(ChannelHopper->GetTimedHopIndex());
+				return GetPrngHopChannel(ChannelHopper->GetTimedHopIndex());
 			}
 			else
 			{
@@ -251,7 +258,7 @@ protected:
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
-				return Session.GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
+				return GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
 			}
 			else
 			{
@@ -280,6 +287,18 @@ protected:
 	{
 		ChannelHopper->SetFixedChannel(channel);
 		PacketService.RefreshChannel();
+	}
+
+private:
+	const uint8_t GetPrngHopChannel(const uint32_t tokenIndex)
+	{
+		// Start Hash with Token Seed.
+		FastHasher.smbus(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
+		//FastHasher.crc32(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
+
+		// Add Token Index and return the mod of the result.
+		return FastHasher.smbus_upd((uint8_t*)&tokenIndex, sizeof(uint32_t));
+		//return FastHasher.crc32_upd((uint8_t*)&tokenIndex, sizeof(uint32_t)) % UINT8_MAX;
 	}
 };
 #endif

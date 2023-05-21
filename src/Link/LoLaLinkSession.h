@@ -3,6 +3,7 @@
 #ifndef _LOLA_LINK_SESSION_h
 #define _LOLA_LINK_SESSION_h
 
+#include <stdint.h>
 
 class LoLaLinkSession
 {
@@ -11,9 +12,6 @@ protected:
 	/// Ephemeral session Id.
 	/// </summary>
 	uint8_t SessionId[LoLaLinkDefinition::SESSION_ID_SIZE];
-
-public:
-	virtual const uint8_t GetPrngHopChannel(const uint32_t tokenIndex) { return 0; }
 
 public:
 	void SetSessionId(const uint8_t* sessionId)
