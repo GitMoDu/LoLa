@@ -6,7 +6,7 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ILoLaPacketDriver.h>
+#include <ILoLaRxTxDriver.h>
 #include "IVirtualPacketDriver.h"
 
 /// <summary>
@@ -24,7 +24,7 @@ template<typename Config,
 class VirtualHalfDuplexDriver
 	: private Task
 	, public virtual IVirtualPacketDriver
-	, public virtual ILoLaPacketDriver
+	, public virtual ILoLaRxTxDriver
 {
 private:
 	template<const uint8_t MaxPacketSize>
@@ -52,7 +52,7 @@ private:
 	};
 
 private:
-	ILoLaPacketDriverListener* PacketListener = nullptr;
+	ILoLaRxTxListener* Listener = nullptr;
 
 private:
 	IVirtualPacketDriver* Partner = nullptr;
@@ -81,7 +81,7 @@ public:
 	VirtualHalfDuplexDriver(Scheduler& scheduler)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, IVirtualPacketDriver()
-		, ILoLaPacketDriver()
+		, ILoLaRxTxDriver()
 	{
 	}
 
@@ -95,9 +95,9 @@ public:
 			UpdateChannel(OutGoing.Channel);
 			Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
 			OutGoing.Clear();
-			if (PacketListener != nullptr)
+			if (Listener != nullptr)
 			{
-				PacketListener->OnSent(true);
+				Listener->OnSent(true);
 			}
 		}
 
@@ -105,9 +105,9 @@ public:
 		if (Incoming.HasPending() && (micros() - Incoming.Started > GetRxDuration(Incoming.Size)))
 		{
 			// Rx duration has elapsed since the packet incoming start triggered.
-			if (PacketListener != nullptr)
+			if (Listener != nullptr)
 			{
-				if (!PacketListener->OnReceived(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
+				if (!Listener->OnReceived(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
 				{
 #if defined(DEBUG_LOLA)
 					Serial.print(millis());
@@ -135,11 +135,11 @@ public:
 	}
 
 public:
-	virtual const bool DriverSetupListener(ILoLaPacketDriverListener* packetListener) final
+	virtual const bool DriverSetupListener(ILoLaRxTxListener* listener) final
 	{
-		PacketListener = packetListener;
+		Listener = listener;
 
-		return PacketListener != nullptr;
+		return Listener != nullptr;
 	}
 
 	virtual const bool DriverStart() final
@@ -237,9 +237,9 @@ public:
 
 		if (Incoming.HasPending())
 		{
-			if (PacketListener != nullptr)
+			if (Listener != nullptr)
 			{
-				PacketListener->OnReceiveLost(timestamp);
+				Listener->OnReceiveLost(timestamp);
 			}
 #if defined(DEBUG_LOLA)
 			Serial.print(millis());

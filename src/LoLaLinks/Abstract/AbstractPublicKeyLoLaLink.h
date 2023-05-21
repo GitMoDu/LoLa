@@ -31,7 +31,7 @@ protected:
 
 public:
 	AbstractPublicKeyLoLaLink(Scheduler& scheduler,
-		ILoLaPacketDriver* driver,
+		ILoLaRxTxDriver* driver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,

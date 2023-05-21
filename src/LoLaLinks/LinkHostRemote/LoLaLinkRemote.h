@@ -100,7 +100,7 @@ protected:
 
 public:
 	LoLaLinkRemote(Scheduler& scheduler,
-		ILoLaPacketDriver* driver,
+		ILoLaRxTxDriver* driver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,

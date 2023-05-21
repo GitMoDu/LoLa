@@ -109,7 +109,7 @@ protected:
 
 public:
 	LoLaLinkHost(Scheduler& scheduler,
-		ILoLaPacketDriver* driver,
+		ILoLaRxTxDriver* driver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,

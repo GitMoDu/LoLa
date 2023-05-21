@@ -7,7 +7,7 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ILoLaPacketDriver.h>
+#include <ILoLaRxTxDriver.h>
 #include "IPacketServiceListener.h"
 
 
@@ -21,7 +21,7 @@
 /// </summary>
 /// <param name="MaxPacketSize">The maximum raw packet size.</param>
 template<const uint8_t MaxPacketSize>
-class LoLaPacketService : private Task, public virtual ILoLaPacketDriverListener
+class LoLaPacketService : private Task, public virtual ILoLaRxTxListener
 {
 private:
 	using SendResultEnum = ILinkPacketSender::SendResultEnum;
@@ -53,16 +53,16 @@ private:
 	volatile StateEnum State = StateEnum::Done;
 
 public:
-	ILoLaPacketDriver* Driver = nullptr;
+	ILoLaRxTxDriver* Driver = nullptr;
 
 public:
 	LoLaPacketService(Scheduler& scheduler,
 		IPacketServiceListener* serviceListener,
-		ILoLaPacketDriver* driver,
+		ILoLaRxTxDriver* driver,
 		uint8_t* rawInPacket,
 		uint8_t* rawOutPacket)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILoLaPacketDriverListener()
+		, ILoLaRxTxListener()
 		, ServiceListener(serviceListener)
 		, RawInPacket(rawInPacket)
 		, RawOutPacket(rawOutPacket)
@@ -234,7 +234,7 @@ public:
 	}
 
 	/// <summary>
-	/// ILoLaPacketDriverListener overrides.
+	/// ILoLaRxTxListener overrides.
 	/// </summary>
 public:
 	virtual const bool OnReceived(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final

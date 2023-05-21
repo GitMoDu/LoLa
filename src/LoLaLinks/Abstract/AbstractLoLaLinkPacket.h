@@ -6,7 +6,7 @@
 
 #include "AbstractLoLaReceiver.h"
 
-#include <ILoLaPacketDriver.h>
+//#include <ILoLaRxTxDriver.h>
 
 #include "..\..\Link\IChannelHop.h"
 
@@ -83,7 +83,7 @@ private:
 public:
 	AbstractLoLaLinkPacket(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaPacketDriver* driver,
+		ILoLaRxTxDriver* driver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,

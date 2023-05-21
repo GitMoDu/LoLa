@@ -1,11 +1,11 @@
-// ILoLaPacketDriver.h
+// ILoLaRxTxDriver.h
 
-#ifndef _I_LOLA_PACKET_DRIVER_h
-#define _I_LOLA_PACKET_DRIVER_h
+#ifndef _I_LOLA_RX_TX_DRIVER_h
+#define _I_LOLA_RX_TX_DRIVER_h
 
 #include "Link\LoLaPacketDefinition.h"
 
-class ILoLaPacketDriverListener
+class ILoLaRxTxListener
 {
 public:
 	/// <summary>
@@ -19,27 +19,27 @@ public:
 	virtual const bool OnReceived(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) { return false;}
 
 	/// <summary>
-	/// Driver was receiveing a packet but couldn't read it or finish it.
+	/// Transceiver was receiveing a packet but couldn't read it or finish it.
 	/// </summary>
 	/// <param name="startTimestamp">Accurate timestamp (micros()) of lost packet start.</param>
 	virtual void OnReceiveLost(const uint32_t receiveTimestamp) {}
 
 	/// <summary>
-	/// Driver has finished transmitting a packet.
+	/// Transceiver has finished transmitting a packet.
 	/// </summary>
 	/// <param name="success">True if success.</param>
 	virtual void OnSent(const bool success) {}
 };
 
-class ILoLaPacketDriver
+class ILoLaRxTxDriver
 {
 public:
 	/// <summary>
-	/// Set up the packet driver listener, that will handle all packet events.
+	/// Set up the transceiver listener that will handle all packet events.
 	/// </summary>
 	/// <param name="packetListener"></param>
 	/// <returns></returns>
-	virtual const bool DriverSetupListener(ILoLaPacketDriverListener* packetListener) { return false; }
+	virtual const bool DriverSetupListener(ILoLaRxTxListener* packetListener) { return false; }
 
 	/// <summary>
 	/// Boot up the device and start in working mode.
@@ -50,11 +50,11 @@ public:
 	/// <summary>
 	/// Stop the device and turn off power if possible.
 	/// </summary>
-	/// <returns>True if Driver was running.</returns>
+	/// <returns>True if transceiver was running.</returns>
 	virtual const bool DriverStop() { return false; }
 
 	/// <summary>
-	/// Inform the caller if the Driver can currently perform a DriverTx.
+	/// Inform the caller if the transceiver can currently perform a DriverTx.
 	/// </summary>
 	/// <returns>True if yes.</returns>
 	virtual const bool DriverCanTransmit() { return false; }
@@ -84,8 +84,8 @@ public:
 	/// <summary>
 	/// How long does the driver estimate transmiting will take
 	///  from DriverTx to detected start from partner.
-	/// This includes memory copies and SPI transactions, pre-ambles.
-	///	 but does not include medium delay (ex: lightspeed), internal radio processing. 
+	/// This includes memory copies and SPI transactions and pre-ambles,
+	///	 but does not include medium delay (ex: lightspeed) or internal transceiver processing. 
 	/// </summary>
 	/// <param name="packetSize">Number of bytes in the packet.</param>
 	/// <returns>The expected transmission duration in microseconds.</returns>

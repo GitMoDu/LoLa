@@ -44,7 +44,7 @@ protected:
 public:
 	AbstractLoLaSender(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaPacketDriver* driver,
+		ILoLaRxTxDriver* driver,
 		IClockSource* clockSource,
 		ITimerSource* timerSource)
 		: BaseClass(scheduler, encoder, driver, clockSource, timerSource)

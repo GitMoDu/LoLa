@@ -66,7 +66,7 @@ protected:
 	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
 	// Rx/Tx Driver for PHY.
-	ILoLaPacketDriver* Driver;
+	ILoLaRxTxDriver* Driver;
 
 	// Expandable session encoder.
 	LoLaCryptoEncoderSession* Encoder;
@@ -83,7 +83,7 @@ protected:
 public:
 	AbstractLoLa(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaPacketDriver* driver, 
+		ILoLaRxTxDriver* driver,
 		IClockSource* clockSource,
 		ITimerSource* timerSource)
 		: BaseClass(scheduler, this)

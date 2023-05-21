@@ -88,7 +88,7 @@ protected:
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaPacketDriver* driver,
+		ILoLaRxTxDriver* driver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
