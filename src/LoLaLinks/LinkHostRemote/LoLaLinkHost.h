@@ -95,7 +95,8 @@ protected:
 	{
 		if (this->GetLinkDuration() > HOST_DROP_LINK_TEST)
 		{
-			Serial.print(("[H] Test disconnect after "));
+			this->Owner();
+			Serial.print(("Test disconnect after "));
 			Serial.print(HOST_DROP_LINK_TEST);
 			Serial.println((" seconds."));
 			UpdateLinkStage(LinkStageEnum::AwaitingLink);
@@ -391,14 +392,14 @@ protected:
 				{
 					OutPacket.Payload[Unlinked::SearchReply::SUB_HEADER_INDEX] = Unlinked::SearchReply::SUB_HEADER;
 
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sending Search Reply."));
+#endif
 					if (SendPacket(this, OutPacket.Data, Unlinked::SearchReply::PAYLOAD_SIZE))
 					{
 						SearchReplyPending = false;
 						PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.println(F("Sent Search Reply."));
-#endif
 					}
 				}
 				else
@@ -407,13 +408,14 @@ protected:
 					Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::SessionBroadcast::PAYLOAD_SESSION_ID_INDEX]);
 					Session.CompressPublicKeyTo(&OutPacket.Payload[Unlinked::SessionBroadcast::PAYLOAD_PUBLIC_KEY_INDEX]);
 
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sending Broadcast Session."));
+#endif
 					if (SendPacket(this, OutPacket.Data, Unlinked::SessionBroadcast::PAYLOAD_SIZE))
 					{
 						PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.println(F("Sent Broadcast Session."));
-#endif
+
 					}
 				}
 			}
@@ -479,15 +481,17 @@ protected:
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOver::SUB_HEADER;
 				Session.CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
 				StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+
+#if defined(DEBUG_LOLA)
+				//this->Owner();
+				//Serial.print(F("Sending Linking SwitchOver: "));
+				//Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
+				//Serial.println(F("us remaining."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("Sent Linking SwitchOver: "));
-					Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
-					Serial.println(F("us remaining."));
-#endif
+
 				}
 			}
 			else
@@ -523,13 +527,13 @@ protected:
 				OutPacket.Payload[Linking::HostChallengeRequest::SUB_HEADER_INDEX] = Linking::HostChallengeRequest::SUB_HEADER;
 				Session.CopyLocalChallengeTo(&OutPacket.Payload[Linking::HostChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending HostChallengeRequest."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Linking::HostChallengeRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeRequest::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent HostChallengeRequest."));
-#endif
 				}
 			}
 			break;
@@ -540,13 +544,13 @@ protected:
 				OutPacket.Payload[Linking::HostChallengeReply::SUB_HEADER_INDEX] = Linking::HostChallengeReply::SUB_HEADER;
 				Session.SignPartnerChallengeTo(&OutPacket.Payload[Linking::HostChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending HostChallengeReply."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Linking::HostChallengeReply::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeReply::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent HostChallengeReply."));
-#endif
 				}
 			}
 			break;
@@ -563,32 +567,30 @@ protected:
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 1] = EstimateErrorReply.SubSeconds >> 8;
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 2] = EstimateErrorReply.SubSeconds >> 16;
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 3] = EstimateErrorReply.SubSeconds >> 24;
+
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.print(F("Sending Clock Error:"));
+#endif
 				if (InEstimateWithinTolerance())
 				{
 					OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] = UINT8_MAX;
+#if defined(DEBUG_LOLA)
+					Serial.println(F("Accepted."));
+#endif
 				}
 				else
 				{
 					OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] = 0;
+#if defined(DEBUG_LOLA)
+					Serial.println(F("Rejected."));
+#endif
 				}
 
 				if (SendPacket(this, OutPacket.Data, Linking::ClockSyncReply::PAYLOAD_SIZE))
 				{
 					// Only send a time reply once.
 					ClockReplyPending = false;
-
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("Sent Clock Error:"));
-					if (InEstimateWithinTolerance())
-					{
-						Serial.println(F("Accepted."));
-					}
-					else
-					{
-						Serial.println(F("Rejected."));
-					}
-#endif
 				}
 			}
 			Task::enableIfNot();
@@ -618,15 +620,16 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOver::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOver::SUB_HEADER;
 				StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+				
+#if defined(DEBUG_LOLA)
+				//this->Owner();
+				//Serial.print(F("Sending Link SwitchOver: "));
+				//Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
+				//Serial.println(F("us remaining."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("Sent Link SwitchOver: "));
-					Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
-					Serial.println(F("us remaining."));
-#endif
 				}
 			}
 			else

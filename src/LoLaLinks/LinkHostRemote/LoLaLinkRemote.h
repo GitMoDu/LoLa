@@ -426,14 +426,14 @@ protected:
 					OutPacket.Payload[Unlinked::SearchRequest::SUB_HEADER_INDEX] = Unlinked::SearchRequest::SUB_HEADER;
 
 					// TODO: Add support for search for specific Host Id.
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sending Broadcast Search."));
+#endif
 					if (SendPacket(this, OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
 						PreLinkPacketSchedule = millis() + CHANNEL_SEARCH_PERIOD_MILLIS + RandomSource.GetRandomShort(CHANNEL_SEARCH_JITTER_MILLIS);
 						SearchChannelTryCount++;
-#if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.println(F("Sent Broadcast Search."));
-#endif
 					}
 				}
 			}
@@ -445,13 +445,13 @@ protected:
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::SessionRequest::SUB_HEADER_INDEX] = Unlinked::SessionRequest::SUB_HEADER;
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending Session Start Request."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Unlinked::SessionRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionRequest::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent Session Start Request."));
-#endif
 				}
 			}
 			Task::enable();
@@ -499,13 +499,13 @@ protected:
 				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
 				Session.CompressPublicKeyTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX]);
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending Linking Start Request."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::LinkingStartRequest::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent Linking Start Request."));
-#endif
 				}
 			}
 			Task::enable();
@@ -537,13 +537,13 @@ protected:
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER;
 				Session.CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending StateTransition Ack."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("StateTransition sent Ack."));
-#endif
 				}
 				else
 				{
@@ -599,13 +599,14 @@ protected:
 				Session.SignPartnerChallengeTo(&OutPacket.Payload[Linking::RemoteChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
 				Session.CopyLocalChallengeTo(&OutPacket.Payload[Linking::RemoteChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending RemoteChallengeReplyRequest."));
+#endif
+
 				if (SendPacket(this, OutPacket.Data, Linking::RemoteChallengeReplyRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::RemoteChallengeReplyRequest::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent RemoteChallengeReplyRequest."));
-#endif
 				}
 				else
 				{
@@ -636,17 +637,15 @@ protected:
 				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] = OutEstimate.SubSeconds >> 16;
 				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] = OutEstimate.SubSeconds >> 24;
 
+#if defined(DEBUG_LOLA)
+				//this->Owner();
+				//Serial.print(F("Sending ClockSync "));
+				//Serial.print(OutEstimate.Seconds);
+				//Serial.println('s');
+#endif
 				if (SendPacket(this, OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::ClockSyncRequest::PAYLOAD_SIZE);
-
-
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("Sent ClockSync "));
-					Serial.print(OutEstimate.Seconds);
-					Serial.println('s');
-#endif
 				}
 				else
 				{
@@ -664,13 +663,13 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::StartLinkRequest::SUB_HEADER_INDEX] = Linking::StartLinkRequest::SUB_HEADER;
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending Linking Start Request."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::StartLinkRequest::PAYLOAD_SIZE);
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent Linking Start Request."));
-#endif
 				}
 				else
 				{
@@ -707,13 +706,13 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sending StateTransition Ack."));
+#endif
 				if (SendPacket(this, OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("StateTransition sent Ack."));
-#endif
 				}
 				else
 				{
@@ -732,15 +731,26 @@ protected:
 #pragma endregion
 
 
-	bool PendingMicrosSend = false;
-	uint32_t LastClockSync = 0;
+	//bool PendingMicrosSend = false;
+	//uint32_t LastClockSync = 0;
 
-	static constexpr uint32_t CLOCK_SYNC_UPDATE_PERIOD_MILLIS = 2000;
+	//static constexpr uint32_t CLOCK_SYNC_UPDATE_PERIOD_MILLIS = 2000;
 
 
-	//virtual const bool CheckForClockSyncUpdate() final
-	//{
-	//	return false;
-	//}
+#if defined(REMOTE_DROP_LINK_TEST)
+	virtual const bool CheckForClockSyncUpdate() final
+	{
+		if (this->GetLinkDuration() > REMOTE_DROP_LINK_TEST)
+		{
+			this->Owner();
+			Serial.print(("Test disconnect after "));
+			Serial.print(REMOTE_DROP_LINK_TEST);
+			Serial.println((" seconds."));
+			UpdateLinkStage(LinkStageEnum::AwaitingLink);
+		}
+
+		return false;
+	}
+#endif
 };
 #endif
