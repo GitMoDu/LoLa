@@ -77,7 +77,6 @@ public:
 		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}
 
-
 	/// <summary>
 	/// 
 	/// </summary>
@@ -95,6 +94,9 @@ public:
 		KeyHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 
 		KeyHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
+
+		// Clear hasher from sensitive material.
+		KeyExpander.clear();
 	}
 
 	void CalculateExpandedKey()
@@ -102,8 +104,8 @@ public:
 		// Populate crypto keys with HKDF from secret key.
 		KeyExpander.extract(((uint8_t*)(ExpandedKey)), LoLaLinkDefinition::HKDFSize);
 
-		// Clear hasher from sensitive material. Disabled for performance.
-		//KeyExpander.clear();
+		// Clear hasher from sensitive material.
+		KeyExpander.clear();
 	}
 
 	/// <summary>
@@ -124,8 +126,8 @@ public:
 		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		KeyHasher.finalize(OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
-		// Clear hasher from sensitive material. Disabled for performance.
-		//KeyHasher.clear();
+		// Clear hasher from sensitive material.
+		KeyHasher.clear();
 	}
 
 	void CalculateSessionToken(const uint8_t* partnerPublicKey)
@@ -135,8 +137,8 @@ public:
 		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		KeyHasher.finalize(SessionToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
 
-		// Clear hasher from sensitive material. Disabled for performance.
-		//KeyHasher.clear();
+		// Clear hasher from sensitive material.
+		KeyHasher.clear();
 	}
 
 	/// <summary>
@@ -151,8 +153,8 @@ public:
 		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		KeyHasher.finalize(MatchToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
 
-		// Clear hasher from sensitive material. Disabled for performance.
-		//KeyHasher.clear();
+		// Clear hasher from sensitive material.
+		KeyHasher.clear();
 
 		return CachedSessionTokenMatches(MatchToken);
 	}
