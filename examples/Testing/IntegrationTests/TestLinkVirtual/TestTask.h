@@ -21,7 +21,7 @@ private:
 	static const uint8_t Port = 0x42;
 	static const uint8_t PayloadSize = 0;
 	static const uint32_t HearBeatPeriod = 1000;
-	static const uint32_t PingPeriod = 500;
+	static const uint32_t PingPeriod = 321;
 
 	ILoLaLink* Host;
 	ILoLaLink* Remote;
@@ -95,14 +95,11 @@ public:
 				LastPing = timestamp;
 #if defined(PRINT_TEST_PACKETS)
 				PrintTag('H');
-				Serial.print(F("Sending... "));
+				Serial.println(F("Sending."));
 #endif
 				if (Host->SendPacket(this, OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
 				{
 					LastPing = timestamp;
-#if defined(PRINT_TEST_PACKETS)
-					Serial.println(F("Ok."));
-#endif
 				}
 				else
 				{
@@ -129,21 +126,21 @@ public:
 	virtual void OnSendComplete(const SendResultEnum result) final
 	{
 #if defined(PRINT_TEST_PACKETS)
-		Serial.print(F("OnSendComplete: "));
+		PrintTag('H');
 
 		switch (Success)
 		{
 		case SendResultEnum::Success:
-			Serial.println(F(" Success"));
+			Serial.println(F("Sent Success"));
 			break;
 		case SendResultEnum::SendTimeout:
-			Serial.println(F(" SendTimeout"));
+			Serial.println(F("Send Timeout"));
 			break;
 		case SendResultEnum::SendCollision:
-			Serial.println(F(" SendCollision"));
+			Serial.println(F(" Send Collision"));
 			break;
 		case SendResultEnum::Error:
-			Serial.println(F(" Error"));
+			Serial.println(F("Send Error"));
 			break;
 		default:
 			break;
