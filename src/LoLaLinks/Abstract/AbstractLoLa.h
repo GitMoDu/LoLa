@@ -15,6 +15,7 @@
 
 #include "..\..\Link\ILoLaLink.h"
 #include "..\..\Link\LoLaPacketDefinition.h"
+#include "..\..\Crypto\LoLaCryptoEncoderSession.h"
 
 /// <summary>
 /// LoLa Link base is a special case of a LoLaService,
@@ -67,6 +68,9 @@ protected:
 	// Rx/Tx Driver for PHY.
 	ILoLaPacketDriver* Driver;
 
+	// Expandable session encoder.
+	LoLaCryptoEncoderSession* Encoder;
+
 	// Duplex, Channel Hop and Cryptography depend on a synchronized clock between host and remote.
 	SynchronizedClock SyncClock;
 
@@ -77,11 +81,16 @@ protected:
 	virtual void OnEvent(const PacketEventEnum packetEvent) {}
 
 public:
-	AbstractLoLa(Scheduler& scheduler, ILoLaPacketDriver* driver, IClockSource* clockSource, ITimerSource* timerSource)
+	AbstractLoLa(Scheduler& scheduler,
+		LoLaCryptoEncoderSession* encoder,
+		ILoLaPacketDriver* driver, 
+		IClockSource* clockSource,
+		ITimerSource* timerSource)
 		: BaseClass(scheduler, this)
 		, ILoLaLink()
 		, IPacketServiceListener()
 		, LinkPacketServiceListeners()
+		, Encoder(encoder)
 		, Driver(driver)
 		, SyncClock(clockSource, timerSource)
 		, PacketService(scheduler, this, driver, RawInPacket, RawOutPacket)

@@ -6,6 +6,8 @@
 #include "AbstractLoLaLinkPacket.h"
 
 
+#include "..\..\Crypto\LoLaCryptoPkeSession.h"
+
 /// <summary>
 /// Elliptic-curve Diffie–Hellman public key exchange.
 /// SECP 160 R1
@@ -21,12 +23,12 @@ private:
 	using BaseClass = AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>;
 
 protected:
-	using BaseClass::Session;
 	using BaseClass::RandomSource;
 
-	using BaseClass::RawOutPacket;
-	using BaseClass::RawInPacket;
-	using BaseClass::InData;
+	using BaseClass::ExpandedKey;
+
+protected:
+	LoLaCryptoPkeSession Session;
 
 public:
 	AbstractPublicKeyLoLaLink(Scheduler& scheduler,
@@ -39,7 +41,8 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, &Session, driver, entropySource, clockSource, timerSource, duplex, hop)
+		, Session(&ExpandedKey)
 	{
 		Session.SetKeysAndPassword(publicKey, privateKey, accessPassword);
 	}
@@ -62,27 +65,6 @@ protected:
 		default:
 			break;
 		}
-	}
-
-protected:
-	virtual void EncodeOutPacket(const uint8_t* data, const uint8_t counter, const uint8_t dataSize) final
-	{
-		Session.EncodeOutPacket(data, RawOutPacket, counter, dataSize);
-	}
-
-	virtual void EncodeOutPacket(const uint8_t* data, Timestamp& timestamp, const uint8_t counter, const uint8_t dataSize) final
-	{
-		Session.EncodeOutPacket(data, RawOutPacket, timestamp, counter, dataSize);
-	}
-
-	virtual const bool DecodeInPacket(uint8_t& counter, const uint8_t dataSize)  final
-	{
-		return Session.DecodeInPacket(RawInPacket, InData, counter, dataSize);
-	}
-
-	virtual const bool DecodeInPacket(Timestamp& timestamp, uint8_t& counter, const uint8_t dataSize)  final
-	{
-		return Session.DecodeInPacket(RawInPacket, InData, timestamp, counter, dataSize);
 	}
 };
 #endif

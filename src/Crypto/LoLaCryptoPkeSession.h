@@ -4,9 +4,9 @@
 #define _LOLA_CRYPTO_PKE_SESSION_h
 
 #include "LoLaCryptoPrimitives.h"
-#include "LoLaCryptoSession.h"
+#include "LoLaCryptoEncoderSession.h"
 
-class LoLaCryptoPkeSession : public LoLaCryptoSession
+class LoLaCryptoPkeSession : public LoLaCryptoEncoderSession
 {
 private:
 	enum PkeEnum
@@ -21,6 +21,9 @@ private:
 
 private:
 	const uECC_Curve_t* ECC_CURVE; // uECC_secp160r1
+
+private:
+	HKDF<LoLaCryptoPrimitives::KeyHashType> KeyExpander; // N-Bytes key expander HKDF.
 
 private:
 	PkeEnum PkeState = PkeEnum::CalculatingSecret;
@@ -42,9 +45,10 @@ private:
 	const uint8_t* AccessPassword = nullptr;
 
 public:
-	LoLaCryptoPkeSession()
-		: LoLaCryptoSession()
+	LoLaCryptoPkeSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey)
+		: LoLaCryptoEncoderSession(expandedKey)
 		, ECC_CURVE(uECC_secp160r1())
+		, KeyExpander()
 	{
 	}
 
@@ -58,6 +62,26 @@ public:
 		AccessPassword = accessPassword;
 
 		return;
+	}
+
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="key">sizeof = LoLaCryptoDefinition::CYPHER_KEY_SIZE</param>
+	void SetSecretKey(const uint8_t* key)
+	{
+		// Populate crypto keys with HKDF from secret key.
+		KeyExpander.setKey((uint8_t*)(key), LoLaCryptoDefinition::CYPHER_KEY_SIZE, SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+	}
+
+	void CalculateExpandedKey()
+	{
+		// Populate crypto keys with HKDF from secret key.
+		KeyExpander.extract(((uint8_t*)(ExpandedKey)), LoLaLinkDefinition::HKDFSize);
+
+		// Clear hasher from sensitive material. Disabled for performance.
+		//KeyExpander.clear();
 	}
 
 	const bool Setup()

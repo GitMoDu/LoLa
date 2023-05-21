@@ -17,8 +17,6 @@
 
 
 
-#include "..\..\Crypto\LoLaCryptoEncoderSession.h"
-
 
 
 /// <summary>
@@ -53,7 +51,10 @@ protected:
 	using BaseClass::GetSendDuration;
 
 protected:
-	LoLaCryptoEncoderSession Session;
+	/// <summary>
+	/// HKDF Expanded key, with extra seeds.
+	/// </summary>
+	LoLaLinkDefinition::ExpandedKeyStruct ExpandedKey;
 
 	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
 
@@ -74,15 +75,19 @@ private:
 	const bool IsLinkHopper;
 
 public:
-	AbstractLoLaLinkPacket(Scheduler& scheduler, ILoLaPacketDriver* driver,
-		IEntropySource* entropySource, IClockSource* clockSource,
-		ITimerSource* timerSource, IDuplex* duplex, IChannelHop* hop)
-		: BaseClass(scheduler, driver, clockSource, timerSource)
+	AbstractLoLaLinkPacket(Scheduler& scheduler,
+		LoLaCryptoEncoderSession* encoder,
+		ILoLaPacketDriver* driver,
+		IEntropySource* entropySource,
+		IClockSource* clockSource,
+		ITimerSource* timerSource,
+		IDuplex* duplex, 
+		IChannelHop* hop)
+		: BaseClass(scheduler, encoder, driver, clockSource, timerSource)
 		, IChannelHop::IHopListener()
 		, Duplex(duplex)
 		, ChannelHopper(hop)
 		, IsLinkHopper(hop->IsHopper())
-		, Session()
 		, RandomSource(entropySource)
 		, HopTimestamp()
 	{}

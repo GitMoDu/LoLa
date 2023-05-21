@@ -15,6 +15,7 @@ private:
 
 protected:
 	using BaseClass::PacketService;
+	using BaseClass::Encoder;
 	using BaseClass::Driver;
 	using BaseClass::SyncClock;
 	using BaseClass::LinkStage;
@@ -40,29 +41,13 @@ protected:
 protected:
 	virtual const uint8_t GetTxChannel(const uint32_t rollingMicros) { return 0; }
 
-	/// <summary>
-	/// Encode data to RawOutPacket.
-	/// </summary>
-	/// <param name="data"></param>
-	/// <param name="outPacket"></param>
-	/// <param name="counter"></param>
-	/// <param name="dataSize"></param>
-	virtual void EncodeOutPacket(const uint8_t* data, const uint8_t counter, const uint8_t dataSize) {}
-
-	/// <summary>
-	/// Encode data to RawOutPacket.
-	/// </summary>
-	/// <param name="data"></param>
-	/// <param name="outPacket"></param>
-	/// <param name="timestamp"></param>
-	/// <param name="counter"></param>
-	/// <param name="dataSize"></param>
-	virtual void EncodeOutPacket(const uint8_t* data, Timestamp& timestamp, const uint8_t counter, const uint8_t dataSize) { }
-
-
 public:
-	AbstractLoLaSender(Scheduler& scheduler, ILoLaPacketDriver* driver, IClockSource* clockSource, ITimerSource* timerSource)
-		: BaseClass(scheduler, driver, clockSource, timerSource)
+	AbstractLoLaSender(Scheduler& scheduler,
+		LoLaCryptoEncoderSession* encoder,
+		ILoLaPacketDriver* driver,
+		IClockSource* clockSource,
+		ITimerSource* timerSource)
+		: BaseClass(scheduler, encoder, driver, clockSource, timerSource)
 	{}
 
 	virtual const bool SendPacket(ILinkPacketSender* callback, const uint8_t* data, const uint8_t payloadSize) final
@@ -76,15 +61,16 @@ public:
 		{
 		case LinkStageEnum::AwaitingLink:
 			// Encode packet with no encryption and CRC.
-			EncodeOutPacket(data, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+			Encoder->EncodeOutPacket(data, RawOutPacket, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 			break;
 		case LinkStageEnum::Linking:
 			// Encrypt packet without token.
-			EncodeOutPacket(data, ZeroTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+			Encoder->EncodeOutPacket(data, RawOutPacket, ZeroTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 			break;
 		case LinkStageEnum::Linked:
 			// Encrypt packet with token based on time.
-			EncodeOutPacket(data,
+			Encoder->EncodeOutPacket(data,
+				RawOutPacket,
 				SendTimestamp,
 				SendCounter,
 				LoLaPacketDefinition::GetDataSize(packetSize));
@@ -144,7 +130,7 @@ protected:
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		// Encrypt packet with token based on time.
-		EncodeOutPacket(data, SendTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 
 		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(

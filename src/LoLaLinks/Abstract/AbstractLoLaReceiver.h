@@ -16,6 +16,7 @@ private:
 
 protected:
 	using BaseClass::SyncClock;
+	using BaseClass::Encoder;
 
 	using BaseClass::RawInPacket;
 	using BaseClass::ZeroTimestamp;
@@ -70,18 +71,13 @@ protected:
 	/// <returns></returns>
 	virtual void OnReceiveLossDetected(const uint8_t lostCount) {}
 
-	/// <summary>
-	/// Decode RawIn packet to InData, if valid.
-	/// </summary>
-	/// <param name="counter"></param>
-	/// <param name="dataSize"></param>
-	/// <returns>True if received packet was valid.</returns>
-	virtual const bool DecodeInPacket(uint8_t& counter, const uint8_t dataSize) { return false; }
-	virtual const bool DecodeInPacket(Timestamp& timestamp, uint8_t& counter, const uint8_t dataSize) { return false; }
-
 public:
-	AbstractLoLaReceiver(Scheduler& scheduler, ILoLaPacketDriver* driver, IClockSource* clockSource, ITimerSource* timerSource)
-		: BaseClass(scheduler, driver, clockSource, timerSource)
+	AbstractLoLaReceiver(Scheduler& scheduler,
+		LoLaCryptoEncoderSession* encoder,
+		ILoLaPacketDriver* driver,
+		IClockSource* clockSource,
+		ITimerSource* timerSource)
+		: BaseClass(scheduler, encoder, driver, clockSource, timerSource)
 	{}
 
 public:
@@ -108,7 +104,7 @@ public:
 		case LinkStageEnum::AwaitingLink:
 			// Update MAC without implicit addressing or token.
 			// Addressing must be explicit in payload.
-			if (DecodeInPacket(ReceivingCounter, receivingDataSize))
+			if (Encoder->DecodeInPacket(RawInPacket, InData, ReceivingCounter, receivingDataSize))
 			{
 				// Save last received counter, ready for switch for next stage.
 				LastValidReceivedCounter = ReceivingCounter;
@@ -122,7 +118,7 @@ public:
 			break;
 		case LinkStageEnum::Linking:
 			// Update MAC with implicit addressing but without token.
-			if (DecodeInPacket(ZeroTimestamp, ReceivingCounter, receivingDataSize))
+			if (Encoder->DecodeInPacket(RawInPacket, InData, ZeroTimestamp, ReceivingCounter, receivingDataSize))
 			{
 				if (ValidateCounter(ReceivingCounter))
 				{
@@ -154,7 +150,7 @@ public:
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestamp(ReceiveTimestamp);
 			ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
-			if (DecodeInPacket(ReceiveTimestamp, ReceivingCounter, receivingDataSize))
+			if (Encoder->DecodeInPacket(RawInPacket, InData, ReceiveTimestamp, ReceivingCounter, receivingDataSize))
 			{
 				if (ValidateCounter(ReceivingCounter))
 				{

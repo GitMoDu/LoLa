@@ -16,85 +16,45 @@
 
 class LoLaCryptoSession : public LoLaLinkSession
 {
-private:
-	HKDF<LoLaCryptoPrimitives::KeyHashType> KeyExpander; // N-Bytes key expander HKDF.
-		
-private:
-	LoLaCryptoPrimitives::FastHashType FastHasher; // 32 bit fast hasher for PRNG.
-
 protected:
-	LoLaCryptoPrimitives::KeyHashType KeyHasher; // HKDF and Random hasher.
+	LoLaCryptoPrimitives::KeyHashType KeyHasher; // HKDF and Signature hasher.
 
 public:
-	/// <summary>
-	/// HKDF Expanded key, with extra seeds.
-	/// </summary>
-	LoLaLinkDefinition::ExpandedKeyStruct ExpandedKey;
+	///// <summary>
+	///// HKDF Expanded key, with extra seeds.
+	///// </summary>
+	LoLaLinkDefinition::ExpandedKeyStruct* ExpandedKey;
 
 	/// <summary>
 	/// Implicit addressing Rx key.
 	/// Extracted from seed and public keys: [Receiver|Sender]
 	/// </summary>
-	uint8_t InputKey[LoLaLinkDefinition::ADDRESS_KEY_SIZE];
+	uint8_t InputKey[LoLaLinkDefinition::ADDRESS_KEY_SIZE]{};
 
 	/// <summary>
 	/// Implicit addressing Tx key.
 	/// Extracted from seed and public keys: [Receiver|Sender]
 	/// </summary>
-	uint8_t OutputKey[LoLaLinkDefinition::ADDRESS_KEY_SIZE];
+	uint8_t OutputKey[LoLaLinkDefinition::ADDRESS_KEY_SIZE]{};
 
 private:
-	uint8_t MatchToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE];
+	uint8_t MatchToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
 
 	/// <summary>
 	/// Ephemeral session matching token.
 	/// </summary>
-	uint8_t SessionToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE];
+	uint8_t SessionToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
 
 public:
-	LoLaCryptoSession()
+	LoLaCryptoSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey)
 		: LoLaLinkSession()
-		, KeyExpander()
-		, FastHasher()
-		, ExpandedKey()
-		, InputKey()
-		, OutputKey()
-		, SessionToken()
+		, ExpandedKey(expandedKey)
 	{}
-
-public:
-	virtual const uint8_t GetPrngHopChannel(const uint32_t tokenIndex) final
-	{
-		// Start Hash with Token Seed.
-		FastHasher.crc32(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
-
-		// Add Token Index and return the mod of the result.
-		return FastHasher.crc32_upd((uint8_t*)&tokenIndex, sizeof(uint32_t)) % UINT8_MAX;
-	}
 
 public:
 	void SetRandomSessionId(LoLaRandom* randomSource)
 	{
 		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-	}
-
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="key">sizeof = LoLaCryptoDefinition::CYPHER_KEY_SIZE</param>
-	void SetSecretKey(const uint8_t* key)
-	{
-		// Populate crypto keys with HKDF from secret key.
-		KeyExpander.setKey((uint8_t*)(key), LoLaCryptoDefinition::CYPHER_KEY_SIZE, SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-	}
-
-	void CalculateExpandedKey()
-	{
-		// Populate crypto keys with HKDF from secret key.
-		KeyExpander.extract(((uint8_t*)(&ExpandedKey)), LoLaLinkDefinition::HKDFSize);
-
-		// Clear hasher from sensitive material. Disabled for performance.
-		//KeyExpander.clear();
 	}
 
 	/// <summary>
@@ -104,13 +64,13 @@ public:
 	void CalculateSessionAddressing(const uint8_t* localPublicKey, const uint8_t* partnerPublicKey)
 	{
 		KeyHasher.reset(LoLaLinkDefinition::ADDRESS_KEY_SIZE);
-		KeyHasher.update(ExpandedKey.AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
+		KeyHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
 		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		KeyHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		KeyHasher.finalize(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
 		KeyHasher.reset(LoLaLinkDefinition::ADDRESS_KEY_SIZE);
-		KeyHasher.update(ExpandedKey.AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
+		KeyHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
 		KeyHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		KeyHasher.finalize(OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
@@ -152,7 +112,7 @@ public:
 	{
 		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
 		{
-			target[i] = ExpandedKey.LinkingToken[i];
+			target[i] = ExpandedKey->LinkingToken[i];
 		}
 	}
 
@@ -160,7 +120,7 @@ public:
 	{
 		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
 		{
-			if (linkingToken[i] != ExpandedKey.LinkingToken[i])
+			if (linkingToken[i] != ExpandedKey->LinkingToken[i])
 			{
 				return false;
 			}
