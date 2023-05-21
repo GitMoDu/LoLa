@@ -94,6 +94,10 @@ public:
 			// Tx duration has elapsed.
 			UpdateChannel(OutGoing.Channel);
 			Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
+
+#if defined(PRINT_PACKETS)
+			PrintPacket(OutGoing.Buffer, OutGoing.Size);
+#endif
 			OutGoing.Clear();
 			if (Listener != nullptr)
 			{
@@ -282,10 +286,10 @@ public:
 			PrintName();
 			Serial.println(F("Corruption attack!"));
 #endif
-		}
+	}
 #endif
 		Task::enable();
-	}
+}
 
 	const uint32_t GetRxDuration(const uint8_t size)
 	{
