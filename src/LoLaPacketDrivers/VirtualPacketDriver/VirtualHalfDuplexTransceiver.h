@@ -1,13 +1,13 @@
-// VirtualHalfDuplexDriver.h
+// VirtualHalfDuplexTransceiver.h
 
-#ifndef _VIRTUAL_HALF_DUPLEX_DRIVER_h
-#define _VIRTUAL_HALF_DUPLEX_DRIVER_h
+#ifndef _VIRTUAL_HALF_DUPLEX_TRANSCEIVER_h
+#define _VIRTUAL_HALF_DUPLEX_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
 #include <ILoLaRxTxDriver.h>
-#include "IVirtualPacketDriver.h"
+#include "IVirtualTransceiver.h"
 
 /// <summary>
 /// Virtual Packet Driver.
@@ -21,9 +21,9 @@ template<typename Config,
 	const char OnwerName,
 	const bool LogChannelHop = false,
 	const uint8_t PinTestTx = 0>
-class VirtualHalfDuplexDriver
+class VirtualHalfDuplexTransceiver
 	: private Task
-	, public virtual IVirtualPacketDriver
+	, public virtual IVirtualTransceiver
 	, public virtual ILoLaRxTxDriver
 {
 private:
@@ -55,7 +55,7 @@ private:
 	ILoLaRxTxListener* Listener = nullptr;
 
 private:
-	IVirtualPacketDriver* Partner = nullptr;
+	IVirtualTransceiver* Partner = nullptr;
 
 
 private:
@@ -78,10 +78,10 @@ private:
 	}
 
 public:
-	VirtualHalfDuplexDriver(Scheduler& scheduler)
+	VirtualHalfDuplexTransceiver(Scheduler& scheduler)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, IVirtualPacketDriver()
 		, ILoLaRxTxDriver()
+		, IVirtualTransceiver()
 	{
 	}
 
@@ -230,7 +230,7 @@ public:
 	}
 
 public:
-	virtual void SetPartner(IVirtualPacketDriver* partner) final
+	virtual void SetPartner(IVirtualTransceiver* partner) final
 	{
 		Partner = partner;
 	}

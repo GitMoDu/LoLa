@@ -97,16 +97,16 @@ static const uint8_t RemotePrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 
 
 // Test Virtual Packet Driver configurations.
-using FastGHzRadio = IVirtualPacketDriver::Configuration<100, 25, 100, 10, 50, 10>;
-using TypicalSubGHzRadio = IVirtualPacketDriver::Configuration<150, 50, 250, 20, 250, 20>;
-using SlowSingleChannelRadio = IVirtualPacketDriver::Configuration<1, 100, 500, 50, 400, 50>;
-using IdealRadio = IVirtualPacketDriver::Configuration<1, 1, 1, 1, 1, 1>;
+using FastGHzRadio = IVirtualTransceiver::Configuration<100, 25, 100, 10, 50, 10>;
+using TypicalSubGHzRadio = IVirtualTransceiver::Configuration<25, 50, 250, 20, 250, 20>;
+using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 100, 500, 50, 400, 50>;
+using IdealRadio = IVirtualTransceiver::Configuration<1, 1, 1, 1, 1, 1>;
 // Used Virtual Driver Configuration.
 using TestRadioConfig = TypicalSubGHzRadio;
 //
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 10000;
+static const uint16_t DuplexPeriod = 4000;
 static const uint32_t ChannelHopPeriod = 20000;
 
 // Use best available sources.
@@ -154,7 +154,7 @@ NoHopNoChannel RemoteChannelHop;
 
 
 // Link host and its required instances.
-VirtualHalfDuplexDriver<TestRadioConfig, 'H', false, TX_HOST_TEST_PIN> HostDriver(SchedulerBase);
+VirtualHalfDuplexTransceiver<TestRadioConfig, 'H', false, TX_HOST_TEST_PIN> HostDriver(SchedulerBase);
 HalfDuplex<DuplexPeriod, false> HostDuplex;
 LoLaLinkHost<> Host(SchedulerBase,
 	&HostDriver,
@@ -168,7 +168,7 @@ LoLaLinkHost<> Host(SchedulerBase,
 	Password);
 
 // Link Remote.
-VirtualHalfDuplexDriver<TestRadioConfig, 'R', PRINT_CHANNEL_HOP, TX_REMOTE_TEST_PIN> RemoteDriver(SchedulerBase);
+VirtualHalfDuplexTransceiver<TestRadioConfig, 'R', PRINT_CHANNEL_HOP, TX_REMOTE_TEST_PIN> RemoteDriver(SchedulerBase);
 HalfDuplex<DuplexPeriod, true> RemoteDuplex;
 LoLaLinkRemote<> Remote(SchedulerBase,
 	&RemoteDriver,

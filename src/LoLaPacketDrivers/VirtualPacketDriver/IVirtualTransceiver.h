@@ -1,12 +1,12 @@
-// IVirtualPacketDriver.h
+// IVirtualTransceiver.h
 
-#ifndef _I_VIRTUAL_PACKET_DRIVER_h
-#define _I_VIRTUAL_PACKET_DRIVER_h
+#ifndef _I_VIRTUAL_TRANSCEIVER_h
+#define _I_VIRTUAL_TRANSCEIVER_h
 
 #include <stdint.h>
 
 
-class IVirtualPacketDriver
+class IVirtualTransceiver
 {
 public:
 	template<const uint8_t channelCount,
@@ -26,7 +26,7 @@ public:
 	};
 
 public:
-	virtual void SetPartner(IVirtualPacketDriver* partner) {}
+	virtual void SetPartner(IVirtualTransceiver* partner) {}
 	virtual void ReceivePacket(const uint8_t* data, const uint8_t size, const uint8_t channel) {}
 };
 #endif
