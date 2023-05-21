@@ -3,7 +3,7 @@
 #ifndef _LOLA_LINK_REMOTE_
 #define _LOLA_LINK_REMOTE_
 
-#include "..\Abstract\AbstractLoLaLink.h"
+#include "..\Abstract\AbstractPublicKeyLoLaLink.h"
 
 /// <summary>
 /// Link Remote Template.
@@ -14,10 +14,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class LoLaLinkRemote : public AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
+class LoLaLinkRemote : public AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 public:
 	static constexpr uint32_t REMOTE_SLEEP_TIMEOUT_MILLIS = 5000;
@@ -742,10 +742,12 @@ protected:
 	{
 		if (this->GetLinkDuration() > REMOTE_DROP_LINK_TEST)
 		{
+#if defined(DEBUG_LOLA)
 			this->Owner();
 			Serial.print(("Test disconnect after "));
 			Serial.print(REMOTE_DROP_LINK_TEST);
 			Serial.println((" seconds."));
+#endif
 			UpdateLinkStage(LinkStageEnum::AwaitingLink);
 		}
 

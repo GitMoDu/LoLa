@@ -3,7 +3,7 @@
 #define _ABSTRACT_LOLA_LINK_
 
 
-#include "AbstractPublicKeyLoLaLink.h"
+#include "AbstractLoLaLinkPacket.h"
 #include "..\..\Link\ReportTracker.h"
 #include "..\..\Link\TimedStateTransition.h"
 
@@ -16,10 +16,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLaLink : public AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractLoLaLink : public AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>;
 
 
 	using Unlinked = LoLaLinkDefinition::Unlinked;
@@ -37,7 +37,6 @@ protected:
 	using BaseClass::SyncClock;
 	using BaseClass::LastReceivedRssi;
 
-	using BaseClass::Session;
 	using BaseClass::RandomSource;
 	using BaseClass::PacketService;
 
@@ -88,16 +87,14 @@ protected:
 
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
+		LoLaCryptoEncoderSession* encoder,
 		ILoLaPacketDriver* driver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
 		IDuplex* duplex,
-		IChannelHop* hop,
-		const uint8_t* publicKey,
-		const uint8_t* privateKey,
-		const uint8_t* accessPassword)
-		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
+		IChannelHop* hop)
+		: BaseClass(scheduler, encoder, driver, entropySource, clockSource, timerSource, duplex, hop)
 		, ReportTracking()
 	{}
 

@@ -3,8 +3,7 @@
 #ifndef _ABSTRACT_PUBLIC_KEY_LOLA_LINK_
 #define _ABSTRACT_PUBLIC_KEY_LOLA_LINK_
 
-#include "AbstractLoLaLinkPacket.h"
-
+#include "AbstractLoLaLink.h"
 
 #include "..\..\Crypto\LoLaCryptoPkeSession.h"
 
@@ -17,10 +16,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class AbstractPublicKeyLoLaLink : public AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractPublicKeyLoLaLink : public AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 protected:
 	using BaseClass::RandomSource;

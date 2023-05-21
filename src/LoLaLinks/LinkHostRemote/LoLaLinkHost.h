@@ -3,8 +3,7 @@
 #ifndef _LOLA_LINK_HOST_
 #define _LOLA_LINK_HOST_
 
-#include "..\Abstract\AbstractLoLaLink.h"
-
+#include "..\Abstract\AbstractPublicKeyLoLaLink.h"
 
 /// <summary>
 /// LoLa Host Link class.
@@ -14,10 +13,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class LoLaLinkHost : public AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
+class LoLaLinkHost : public AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 public:
 	static constexpr uint32_t HOST_SLEEP_TIMEOUT_MILLIS = 5000;
@@ -95,10 +94,12 @@ protected:
 	{
 		if (this->GetLinkDuration() > HOST_DROP_LINK_TEST)
 		{
+#if defined(DEBUG_LOLA)
 			this->Owner();
 			Serial.print(("Test disconnect after "));
 			Serial.print(HOST_DROP_LINK_TEST);
 			Serial.println((" seconds."));
+#endif
 			UpdateLinkStage(LinkStageEnum::AwaitingLink);
 		}
 
