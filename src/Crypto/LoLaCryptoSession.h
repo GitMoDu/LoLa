@@ -22,14 +22,7 @@ protected:
 private:
 	HKDF<LoLaCryptoPrimitives::KeyHashType> KeyExpander; // N-Bytes key expander HKDF.
 
-public:
-	//&/// move to protected
-	///// <summary>
-	///// HKDF Expanded key, with extra seeds.
-	///// </summary>
-	LoLaLinkDefinition::ExpandedKeyStruct* ExpandedKey;
-
-	///move to private
+protected:
 	/// <summary>
 	/// Implicit addressing Rx key.
 	/// Extracted from seed and public keys: [Receiver|Sender]
@@ -52,7 +45,6 @@ protected:
 	/// Access control password.
 	/// </summary>
 	const uint8_t* AccessPassword;
-
 
 private:
 	uint8_t MatchToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
