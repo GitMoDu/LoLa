@@ -69,7 +69,6 @@ protected:
 	/// <returns></returns>
 	virtual const uint8_t GetServiceId() { return 0; }
 
-
 	/// <summary>
 	/// Fires when the the service has been discovered.
 	/// </summary>
@@ -81,32 +80,29 @@ protected:
 	virtual void OnServiceEnded() { Task::disable(); }
 
 	/// <summary>
-	/// The user class can ride this task's callback,
+	/// The user class can ride this task's callback while linked,
 	/// once the discovery has been complete.
 	/// </summary>
-	virtual void OnDiscoveredService() { Task::disable(); }
-
+	virtual void OnLinkedService() { Task::disable(); }
 
 	/// <summary>
 	/// Fires when the user class's packet send request
 	///  failed after transmission request.
 	/// </summary>
-	virtual void OnDiscoveredSendRequestFail() { }
-
+	virtual void OnLinkedSendRequestFail() { }
 
 	/// <summary>
-	/// 
+	/// After discovery is completed, any non-discovery packets will be routed to the user class.
 	/// </summary>
 	/// <param name="startTimestamp"></param>
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
-	virtual void OnDiscoveredPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) {}
+	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) {}
 
 public:
 	AbstractLoLaDiscoveryService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
 		: BaseClass(scheduler, loLaLink, sendRequestTimeout)
-	{
-	}
+	{}
 
 public:
 	virtual const bool Setup()
@@ -144,8 +140,7 @@ public:
 	{
 		if (port == Port)
 		{
-			const uint8_t subHeader = payload[SubHeaderDefinition::SUB_HEADER_INDEX];
-			if (subHeader == DiscoverySubDefinition::SUB_HEADER) {
+			if (payload[SubHeaderDefinition::SUB_HEADER_INDEX] == DiscoverySubDefinition::SUB_HEADER) {
 				if (payloadSize == DiscoverySubDefinition::PAYLOAD_SIZE &&
 					payload[DiscoverySubDefinition::ID_OFFSET] == GetServiceId()) {
 					switch (DiscoveryState)
@@ -177,7 +172,7 @@ public:
 			}
 			else
 			{
-				OnDiscoveredPacketReceived(startTimestamp, payload, payloadSize);
+				OnLinkedPacketReceived(startTimestamp, payload, payloadSize);
 			}
 		}
 	}
@@ -269,7 +264,7 @@ protected:
 			}
 			break;
 		case DiscoveryStateEnum::Running:
-			OnDiscoveredService();
+			OnLinkedService();
 		default:
 			break;
 		}
@@ -285,7 +280,7 @@ protected:
 			ResetLastSent();
 			break;
 		case DiscoveryStateEnum::Running:
-			OnDiscoveredSendRequestFail();
+			OnLinkedSendRequestFail();
 			break;
 		default:
 			break;
