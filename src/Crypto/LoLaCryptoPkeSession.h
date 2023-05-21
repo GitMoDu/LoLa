@@ -44,30 +44,29 @@ private:
 private:
 	const uint8_t* LocalPublicKey = nullptr;
 	const uint8_t* LocalPrivateKey = nullptr;
-	const uint8_t* AccessPassword = nullptr;
 
 public:
-	LoLaCryptoPkeSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey)
-		: LoLaCryptoEncoderSession(expandedKey)
-		, ECC_CURVE(uECC_secp160r1())
-	{
-	}
-
-	void SetKeysAndPassword(
+	/// <summary>
+	/// </summary>
+	/// <param name="expandedKey">sizeof = LoLaLinkDefinition::HKDFSize</param>
+	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
+	/// <param name="publicKey">sizeof = LoLaCryptoDefinition::PUBLIC_KEY_SIZE</param>
+	/// <param name="privateKey">size of = LoLaCryptoDefinition::PRIVATE_KEY_SIZE</param>
+	LoLaCryptoPkeSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey,
+		const uint8_t* accessPassword,
 		const uint8_t* publicKey,
-		const uint8_t* privateKey,
-		const uint8_t* accessPassword)
-	{
-		LocalPublicKey = publicKey;
-		LocalPrivateKey = privateKey;
-		AccessPassword = accessPassword;
+		const uint8_t* privateKey)
+		: LoLaCryptoEncoderSession(expandedKey, accessPassword)
+		, ECC_CURVE(uECC_secp160r1())
+		, LocalPublicKey(publicKey)
+		, LocalPrivateKey(privateKey)
+	{}
 
-		return;
-	}
-
-	const bool Setup()
+	virtual const bool Setup() final
 	{
-		return LocalPublicKey != nullptr && LocalPrivateKey != nullptr && AccessPassword != nullptr;
+		return
+			LoLaCryptoEncoderSession::Setup() &&
+			LocalPublicKey != nullptr && LocalPrivateKey != nullptr;
 	}
 
 	const bool SessionIsCached()
@@ -145,15 +144,6 @@ public:
 	void CompressPublicKeyTo(uint8_t* target)
 	{
 		uECC_compress(LocalPublicKey, target, ECC_CURVE);
-	}
-
-	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
-	{
-		KeyHasher.reset(LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
-		KeyHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
-		KeyHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
-
-		KeyHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
 	}
 
 	const bool VerifyChallengeSignature(const uint8_t* signatureSource)

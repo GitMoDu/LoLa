@@ -22,8 +22,12 @@ private:
 	uint8_t MatchMac[LoLaPacketDefinition::MAC_SIZE]{};
 
 public:
-	LoLaCryptoEncoderSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey)
-		: LoLaCryptoSession(expandedKey)
+	/// <summary>
+	/// </summary>
+	/// <param name="expandedKey">sizeof = LoLaLinkDefinition::HKDFSize</param>
+	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
+	LoLaCryptoEncoderSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey, const uint8_t* accessPassword)
+		: LoLaCryptoSession(expandedKey, accessPassword)
 		, CryptoHasher()
 		, CryptoCypher(LoLaCryptoDefinition::CYPHER_ROUNDS)
 	{
@@ -36,7 +40,8 @@ public:
 
 	virtual const bool Setup()
 	{
-		return 	ExpandedKey != nullptr &&
+		return
+			LoLaCryptoSession::Setup() &&
 			CryptoCypher.keySize() == LoLaCryptoDefinition::CYPHER_KEY_SIZE &&
 			CryptoCypher.ivSize() == LoLaCryptoDefinition::CYPHER_IV_SIZE &&
 			LoLaCryptoDefinition::MAC_KEY_SIZE >= LoLaCryptoDefinition::CYPHER_TAG_SIZE;

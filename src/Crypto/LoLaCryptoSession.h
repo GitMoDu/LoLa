@@ -23,11 +23,13 @@ private:
 	HKDF<LoLaCryptoPrimitives::KeyHashType> KeyExpander; // N-Bytes key expander HKDF.
 
 public:
+	//&/// move to protected
 	///// <summary>
 	///// HKDF Expanded key, with extra seeds.
 	///// </summary>
 	LoLaLinkDefinition::ExpandedKeyStruct* ExpandedKey;
 
+	///move to private
 	/// <summary>
 	/// Implicit addressing Rx key.
 	/// Extracted from seed and public keys: [Receiver|Sender]
@@ -40,6 +42,18 @@ public:
 	/// </summary>
 	uint8_t OutputKey[LoLaLinkDefinition::ADDRESS_KEY_SIZE]{};
 
+protected:
+	///// <summary>
+	///// HKDF Expanded key, with extra seeds.
+	///// </summary>
+	LoLaLinkDefinition::ExpandedKeyStruct* ExpandedKey;
+
+	/// <summary>
+	/// Access control password.
+	/// </summary>
+	const uint8_t* AccessPassword;
+
+
 private:
 	uint8_t MatchToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
 
@@ -49,17 +63,28 @@ private:
 	uint8_t SessionToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
 
 public:
-	LoLaCryptoSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey)
+	/// <summary>
+	/// </summary>
+	/// <param name="expandedKey">sizeof = LoLaLinkDefinition::HKDFSize</param>
+	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
+	LoLaCryptoSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey, const uint8_t* accessPassword)
 		: LoLaLinkSession()
 		, ExpandedKey(expandedKey)
+		, AccessPassword(accessPassword)
 		, KeyExpander()
 	{}
+
+	virtual const bool Setup()
+	{
+		return ExpandedKey != nullptr && AccessPassword != nullptr;
+	}
 
 public:
 	void SetRandomSessionId(LoLaRandom* randomSource)
 	{
 		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}
+
 
 	/// <summary>
 	/// 
@@ -69,6 +94,15 @@ public:
 	{
 		// Populate crypto keys with HKDF from secret key.
 		KeyExpander.setKey((uint8_t*)(key), LoLaCryptoDefinition::CYPHER_KEY_SIZE, SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+	}
+
+	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
+	{
+		KeyHasher.reset(LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
+		KeyHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
+		KeyHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
+
+		KeyHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
 	}
 
 	void CalculateExpandedKey()

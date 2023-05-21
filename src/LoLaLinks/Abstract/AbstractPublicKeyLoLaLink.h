@@ -41,10 +41,8 @@ public:
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
 		: BaseClass(scheduler, &Session, driver, entropySource, clockSource, timerSource, duplex, hop)
-		, Session(&ExpandedKey)
-	{
-		Session.SetKeysAndPassword(publicKey, privateKey, accessPassword);
-	}
+		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
+	{}
 
 	virtual const bool Setup()
 	{

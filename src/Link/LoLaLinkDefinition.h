@@ -44,7 +44,6 @@ public:
 
 	/// <summary>
 	/// Channel PRNG entropy/key size.
-	/// Follows the size of the PRNG hash.
 	/// </summary>
 	static constexpr uint8_t CHANNEL_KEY_SIZE = 4;
 
