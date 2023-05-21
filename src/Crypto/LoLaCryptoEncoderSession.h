@@ -133,10 +133,22 @@ public:
 	/// <returns>True if packet was accepted.</returns>
 	const bool DecodeInPacket(const uint8_t* inPacket, uint8_t* data, uint8_t& counter, const uint8_t dataSize)
 	{
+		// Set packet authentication tag.
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[LoLaPacketDefinition::ID_INDEX];
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = 0;
+
 		// Calculate MAC from content.
 		CryptoHasher.reset(EmptyKey);
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
-		CryptoHasher.finalize(EmptyKey, MatchMac, LoLaPacketDefinition::MAC_SIZE);
+		
+		// Only the first MAC_SIZE bytes are effectively used.
+		CryptoHasher.finalize(AuthTag, MatchMac, LoLaPacketDefinition::MAC_SIZE);
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAC_SIZE; i++)
@@ -149,7 +161,7 @@ public:
 		}
 
 		// Copy plaintext counter.
-		counter = inPacket[LoLaPacketDefinition::ID_INDEX];
+		counter = AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
 
 		// Copy plaintext content to in data.
 		for (uint_fast8_t i = 0; i < dataSize; i++)
@@ -178,10 +190,22 @@ public:
 		// Set rolling plaintext rolling counter id.
 		outPacket[LoLaPacketDefinition::ID_INDEX] = counter;
 
+		// Set packet authentication tag.
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = outPacket[LoLaPacketDefinition::ID_INDEX];
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = 0;
+		AuthTag[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = 0;
+
 		// Set HMAC without implicit addressing or token.
 		CryptoHasher.reset(EmptyKey);
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
-		CryptoHasher.finalize(EmptyKey, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+
+		// Only the first LoLaPacketDefinition:MAC_SIZE bytes are effectively used.
+		CryptoHasher.finalize(AuthTag, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
 	}
 
 	/// <summary>

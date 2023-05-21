@@ -120,6 +120,6 @@ public:
 #pragma endregion
 };
 
-static const uint8_t EmptyKey[LoLaCryptoDefinition::MAC_KEY_SIZE] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+static const uint8_t EmptyKey[LoLaCryptoDefinition::MAC_KEY_SIZE] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 static const uint8_t CounterZero[1] = { 0 };
 #endif
