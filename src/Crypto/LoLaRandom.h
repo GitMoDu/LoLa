@@ -40,12 +40,12 @@ public:
 
 	const uint8_t GetRandomShort()
 	{
-		return (uint8_t)GetNextRandom();
+		return (uint8_t)GetRandomLong(UINT8_MAX);
 	}
 
 	const uint8_t GetRandomShort(const uint8_t maxValue)
 	{
-		return GetRandomShort() % (maxValue + 1);
+		return (uint8_t)GetRandomLong(maxValue);
 	}
 
 	const uint32_t GetRandomLong()
@@ -53,9 +53,17 @@ public:
 		return GetNextRandom();
 	}
 
+	/// <summary>
+	/// Ranging done using Biased Integer Multiplication.
+	/// https://www.pcg-random.org/posts/bounded-rands.html
+	/// </summary>
+	/// <param name="maxValue"></param>
+	/// <returns>Random value [0 ; maxValue].</returns>
 	const uint32_t GetRandomLong(const uint32_t maxValue)
 	{
-		return GetNextRandom() % (maxValue + 1);
+		const uint64_t bounded = ((uint64_t)GetNextRandom() * maxValue);
+
+		return bounded >> 32;
 	}
 
 	/// <summary>
@@ -97,6 +105,9 @@ private:
 			}
 		}
 		Rng.state += EntropySource->GetNoise();
+		Rng.state += (uint64_t)EntropySource->GetNoise() << 32;
+		Rng.inc += EntropySource->GetNoise();
+
 		PCG::pcg32_random_r(&Rng);
 
 #if defined(DEBUG_LOLA)
