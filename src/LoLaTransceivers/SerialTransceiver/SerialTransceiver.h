@@ -1,24 +1,104 @@
-// SerialLoLaPacketDriver.h
+// SerialTransceiver.h
 // For use with serial/UART.
 
-#ifndef _LOLA_SERIAL_PACKET_DRIVER_h
-#define _LOLA_SERIAL_PACKET_DRIVER_h
+#ifndef _LOLA_SERIAL_TRANSCEIVER_h
+#define _LOLA_SERIAL_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ILoLaPacketDriver.h>
+#include <ILoLaTransceiver.h>
 
 
 /// <summary>
 /// Serial/UART LoLa Packet Driver.
 /// 
 /// </summary>
-template<const uint8_t MaxPacketSize,
+template<const uint8_t InterruptPin,
 	typename SerialType,
-	const uint32_t BaudRate = 9600>
-class SerialLoLaPacketDriver : private Task, public virtual ILoLaPacketDriver
+	const uint32_t BaudRate>
+class SerialTransceiver : private Task, public virtual ILoLaTransceiver
 {
+	template<const uint8_t InterruptPin,
+		typename SerialType,
+		const uint32_t BaudRate>
+	class TimestampedSerial
+	{
+	private:
+		SerialType& SerialInstance;
+
+		volatile uint32_t RxStartTimestamp = 0;
+
+		volatile bool RxPending = false;
+
+		volatile bool RxActive = false;
+
+	public:
+		TimestampedSerial(SerialType& serialInstance)
+			: SerialInstance(serialInstance)
+		{
+
+		}
+
+		void StopRx()
+		{
+			if (RxActive)
+			{
+				RxActive = false;
+				ClearRx();
+			}
+		}
+
+		void StartRx()
+		{
+			if (!RxActive)
+			{
+				RxActive = true;
+				ClearRx();
+			}
+		}
+
+		const bool Setup(void* onInterruptFunction())
+		{
+			if (onInterruptFunction != nullptr) 
+			{
+				return true;
+			}
+
+			return false;
+		}
+
+		void OnPinInterrupt()
+		{
+			// Only one interrupt for each packet.
+			DisableInterrupt();
+
+			if (RxActive)
+			{
+				// Flag pending.
+				RxPending = true;
+
+				// Store timestamp for notification.
+				RxStartTimestamp = micros();
+			}
+		}
+
+	private:
+		void EnableInterrupt()
+		{
+			//TODO: Implement. InterruptPin
+		}
+		void DisableInterrupt()
+		{
+			//TODO: Implement. InterruptPin
+		}
+		void ClearRx()
+		{
+			RxPending = false;
+
+			//TODO: Clear serial input buffer.
+		}
+	};
 private:
 	// Compile time static definition.
 	template<const uint32_t byteDurationMicros>
@@ -30,14 +110,15 @@ private:
 	template<const uint32_t byteDurationMicros>
 	static constexpr uint32_t GetByteDurationMillis()
 	{
-		if (consteval(IsNotZero<byteDurationMicros>()))
+		return byteDurationMicros / 1000;
+		/*if (consteval(IsNotZero<byteDurationMicros>()))
 		{
 			return byteDurationMicros / 1000;
 		}
 		else
 		{
 			return 1;
-		}
+		}*/
 	}
 
 	// Estimate byte duration with baud-rate.
@@ -46,11 +127,11 @@ private:
 
 	static const uint32_t PacketSeparationPauseMicros = 5000000L / BaudRate;
 
-	ILoLaPacketDriverListener* PacketListener = nullptr;
+	ILoLaTransceiverListener* Listener = nullptr;
 
 	SerialType* IO;
 
-	uint8_t InBuffer[MaxPacketSize];
+	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
 
 	uint32_t ReceiveTimestamp = 0;
 	uint32_t LastReceivedTimestamp = 0;
@@ -63,9 +144,9 @@ private:
 	bool ReceivePending = false;
 
 public:
-	SerialLoLaPacketDriver(Scheduler& scheduler, SerialType* io)
+	SerialTransceiver(Scheduler& scheduler, SerialType* io)
 		: Task(0, TASK_FOREVER, &scheduler, false)
-		, ILoLaPacketDriver()
+		, ILoLaTransceiver()
 		, IO(io)
 	{}
 
@@ -93,7 +174,7 @@ public:
 			{
 				if (micros() > SendEndTimestamp)
 				{
-					PacketListener->OnSent(true);
+					Listener->OnTx();
 					SendPending = false;
 				}
 			}
@@ -112,17 +193,18 @@ public:
 
 						if (size > 0)
 						{
-							PacketListener->OnReceived(InBuffer, ReceiveTimestamp, size, UINT8_MAX);
+							// All reception is perfect reception.
+							Listener->OnRx(InBuffer, ReceiveTimestamp, size, UINT8_MAX);
 						}
 						else
 						{
-							PacketListener->OnReceiveLost(ReceiveTimestamp);
+							Listener->OnRxLost(ReceiveTimestamp);
 						}
 					}
 					else
 					{
 						ReceivePending = false;
-						PacketListener->OnReceiveLost(ReceiveTimestamp);
+						Listener->OnRxLost(ReceiveTimestamp);
 					}
 				}
 				Task::enable();
@@ -139,16 +221,16 @@ public:
 	}
 
 	// ILoLaPacketDriver overrides.
-	virtual const bool DriverSetup(ILoLaPacketDriverListener* packetListener)
+	virtual const bool SetupListener(ILoLaTransceiverListener* listener)
 	{
-		DriverStop();
+		Stop();
 
-		PacketListener = packetListener;
+		Listener = listener;
 
-		return PacketListener != nullptr;
+		return Listener != nullptr;
 	}
 
-	virtual const bool DriverStart() final
+	virtual const bool Start() final
 	{
 		if (IO != nullptr)
 		{
@@ -167,7 +249,7 @@ public:
 		}
 	}
 
-	virtual const bool DriverStop() final
+	virtual const bool Stop() final
 	{
 		ReceivePending = false;
 		DriverEnabled = false;
@@ -183,18 +265,18 @@ public:
 	/// Serial isn't limited by receiving, only block if busy sending.
 	/// </summary>
 	/// <returns></returns>
-	virtual const bool DriverCanTransmit() final
+	virtual const bool TxAvailable() final
 	{
 		return DriverEnabled && !SendPending && IO->availableForWrite() && ((micros() - SendEndTimestamp) > PacketSeparationPauseMicros);
 	}
 
 	/// <summary>
-	/// Packet it copied to serial buffer, freeing the packet buffer.
+	/// Packet copy to serial buffer, and start transmission.
 	/// </summary>
 	/// <param name="data"></param>
 	/// <param name="length"></param>
 	/// <returns></returns>
-	virtual const bool DriverTransmit(uint8_t* data, const uint8_t length) final
+	virtual const bool Tx(uint8_t* data, const uint8_t length) final
 	{
 		if (IO->write(data, length) == length)
 		{
@@ -207,22 +289,16 @@ public:
 		return false;
 	}
 
-	virtual const uint8_t GetLastRssiIndicator() final
+	/// <summary>
+	/// Estimate duration with baud-rate.
+	/// Packet size is not a factor, as serial will start outputing
+	///  as soon as the first byte is pushed.
+	/// </summary>
+	/// <param name="packetSize">Number of bytes in the packet.</param>
+	/// <returns>The expected transmission duration in microseconds.</returns>
+	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) final
 	{
-		// All reception is perfect reception.
-		return UINT8_MAX;
-	}
-
-	virtual const uint32_t GetTransmitTimeoutMicros(const uint8_t packetSize) final
-	{
-		// Estimate byte duration with baud-rate.
-		return ByteDurationMicros * (packetSize + 1);
-	}
-
-	virtual const uint32_t GetReplyTimeoutMicros(const uint8_t packetSize) final
-	{
-		// A bit longe than expected, just for margin.
-		return GetTransmitTimeoutMicros(packetSize + 3);
+		return ByteDurationMicros;
 	}
 };
 #endif

@@ -36,9 +36,9 @@ public:
 	/// <summary>
 	/// Set up the transceiver listener that will handle all packet events.
 	/// </summary>
-	/// <param name="packetListener"></param>
+	/// <param name="listener"></param>
 	/// <returns></returns>
-	virtual const bool SetupListener(ILoLaTransceiverListener* packetListener) { return false; }
+	virtual const bool SetupListener(ILoLaTransceiverListener* listener) { return false; }
 
 	/// <summary>
 	/// Boot up the device and start in working mode.
@@ -89,11 +89,5 @@ public:
 	/// <param name="packetSize">Number of bytes in the packet.</param>
 	/// <returns>The expected transmission duration in microseconds.</returns>
 	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) { return 0; }
-
-	///// <summary>
-	///// How long does the driver estimate switching Rx channel will take?
-	///// </summary>
-	///// <returns>The expected hop duration in microseconds.</returns>
-	//virtual const uint32_t GetHopDurationMicros() { return 0; }
 };
 #endif

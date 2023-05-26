@@ -1,7 +1,7 @@
-// VirtualHalfDuplexTransceiver.h
+// VirtualTransceiver.h
 
-#ifndef _VIRTUAL_HALF_DUPLEX_TRANSCEIVER_h
-#define _VIRTUAL_HALF_DUPLEX_TRANSCEIVER_h
+#ifndef _VIRTUAL_TRANSCEIVER_h
+#define _VIRTUAL_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
@@ -21,7 +21,7 @@ template<typename Config,
 	const char OnwerName,
 	const bool LogChannelHop = false,
 	const uint8_t PinTestTx = 0>
-class VirtualHalfDuplexTransceiver
+class VirtualTransceiver
 	: private Task
 	, public virtual IVirtualTransceiver
 	, public virtual ILoLaTransceiver
@@ -78,7 +78,7 @@ private:
 	}
 
 public:
-	VirtualHalfDuplexTransceiver(Scheduler& scheduler)
+	VirtualTransceiver(Scheduler& scheduler)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, ILoLaTransceiver()
 		, IVirtualTransceiver()

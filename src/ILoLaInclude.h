@@ -12,10 +12,10 @@
 
 //TODO: Refactor as individual driver includes?
 #pragma	region Available Packet Drivers
-#include "LoLaPacketDrivers\VirtualPacketDriver\VirtualHalfDuplexTransceiver.h"
-//#include "LoLaPacketDrivers\SerialLoLaPacketDriver\SerialLoLaPacketDriver.h"
-//#include "LoLaPacketDrivers\PIMLoLaPacketDriver\PIMLoLaPacketDriver.h"
-//#include "LoLaPacketDrivers\Si446xLolaPacketDriver\Si446xLolaPacketDriver.h"
+#include "LoLaTransceivers\VirtualTransceiver\VirtualTransceiver.h"
+#include "LoLaTransceivers\SerialTransceiver\SerialTransceiver.h"
+//#include "LoLaTransceivers\PIMLoLaPacketDriver\PIMLoLaPacketDriver.h"
+//#include "LoLaTransceivers\Si446xLolaPacketDriver\Si446xLolaPacketDriver.h"
 #pragma endregion
 
 

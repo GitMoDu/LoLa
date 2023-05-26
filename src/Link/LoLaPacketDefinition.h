@@ -77,7 +77,7 @@ struct LoLaPacketDefinition
 };
 
 /// <summary>
-/// Fixed payload size template packet definition.
+/// Template packet definition.
 /// </summary>
 template<const uint8_t Port, const uint8_t PayloadSize>
 struct TemplateDefinition
@@ -94,6 +94,7 @@ struct SubHeaderDefinition
 	static const uint8_t SUB_HEADER_INDEX = 0;
 	static const uint8_t SUB_PAYLOAD_INDEX = 1;
 };
+
 /// <summary>
 /// Wraps Payload as |SubHeader|SubPayload...|
 /// </summary>

@@ -157,7 +157,7 @@ NoHopNoChannel RemoteChannelHop;
 
 
 // Link host and its required instances.
-VirtualHalfDuplexTransceiver<TestRadioConfig, 'H', false, TX_HOST_TEST_PIN> HostDriver(SchedulerBase);
+VirtualTransceiver<TestRadioConfig, 'H', false, TX_HOST_TEST_PIN> HostDriver(SchedulerBase);
 HalfDuplex<DuplexPeriod, false> HostDuplex;
 LoLaLinkHost<> Host(SchedulerBase,
 	&HostDriver,
@@ -171,7 +171,7 @@ LoLaLinkHost<> Host(SchedulerBase,
 	Password);
 
 // Link Remote.
-VirtualHalfDuplexTransceiver<TestRadioConfig, 'R', PRINT_CHANNEL_HOP, TX_REMOTE_TEST_PIN> RemoteDriver(SchedulerBase);
+VirtualTransceiver<TestRadioConfig, 'R', PRINT_CHANNEL_HOP, TX_REMOTE_TEST_PIN> RemoteDriver(SchedulerBase);
 HalfDuplex<DuplexPeriod, true> RemoteDuplex;
 LoLaLinkRemote<> Remote(SchedulerBase,
 	&RemoteDriver,

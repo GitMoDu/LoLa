@@ -1,4 +1,4 @@
-//// LoLaSi446xPacketDriver.h
+//// Si446xTransceiver.h
 //
 //#ifndef _LOLASI446XPACKETDRIVER_h
 //#define _LOLASI446XPACKETDRIVER_h
@@ -10,9 +10,8 @@
 //#include <PacketDriver\LoLaSi446x\PendingActionsTracker.h>
 //
 //
-//class LoLaSi446xPacketDriver
-//	: public LoLaSi446xRadioDriver
-//	, public virtual ILoLaPacketDriver
+//class Si446xTransceiver
+//	: public virtual ILoLaTransceiver
 //{
 //private:
 //	static const uint32_t RESPONSE_TIMEOUT_MICROS = 500000;
@@ -24,11 +23,13 @@
 //	uint32_t LastEventTimestamp = 0;
 //
 //	//PendingActionsTracker PendingActions;
+// 
+//  Si446xRadioDriver& RadioDriver;
 //
 //public:
-//	LoLaSi446xPacketDriver(SPIClass* spi, const uint8_t cs, const uint8_t reset, const uint8_t irq)
-//		: LoLaSi446xRadioDriver(spi, cs, reset, irq)
-//		, ILoLaPacketDriver()
+//	Si446xTransceiver(SPIClass* spi, const uint8_t cs, const uint8_t reset, const uint8_t irq)
+//		: ILoLaTransceiver()
+//		, RadioDriver(Si446xRadioDriver& radioDriver)
 //	{
 //	}
 //
