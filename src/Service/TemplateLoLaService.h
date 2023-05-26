@@ -23,6 +23,9 @@ protected:
 	/// </summary>
 	TemplateLoLaOutDataPacket<MaxSendPayloadSize> OutPacket;
 
+	/// <summary>
+	/// Link source.
+	/// </summary>
 	ILoLaLink* LoLaLink;
 
 private:
@@ -124,6 +127,11 @@ protected:
 		return millis() - LastRequestSent;
 	}
 
+	void ResetLastSent()
+	{
+		LastRequestSent = millis() - SendRequestTimeout;
+	}
+
 	void RequestSendCancel()
 	{
 		RequestPending = false;
@@ -134,6 +142,7 @@ protected:
 	{
 		return !RequestPending;
 	}
+
 	/// <summary>
 	/// 
 	/// </summary>
@@ -141,7 +150,11 @@ protected:
 	/// <returns>False if a previous send request was interrupted.</returns>
 	const bool RequestSendPacket(const uint8_t payloadSize)
 	{
-		if (RequestPending)
+		if (RequestPending
+#if defined(DEBUG_LOLA)
+			&& payloadSize <= MaxSendPayloadSize
+#endif
+			)
 		{
 			// Interrupted another request.
 			return false;
@@ -151,20 +164,8 @@ protected:
 		RequestPayloadSize = payloadSize;
 		RequestStart = millis();
 
-#if defined(DEBUG_LOLA)
-		if (payloadSize <= MaxSendPayloadSize)
-		{
-			Task::enable();
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-#else
 		Task::enable();
 		return true;
-#endif
 	}
 
 	const bool RegisterPort(const uint8_t port)
