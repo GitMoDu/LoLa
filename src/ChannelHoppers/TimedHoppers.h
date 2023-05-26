@@ -140,9 +140,6 @@ public:
 		if (PinTestHop2 > 0)
 		{
 			digitalWrite(PinTestHop2, HIGH);
-		}
-		if (PinTestHop2 > 0)
-		{
 			digitalWrite(PinTestHop2, LOW);
 		}
 
