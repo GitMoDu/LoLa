@@ -6,8 +6,6 @@
 
 #include "AbstractLoLaReceiver.h"
 
-//#include <ILoLaRxTxDriver.h>
-
 #include "..\..\Link\IChannelHop.h"
 
 #include "..\..\Link\IDuplex.h"
@@ -294,11 +292,9 @@ private:
 	{
 		// Start Hash with Token Seed.
 		FastHasher.smbus(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
-		//FastHasher.crc32(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
 
 		// Add Token Index and return the mod of the result.
 		return FastHasher.smbus_upd((uint8_t*)&tokenIndex, sizeof(uint32_t));
-		//return FastHasher.crc32_upd((uint8_t*)&tokenIndex, sizeof(uint32_t)) % UINT8_MAX;
 	}
 };
 #endif
