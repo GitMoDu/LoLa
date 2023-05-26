@@ -56,7 +56,7 @@ protected:
 	// Packet service instance, templated to max packet size and reference low latency timeouts.
 	LoLaPacketService<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> PacketService;
 
-	// The outgoing content is encrypted and MAC'd here before being sent to the driver for transmission.
+	// The outgoing content is encrypted and MAC'd here before being sent to the Transceiver for transmission.
 	uint8_t RawOutPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
 	// The incoming encrypted and MAC'd packet is stored, here before validated, and decrypted to InData.
@@ -66,8 +66,8 @@ protected:
 	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
 protected:
-	// Rx/Tx Driver for PHY.
-	ILoLaRxTxDriver* Driver;
+	// Rx/Tx Transceiver for PHY.
+	ILoLaTransceiver* Transceiver;
 
 	// Expandable session encoder.
 	LoLaCryptoEncoderSession* Encoder;
@@ -85,7 +85,7 @@ protected:
 public:
 	AbstractLoLa(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IClockSource* clockSource,
 		ITimerSource* timerSource)
 		: BaseClass(scheduler, this)
@@ -93,14 +93,14 @@ public:
 		, IPacketServiceListener()
 		, LinkPacketServiceListeners()
 		, Encoder(encoder)
-		, Driver(driver)
+		, Transceiver(transceiver)
 		, SyncClock(clockSource, timerSource)
-		, PacketService(scheduler, this, driver, RawInPacket, RawOutPacket)
+		, PacketService(scheduler, this, transceiver, RawInPacket, RawOutPacket)
 	{}
 
 	virtual const bool Setup()
 	{
-		return Driver != nullptr && PacketService.Setup() && SyncClock.Setup();
+		return Transceiver != nullptr && PacketService.Setup() && SyncClock.Setup();
 	}
 
 public:

@@ -6,15 +6,15 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ILoLaRxTxDriver.h>
+#include <ILoLaTransceiver.h>
 #include "IVirtualTransceiver.h"
 
 /// <summary>
-/// Virtual Packet Driver.
+/// Virtual Packet Transceiver.
 /// Provides a double-buffered simulated PHY, for LoLaLinks.
-/// Can send and transmit to IVirtualPacketDriver partner.
+/// Can send and transmit to IVirtualTransceiver partner.
 /// </summary>
-/// <typeparam name="Config">IVirtualPacketDriver::Configuration: Simulated PHY characteristics.</typeparam>
+/// <typeparam name="Config">IVirtualTransceiver::Configuration: Simulated PHY characteristics.</typeparam>
 /// <typeparam name="OnwerName">Indentifier for debug logging.</typeparam>
 /// <typeparam name="LogChannelHop">Enables current channel logging, when DEBUG_LOLA is defined.</typeparam>
 template<typename Config,
@@ -24,7 +24,7 @@ template<typename Config,
 class VirtualHalfDuplexTransceiver
 	: private Task
 	, public virtual IVirtualTransceiver
-	, public virtual ILoLaRxTxDriver
+	, public virtual ILoLaTransceiver
 {
 private:
 	template<const uint8_t MaxPacketSize>
@@ -52,7 +52,7 @@ private:
 	};
 
 private:
-	ILoLaRxTxListener* Listener = nullptr;
+	ILoLaTransceiverListener* Listener = nullptr;
 
 private:
 	IVirtualTransceiver* Partner = nullptr;
@@ -80,7 +80,7 @@ private:
 public:
 	VirtualHalfDuplexTransceiver(Scheduler& scheduler)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILoLaRxTxDriver()
+		, ILoLaTransceiver()
 		, IVirtualTransceiver()
 	{
 	}
@@ -101,7 +101,7 @@ public:
 			OutGoing.Clear();
 			if (Listener != nullptr)
 			{
-				Listener->OnSent(true);
+				Listener->OnTx();
 			}
 		}
 
@@ -111,7 +111,7 @@ public:
 			// Rx duration has elapsed since the packet incoming start triggered.
 			if (Listener != nullptr)
 			{
-				if (!Listener->OnReceived(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
+				if (!Listener->OnRx(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
 				{
 #if defined(DEBUG_LOLA)
 					Serial.print(millis());
@@ -139,14 +139,14 @@ public:
 	}
 
 public:
-	virtual const bool DriverSetupListener(ILoLaRxTxListener* listener) final
+	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
 	{
 		Listener = listener;
 
 		return Listener != nullptr;
 	}
 
-	virtual const bool DriverStart() final
+	virtual const bool Start() final
 	{
 		Incoming.Clear();
 		OutGoing.Clear();
@@ -159,7 +159,7 @@ public:
 		return true;
 	}
 
-	virtual const bool DriverStop() final
+	virtual const bool Stop() final
 	{
 		DriverEnabled = false;
 
@@ -168,7 +168,7 @@ public:
 		return true;
 	}
 
-	virtual const bool DriverTx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
+	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		const uint32_t timestamp = micros();
 
@@ -201,6 +201,9 @@ public:
 			return false;
 		}
 
+		// Copy packet to temporary output buffer.
+		// This will be distributed after TransmitDuration,
+		// simulating the transmit delay.
 		OutGoing.Size = packetSize;
 		OutGoing.Channel = channel;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
@@ -214,7 +217,7 @@ public:
 		return true;
 	}
 
-	virtual void DriverRx(const uint8_t channel) final
+	virtual void Rx(const uint8_t channel) final
 	{
 		UpdateChannel(channel);
 	}
@@ -224,7 +227,7 @@ public:
 		return Config::TxBase + ((Config::TxByteNanos * packetSize) / 1000);
 	}
 
-	virtual const bool DriverCanTransmit() final
+	virtual const bool TxAvailable() final
 	{
 		return DriverEnabled && !OutGoing.HasPending() && !Incoming.HasPending();
 	}
@@ -243,7 +246,7 @@ public:
 		{
 			if (Listener != nullptr)
 			{
-				Listener->OnReceiveLost(timestamp);
+				Listener->OnRxLost(timestamp);
 			}
 #if defined(DEBUG_LOLA)
 			Serial.print(millis());
@@ -268,9 +271,6 @@ public:
 			return;
 		}
 
-		// Copy packet to temporary local copy of partner output.
-		// This will be distributed as Incoming after TransmitDuration,
-		// simulating the transmit delay without async calls.
 		Incoming.Started = timestamp;
 		Incoming.Size = packetSize;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
@@ -286,10 +286,10 @@ public:
 			PrintName();
 			Serial.println(F("Corruption attack!"));
 #endif
-	}
+		}
 #endif
 		Task::enable();
-}
+	}
 
 	const uint32_t GetRxDuration(const uint8_t size)
 	{

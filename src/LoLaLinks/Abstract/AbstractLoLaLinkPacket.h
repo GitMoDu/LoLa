@@ -81,13 +81,13 @@ private:
 public:
 	AbstractLoLaLinkPacket(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
 		IDuplex* duplex, 
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, driver, clockSource, timerSource)
+		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
 		, IChannelHop::IHopListener()
 		, Duplex(duplex)
 		, ChannelHopper(hop)

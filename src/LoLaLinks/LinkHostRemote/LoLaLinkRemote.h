@@ -62,7 +62,7 @@ protected:
 	using BaseClass::SyncClock;
 	using BaseClass::Session;
 	using BaseClass::RandomSource;
-	using BaseClass::Driver;
+	using BaseClass::Transceiver;
 
 	using BaseClass::PacketService;
 
@@ -100,7 +100,7 @@ protected:
 
 public:
 	LoLaLinkRemote(Scheduler& scheduler,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
@@ -109,7 +109,7 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
+		: BaseClass(scheduler, transceiver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
 	{}
 
 #pragma region Packet Handling
@@ -406,7 +406,7 @@ protected:
 		switch (SubState)
 		{
 		case RemoteAwaitingLinkEnum::SearchingHost:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				if (SearchChannelTryCount >= CHANNEL_SEARCH_TRY_COUNT)
 				{
@@ -439,7 +439,7 @@ protected:
 			}
 			break;
 		case RemoteAwaitingLinkEnum::RequestingSession:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				// Session PKE start request packet.
 				OutPacket.SetPort(Unlinked::PORT);
@@ -492,7 +492,7 @@ protected:
 			Task::enable();
 			break;
 		case RemoteAwaitingLinkEnum::TryLinking:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::LinkingStartRequest::SUB_HEADER_INDEX] = Unlinked::LinkingStartRequest::SUB_HEADER;
@@ -531,7 +531,7 @@ protected:
 					PreLinkPacketSchedule = millis();
 				}
 			}
-			else if (Driver->DriverCanTransmit() && StateTransition.IsSendRequested(micros()))
+			else if (Transceiver->TxAvailable() && StateTransition.IsSendRequested(micros()))
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER;
@@ -592,7 +592,7 @@ protected:
 			}
 			break;
 		case RemoteLinkingEnum::AuthenticationReply:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::RemoteChallengeReplyRequest::SUB_HEADER_INDEX] = Linking::RemoteChallengeReplyRequest::SUB_HEADER;
@@ -619,7 +619,7 @@ protected:
 			}
 			break;
 		case RemoteLinkingEnum::ClockSyncing:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClockSyncRequest::SUB_HEADER_INDEX] = Linking::ClockSyncRequest::SUB_HEADER;
@@ -658,7 +658,7 @@ protected:
 			}
 			break;
 		case RemoteLinkingEnum::RequestingLinkStart:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::StartLinkRequest::SUB_HEADER_INDEX] = Linking::StartLinkRequest::SUB_HEADER;
@@ -701,7 +701,7 @@ protected:
 					UpdateLinkStage(LinkStageEnum::AwaitingLink);
 				}
 			}
-			else if (Driver->DriverCanTransmit() && StateTransition.IsSendRequested(micros()))
+			else if (Transceiver->TxAvailable() && StateTransition.IsSendRequested(micros()))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;

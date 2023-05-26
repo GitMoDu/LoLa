@@ -28,7 +28,7 @@ private:
 
 
 protected:
-	using BaseClass::Driver;
+	using BaseClass::Transceiver;
 	using BaseClass::OutPacket;
 	using BaseClass::Duplex;
 	using BaseClass::LinkStage;
@@ -88,13 +88,13 @@ protected:
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, driver, entropySource, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
 		, ReportTracking()
 	{}
 
@@ -120,7 +120,7 @@ public:
 		case LinkStageEnum::AwaitingLink:
 		case LinkStageEnum::Linking:
 			// Before Link starts, packet service is not handling sends.
-			// So we need to manually reset RxTxDriver to Rx (also updates channel).
+			// So we need to manually reset Transceiver to Rx (also updates channel).
 			PacketService.RefreshChannel();
 			break;
 		case LinkStageEnum::Linked:
@@ -194,7 +194,7 @@ public:
 	{
 		UpdateLinkStage(LinkStageEnum::Disabled);
 
-		return Driver->DriverStop();
+		return Transceiver->Stop();
 	}
 
 protected:
@@ -300,7 +300,7 @@ protected:
 		case LinkStageEnum::Booting:
 			SyncClock.Start();
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
-			if (Driver->DriverStart())
+			if (Transceiver->Start())
 			{
 				UpdateLinkStage(LinkStageEnum::AwaitingLink);
 			}

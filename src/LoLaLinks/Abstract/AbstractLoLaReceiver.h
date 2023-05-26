@@ -74,10 +74,10 @@ protected:
 public:
 	AbstractLoLaReceiver(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IClockSource* clockSource,
 		ITimerSource* timerSource)
-		: BaseClass(scheduler, encoder, driver, clockSource, timerSource)
+		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
 	{}
 
 public:

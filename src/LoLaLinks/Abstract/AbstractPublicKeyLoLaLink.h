@@ -31,7 +31,7 @@ protected:
 
 public:
 	AbstractPublicKeyLoLaLink(Scheduler& scheduler,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
@@ -40,7 +40,7 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, &Session, driver, entropySource, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, &Session, transceiver, entropySource, clockSource, timerSource, duplex, hop)
 		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
 	{}
 

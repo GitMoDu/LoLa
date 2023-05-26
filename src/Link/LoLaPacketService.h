@@ -7,21 +7,21 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ILoLaRxTxDriver.h>
+#include <ILoLaTransceiver.h>
 #include "IPacketServiceListener.h"
 
 
 /// <summary>
 /// Packet send and receive service, with a single IPacketServiceListener for receive.
-/// Interfaces directly with and abstracts ILoLaPacketDriver.
+/// Interfaces directly with and abstracts ILoLaTransceiver.
 /// Optional SendListener event callbacks.
 /// Properties:
 ///		Content abstract.
-///		Buffers input packets, so packet driver is free to receive more while the service processes it.
+///		Buffers input packets, so transceiver is free to receive more while the service processes it.
 /// </summary>
 /// <param name="MaxPacketSize">The maximum raw packet size.</param>
 template<const uint8_t MaxPacketSize>
-class LoLaPacketService : private Task, public virtual ILoLaRxTxListener
+class LoLaPacketService : private Task, public virtual ILoLaTransceiverListener
 {
 private:
 	using SendResultEnum = ILinkPacketSender::SendResultEnum;
@@ -53,27 +53,27 @@ private:
 	volatile StateEnum State = StateEnum::Done;
 
 public:
-	ILoLaRxTxDriver* Driver = nullptr;
+	ILoLaTransceiver* Transceiver = nullptr;
 
 public:
 	LoLaPacketService(Scheduler& scheduler,
 		IPacketServiceListener* serviceListener,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		uint8_t* rawInPacket,
 		uint8_t* rawOutPacket)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILoLaRxTxListener()
+		, ILoLaTransceiverListener()
 		, ServiceListener(serviceListener)
 		, RawInPacket(rawInPacket)
 		, RawOutPacket(rawOutPacket)
-		, Driver(driver)
+		, Transceiver(transceiver)
 	{}
 
 	const bool Setup()
 	{
 		if (RawInPacket != nullptr &&
 			RawOutPacket != nullptr &&
-			Driver->DriverSetupListener(this))
+			Transceiver->SetupListener(this))
 		{
 			return true;
 		}
@@ -121,7 +121,7 @@ public:
 			State = StateEnum::Done;
 			break;
 		case StateEnum::Done:
-			Driver->DriverRx(ServiceListener->GetRxChannel());
+			Transceiver->Rx(ServiceListener->GetRxChannel());
 			Task::disable();
 			break;
 		default:
@@ -150,7 +150,7 @@ public:
 public:
 	const bool CanSendPacket() const
 	{
-		return State == StateEnum::Done && Driver->DriverCanTransmit();
+		return State == StateEnum::Done && Transceiver->TxAvailable();
 	}
 
 	void RefreshChannel()
@@ -161,7 +161,7 @@ public:
 		if (State == StateEnum::Done)
 		{
 			// Just running the task in Done state will update the channel, but directly calling Driver has less latency.
-			Driver->DriverRx(ServiceListener->GetRxChannel());
+			Transceiver->Rx(ServiceListener->GetRxChannel());
 		}
 	}
 
@@ -191,7 +191,7 @@ public:
 	/// <returns></returns>
 	const bool Send(ILinkPacketSender* callback, const uint8_t size, const uint8_t channel)
 	{
-		if (Driver->DriverTx(RawOutPacket, size, channel))
+		if (Transceiver->Tx(RawOutPacket, size, channel))
 		{
 			SendOutTimestamp = micros();
 			SendListener = callback;
@@ -211,7 +211,7 @@ public:
 	}
 
 	/// <summary>
-	/// Mock internal "DriverTx", 
+	/// Mock internal "Tx", 
 	/// for calibration/testing purposes.
 	/// </summary>
 	/// <param name="callback"></param>
@@ -220,11 +220,11 @@ public:
 	/// <returns></returns>
 	const bool MockSend(ILinkPacketSender* callback, const uint8_t size, const uint8_t channel)
 	{
-		// Mock internal "DriverTx".
+		// Mock internal "Tx".
 		if ((size > 0 && channel == 0) || (size >= 0))
 		{
-			// Mock driver call.
-			if (((Driver->GetTransmitDurationMicros(size) > 0)))
+			// Mock Transceiver call.
+			if (((Transceiver->GetTransmitDurationMicros(size) > 0)))
 			{
 				return true;
 			}
@@ -234,10 +234,10 @@ public:
 	}
 
 	/// <summary>
-	/// ILoLaRxTxListener overrides.
+	/// ILoLaTransceiverListener overrides.
 	/// </summary>
 public:
-	virtual const bool OnReceived(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
+	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
 		if (PendingReceiveSize > 0)
 		{
@@ -268,12 +268,12 @@ public:
 		}
 	}
 
-	virtual void OnReceiveLost(const uint32_t receiveTimestamp) final
+	virtual void OnRxLost(const uint32_t receiveTimestamp) final
 	{
 		ServiceListener->OnLost(receiveTimestamp);
 	}
 
-	virtual void OnSent(const bool success) final
+	virtual void OnTx() final
 	{
 		switch (State)
 		{

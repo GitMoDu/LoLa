@@ -51,7 +51,7 @@ protected:
 	using BaseClass::SyncClock;
 	using BaseClass::Session;
 	using BaseClass::RandomSource;
-	using BaseClass::Driver;
+	using BaseClass::Transceiver;
 
 	using BaseClass::PacketService;
 
@@ -109,7 +109,7 @@ protected:
 
 public:
 	LoLaLinkHost(Scheduler& scheduler,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
@@ -118,7 +118,7 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, driver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
+		: BaseClass(scheduler, transceiver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
 		, StateTransition()
 	{}
 
@@ -385,7 +385,7 @@ protected:
 			Task::enable();
 			break;
 		case HostAwaitingLinkEnum::BroadcastingSession:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				// Session broadcast packet.
 				OutPacket.SetPort(Unlinked::PORT);
@@ -476,7 +476,7 @@ protected:
 					Task::enable();
 				}
 			}
-			else if (StateTransition.IsSendRequested(micros()) && Driver->DriverCanTransmit())
+			else if (StateTransition.IsSendRequested(micros()) && Transceiver->TxAvailable())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOver::SUB_HEADER;
@@ -522,7 +522,7 @@ protected:
 		switch (SubState)
 		{
 		case HostLinkingEnum::AuthenticationRequest:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::HostChallengeRequest::SUB_HEADER_INDEX] = Linking::HostChallengeRequest::SUB_HEADER;
@@ -539,7 +539,7 @@ protected:
 			}
 			break;
 		case HostLinkingEnum::AuthenticationReply:
-			if (Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::HostChallengeReply::SUB_HEADER_INDEX] = Linking::HostChallengeReply::SUB_HEADER;
@@ -556,7 +556,7 @@ protected:
 			}
 			break;
 		case HostLinkingEnum::ClockSyncing:
-			if (ClockReplyPending && Driver->DriverCanTransmit() && (millis() > PreLinkPacketSchedule))
+			if (ClockReplyPending && Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClockSyncReply::SUB_HEADER_INDEX] = Linking::ClockSyncReply::SUB_HEADER;
@@ -616,7 +616,7 @@ protected:
 					Task::enable();
 				}
 			}
-			else if (StateTransition.IsSendRequested(micros()) && Driver->DriverCanTransmit())
+			else if (StateTransition.IsSendRequested(micros()) && Transceiver->TxAvailable())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOver::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOver::SUB_HEADER;

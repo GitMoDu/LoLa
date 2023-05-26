@@ -14,9 +14,9 @@ private:
 	using BaseClass = AbstractLoLa<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
 
 protected:
+	using BaseClass::Transceiver;
 	using BaseClass::PacketService;
 	using BaseClass::Encoder;
-	using BaseClass::Driver;
 	using BaseClass::SyncClock;
 	using BaseClass::LinkStage;
 
@@ -44,10 +44,10 @@ protected:
 public:
 	AbstractLoLaSender(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
-		ILoLaRxTxDriver* driver,
+		ILoLaTransceiver* transceiver,
 		IClockSource* clockSource,
 		ITimerSource* timerSource)
-		: BaseClass(scheduler, encoder, driver, clockSource, timerSource)
+		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
 	{}
 
 	virtual const bool SendPacket(ILinkPacketSender* callback, const uint8_t* data, const uint8_t payloadSize) final
@@ -110,7 +110,7 @@ protected:
 	{
 		return SendShortDurationMicros
 			+ ((SendVariableDurationMicros * payloadSize) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE)
-			+ Driver->GetTransmitDurationMicros(LoLaPacketDefinition::GetTotalSize(payloadSize));
+			+ Transceiver->GetTransmitDurationMicros(LoLaPacketDefinition::GetTotalSize(payloadSize));
 	}
 
 protected:
