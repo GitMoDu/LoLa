@@ -56,7 +56,8 @@
 
 #define HOST_DROP_LINK_TEST 5
 //#define REMOTE_DROP_LINK_TEST 5
-//#define PRINT_TEST_PACKETS false
+//#define PRINT_TEST_PACKETS
+#define PRINT_DISCOVERY
 
 #define PRINT_CHANNEL_HOP false
 #define PRINT_LINK_HEARBEAT 1
@@ -76,6 +77,8 @@
 #include <ILoLaInclude.h>
 
 #include "TestTask.h"
+
+#include "DiscoveryTestService.h"
 
 // Process scheduler.
 Scheduler SchedulerBase;
@@ -183,6 +186,9 @@ LoLaLinkRemote<> Remote(SchedulerBase,
 
 TestTask Tester(SchedulerBase, &Host, &Remote);
 
+DiscoveryTestService<0, 'H'> HostDiscovery(SchedulerBase, &Host);
+DiscoveryTestService<0, 'R'> RemoteDiscovery(SchedulerBase, &Remote);
+
 
 void BootError()
 {
@@ -210,6 +216,20 @@ void setup()
 	if (!Tester.Setup())
 	{
 		Serial.println(F("Tester Task setup failed."));
+
+		BootError();
+	}
+
+	// Setup Test Discovery services.
+	if (!HostDiscovery.Setup())
+	{
+		Serial.println(F("HostDiscovery setup failed."));
+
+		BootError();
+	}
+	if (!RemoteDiscovery.Setup())
+	{
+		Serial.println(F("RemoteDiscovery setup failed."));
 
 		BootError();
 	}
