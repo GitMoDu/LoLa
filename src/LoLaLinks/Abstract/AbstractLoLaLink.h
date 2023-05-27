@@ -101,8 +101,6 @@ public:
 	virtual const bool Setup()
 	{
 		if (BaseClass::Setup()
-			&& RegisterPacketReceiverInternal(this, Unlinked::PORT)
-			&& RegisterPacketReceiverInternal(this, Linking::PORT)
 			&& RegisterPort(Linked::PORT)
 			&& CalibrateSendDuration())
 		{
