@@ -9,6 +9,87 @@
 
 #include <ILoLaTransceiver.h>
 
+template<const uint8_t InterruptPin,
+	typename SerialType,
+	const uint32_t BaudRate>
+class TimestampedSerial
+{
+private:
+	SerialType& SerialInstance;
+
+	volatile uint32_t RxStartTimestamp = 0;
+
+	volatile bool RxPending = false;
+
+	volatile bool RxActive = false;
+
+public:
+	TimestampedSerial(SerialType& serialInstance)
+		: SerialInstance(serialInstance)
+	{
+
+	}
+
+	void StopRx()
+	{
+		if (RxActive)
+		{
+			RxActive = false;
+			ClearRx();
+		}
+	}
+
+	void StartRx()
+	{
+		if (!RxActive)
+		{
+			RxActive = true;
+			ClearRx();
+		}
+	}
+
+	const bool Setup(void* onInterruptFunction())
+	{
+		if (onInterruptFunction != nullptr)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	void OnPinInterrupt()
+	{
+		// Only one interrupt for each packet.
+		DisableInterrupt();
+
+		if (RxActive)
+		{
+			// Flag pending.
+			RxPending = true;
+
+			// Store timestamp for notification.
+			RxStartTimestamp = micros();
+		}
+	}
+
+private:
+	void EnableInterrupt()
+	{
+		//TODO: Implement. InterruptPin
+	}
+	void DisableInterrupt()
+	{
+		//TODO: Implement. InterruptPin
+	}
+	void ClearRx()
+	{
+		RxPending = false;
+
+		//TODO: Clear serial input buffer.
+	}
+};
+
 
 /// <summary>
 /// Serial/UART LoLa Packet Driver.
@@ -19,93 +100,14 @@ template<const uint8_t InterruptPin,
 	const uint32_t BaudRate>
 class SerialTransceiver : private Task, public virtual ILoLaTransceiver
 {
-	template<const uint8_t InterruptPin,
-		typename SerialType,
-		const uint32_t BaudRate>
-	class TimestampedSerial
-	{
-	private:
-		SerialType& SerialInstance;
 
-		volatile uint32_t RxStartTimestamp = 0;
-
-		volatile bool RxPending = false;
-
-		volatile bool RxActive = false;
-
-	public:
-		TimestampedSerial(SerialType& serialInstance)
-			: SerialInstance(serialInstance)
-		{
-
-		}
-
-		void StopRx()
-		{
-			if (RxActive)
-			{
-				RxActive = false;
-				ClearRx();
-			}
-		}
-
-		void StartRx()
-		{
-			if (!RxActive)
-			{
-				RxActive = true;
-				ClearRx();
-			}
-		}
-
-		const bool Setup(void* onInterruptFunction())
-		{
-			if (onInterruptFunction != nullptr) 
-			{
-				return true;
-			}
-
-			return false;
-		}
-
-		void OnPinInterrupt()
-		{
-			// Only one interrupt for each packet.
-			DisableInterrupt();
-
-			if (RxActive)
-			{
-				// Flag pending.
-				RxPending = true;
-
-				// Store timestamp for notification.
-				RxStartTimestamp = micros();
-			}
-		}
-
-	private:
-		void EnableInterrupt()
-		{
-			//TODO: Implement. InterruptPin
-		}
-		void DisableInterrupt()
-		{
-			//TODO: Implement. InterruptPin
-		}
-		void ClearRx()
-		{
-			RxPending = false;
-
-			//TODO: Clear serial input buffer.
-		}
-	};
 private:
 	// Compile time static definition.
-	template<const uint32_t byteDurationMicros>
-	static constexpr bool IsNotZero()
-	{
-		return (byteDurationMicros / 1000L) > 0;
-	}
+	//template<const uint32_t byteDurationMicros>
+	//static constexpr bool IsNotZero()
+	//{
+	//	return (byteDurationMicros / 1000L) > 0;
+	//}
 
 	template<const uint32_t byteDurationMicros>
 	static constexpr uint32_t GetByteDurationMillis()
@@ -186,7 +188,7 @@ public:
 					const uint8_t pending = Serial.available();
 					if (pending > 0)
 					{
-						uint8_t size = Serial.readBytes((char*)InBuffer, pending);
+						const uint8_t size = Serial.readBytes((char*)InBuffer, pending);
 
 						// Clear flag as soon as the packet has been read off serial buffer.
 						ReceivePending = false;
