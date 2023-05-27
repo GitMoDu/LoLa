@@ -6,13 +6,25 @@
 #include "..\Service\TemplateLoLaService.h"
 
 /// <summary>
+/// Discovery sub header definition.
+/// User classes should extend sub-headers starting from 0 up to UINT8_MAX-1.
 /// </summary>
-/// <param name="Port">The port registered for this service.
-///  Can be piggybacked on by using the first byte of the payload as a header (excluding UINT8_MAX).</param>
+class DiscoveryDefinition : public TemplateSubHeaderDefinition<UINT8_MAX, 1 + 4>
+{
+public:
+	static const uint8_t PAYLOAD_ACK_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+	static const uint8_t PAYLOAD_ID_INDEX = PAYLOAD_ACK_INDEX + 1;
+};
+
+/// <summary>
+/// Can be piggybacked on by using the first byte of the payload as a sub-header (excluding UINT8_MAX).
+/// </summary>
+/// <typeparam name="Port">The port registered for this service.</typeparam>
+/// <typeparam name="ServiceId">Unique service identifier.</typeparam>
+/// <typeparam name="MaxSendPayloadSize">Size of shared out packet buffer. Must be at least DiscoveryDefinition::PAYLOAD_SIZE bytes.</typeparam>
 template<const uint8_t Port,
-	const uint8_t MaxSendPayloadSize = 3,
-	const bool AutoStart = true,
-	const uint32_t NoDiscoveryTimeOut = 30000>
+	const uint32_t ServiceId,
+	const uint8_t MaxSendPayloadSize = DiscoveryDefinition::PAYLOAD_SIZE>
 class AbstractLoLaDiscoveryService
 	: public TemplateLoLaService<MaxSendPayloadSize>
 	, public virtual ILinkListener
@@ -20,55 +32,21 @@ class AbstractLoLaDiscoveryService
 private:
 	using BaseClass = TemplateLoLaService<MaxSendPayloadSize>;
 
-	/// <summary>
-	/// Discovery sub header start at the top, leaving the bottom free.
-	/// </summary>
-	class DiscoverySubDefinition : public TemplateSubHeaderDefinition<UINT8_MAX, 2>
-	{
-	public:
-		static const uint8_t PAYLOAD_ID_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
-		static const uint8_t PAYLOAD_ACK_INDEX = PAYLOAD_ID_INDEX + 1;
-	};
+	static const uint32_t RetryPeriod = 2;
+	static const uint32_t ResendPeriod = 10;
+	static const uint32_t NoDiscoveryTimeOut = 1000;
 
 protected:
 	using BaseClass::LoLaLink;
 	using BaseClass::RegisterPort;
 	using BaseClass::RequestSendCancel;
+	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::ResetLastSent;
+	using BaseClass::OutPacket;
 	using BaseClass::GetElapsedSinceLastSent;
 
-	using SendResultEnum = ILinkPacketSender::SendResultEnum;
-
 protected:
-	TemplateLoLaOutDataPacket<MaxSendPayloadSize> OutPacket;
-
-private:
-	enum DiscoveryStateEnum
-	{
-		WaitingForManualActivation,
-		WaitingForLink,
-		SendingSearch,
-		WaitingForReply,
-		Ready,
-		Running
-	};
-
-	static const uint32_t RetryPeriod = 2;
-	static const uint32_t SendNoResponseTimeoutPeriod = 50;
-
-	uint32_t DiscoveryStart = 0;
-
-	DiscoveryStateEnum DiscoveryState = DiscoveryStateEnum::WaitingForManualActivation;
-	bool Acknowledged = false;
-
-protected:
-	/// <summary>
-	/// Service content identifier. Double checks that the registered service on the other is has the same abstract "content".
-	/// </summary>
-	/// <returns></returns>
-	virtual const uint8_t GetServiceId() { return 0; }
-
 	/// <summary>
 	/// Fires when the the service has been discovered.
 	/// </summary>
@@ -78,6 +56,11 @@ protected:
 	/// Fires when the the service has been lost.
 	/// </summary>
 	virtual void OnServiceEnded() { Task::disable(); }
+
+	/// <summary>
+	/// Fires when the the service partner can't be found.
+	/// </summary>
+	virtual void OnDiscoveryFailed() { Task::disable(); }
 
 	/// <summary>
 	/// The user class can ride this task's callback while linked,
@@ -99,6 +82,21 @@ protected:
 	/// <param name="payloadSize"></param>
 	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) {}
 
+private:
+	enum DiscoveryStateEnum
+	{
+		WaitingForLink,
+		Discovering,
+		Acknowledging,
+		Running,
+		PostStartReply
+	};
+
+	uint32_t DiscoveryStart = 0;
+	DiscoveryStateEnum DiscoveryState = DiscoveryStateEnum::WaitingForLink;
+
+	bool Acknowledged = false;
+
 public:
 	AbstractLoLaDiscoveryService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
 		: BaseClass(scheduler, loLaLink, sendRequestTimeout)
@@ -107,14 +105,7 @@ public:
 public:
 	virtual const bool Setup()
 	{
-		if (AutoStart)
-		{
-			DiscoveryState = DiscoveryStateEnum::WaitingForLink;
-		}
-		else
-		{
-			DiscoveryState = DiscoveryStateEnum::WaitingForManualActivation;
-		}
+		DiscoveryState = DiscoveryStateEnum::WaitingForLink;
 
 		return BaseClass::Setup() &&
 			LoLaLink->RegisterLinkListener(this) &&
@@ -127,95 +118,78 @@ public:
 		{
 			if (DiscoveryState == DiscoveryStateEnum::WaitingForLink)
 			{
-				StartInternal();
+				Acknowledged = false;
+				DiscoveryState = DiscoveryStateEnum::Discovering;
+				DiscoveryStart = millis();
+				Task::enableIfNot();
 			}
 		}
 		else
 		{
-			StopDiscovery();
-		}
-	}
-
-	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
-	{
-		if (port == Port)
-		{
-			if (payload[SubHeaderDefinition::SUB_HEADER_INDEX] == DiscoverySubDefinition::SUB_HEADER) {
-				if (payloadSize == DiscoverySubDefinition::PAYLOAD_SIZE &&
-					payload[DiscoverySubDefinition::ID_OFFSET] == GetServiceId()) {
-					switch (DiscoveryState)
-					{
-					case DiscoveryStateEnum::SendingSearch:
-						RequestSendCancel();
-						DiscoveryState = DiscoveryStateEnum::Ready;
-						UpdateAcknowledge(payload[DiscoverySubDefinition::ACK_OFFSET] > 0);
-						Task::enableIfNot();
-						break;
-					case DiscoveryStateEnum::WaitingForLink:
-						break;
-					case DiscoveryStateEnum::WaitingForReply:
-						DiscoveryState = DiscoveryStateEnum::Ready;
-						UpdateAcknowledge(payload[DiscoverySubDefinition::ACK_OFFSET] > 0);
-						Task::enableIfNot();
-						break;
-					case DiscoveryStateEnum::Ready:
-						UpdateAcknowledge(payload[DiscoverySubDefinition::ACK_OFFSET] > 0);
-						Task::enableIfNot();
-					case DiscoveryStateEnum::WaitingForManualActivation:
-						// Host has not enabled the service.
-						break;
-					default:
-						// Acknowledged is not updated on an unexpected state.
-						break;
-					}
-				}
-			}
-			else
+			if (DiscoveryState == DiscoveryStateEnum::Running)
 			{
-				OnLinkedPacketReceived(startTimestamp, payload, payloadSize);
+				OnServiceEnded();
 			}
-		}
-	}
-
-protected:
-	/// <summary>
-	/// Starts discovery immediatelly if Link is available.
-	/// Otherwise sets up the state so it will wake-up when the Link is available.
-	/// </summary>
-	void StartDiscovery()
-	{
-		if (LoLaLink->HasLink())
-		{
-			StartInternal();
-		}
-		else
-		{
 			DiscoveryState = DiscoveryStateEnum::WaitingForLink;
 			Task::enableIfNot();
 		}
 	}
 
-	void StopDiscovery()
+	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
-		switch (DiscoveryState)
+		if (port != Port)
 		{
-		case DiscoveryStateEnum::Running:
-			OnServiceEnded();
-			break;
-		default:
-			break;
+			return;
 		}
-		if (AutoStart)
+
+		if (payload[SubHeaderDefinition::SUB_HEADER_INDEX] == DiscoveryDefinition::SUB_HEADER)
 		{
-			DiscoveryState = DiscoveryStateEnum::WaitingForLink;
+			if (payloadSize == DiscoveryDefinition::PAYLOAD_SIZE
+				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX] == (uint8_t)(ServiceId)
+				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 1] == (uint8_t)(ServiceId >> 8)
+				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 2] == (uint8_t)(ServiceId >> 16)
+				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 3] == (uint8_t)(ServiceId >> 24)
+				)
+			{
+				switch (DiscoveryState)
+				{
+				case DiscoveryStateEnum::Discovering:
+					DiscoveryState = DiscoveryStateEnum::Acknowledging;
+					Acknowledged |= payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0;
+					ResetLastSent();
+					break;
+				case DiscoveryStateEnum::Acknowledging:
+					if (Acknowledged && payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0)
+					{
+						// We have been acknowledged and we know it, discovery is finished.
+						DiscoveryState = DiscoveryStateEnum::Running;
+						OnServiceStarted();
+						Task::enableIfNot();
+					}
+					else
+					{
+						Acknowledged |= payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0;
+					}
+					ResetLastSent();
+					break;
+				case DiscoveryStateEnum::Running:
+					DiscoveryState = DiscoveryStateEnum::PostStartReply;
+					Task::enable();
+					break;
+				default:
+					// Received packet at an unexpected state.
+					return;
+					break;
+				}
+			}
 		}
 		else
 		{
-			DiscoveryState = DiscoveryStateEnum::WaitingForManualActivation;
+			OnLinkedPacketReceived(startTimestamp, payload, payloadSize);
 		}
-		Task::enableIfNot();
 	}
 
+protected:
 	virtual void OnService() final
 	{
 		switch (DiscoveryState)
@@ -223,48 +197,59 @@ protected:
 		case DiscoveryStateEnum::WaitingForLink:
 			Task::disable();
 			break;
-		case DiscoveryStateEnum::WaitingForManualActivation:
-			Task::disable();
-			break;
-		case DiscoveryStateEnum::SendingSearch:
-			if (RequestSendDiscovery())
-			{
-				DiscoveryState = DiscoveryStateEnum::WaitingForReply;
-			}
-			else
-			{
-				Task::delay(RetryPeriod);
-			}
-			break;
-		case DiscoveryStateEnum::WaitingForReply:
+		case DiscoveryStateEnum::Discovering:
 			if (millis() - DiscoveryStart > NoDiscoveryTimeOut)
 			{
-				// After NoDiscoveryTimeOut ms have elapsed, we give up?
-				Task::disable();
+				// After NoDiscoveryTimeOut ms have elapsed, we give up.
+				OnDiscoveryFailed();
 			}
-			else if (GetElapsedSinceLastSent() > SendNoResponseTimeoutPeriod)
+			else if (GetElapsedSinceLastSent() > ResendPeriod)
 			{
-				DiscoveryState = DiscoveryStateEnum::SendingSearch;
-				Task::enable();
+				if (!RequestSendDiscovery(false))
+				{
+					Task::delay(RetryPeriod);
+				}
 			}
 			else
 			{
 				Task::delay(RetryPeriod);
 			}
 			break;
-		case DiscoveryStateEnum::Ready:
-			if (Acknowledged)
+		case DiscoveryStateEnum::Acknowledging:
+			if (millis() - DiscoveryStart > NoDiscoveryTimeOut)
 			{
-				DiscoveryState = DiscoveryStateEnum::Running;
-				OnServiceStarted();
+				// After NoDiscoveryTimeOut ms have elapsed, we give up.
+				OnDiscoveryFailed();
+			}
+			else if (GetElapsedSinceLastSent() > ResendPeriod)
+			{
+				if (!RequestSendDiscovery(true))
+				{
+					Task::delay(RetryPeriod);
+				}
 			}
 			else
 			{
-				DiscoveryState = DiscoveryStateEnum::SendingSearch;
+				Task::delay(RetryPeriod);
+			}
+			break;
+		case DiscoveryStateEnum::PostStartReply:
+			if (GetElapsedSinceLastSent() > ResendPeriod)
+			{
+				if (RequestSendDiscovery(true))
+				{
+					DiscoveryState = DiscoveryStateEnum::Running;
+					Task::enable();
+				}
+				else
+				{
+					Task::delay(RetryPeriod);
+				}
 			}
 			break;
 		case DiscoveryStateEnum::Running:
 			OnLinkedService();
+			break;
 		default:
 			break;
 		}
@@ -274,11 +259,6 @@ protected:
 	{
 		switch (DiscoveryState)
 		{
-		case DiscoveryStateEnum::WaitingForReply:
-			DiscoveryState = DiscoveryStateEnum::SendingSearch;
-		case DiscoveryStateEnum::SendingSearch:
-			ResetLastSent();
-			break;
 		case DiscoveryStateEnum::Running:
 			OnLinkedSendRequestFail();
 			break;
@@ -287,40 +267,38 @@ protected:
 		}
 	}
 
+protected:
+	const bool IsDiscovered()
+	{
+		return DiscoveryState == DiscoveryStateEnum::Running;
+	}
+
 private:
-	void StartInternal(const bool startingAckStatus = false)
+	const bool RequestSendDiscovery(const bool partnerFound)
 	{
-		Acknowledged = startingAckStatus;
-		DiscoveryState = DiscoveryStateEnum::SendingSearch;
-		DiscoveryStart = millis();
-		Task::enableIfNot();
-	}
-
-	void UpdateAcknowledge(const bool ack)
-	{
-		// Update remote acknowledged state.
-		if (!Acknowledged && ack)
+		if (CanRequestSend())
 		{
-			Acknowledged = true;
-		}
-	}
+			OutPacket.SetPort(Port);
+			OutPacket.Payload[SubHeaderDefinition::SUB_HEADER_INDEX] = DiscoveryDefinition::SUB_HEADER;
 
-	const bool RequestSendDiscovery()
-	{
-		OutPacket.SetPort(Port);
+			if (partnerFound)
+			{
+				OutPacket.Payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] = UINT8_MAX;
+			}
+			else
+			{
+				OutPacket.Payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] = 0;
+			}
 
-		OutPacket.Payload[SubHeaderDefinition::SUB_HEADER_INDEX] = DiscoverySubDefinition::SUB_HEADER;
-		OutPacket.Payload[DiscoverySubDefinition::ID_OFFSET] = GetServiceId();
-		if (DiscoveryState == DiscoveryStateEnum::Ready)
-		{
-			OutPacket.Payload[DiscoverySubDefinition::ACK_OFFSET] = UINT8_MAX;
-		}
-		else
-		{
-			OutPacket.Payload[DiscoverySubDefinition::ACK_OFFSET] = 0;
+			OutPacket.Payload[DiscoveryDefinition::PAYLOAD_ID_INDEX] = (uint8_t)ServiceId;
+			OutPacket.Payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 1] = (uint8_t)(ServiceId >> 8);
+			OutPacket.Payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 2] = (uint8_t)(ServiceId >> 16);
+			OutPacket.Payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 3] = (uint8_t)(ServiceId >> 24);
+
+			return RequestSendPacket(DiscoveryDefinition::PAYLOAD_SIZE);
 		}
 
-		return RequestSendPacket(DiscoverySubDefinition::PAYLOAD_SIZE);
+		return false;
 	}
 };
 #endif

@@ -5,12 +5,14 @@
 
 #include "LoLaServices\AbstractLoLaDiscoveryService.h"
 
-template<const uint8_t Port,
-	const char OnwerName>
-class DiscoveryTestService : public AbstractLoLaDiscoveryService<OnwerName, Port>
+template<const char OnwerName,
+	const uint8_t Port,
+	const uint32_t ServiceId,
+	const uint8_t MaxSendPayloadSize = 3>
+class DiscoveryTestService : public AbstractLoLaDiscoveryService<Port, ServiceId>
 {
 private:
-	using BaseClass = AbstractLoLaDiscoveryService<OnwerName, Port>;
+	using BaseClass = AbstractLoLaDiscoveryService<Port, ServiceId>;
 
 public:
 	DiscoveryTestService(Scheduler& scheduler, ILoLaLink* link)
@@ -38,6 +40,18 @@ protected:
 		PrintName();
 		Serial.println(F("OnServiceStarted."));
 #endif
+	}
+
+	/// <summary>
+	/// Fires when the the service partner can't be found.
+	/// </summary>
+	virtual void OnDiscoveryFailed() final
+	{
+#if defined(PRINT_DISCOVERY)
+		PrintName();
+		Serial.println(F("OnDiscoveryFailed."));
+#endif
+		Task::disable(); 
 	}
 
 	/// <summary>
