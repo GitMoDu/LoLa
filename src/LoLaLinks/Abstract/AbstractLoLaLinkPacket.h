@@ -136,7 +136,7 @@ public:
 	/// ILoLaLink overrides.
 	/// </summary>
 public:
-	virtual const bool RegisterPacketReceiver(ILinkPacketReceiver* listener, const uint8_t port) final
+	virtual const bool RegisterPacketReceiver(ILinkPacketListener* listener, const uint8_t port) final
 	{
 		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
 		{

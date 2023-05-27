@@ -14,7 +14,7 @@
 /// Raw Link usage test task, no inheritance from template service.
 /// </summary>
 class TestTask : private Task
-	, public virtual ILinkPacketReceiver
+	, public virtual ILinkPacketListener
 	, public virtual ILinkListener
 {
 private:
@@ -34,7 +34,8 @@ private:
 public:
 	TestTask(Scheduler& scheduler, ILoLaLink* host, ILoLaLink* remote)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILinkPacketReceiver()
+		, ILinkPacketListener()
+		, ILinkListener()
 		, Host(host)
 		, Remote(remote)
 	{

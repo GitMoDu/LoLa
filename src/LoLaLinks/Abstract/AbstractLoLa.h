@@ -37,7 +37,7 @@ private:
 
 	struct LinkPacketServiceWrapper
 	{
-		ILinkPacketReceiver* Listener = nullptr;
+		ILinkPacketListener* Listener = nullptr;
 		uint8_t Port = 0;
 	};
 
@@ -161,7 +161,7 @@ protected:
 		}
 	}
 
-	const bool RegisterPacketReceiverInternal(ILinkPacketReceiver* listener, const uint8_t port)
+	const bool RegisterPacketReceiverInternal(ILinkPacketListener* listener, const uint8_t port)
 	{
 		if (listener != nullptr
 			&& (PacketServiceListenersCount < MaxPacketReceiveListeners))

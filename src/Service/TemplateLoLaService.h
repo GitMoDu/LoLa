@@ -15,7 +15,7 @@
 /// <typeparam name="MaxSendPayloadSize"></typeparam>
 template<const uint8_t MaxSendPayloadSize>
 class TemplateLoLaService : protected Task
-	, public virtual ILinkPacketReceiver
+	, public virtual ILinkPacketListener
 {
 protected:
 	/// <summary>
@@ -68,7 +68,7 @@ public:
 public:
 	TemplateLoLaService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILinkPacketReceiver()
+		, ILinkPacketListener()
 		, LoLaLink(loLaLink)
 	{
 		SetSendRequestTimeout(sendRequestTimeout);

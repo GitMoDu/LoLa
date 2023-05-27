@@ -14,7 +14,7 @@ public:
 	virtual void OnLinkStateUpdated(const bool hasLink) {}
 };
 
-class ILinkPacketReceiver
+class ILinkPacketListener
 {
 public:
 	/// <summary>
@@ -80,8 +80,8 @@ public:
 	/// 
 	/// </summary>
 	/// <param name="listener"></param>
-	/// <param name="port">Port number to register. Note that some ports (upmost) may be reserved for Link and Ack.</param>
+	/// <param name="port">Port number to register. Note that a port (upmost) may be reserved for Link.</param>
 	/// <returns>True if success. False if no more slots are available or port is reserved.</returns>
-	virtual const bool RegisterPacketReceiver(ILinkPacketReceiver* listener, const uint8_t port) { return false; }
+	virtual const bool RegisterPacketReceiver(ILinkPacketListener* listener, const uint8_t port) { return false; }
 };
 #endif
