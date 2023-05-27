@@ -95,12 +95,11 @@ private:
 /// Serial/UART LoLa Packet Driver.
 /// 
 /// </summary>
-template<const uint8_t InterruptPin,
-	typename SerialType,
-	const uint32_t BaudRate>
+template<typename SerialType,
+	const uint32_t BaudRate,
+	const uint8_t InterruptPin>
 class SerialTransceiver : private Task, public virtual ILoLaTransceiver
 {
-
 private:
 	// Compile time static definition.
 	//template<const uint32_t byteDurationMicros>
