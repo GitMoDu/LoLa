@@ -227,18 +227,18 @@ public:
 		using SearchReply = TemplateSubHeaderDefinition<SearchRequest::SUB_HEADER + 1, 0>;
 
 		/// <summary>
-		/// Request host to start a session.
-		/// TODO: Add support for search for specific Host Id.
+		/// Request server to start a session.
+		/// TODO: Add support for search for specific Device Id.
 		/// </summary>
 		using SessionRequest = TemplateSubHeaderDefinition<SearchReply::SUB_HEADER + 1, 0>;
 
 		/// <summary>
-		/// ||SessionId|HostPublicKey||
+		/// ||SessionId|ServerPublicKey||
 		/// </summary>
 		using SessionBroadcast = BroadcastDefinition<SessionRequest::SUB_HEADER + 1>;
 
 		/// <summary>
-		/// ||SessionId|RemotePublicKey||
+		/// ||SessionId|ClientPublicKey||
 		/// </summary>
 		using LinkingStartRequest = BroadcastDefinition<SessionBroadcast::SUB_HEADER + 1>;
 
@@ -266,7 +266,7 @@ public:
 		/// ||ChallengeCode||
 		/// </summary>
 		//using LinkChallenge = TemplateSubHeaderDefinition<0, CHALLENGE_REQUEST_SIZE>;
-		struct HostChallengeRequest : public TemplateSubHeaderDefinition<0, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
+		struct ServerChallengeRequest : public TemplateSubHeaderDefinition<0, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
@@ -274,7 +274,7 @@ public:
 		/// <summary>
 		/// ||SignedCode|ChallengeCode||
 		/// </summary>
-		struct RemoteChallengeReplyRequest : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
+		struct ClientChallengeReplyRequest : public TemplateSubHeaderDefinition<ServerChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE;
@@ -283,7 +283,7 @@ public:
 		/// <summary>
 		/// ||SignedCode||
 		/// </summary>
-		struct HostChallengeReply : public TemplateSubHeaderDefinition<HostChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE>
+		struct ServerChallengeReply : public TemplateSubHeaderDefinition<ServerChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
@@ -293,7 +293,7 @@ public:
 		/// Seconds in full UTC seconds.
 		/// Sub-seconds in microseconds [-999999; +999999]
 		/// </summary>
-		using ClockSyncRequest = ClockTimestampDefinition<HostChallengeReply::SUB_HEADER + 1>;
+		using ClockSyncRequest = ClockTimestampDefinition<ServerChallengeReply::SUB_HEADER + 1>;
 
 		/// <summary>
 		/// ||Seconds|SubSecondsError|Accepted||

@@ -1,5 +1,5 @@
 /* LoLa Link Virtual tester.
-* Creates instances of both host and receiver,
+* Creates instances of both Server and Client,
 * communicating through a virtual radio.
 *
 * Used to testing and developing the LoLa Link protocol.
@@ -35,27 +35,28 @@
 #define HOP_TEST_PIN TEST_PIN_3
 #define HOP_TEST_PIN_2 TEST_PIN_4
 
-#define TX_HOST_TEST_PIN TEST_PIN_1
-#define TX_REMOTE_TEST_PIN TEST_PIN_2
+#define TX_SERVER_TEST_PIN TEST_PIN_1
+#define TX_CLIENT_TEST_PIN TEST_PIN_2
 #else
 #define HOP_TEST_PIN 0
 #define HOP_TEST_PIN_2 0
-#define TX_HOST_TEST_PIN 0
-#define TX_REMOTE_TEST_PIN 0
+#define TX_SERVER_TEST_PIN 0
+#define TX_CLIENT_TEST_PIN 0
 #endif
 
 
 
 
 // Medium Simulation error chances, out 255, for every call.
-//#define PRINT_PACKETS
 //#define DROP_CHANCE 10
 //#define CORRUPT_CHANCE 10
 //#define ECO_CHANCE 5
 //#define DOUBLE_SEND_CHANCE 5
 
-#define HOST_DROP_LINK_TEST 5
-//#define REMOTE_DROP_LINK_TEST 5
+#define SERVER_DROP_LINK_TEST 5
+//#define CLIENT_DROP_LINK_TEST 5
+
+//#define PRINT_PACKETS
 //#define PRINT_TEST_PACKETS
 #define PRINT_DISCOVERY
 
@@ -90,11 +91,11 @@ static const uint8_t Password[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] 
 //
 
 // Created offline using PublicPrivateKeyGenerator example project.
-static const uint8_t HostPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x88,0x64,0x9C,0xFE,0x38,0xFA,0xFE,0xB9,0x41,0xA8,0xD1,0xB7,0xAC,0xA0,0x23,0x82,0x97,0xFB,0x5B,0xD1,0xC4,0x75,0x94,0x68,0x41,0x6D,0xEE,0x57,0x6B,0x07,0xF5,0xC0,0x95,0x78,0x10,0xCC,0xEA,0x08,0x0D,0x8F };
-static const uint8_t HostPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x2E,0xBD,0x81,0x6E,0x56,0x59,0xDF,0x1D,0x77,0x83,0x0D,0x85,0xCE,0x59,0x61,0xE8,0x74,0x52,0xD7,0x98 };
+static const uint8_t ServerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x88,0x64,0x9C,0xFE,0x38,0xFA,0xFE,0xB9,0x41,0xA8,0xD1,0xB7,0xAC,0xA0,0x23,0x82,0x97,0xFB,0x5B,0xD1,0xC4,0x75,0x94,0x68,0x41,0x6D,0xEE,0x57,0x6B,0x07,0xF5,0xC0,0x95,0x78,0x10,0xCC,0xEA,0x08,0x0D,0x8F };
+static const uint8_t ServerPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x2E,0xBD,0x81,0x6E,0x56,0x59,0xDF,0x1D,0x77,0x83,0x0D,0x85,0xCE,0x59,0x61,0xE8,0x74,0x52,0xD7,0x98 };
 
-static const uint8_t RemotePublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x21,0x9B,0xA6,0x2A,0xF0,0x14,0x8A,0x62,0xEB,0x2A,0xF0,0xD1,0xAC,0xB4,0x6E,0x15,0x1B,0x63,0xA7,0xEA,0x99,0xFD,0x1E,0xDD,0x74,0x2F,0xD4,0xB0,0xE1,0x04,0xC5,0x96,0x09,0x65,0x1F,0xAB,0x4F,0xDC,0x75,0x0C };
-static const uint8_t RemotePrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x9E,0x78,0xBA,0x67,0xEA,0x57,0xA9,0xBD,0x4E,0x1A,0x35,0xFB,0xD3,0xA7,0x19,0x29,0x55,0xB9,0xA1,0x3A };
+static const uint8_t ClientPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x21,0x9B,0xA6,0x2A,0xF0,0x14,0x8A,0x62,0xEB,0x2A,0xF0,0xD1,0xAC,0xB4,0x6E,0x15,0x1B,0x63,0xA7,0xEA,0x99,0xFD,0x1E,0xDD,0x74,0x2F,0xD4,0xB0,0xE1,0x04,0xC5,0x96,0x09,0x65,0x1F,0xAB,0x4F,0xDC,0x75,0x0C };
+static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x9E,0x78,0xBA,0x67,0xEA,0x57,0xA9,0xBD,0x4E,0x1A,0x35,0xFB,0xD3,0xA7,0x19,0x29,0x55,0xB9,0xA1,0x3A };
 //
 
 
@@ -125,69 +126,69 @@ ArduinoEntropySource EntropySource;
 
 #if !defined(LINK_USE_TIMER_AND_RTC)
 ArduinoTaskTimerClockSource<> SharedTimerClockSource(SchedulerBase);
-IClockSource* HostClock = &SharedTimerClockSource;
-ITimerSource* HostTimer = &SharedTimerClockSource;
-IClockSource* RemoteClock = &SharedTimerClockSource;
-ITimerSource* RemoteTimer = &SharedTimerClockSource;
+IClockSource* ServerClock = &SharedTimerClockSource;
+ITimerSource* ServerTimer = &SharedTimerClockSource;
+IClockSource* ClientClock = &SharedTimerClockSource;
+ITimerSource* ClientTimer = &SharedTimerClockSource;
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32TimerSource HostTimerSource(1, 'A');
-Stm32RtcClockSource HostClockSource(SchedulerBase);
+Stm32TimerSource ServerTimerSource(1, 'A');
+Stm32RtcClockSource ServerClockSource(SchedulerBase);
 
-Stm32RtcClockSource RemoteClockSource(SchedulerBase);
-Stm32TimerSource RemoteTimerSource(2, 'A');
+Stm32RtcClockSource ClientClockSource(SchedulerBase);
+Stm32TimerSource ClientTimerSource(2, 'A');
 //#elif defined(ARDUINO_ARCH_ESP8266)
 #else 
 #error No RTC/Timer sources found.
 #endif
-IClockSource* HostClock = &HostClockSource;
-ITimerSource* HostTimer = &HostTimerSource;
+IClockSource* ServerClock = &ServerClockSource;
+ITimerSource* ServerTimer = &ServerTimerSource;
 
-IClockSource* RemoteClock = &RemoteClockSource;
-ITimerSource* RemoteTimer = &RemoteTimerSource;
+IClockSource* ClientClock = &ClientClockSource;
+ITimerSource* ClientTimer = &ClientTimerSource;
 #endif
 
 #if defined(LINK_USE_CHANNEL_HOP)
-TimedChannelHopper<ChannelHopPeriod> HostChannelHop(SchedulerBase);
-TimedChannelHopper<ChannelHopPeriod, HOP_TEST_PIN, HOP_TEST_PIN_2> RemoteChannelHop(SchedulerBase);
+TimedChannelHopper<ChannelHopPeriod> ServerChannelHop(SchedulerBase);
+TimedChannelHopper<ChannelHopPeriod, HOP_TEST_PIN, HOP_TEST_PIN_2> ClientChannelHop(SchedulerBase);
 #else
-NoHopNoChannel HostChannelHop;
-NoHopNoChannel RemoteChannelHop;
+NoHopNoChannel ServerChannelHop;
+NoHopNoChannel ClientChannelHop;
 #endif
 
 
-// Link host and its required instances.
-VirtualTransceiver<TestRadioConfig, 'H', false, TX_HOST_TEST_PIN> HostDriver(SchedulerBase);
-HalfDuplex<DuplexPeriod, false> HostDuplex;
-LoLaLinkHost<> Host(SchedulerBase,
-	&HostDriver,
+// Link Server and its required instances.
+VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerDriver(SchedulerBase);
+HalfDuplex<DuplexPeriod, false> ServerDuplex;
+LoLaPkeLinkServer<> Server(SchedulerBase,
+	&ServerDriver,
 	&EntropySource,
-	HostClock,
-	HostTimer,
-	&HostDuplex,
-	&HostChannelHop,
-	HostPublicKey,
-	HostPrivateKey,
+	ServerClock,
+	ServerTimer,
+	&ServerDuplex,
+	&ServerChannelHop,
+	ServerPublicKey,
+	ServerPrivateKey,
 	Password);
 
-// Link Remote.
-VirtualTransceiver<TestRadioConfig, 'R', PRINT_CHANNEL_HOP, TX_REMOTE_TEST_PIN> RemoteDriver(SchedulerBase);
-HalfDuplex<DuplexPeriod, true> RemoteDuplex;
-LoLaLinkRemote<> Remote(SchedulerBase,
-	&RemoteDriver,
+// Link Client and its required instances.
+VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientDriver(SchedulerBase);
+HalfDuplex<DuplexPeriod, true> ClientDuplex;
+LoLaPkeLinkClient<> Client(SchedulerBase,
+	&ClientDriver,
 	&EntropySource,
-	RemoteClock,
-	RemoteTimer,
-	&RemoteDuplex,
-	&RemoteChannelHop,
-	RemotePublicKey,
-	RemotePrivateKey,
+	ClientClock,
+	ClientTimer,
+	&ClientDuplex,
+	&ClientChannelHop,
+	ClientPublicKey,
+	ClientPrivateKey,
 	Password);
 
-TestTask Tester(SchedulerBase, &Host, &Remote);
+TestTask Tester(SchedulerBase, &Server, &Client);
 
-DiscoveryTestService<'H', 0, 12345> HostDiscovery(SchedulerBase, &Host);
-DiscoveryTestService<'R', 0, 12345> RemoteDiscovery(SchedulerBase, &Remote);
+DiscoveryTestService<'S', 0, 12345> ServerDiscovery(SchedulerBase, &Server);
+DiscoveryTestService<'C', 0, 12345> ClientDiscovery(SchedulerBase, &Client);
 
 
 void BootError()
@@ -208,9 +209,14 @@ void setup()
 	delay(1000);
 #endif
 
+#ifdef SCHEDULER_TEST_PIN
+	digitalWrite(SCHEDULER_TEST_PIN, LOW);
+	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
+#endif
+
 	// Setup Virtual Packet Drivers.
-	HostDriver.SetPartner(&RemoteDriver);
-	RemoteDriver.SetPartner(&HostDriver);
+	ServerDriver.SetPartner(&ClientDriver);
+	ClientDriver.SetPartner(&ServerDriver);
 
 	// Setup Test Task.
 	if (!Tester.Setup())
@@ -221,38 +227,38 @@ void setup()
 	}
 
 	// Setup Test Discovery services.
-	if (!HostDiscovery.Setup())
+	if (!ServerDiscovery.Setup())
 	{
-		Serial.println(F("HostDiscovery setup failed."));
+		Serial.println(F("ServerDiscovery setup failed."));
 
 		BootError();
 	}
-	if (!RemoteDiscovery.Setup())
+	if (!ClientDiscovery.Setup())
 	{
-		Serial.println(F("RemoteDiscovery setup failed."));
+		Serial.println(F("ClientDiscovery setup failed."));
 
 		BootError();
 	}
 
 	// Setup Link instances.
-	if (!Host.Setup())
+	if (!Server.Setup())
 	{
 #ifdef DEBUG
-		Serial.println(F("Host Link Setup Failed."));
+		Serial.println(F("Server Link Setup Failed."));
 #endif
 		BootError();
 	}
-	if (!Remote.Setup())
+	if (!Client.Setup())
 	{
 #ifdef DEBUG
-		Serial.println(F("Remote Link Setup Failed."));
+		Serial.println(F("Client Link Setup Failed."));
 #endif
 		BootError();
 	}
 
 	// Start Link instances.
-	if (Host.Start() &&
-		Remote.Start())
+	if (Server.Start() &&
+		Client.Start())
 	{
 		Serial.print(millis());
 		Serial.println(F("\tLoLa Links have started."));
@@ -270,8 +276,6 @@ void loop()
 {
 #ifdef SCHEDULER_TEST_PIN
 	digitalWrite(SCHEDULER_TEST_PIN, HIGH);
-#endif
-#ifdef SCHEDULER_TEST_PIN
 	digitalWrite(SCHEDULER_TEST_PIN, LOW);
 #endif
 	SchedulerBase.execute();

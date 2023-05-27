@@ -25,8 +25,8 @@ private:
 	static const uint32_t HearBeatPeriod = 1000;
 	static const uint32_t PingPeriod = 321;
 
-	ILoLaLink* Host;
-	ILoLaLink* Remote;
+	ILoLaLink* Server;
+	ILoLaLink* Client;
 
 	TemplateLoLaOutDataPacket<PayloadSize> OutData;
 
@@ -36,21 +36,21 @@ public:
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, ILinkPacketListener()
 		, ILinkListener()
-		, Host(host)
-		, Remote(remote)
+		, Server(host)
+		, Client(remote)
 	{
 		LastPing = millis();
 	}
 
 	const bool Setup()
 	{
-		if (Remote != nullptr)
+		if (Client != nullptr)
 		{
-			if (Remote->RegisterPacketReceiver(this, Port))
+			if (Client->RegisterPacketReceiver(this, Port))
 			{
-				if (Host != nullptr)
+				if (Server != nullptr)
 				{
-					return Host->RegisterLinkListener(this);
+					return Server->RegisterLinkListener(this);
 				}
 			}
 		}
@@ -72,26 +72,24 @@ public:
 			workDone = true;
 			LastRan = timestamp;
 			Serial.println(F("# Link Clock"));
-			Serial.print(F("Host:"));
-			PrintDuration(Host->GetLinkDuration());
-			//Serial.println(Host->GetLinkDuration());
-			Serial.print(F("Remote: "));
-			//Serial.println(Remote->GetLinkDuration());
-			PrintDuration(Remote->GetLinkDuration());
+			Serial.print(F("Server:"));
+			PrintDuration(Server->GetLinkDuration());
+			Serial.print(F("Client: "));
+			PrintDuration(Client->GetLinkDuration());
 
 			Serial.println(F("# DebugClock"));
-			Host->DebugClock();
-			Remote->DebugClock();
+			Server->DebugClock();
+			Client->DebugClock();
 			Serial.println();
 		}
 #endif
 
-		if ((Remote != nullptr) && ((timestamp - LastPing) >= PingPeriod))
+		if ((Client != nullptr) && ((timestamp - LastPing) >= PingPeriod))
 		{
 			workDone = true;
 			OutData.SetPort(Port);
 
-			if (Host->CanSendPacket(PayloadSize))
+			if (Server->CanSendPacket(PayloadSize))
 			{
 				Payload++;
 				LastPing = timestamp;
@@ -99,7 +97,7 @@ public:
 				PrintTag('H');
 				Serial.println(F("Sending."));
 #endif
-				if (Host->SendPacket(OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
+				if (Server->SendPacket(OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
 				{
 					LastPing = timestamp;
 				}
@@ -128,7 +126,7 @@ public:
 	virtual void OnSendRequestFail() final
 	{
 #if defined(DEBUG_LOLA)
-		PrintTag('H');
+		PrintTag('S');
 		Serial.println(F("Send Error."));
 #endif
 	}
@@ -153,7 +151,7 @@ public:
 	{
 		const uint32_t timestamp = micros();
 #if defined(PRINT_TEST_PACKETS)
-		PrintTag('R');
+		PrintTag('C');
 		//Serial.print(port);
 		//Serial.print(payloadSize);
 

@@ -18,8 +18,8 @@
 #include "..\..\Crypto\LoLaCryptoEncoderSession.h"
 
 /// <summary>
-/// LoLa Link base is a special case of a LoLaService,
-/// it will handle tx/rx pre-link packets as well as use plain link time tx/rx for link upkeep.
+/// LoLa Link base (AbstractLoLa) is a special case of a TemplateLoLaService,
+/// as it will handle pre-link Packet as well as use link time packets for link upkeep.
 /// As a partial abstract class, it implements the following ILoLaLink calls:
 ///		- Link Listeners.
 ///		- Receive Listeners.
@@ -73,7 +73,7 @@ protected:
 	LoLaCryptoEncoderSession* Encoder;
 
 protected:
-	// Duplex, Channel Hop and Cryptography depend on a synchronized clock between host and remote.
+	// Duplex, Channel Hop and Cryptography depend on a synchronized clock between Server and Client.
 	SynchronizedClock SyncClock;
 
 	// Current Link Stage for packet handling.

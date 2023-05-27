@@ -1,25 +1,25 @@
-// LoLaLinkHost.h
+// LoLaPkeLinkServer.h
 
-#ifndef _LOLA_LINK_HOST_
-#define _LOLA_LINK_HOST_
+#ifndef _LOLA_PKE_LINK_SERVER_
+#define _LOLA_PKE_LINK_SERVER_
 
 #include "..\Abstract\AbstractPublicKeyLoLaLink.h"
 
 /// <summary>
-/// LoLa Host Link class.
+/// LoLa Public-Key-Exchange Link Server.
 /// Template parameters allow specifying maxlisteners.
 /// </summary>
 /// <typeparam name="MaxPacketReceiveListeners"></typeparam>
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class LoLaLinkHost : public AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
+class LoLaPkeLinkServer : public AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
 	using BaseClass = AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 public:
-	static constexpr uint32_t HOST_SLEEP_TIMEOUT_MILLIS = 5000;
+	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 5000;
 
 private:
 	using Unlinked = LoLaLinkDefinition::Unlinked;
@@ -27,7 +27,7 @@ private:
 	using Linked = LoLaLinkDefinition::Linked;
 
 
-	enum HostAwaitingLinkEnum
+	enum ServerAwaitingLinkEnum
 	{
 		NewSessionStart,
 		BroadcastingSession,
@@ -37,7 +37,7 @@ private:
 		Sleeping
 	};
 
-	enum HostLinkingEnum
+	enum ServerLinkingEnum
 	{
 		AuthenticationRequest,
 		AuthenticationReply,
@@ -85,19 +85,19 @@ protected:
 	virtual void Owner() final
 	{
 		Serial.print(millis());
-		Serial.print(F("\t[H] "));
+		Serial.print(F("\t[S] "));
 	}
 #endif
 
-#if defined(HOST_DROP_LINK_TEST)
+#if defined(SERVER_DROP_LINK_TEST)
 	virtual const bool CheckForClockSyncUpdate() final
 	{
-		if (this->GetLinkDuration() > HOST_DROP_LINK_TEST)
+		if (this->GetLinkDuration() > SERVER_DROP_LINK_TEST)
 		{
 #if defined(DEBUG_LOLA)
 			this->Owner();
 			Serial.print(("Test disconnect after "));
-			Serial.print(HOST_DROP_LINK_TEST);
+			Serial.print(SERVER_DROP_LINK_TEST);
 			Serial.println((" seconds."));
 #endif
 			UpdateLinkStage(LinkStageEnum::AwaitingLink);
@@ -108,7 +108,7 @@ protected:
 #endif
 
 public:
-	LoLaLinkHost(Scheduler& scheduler,
+	LoLaPkeLinkServer(Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
@@ -139,19 +139,19 @@ protected:
 					{
 						switch (SubState)
 						{
-						case HostAwaitingLinkEnum::Sleeping:
+						case ServerAwaitingLinkEnum::Sleeping:
 #if defined(DEBUG_LOLA)
 							this->Owner();
 							Serial.println(F("Broadcast wake up!"));
 #endif
 							// Wake up!
 							ResetStageStartTime();
-							SubState = (uint8_t)HostAwaitingLinkEnum::NewSessionStart;
+							SubState = (uint8_t)ServerAwaitingLinkEnum::NewSessionStart;
 							PreLinkPacketSchedule = millis();
 							SearchReplyPending = true;
 							Task::enable();
 							break;
-						case HostAwaitingLinkEnum::BroadcastingSession:
+						case ServerAwaitingLinkEnum::BroadcastingSession:
 							PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
 							Task::enable();
 							SearchReplyPending = true;
@@ -166,7 +166,7 @@ protected:
 					{
 						switch (SubState)
 						{
-						case HostAwaitingLinkEnum::BroadcastingSession:
+						case ServerAwaitingLinkEnum::BroadcastingSession:
 #if defined(DEBUG_LOLA)
 							this->Owner();
 							Serial.println(F("Session start request received."));
@@ -180,20 +180,20 @@ protected:
 					}
 					break;
 				case Unlinked::LinkingStartRequest::SUB_HEADER:
-					if (SubState == (uint8_t)HostAwaitingLinkEnum::BroadcastingSession
+					if (SubState == (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession
 						&& payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
 						&& Session.SessionIdMatches(&payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
 					{
 						// Slow operation (~8 ms).
 						// The async alternative to inline decompressing of key would require a copy-buffer to hold the compressed key.
 						Session.DecompressPartnerPublicKeyFrom(&payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX]);
-						SubState = (uint8_t)HostAwaitingLinkEnum::ValidatingSession;
+						SubState = (uint8_t)ServerAwaitingLinkEnum::ValidatingSession;
 						Task::enable();
 					}
 					break;
 				case Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER:
 					if (payloadSize == Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE
-						&& SubState == (uint8_t)HostAwaitingLinkEnum::SwitchingToLinking
+						&& SubState == (uint8_t)ServerAwaitingLinkEnum::SwitchingToLinking
 						&& Session.LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]))
 					{
 						StateTransition.OnReceived();
@@ -216,18 +216,18 @@ protected:
 			{
 				switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
 				{
-				case Linking::RemoteChallengeReplyRequest::SUB_HEADER:
-					if (SubState == (uint8_t)HostLinkingEnum::AuthenticationRequest
-						&& payloadSize == Linking::RemoteChallengeReplyRequest::PAYLOAD_SIZE
-						&& Session.VerifyChallengeSignature(&payload[Linking::RemoteChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]))
+				case Linking::ClientChallengeReplyRequest::SUB_HEADER:
+					if (SubState == (uint8_t)ServerLinkingEnum::AuthenticationRequest
+						&& payloadSize == Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE
+						&& Session.VerifyChallengeSignature(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]))
 					{
 #if defined(DEBUG_LOLA)
 						this->Owner();
 						Serial.println(F("Link Access Control granted."));
 #endif
 
-						Session.SetPartnerChallenge(&payload[Linking::RemoteChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
-						SubState = (uint8_t)HostLinkingEnum::AuthenticationReply;
+						Session.SetPartnerChallenge(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
+						SubState = (uint8_t)ServerLinkingEnum::AuthenticationReply;
 						Task::enable();
 					}
 					break;
@@ -240,10 +240,10 @@ protected:
 #endif
 						switch (SubState)
 						{
-						case HostLinkingEnum::ClockSyncing:
+						case ServerLinkingEnum::ClockSyncing:
 							break;
-						case HostLinkingEnum::AuthenticationReply:
-							SubState = (uint8_t)HostLinkingEnum::ClockSyncing;
+						case ServerLinkingEnum::AuthenticationReply:
+							SubState = (uint8_t)ServerLinkingEnum::ClockSyncing;
 							PreLinkPacketSchedule = millis();
 							Task::enable();
 #if defined(DEBUG_LOLA)
@@ -251,8 +251,8 @@ protected:
 							Serial.println(F("Started Clock sync"));
 #endif
 							break;
-						case HostLinkingEnum::SwitchingToLinked:
-							SubState = (uint8_t)HostLinkingEnum::ClockSyncing;
+						case ServerLinkingEnum::SwitchingToLinked:
+							SubState = (uint8_t)ServerLinkingEnum::ClockSyncing;
 #if defined(DEBUG_LOLA)
 							this->Owner();
 							Serial.println(F("Re-Started Clock sync"));
@@ -291,14 +291,14 @@ protected:
 					break;
 				case Linking::StartLinkRequest::SUB_HEADER:
 					if (payloadSize == Linking::StartLinkRequest::PAYLOAD_SIZE
-						&& SubState == HostLinkingEnum::ClockSyncing)
+						&& SubState == ServerLinkingEnum::ClockSyncing)
 					{
 
 #if defined(DEBUG_LOLA)
 						this->Owner();
 						Serial.println(F("Got Link Start Request."));
 #endif
-						SubState = (uint8_t)HostLinkingEnum::SwitchingToLinked;
+						SubState = (uint8_t)ServerLinkingEnum::SwitchingToLinked;
 						StateTransition.OnStart(micros());
 						Task::enableIfNot();
 					}
@@ -312,7 +312,7 @@ protected:
 					break;
 				case Linking::LinkTimedSwitchOverAck::SUB_HEADER:
 					if (payloadSize == Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE
-						&& SubState == (uint8_t)HostLinkingEnum::SwitchingToLinked)
+						&& SubState == (uint8_t)ServerLinkingEnum::SwitchingToLinked)
 					{
 						StateTransition.OnReceived();
 #if defined(DEBUG_LOLA)
@@ -348,10 +348,10 @@ protected:
 			SetHopperFixedChannel(RandomSource.GetRandomShort());
 			break;
 		case LinkStageEnum::AwaitingLink:
-			SubState = (uint8_t)HostAwaitingLinkEnum::Sleeping;
+			SubState = (uint8_t)ServerAwaitingLinkEnum::Sleeping;
 			break;
 		case LinkStageEnum::Linking:
-			SubState = (uint8_t)HostLinkingEnum::AuthenticationRequest;
+			SubState = (uint8_t)ServerLinkingEnum::AuthenticationRequest;
 			ClockReplyPending = false;
 			break;
 		case LinkStageEnum::Linked:
@@ -363,28 +363,28 @@ protected:
 
 	virtual void OnAwaitingLink(const uint32_t stateElapsed) final
 	{
-		if (stateElapsed > HOST_SLEEP_TIMEOUT_MILLIS)
+		if (stateElapsed > SERVER_SLEEP_TIMEOUT_MILLIS)
 		{
 #if defined(DEBUG_LOLA)
 			this->Owner();
 			Serial.println(F("OnAwaitingLink timed out. Going to sleep."));
 #endif
 
-			SubState = (uint8_t)HostAwaitingLinkEnum::Sleeping;
+			SubState = (uint8_t)ServerAwaitingLinkEnum::Sleeping;
 		}
 
 		switch (SubState)
 		{
-		case HostAwaitingLinkEnum::NewSessionStart:
+		case ServerAwaitingLinkEnum::NewSessionStart:
 			Session.SetRandomSessionId(&RandomSource);
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 
-			SubState = (uint8_t)HostAwaitingLinkEnum::BroadcastingSession;
+			SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
 			PreLinkPacketSchedule = millis();
 			SearchReplyPending = true;
 			Task::enable();
 			break;
-		case HostAwaitingLinkEnum::BroadcastingSession:
+		case ServerAwaitingLinkEnum::BroadcastingSession:
 			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				// Session broadcast packet.
@@ -422,14 +422,14 @@ protected:
 			}
 			Task::enable();
 			break;
-		case HostAwaitingLinkEnum::ValidatingSession:
+		case ServerAwaitingLinkEnum::ValidatingSession:
 			if (Session.PublicKeyCollision())
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("Local and Partner public keys match, link is impossible."));
 #endif
-				SubState = (uint8_t)HostAwaitingLinkEnum::BroadcastingSession;
+				SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
 			}
 			else if (Session.SessionIsCached())
 			{
@@ -438,26 +438,26 @@ protected:
 				Serial.println(F("Session secrets are cached, let's start linking."));
 #endif
 
-				SubState = (uint8_t)HostAwaitingLinkEnum::SwitchingToLinking;
+				SubState = (uint8_t)ServerAwaitingLinkEnum::SwitchingToLinking;
 				StateTransition.OnStart(micros());
 				PreLinkPacketSchedule = millis();
 			}
 			else
 			{
 				Session.ResetPke();
-				SubState = (uint8_t)HostAwaitingLinkEnum::ComputingSecretKey;
+				SubState = (uint8_t)ServerAwaitingLinkEnum::ComputingSecretKey;
 			}
 			Task::enable();
 			break;
-		case HostAwaitingLinkEnum::ComputingSecretKey:
+		case ServerAwaitingLinkEnum::ComputingSecretKey:
 			if (Session.CalculatePke()) {
 				// PKE calculation took a lot of time, let's go for another start request, now with cached secrets.
-				SubState = (uint8_t)HostAwaitingLinkEnum::BroadcastingSession;
+				SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
 				PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);;
 			}
 			Task::enable();
 			break;
-		case HostAwaitingLinkEnum::SwitchingToLinking:
+		case ServerAwaitingLinkEnum::SwitchingToLinking:
 			if (StateTransition.HasTimedOut(micros()))
 			{
 				if (StateTransition.HasAcknowledge())
@@ -471,7 +471,7 @@ protected:
 				else
 				{
 					// No Ack before time out.
-					SubState = (uint8_t)HostAwaitingLinkEnum::BroadcastingSession;
+					SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
 					Task::enable();
 				}
@@ -500,7 +500,7 @@ protected:
 				Task::enableIfNot();
 			}
 			break;
-		case HostAwaitingLinkEnum::Sleeping:
+		case ServerAwaitingLinkEnum::Sleeping:
 			Task::disable();
 			break;
 		default:
@@ -521,41 +521,41 @@ protected:
 
 		switch (SubState)
 		{
-		case HostLinkingEnum::AuthenticationRequest:
+		case ServerLinkingEnum::AuthenticationRequest:
 			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::HostChallengeRequest::SUB_HEADER_INDEX] = Linking::HostChallengeRequest::SUB_HEADER;
-				Session.CopyLocalChallengeTo(&OutPacket.Payload[Linking::HostChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
+				OutPacket.Payload[Linking::ServerChallengeRequest::SUB_HEADER_INDEX] = Linking::ServerChallengeRequest::SUB_HEADER;
+				Session.CopyLocalChallengeTo(&OutPacket.Payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
 #if defined(DEBUG_LOLA)
 				this->Owner();
-				Serial.println(F("Sending HostChallengeRequest."));
+				Serial.println(F("Sending ServerChallengeRequest."));
 #endif
-				if (SendPacket(OutPacket.Data, Linking::HostChallengeRequest::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::ServerChallengeRequest::PAYLOAD_SIZE))
 				{
-					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeRequest::PAYLOAD_SIZE);
+					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::ServerChallengeRequest::PAYLOAD_SIZE);
 				}
 			}
 			break;
-		case HostLinkingEnum::AuthenticationReply:
+		case ServerLinkingEnum::AuthenticationReply:
 			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::HostChallengeReply::SUB_HEADER_INDEX] = Linking::HostChallengeReply::SUB_HEADER;
-				Session.SignPartnerChallengeTo(&OutPacket.Payload[Linking::HostChallengeReply::PAYLOAD_SIGNED_INDEX]);
+				OutPacket.Payload[Linking::ServerChallengeReply::SUB_HEADER_INDEX] = Linking::ServerChallengeReply::SUB_HEADER;
+				Session.SignPartnerChallengeTo(&OutPacket.Payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
 #if defined(DEBUG_LOLA)
 				this->Owner();
-				Serial.println(F("Sending HostChallengeReply."));
+				Serial.println(F("Sending ServerChallengeReply."));
 #endif
-				if (SendPacket(OutPacket.Data, Linking::HostChallengeReply::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::ServerChallengeReply::PAYLOAD_SIZE))
 				{
-					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeReply::PAYLOAD_SIZE);
+					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::ServerChallengeReply::PAYLOAD_SIZE);
 				}
 			}
 			break;
-		case HostLinkingEnum::ClockSyncing:
+		case ServerLinkingEnum::ClockSyncing:
 			if (ClockReplyPending && Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
 			{
 				OutPacket.SetPort(Linking::PORT);
@@ -596,7 +596,7 @@ protected:
 			}
 			Task::enableIfNot();
 			break;
-		case HostLinkingEnum::SwitchingToLinked:
+		case ServerLinkingEnum::SwitchingToLinked:
 			if (StateTransition.HasTimedOut(micros()))
 			{
 				if (StateTransition.HasAcknowledge())
@@ -610,7 +610,7 @@ protected:
 				else
 				{
 					// No Ack before time out.
-					SubState = (uint8_t)HostLinkingEnum::ClockSyncing;
+					SubState = (uint8_t)ServerLinkingEnum::ClockSyncing;
 					ClockReplyPending = false;
 					PreLinkPacketSchedule = millis();
 					Task::enable();

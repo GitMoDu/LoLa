@@ -59,8 +59,8 @@
 
 
 #pragma	region Available Link modules
-#include "LoLaLinks\LinkHostRemote\LoLaLinkHost.h"
-#include "LoLaLinks\LinkHostRemote\LoLaLinkRemote.h"
+#include "LoLaLinks\LolaPkeLink\LoLaPkeLinkServer.h"
+#include "LoLaLinks\LolaPkeLink\LoLaPkeLinkClient.h"
 //#include "LoLaLinkLight\LoLaLinkLight.h"
 #pragma endregion
 
