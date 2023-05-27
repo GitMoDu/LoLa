@@ -38,7 +38,7 @@ protected:
 	{
 #if defined(PRINT_DISCOVERY)
 		PrintName();
-		Serial.println(F("OnServiceStarted."));
+		Serial.println(F("Test Discovery Service Started."));
 #endif
 	}
 
@@ -49,7 +49,7 @@ protected:
 	{
 #if defined(PRINT_DISCOVERY)
 		PrintName();
-		Serial.println(F("OnDiscoveryFailed."));
+		Serial.println(F("Test Discovery Failed."));
 #endif
 		Task::disable(); 
 	}
@@ -61,7 +61,7 @@ protected:
 	{
 #if defined(PRINT_DISCOVERY)
 		PrintName();
-		Serial.println(F("OnServiceEnded."));
+		Serial.println(F("Test Discovery Service Ended."));
 #endif
 		Task::disable();
 	}
@@ -74,7 +74,7 @@ protected:
 	{
 #if defined(PRINT_DISCOVERY)
 		PrintName();
-		Serial.println(F("OnLinkedService."));
+		Serial.println(F("Test Discovery Service Run."));
 #endif
 		Task::disable();
 	}
@@ -87,7 +87,7 @@ protected:
 	{
 #if defined(PRINT_DISCOVERY)
 		PrintName();
-		Serial.println(F("OnLinkedSendRequestFail."));
+		Serial.println(F("Test Discovery OnLinkedSendRequestFail."));
 #endif
 	}
 
@@ -101,7 +101,7 @@ protected:
 	{
 #if defined(PRINT_DISCOVERY)
 		PrintName();
-		Serial.print(F("OnLinkedPacketReceived ("));
+		Serial.print(F("Test Discovery OnLinkedPacketReceived ("));
 		Serial.print(F("0x"));
 		Serial.print(payload[SubHeaderDefinition::SUB_HEADER_INDEX]);
 		Serial.println(F(")."));
