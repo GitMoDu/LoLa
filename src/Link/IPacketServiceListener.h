@@ -9,6 +9,18 @@ class IPacketServiceListener
 {
 public:
 	/// <summary>
+	/// Possible results for the send request.
+	/// </summary>
+	enum SendResultEnum
+	{
+		Success,
+		SendTimeout,
+		SendCollision,
+		Error
+	};
+
+public:
+	/// <summary>
 	/// Driver set to RX is always initiated by the packet service,
 	///  so the ServiceListener must provide the channel for RX setting.
 	/// </summary>
@@ -37,5 +49,12 @@ public:
 	/// </summary>
 	/// <param name="startTimestamp"></param>
 	virtual void OnLost(const uint32_t startTimestamp) { }
+
+	/// <summary>
+	/// Optional callback.
+	/// Lets the Sender know the transmission is complete or failed.
+	/// </summary>
+	/// <param name="result"></param>
+	virtual void OnSendComplete(const SendResultEnum result) {}
 };
 #endif

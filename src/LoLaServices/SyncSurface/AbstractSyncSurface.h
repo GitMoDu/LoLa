@@ -18,7 +18,6 @@ class AbstractSyncSurface
 {
 private:
 	using BaseClass = AbstractLoLaDiscoveryService<Port, MaxSendPayloadSize, NoDiscoveryTimeOut>;
-	using SendResultEnum = ILinkPacketSender::SendResultEnum;
 
 protected:
 	using BaseClass::OutPacket;
@@ -197,6 +196,7 @@ protected:
 	}
 
 protected:
+	//TODO: replace with template constant
 	virtual const uint8_t GetServiceId() final
 	{
 		return TrackedSurface.GetId();

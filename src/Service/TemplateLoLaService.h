@@ -9,14 +9,14 @@
 #include "..\Link\ILoLaLink.h"
 #include "..\Link\LoLaPacketDefinition.h"
 
+/// <summary>
+/// Template class for all link-based services.
+/// </summary>
+/// <typeparam name="MaxSendPayloadSize"></typeparam>
 template<const uint8_t MaxSendPayloadSize>
 class TemplateLoLaService : protected Task
 	, public virtual ILinkPacketReceiver
-	, public virtual ILinkPacketSender
 {
-private:
-	using ILinkPacketSender::SendResultEnum;
-
 protected:
 	/// <summary>
 	/// Output packet payload, to be used by service to send packets.
@@ -69,7 +69,6 @@ public:
 	TemplateLoLaService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, ILinkPacketReceiver()
-		, ILinkPacketSender()
 		, LoLaLink(loLaLink)
 	{
 		SetSendRequestTimeout(sendRequestTimeout);
@@ -82,15 +81,16 @@ public:
 
 	virtual bool Callback() final
 	{
-		// Busy loop waiting send availability.
+		// Busy loop waiting for send availability.
 		if (RequestPending)
 		{
 			if (LoLaLink->CanSendPacket(RequestPayloadSize))
 			{
-				// Send is ready, last moment callback before transmission.
+				// Send is available, last moment callback before transmission.
 				OnPreSend();
 
-				if (LoLaLink->SendPacket(this, OutPacket.Data, RequestPayloadSize))
+				// Transmit packet.
+				if (LoLaLink->SendPacket(OutPacket.Data, RequestPayloadSize))
 				{
 					RequestPending = false;
 					LastRequestSent = millis();
@@ -144,21 +144,24 @@ protected:
 	}
 
 	/// <summary>
-	/// 
+	/// Locks service until the OutPacket is sent.
 	/// </summary>
 	/// <param name="payloadSize"></param>
 	/// <returns>False if a previous send request was interrupted.</returns>
 	const bool RequestSendPacket(const uint8_t payloadSize)
 	{
-		if (RequestPending
-#if defined(DEBUG_LOLA)
-			&& payloadSize <= MaxSendPayloadSize
-#endif
-			)
+		if (RequestPending)
 		{
-			// Interrupted another request.
+			// Attempted to interrupt another request.
 			return false;
 		}
+
+#if defined(DEBUG_LOLA)
+		if (payloadSize > MaxSendPayloadSize)
+		{
+			return false;
+		}
+#endif
 
 		RequestPending = true;
 		RequestPayloadSize = payloadSize;

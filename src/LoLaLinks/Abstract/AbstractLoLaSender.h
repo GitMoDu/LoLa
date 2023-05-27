@@ -50,7 +50,7 @@ public:
 		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
 	{}
 
-	virtual const bool SendPacket(ILinkPacketSender* callback, const uint8_t* data, const uint8_t payloadSize) final
+	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
 	{
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
@@ -79,8 +79,7 @@ public:
 			break;
 		}
 
-		if (PacketService.Send(callback,
-			packetSize,
+		if (PacketService.Send(packetSize,
 			GetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
 			SendCounter++;
@@ -122,7 +121,7 @@ protected:
 	/// <param name="data"></param>
 	/// <param name="payloadSize"></param>
 	/// <returns></returns>
-	const bool MockSendPacket(ILinkPacketSender* callback, const uint8_t* data, const uint8_t payloadSize)
+	const bool MockSendPacket(const uint8_t* data, const uint8_t payloadSize)
 	{
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
@@ -133,9 +132,7 @@ protected:
 		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 
 		// Call Packet Service Send (mock) to include the call overhead.
-		if (PacketService.MockSend(
-			callback,
-			packetSize,
+		if (PacketService.MockSend(packetSize,
 			GetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
 			return true;

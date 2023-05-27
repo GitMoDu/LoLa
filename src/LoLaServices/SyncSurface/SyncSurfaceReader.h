@@ -28,10 +28,6 @@ protected:
 	using BaseClass::SLOW_CHECK_PERIOD_MILLIS;
 	using BaseClass::RequestSendMetaPacket;
 
-
-	using SendResultEnum = ILinkPacketSender::SendResultEnum;
-
-
 private:
 	uint32_t LastUpdateReceived = 0;
 	bool UpdateRequested = false;

@@ -430,7 +430,7 @@ protected:
 					this->Owner();
 					Serial.println(F("Sending Broadcast Search."));
 #endif
-					if (SendPacket(this, OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
+					if (SendPacket(OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
 						PreLinkPacketSchedule = millis() + CHANNEL_SEARCH_PERIOD_MILLIS + RandomSource.GetRandomShort(CHANNEL_SEARCH_JITTER_MILLIS);
 						SearchChannelTryCount++;
@@ -449,7 +449,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Sending Session Start Request."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Unlinked::SessionRequest::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Unlinked::SessionRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionRequest::PAYLOAD_SIZE);
 				}
@@ -503,7 +503,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Sending Linking Start Request."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::LinkingStartRequest::PAYLOAD_SIZE);
 				}
@@ -541,7 +541,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Sending StateTransition Ack."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
 				}
@@ -604,7 +604,7 @@ protected:
 				Serial.println(F("Sending RemoteChallengeReplyRequest."));
 #endif
 
-				if (SendPacket(this, OutPacket.Data, Linking::RemoteChallengeReplyRequest::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::RemoteChallengeReplyRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::RemoteChallengeReplyRequest::PAYLOAD_SIZE);
 				}
@@ -643,7 +643,7 @@ protected:
 				//Serial.print(OutEstimate.Seconds);
 				//Serial.println('s');
 #endif
-				if (SendPacket(this, OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::ClockSyncRequest::PAYLOAD_SIZE);
 				}
@@ -667,7 +667,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Sending Linking Start Request."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::StartLinkRequest::PAYLOAD_SIZE);
 				}
@@ -710,7 +710,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Sending StateTransition Ack."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
 				}

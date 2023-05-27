@@ -7,7 +7,7 @@
 
 /// <summary>
 /// Discovery sub header definition.
-/// User classes should extend sub-headers starting from 0 up to UINT8_MAX-1.
+/// User classes should extend sub-headers starting from 0, up to UINT8_MAX-1.
 /// </summary>
 class DiscoveryDefinition : public TemplateSubHeaderDefinition<UINT8_MAX, 1 + 4>
 {
@@ -35,6 +35,15 @@ private:
 	static const uint32_t RetryPeriod = 2;
 	static const uint32_t ResendPeriod = 10;
 	static const uint32_t NoDiscoveryTimeOut = 1000;
+
+	enum DiscoveryStateEnum
+	{
+		WaitingForLink,
+		Discovering,
+		Acknowledging,
+		Running,
+		RunningAck
+	};
 
 protected:
 	using BaseClass::LoLaLink;
@@ -83,15 +92,6 @@ protected:
 	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) {}
 
 private:
-	enum DiscoveryStateEnum
-	{
-		WaitingForLink,
-		Discovering,
-		Acknowledging,
-		Running,
-		PostStartReply
-	};
-
 	uint32_t DiscoveryStart = 0;
 	DiscoveryStateEnum DiscoveryState = DiscoveryStateEnum::WaitingForLink;
 
@@ -173,7 +173,7 @@ public:
 					ResetLastSent();
 					break;
 				case DiscoveryStateEnum::Running:
-					DiscoveryState = DiscoveryStateEnum::PostStartReply;
+					DiscoveryState = DiscoveryStateEnum::RunningAck;
 					Task::enable();
 					break;
 				default:
@@ -233,7 +233,7 @@ protected:
 				Task::delay(RetryPeriod);
 			}
 			break;
-		case DiscoveryStateEnum::PostStartReply:
+		case DiscoveryStateEnum::RunningAck:
 			if (GetElapsedSinceLastSent() > ResendPeriod)
 			{
 				if (RequestSendDiscovery(true))

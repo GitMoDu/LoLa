@@ -27,29 +27,6 @@ public:
 	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 };
 
-class ILinkPacketSender
-{
-public:
-	/// <summary>
-	/// Possible results for the send request.
-	/// </summary>
-	enum SendResultEnum
-	{
-		Success,
-		SendTimeout,
-		SendCollision,
-		Error
-	};
-
-public:
-	/// <summary>
-	/// Optional callback.
-	/// Let's the Sender know the transmission/transmission-ack is complete or failed.
-	/// </summary>
-	/// <param name="result"></param>
-	virtual void OnSendComplete(const SendResultEnum result) {}
-};
-
 class ILoLaLink
 {
 public:
@@ -86,15 +63,14 @@ public:
 	virtual const bool CanSendPacket(const uint8_t payloadSize) { return false; }
 
 	/// <summary>
-	/// 
+	/// Send packet through link using transceiver.
 	/// </summary>
-	/// <param name="callback">Optional, can let the caller know when the transmission finished or failed.</param>
 	/// <param name="payloadSize"></param>
 	/// <returns>True on successfull transmission.</returns>
-	virtual const bool SendPacket(ILinkPacketSender* callback, const uint8_t* data, const uint8_t payloadSize) { return false; }
+	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) { return false; }
 
 	/// <summary>
-	/// 
+	/// Register link status listener.
 	/// </summary>
 	/// <param name="listener"></param>
 	/// <returns>True if success. False if no more slots are available.</returns>

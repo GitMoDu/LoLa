@@ -397,7 +397,7 @@ protected:
 					this->Owner();
 					Serial.println(F("Sending Search Reply."));
 #endif
-					if (SendPacket(this, OutPacket.Data, Unlinked::SearchReply::PAYLOAD_SIZE))
+					if (SendPacket(OutPacket.Data, Unlinked::SearchReply::PAYLOAD_SIZE))
 					{
 						SearchReplyPending = false;
 						PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
@@ -413,7 +413,7 @@ protected:
 					this->Owner();
 					Serial.println(F("Sending Broadcast Session."));
 #endif
-					if (SendPacket(this, OutPacket.Data, Unlinked::SessionBroadcast::PAYLOAD_SIZE))
+					if (SendPacket(OutPacket.Data, Unlinked::SessionBroadcast::PAYLOAD_SIZE))
 					{
 						PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
 
@@ -489,7 +489,7 @@ protected:
 				//Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
 				//Serial.println(F("us remaining."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
 
@@ -532,7 +532,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Sending HostChallengeRequest."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Linking::HostChallengeRequest::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::HostChallengeRequest::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeRequest::PAYLOAD_SIZE);
 				}
@@ -549,7 +549,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Sending HostChallengeReply."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Linking::HostChallengeReply::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::HostChallengeReply::PAYLOAD_SIZE))
 				{
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::HostChallengeReply::PAYLOAD_SIZE);
 				}
@@ -588,7 +588,7 @@ protected:
 #endif
 				}
 
-				if (SendPacket(this, OutPacket.Data, Linking::ClockSyncReply::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::ClockSyncReply::PAYLOAD_SIZE))
 				{
 					// Only send a time reply once.
 					ClockReplyPending = false;
@@ -628,7 +628,7 @@ protected:
 				//Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
 				//Serial.println(F("us remaining."));
 #endif
-				if (SendPacket(this, OutPacket.Data, Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
 				}

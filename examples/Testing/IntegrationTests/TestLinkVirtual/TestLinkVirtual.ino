@@ -186,8 +186,8 @@ LoLaLinkRemote<> Remote(SchedulerBase,
 
 TestTask Tester(SchedulerBase, &Host, &Remote);
 
-DiscoveryTestService<0, 'H'> HostDiscovery(SchedulerBase, &Host);
-DiscoveryTestService<0, 'R'> RemoteDiscovery(SchedulerBase, &Remote);
+DiscoveryTestService<'H', 0, 12345> HostDiscovery(SchedulerBase, &Host);
+DiscoveryTestService<'R', 0, 12345> RemoteDiscovery(SchedulerBase, &Remote);
 
 
 void BootError()

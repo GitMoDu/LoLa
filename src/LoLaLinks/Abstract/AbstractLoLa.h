@@ -104,6 +104,14 @@ public:
 	}
 
 public:
+	/// <summary>
+	/// Overridable callback.
+	/// </summary>
+	/// <param name="result">SendResultEnum</param>
+	virtual void OnSendComplete(const SendResultEnum result)
+	{}
+
+public:
 	virtual const bool RegisterLinkListener(ILinkListener* listener) final
 	{
 		if (listener != nullptr && LinkListenersCount < MaxLinkListeners - 1)

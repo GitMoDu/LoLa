@@ -10,8 +10,10 @@
 #include <ILoLaInclude.h>
 
 
+/// <summary>
+/// Raw Link usage test task, no inheritance from template service.
+/// </summary>
 class TestTask : private Task
-	, public virtual ILinkPacketSender
 	, public virtual ILinkPacketReceiver
 	, public virtual ILinkListener
 {
@@ -32,7 +34,6 @@ private:
 public:
 	TestTask(Scheduler& scheduler, ILoLaLink* host, ILoLaLink* remote)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILinkPacketSender()
 		, ILinkPacketReceiver()
 		, Host(host)
 		, Remote(remote)
@@ -97,7 +98,7 @@ public:
 				PrintTag('H');
 				Serial.println(F("Sending."));
 #endif
-				if (Host->SendPacket(this, OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
+				if (Host->SendPacket(OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
 				{
 					LastPing = timestamp;
 				}
@@ -123,28 +124,11 @@ private:
 	}
 
 public:
-	virtual void OnSendComplete(const SendResultEnum result) final
+	virtual void OnSendRequestFail() final
 	{
-#if defined(PRINT_TEST_PACKETS)
+#if defined(DEBUG_LOLA)
 		PrintTag('H');
-
-		switch (Success)
-		{
-		case SendResultEnum::Success:
-			Serial.println(F("Sent Success"));
-			break;
-		case SendResultEnum::SendTimeout:
-			Serial.println(F("Send Timeout"));
-			break;
-		case SendResultEnum::SendCollision:
-			Serial.println(F(" Send Collision"));
-			break;
-		case SendResultEnum::Error:
-			Serial.println(F("Send Error"));
-			break;
-		default:
-			break;
-		}
+		Serial.println(F("Send Error."));
 #endif
 	}
 

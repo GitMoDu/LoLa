@@ -20,8 +20,6 @@ class SyncSurfaceWriter
 private:
 	using BaseClass = AbstractSyncSurface<Port, SyncSurfaceMaxPayloadSize, NoDiscoveryTimeOut>;
 
-	using SendResultEnum = ILinkPacketSender::SendResultEnum;
-
 	using BaseClass::FAST_CHECK_PERIOD_MILLIS;
 	using BaseClass::SLOW_CHECK_PERIOD_MILLIS;
 	using BaseClass::UPDATE_BACK_OFF_PERIOD_MILLIS;

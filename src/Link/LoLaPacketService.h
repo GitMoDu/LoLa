@@ -14,7 +14,6 @@
 /// <summary>
 /// Packet send and receive service, with a single IPacketServiceListener for receive.
 /// Interfaces directly with and abstracts ILoLaTransceiver.
-/// Optional SendListener event callbacks.
 /// Properties:
 ///		Content abstract.
 ///		Buffers input packets, so transceiver is free to receive more while the service processes it.
@@ -24,7 +23,7 @@ template<const uint8_t MaxPacketSize>
 class LoLaPacketService : private Task, public virtual ILoLaTransceiverListener
 {
 private:
-	using SendResultEnum = ILinkPacketSender::SendResultEnum;
+	using SendResultEnum = IPacketServiceListener::SendResultEnum;
 
 	enum StateEnum
 	{
@@ -42,7 +41,6 @@ private:
 	uint8_t* RawInPacket = nullptr;
 	uint8_t* RawOutPacket = nullptr;
 
-	ILinkPacketSender* SendListener = nullptr;
 
 	uint32_t SendOutTimestamp = 0;
 
@@ -73,6 +71,7 @@ public:
 	{
 		if (RawInPacket != nullptr &&
 			RawOutPacket != nullptr &&
+			ServiceListener != nullptr &&
 			Transceiver->SetupListener(this))
 		{
 			return true;
@@ -88,23 +87,16 @@ public:
 		case StateEnum::SendingSuccess:
 			State = StateEnum::Done;
 			Task::enable();
-			if (SendListener != nullptr)
-			{
-				SendListener->OnSendComplete(SendResultEnum::Success);
-				SendListener = nullptr;
-			}
+			ServiceListener->OnSendComplete(SendResultEnum::Success);
+
 			break;
 		case StateEnum::Sending:
 			if (micros() - SendOutTimestamp > LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)
 			{
 				// Send timeout.
-				Task::enable();
-				if (SendListener != nullptr)
-				{
-					SendListener->OnSendComplete(SendResultEnum::SendTimeout);
-					SendListener = nullptr;
-				}
 				State = StateEnum::Done;
+				Task::enable();
+				ServiceListener->OnSendComplete(SendResultEnum::SendTimeout);
 			}
 			else
 			{
@@ -112,13 +104,9 @@ public:
 			}
 			break;
 		case StateEnum::SendingError:
-			if (SendListener != nullptr)
-			{
-				SendListener->OnSendComplete(SendResultEnum::Error);
-				SendListener = nullptr;
-			}
 			Task::enable();
 			State = StateEnum::Done;
+			ServiceListener->OnSendComplete(SendResultEnum::Error);
 			break;
 		case StateEnum::Done:
 			Transceiver->Rx(ServiceListener->GetRxChannel());
@@ -160,8 +148,8 @@ public:
 		/// </summary>
 		if (State == StateEnum::Done)
 		{
-			// Just running the task in Done state will update the channel, but directly calling Driver has less latency.
-			Transceiver->Rx(ServiceListener->GetRxChannel());
+			// Just running the task in Done state will update the channel on the next task allback.
+			Task::enable();
 		}
 	}
 
@@ -169,15 +157,12 @@ public:
 	{
 		if (State != StateEnum::Done)
 		{
-			if (SendListener != nullptr)
-			{
-				SendListener->OnSendComplete(SendResultEnum::SendTimeout);
-			}
+			ServiceListener->OnSendComplete(SendResultEnum::SendTimeout);
+
 #if defined(DEBUG_LOLA)
 			Serial.println(F("\tPrevious Send request cancelled."));
 #endif
 			Task::enable();
-			ServiceListener = nullptr;
 			State = StateEnum::Done;
 		}
 	}
@@ -189,12 +174,11 @@ public:
 	/// <param name="callback"></param>
 	/// <param name="size"></param>
 	/// <returns></returns>
-	const bool Send(ILinkPacketSender* callback, const uint8_t size, const uint8_t channel)
+	const bool Send(const uint8_t size, const uint8_t channel)
 	{
 		if (Transceiver->Tx(RawOutPacket, size, channel))
 		{
 			SendOutTimestamp = micros();
-			SendListener = callback;
 			Task::enable();
 			State = StateEnum::Sending;
 
@@ -218,7 +202,7 @@ public:
 	/// <param name="size"></param>
 	/// <param name="channel"></param>
 	/// <returns></returns>
-	const bool MockSend(ILinkPacketSender* callback, const uint8_t size, const uint8_t channel)
+	const bool MockSend(const uint8_t size, const uint8_t channel)
 	{
 		// Mock internal "Tx".
 		if ((size > 0 && channel == 0) || (size >= 0))

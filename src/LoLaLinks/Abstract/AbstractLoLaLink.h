@@ -111,24 +111,6 @@ public:
 
 		return false;
 	}
-	virtual void OnSendComplete(const ILinkPacketSender::SendResultEnum result)
-	{
-		switch (LinkStage)
-		{
-		case LinkStageEnum::Disabled:
-			break;
-		case LinkStageEnum::AwaitingLink:
-		case LinkStageEnum::Linking:
-			// Before Link starts, packet service is not handling sends.
-			// So we need to manually reset Transceiver to Rx (also updates channel).
-			PacketService.RefreshChannel();
-			break;
-		case LinkStageEnum::Linked:
-			break;
-		default:
-			break;
-		}
-	}
 
 	virtual const uint32_t GetLinkDuration() final
 	{
@@ -473,7 +455,7 @@ private:
 		start = micros();
 		for (uint_least16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			if (!BaseClass::MockSendPacket(this, OutPacket.Data, 0))
+			if (!BaseClass::MockSendPacket(OutPacket.Data, 0))
 			{
 				// Calibration failed.
 #if defined(DEBUG_LOLA)
@@ -487,7 +469,7 @@ private:
 		start = micros();
 		for (uint_least16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			if (!BaseClass::MockSendPacket(this, OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
+			if (!BaseClass::MockSendPacket(OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
 			{
 				// Calibration failed.
 #if defined(DEBUG_LOLA)
