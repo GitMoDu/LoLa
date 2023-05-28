@@ -9,140 +9,73 @@
 
 #include <ILoLaTransceiver.h>
 
-template<const uint8_t InterruptPin,
-	typename SerialType,
-	const uint32_t BaudRate>
-class TimestampedSerial
-{
-private:
-	SerialType& SerialInstance;
-
-	volatile uint32_t RxStartTimestamp = 0;
-
-	volatile bool RxPending = false;
-
-	volatile bool RxActive = false;
-
-public:
-	TimestampedSerial(SerialType& serialInstance)
-		: SerialInstance(serialInstance)
-	{
-
-	}
-
-	void StopRx()
-	{
-		if (RxActive)
-		{
-			RxActive = false;
-			ClearRx();
-		}
-	}
-
-	void StartRx()
-	{
-		if (!RxActive)
-		{
-			RxActive = true;
-			ClearRx();
-		}
-	}
-
-	const bool Setup(void* onInterruptFunction())
-	{
-		if (onInterruptFunction != nullptr)
-		{
-			return true;
-		}
-
-		return false;
-	}
-
-	void OnPinInterrupt()
-	{
-		// Only one interrupt for each packet.
-		DisableInterrupt();
-
-		if (RxActive)
-		{
-			// Flag pending.
-			RxPending = true;
-
-			// Store timestamp for notification.
-			RxStartTimestamp = micros();
-		}
-	}
-
-private:
-	void EnableInterrupt()
-	{
-		//TODO: Implement. InterruptPin
-	}
-	void DisableInterrupt()
-	{
-		//TODO: Implement. InterruptPin
-	}
-	void ClearRx()
-	{
-		RxPending = false;
-
-		//TODO: Clear serial input buffer.
-	}
-};
-
-
 /// <summary>
 /// Serial/UART LoLa Packet Driver.
-/// 
 /// </summary>
+/// <typeparam name="SerialType"></typeparam>
+/// <typeparam name="BaudRate"></typeparam>
+/// <typeparam name="RxInterruptPin"></typeparam>
+/// <typeparam name="RxBufferSize"></typeparam>
+/// <typeparam name="TxBufferSize"></typeparam>
 template<typename SerialType,
 	const uint32_t BaudRate,
-	const uint8_t InterruptPin>
+	const uint8_t RxInterruptPin,
+	const size_t RxBufferSize = 64,
+	const size_t TxBufferSize = 64>
 class SerialTransceiver : private Task, public virtual ILoLaTransceiver
 {
 private:
-	// Compile time static definition.
-	//template<const uint32_t byteDurationMicros>
-	//static constexpr bool IsNotZero()
-	//{
-	//	return (byteDurationMicros / 1000L) > 0;
-	//}
+#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32)
+	static constexpr uint32_t TransmitDelayMicros = 10;
+#else
+	static constexpr uint32_t TransmitDelayMicros = 25;
+#endif
 
-	template<const uint32_t byteDurationMicros>
-	static constexpr uint32_t GetByteDurationMillis()
-	{
-		return byteDurationMicros / 1000;
-		/*if (consteval(IsNotZero<byteDurationMicros>()))
-		{
-			return byteDurationMicros / 1000;
-		}
-		else
-		{
-			return 1;
-		}*/
-	}
+	// TODO: Baudrate aware.
+	static constexpr uint32_t TxSeparationPauseMicros = 200;
+	static constexpr uint32_t RxWaitPauseMicros = 150;
 
-	// Estimate byte duration with baud-rate.
-	static const uint32_t ByteDurationMicros = (1000000L * 8) / (BaudRate);
-	static const uint32_t ByteDurationMillis = GetByteDurationMillis<ByteDurationMicros>();
+	// TODO: Baudrate and size aware?
+	static constexpr uint32_t RxTimeoutMicros = 5000;
 
-	static const uint32_t PacketSeparationPauseMicros = 5000000L / BaudRate;
+
+private:
+	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
 	SerialType* IO;
-
-	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
-
 	uint32_t ReceiveTimestamp = 0;
-	uint32_t LastReceivedTimestamp = 0;
-
-	uint32_t SendEndTimestamp = 0;
 
 
+private:
+	uint32_t TxEndTimestamp = 0;
+
+	enum TxStateEnum
+	{
+		NoTx,
+		TxStart,
+		TxEnd
+	};
+
+	TxStateEnum TxState = TxStateEnum::NoTx;
+
+private:
+	enum RxStateEnum
+	{
+		NoRx,
+		RxStart,
+		RxEnd
+	};
+	volatile uint32_t RxStartTimestamp = 0;
+
+	volatile RxStateEnum RxState = RxStateEnum::NoRx;
+	uint8_t RxIndex = 0;
+	uint8_t RxSize = 0;
+
+
+private:
 	bool DriverEnabled = false;
-	bool SendPending = false;
-	bool ReceivePending = false;
 
 public:
 	SerialTransceiver(Scheduler& scheduler, SerialType* io)
@@ -151,19 +84,27 @@ public:
 		, IO(io)
 	{}
 
+	void (*OnRxInterrupt)(void) = nullptr;
+
+	void SetupInterrupt(void (*onRxInterrupt)(void))
+	{
+		OnRxInterrupt = onRxInterrupt;
+	}
+
 	/// <summary>
 	/// To be called on serial receive interrupt.
 	/// </summary>
-	void OnSerialEvent()
+	void OnSeriaInterrupt()
 	{
-		LastReceivedTimestamp = micros();
-		if (!ReceivePending)
-		{
-			ReceiveTimestamp = LastReceivedTimestamp;
-			ReceivePending = true;
-		}
+		// Only one interrupt expected for each packet.
+		DisableInterrupt();
 
-		Task::enable();
+		if (RxState == RxStateEnum::NoRx)
+		{
+			RxStartTimestamp = micros();
+			RxState = RxStateEnum::RxStart;
+			Task::enable();
+		}
 	}
 
 public:
@@ -171,61 +112,97 @@ public:
 	{
 		if (DriverEnabled)
 		{
-			if (SendPending)
+			switch (TxState)
 			{
-				if (micros() > SendEndTimestamp)
+			case TxStateEnum::NoTx:
+				break;
+			case TxStateEnum::TxStart:
+				// Wait for Tx buffer to be completely free.
+				if (IO->availableForWrite() >= TxBufferSize - 1)
+				{
+					TxEndTimestamp = micros();
+					TxState = TxStateEnum::TxEnd;
+				}
+				break;
+			case TxStateEnum::TxEnd:
+				// Brief pause at the end, to clearly separate packets.
+				if (micros() - TxEndTimestamp > TxSeparationPauseMicros)
 				{
 					Listener->OnTx();
-					SendPending = false;
+					TxState = TxStateEnum::NoTx;
 				}
+				break;
+			default:
+				break;
 			}
-			else if (ReceivePending)
+
+			switch (RxState)
 			{
-				// For every interrupt, processing is delayed by PacketSeparationPauseMicros.
-				if ((micros() - LastReceivedTimestamp) > PacketSeparationPauseMicros)
+			case RxStateEnum::NoRx:
+				break;
+			case RxStateEnum::RxStart:
+				if (micros() - RxStartTimestamp > RxWaitPauseMicros && IO->available() > 0)
 				{
-					const uint8_t pending = Serial.available();
-					if (pending > 0)
+					// First byte is the packet size.
+					RxSize = IO->read();
+					if (RxSize >= LoLaPacketDefinition::MIN_PACKET_SIZE
+						&& RxSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 					{
-						const uint8_t size = Serial.readBytes((char*)InBuffer, pending);
-
-						// Clear flag as soon as the packet has been read off serial buffer.
-						ReceivePending = false;
-
-						if (size > 0)
-						{
-							// All reception is perfect reception.
-							Listener->OnRx(InBuffer, ReceiveTimestamp, size, UINT8_MAX);
-						}
-						else
-						{
-							Listener->OnRxLost(ReceiveTimestamp);
-						}
+						RxIndex = 0;
+						RxState = RxStateEnum::RxEnd;
 					}
 					else
 					{
-						ReceivePending = false;
-						Listener->OnRxLost(ReceiveTimestamp);
+						Listener->OnRxLost(RxStartTimestamp);
+						ClearRx();
 					}
 				}
-				Task::enable();
+				else if (micros() - RxStartTimestamp > RxTimeoutMicros)
+				{
+					Listener->OnRxLost(RxStartTimestamp);
+					ClearRx();
+				}
+				break;
+			case RxStateEnum::RxEnd:
+				// Wait for Rx buffer to be have RxSize.
+				while (IO->available() > 0 && RxIndex < RxSize)
+				{
+					InBuffer[RxIndex] = IO->read();
+					RxIndex++;
+				}
+
+				if (RxIndex >= RxSize)
+				{
+					if (RxSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
+					{
+						Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
+					}
+					ClearRx();
+				}
+				else if (micros() - RxStartTimestamp > RxTimeoutMicros)
+				{
+					Listener->OnRxLost(RxStartTimestamp);
+					ClearRx();
+				}
+				break;
+			default:
+				break;
 			}
-			else
+
+			if (TxState != TxStateEnum::NoTx || RxState != RxStateEnum::NoRx)
 			{
-				Task::disable();
+				Task::enable();
+				return true;
 			}
 		}
-		else
-		{
-			Task::disable();
-		}
+
+		Task::disable();
+		return false;
 	}
 
 	// ILoLaPacketDriver overrides.
 	virtual const bool SetupListener(ILoLaTransceiverListener* listener)
 	{
-		Stop();
-
 		Listener = listener;
 
 		return Listener != nullptr;
@@ -233,13 +210,22 @@ public:
 
 	virtual const bool Start() final
 	{
-		if (IO != nullptr)
+		if (IO != nullptr
+			&& Listener != nullptr
+			&& OnRxInterrupt != nullptr)
 		{
-			ReceivePending = false;
-			DriverEnabled = true;
+			pinMode(RxInterruptPin, INPUT);
+
 			IO->begin(BaudRate);
 			IO->clearWriteError();
 			IO->flush();
+
+
+			TxState = TxStateEnum::NoTx;
+			DriverEnabled = true;
+
+			ClearRx();
+
 			Task::enable();
 
 			return true;
@@ -252,7 +238,6 @@ public:
 
 	virtual const bool Stop() final
 	{
-		ReceivePending = false;
 		DriverEnabled = false;
 		IO->end();
 		IO->clearWriteError();
@@ -263,26 +248,34 @@ public:
 	}
 
 	/// <summary>
-	/// Serial isn't limited by receiving, only block if busy sending.
+	/// Full Duplex Serial isn't limited by Rx, only denies Tx if already in Tx.
 	/// </summary>
 	/// <returns></returns>
 	virtual const bool TxAvailable() final
 	{
-		return DriverEnabled && !SendPending && IO->availableForWrite() && ((micros() - SendEndTimestamp) > PacketSeparationPauseMicros);
+		return DriverEnabled && TxState == TxStateEnum::NoTx;
 	}
 
 	/// <summary>
 	/// Packet copy to serial buffer, and start transmission.
+	/// The first byte is the packet size, excluding the size byte.
 	/// </summary>
 	/// <param name="data"></param>
 	/// <param name="length"></param>
 	/// <returns></returns>
-	virtual const bool Tx(uint8_t* data, const uint8_t length) final
+	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-		if (IO->write(data, length) == length)
+		if (TxAvailable()
+			&& IO->write(&packetSize, 1) == 1
+			&& IO->write(data, packetSize) == packetSize
+			)
 		{
-			SendEndTimestamp = micros() + (ByteDurationMicros * (length - 1));
-			SendPending = true;
+			Serial.print(F("Tx ("));
+			Serial.print(packetSize);
+			Serial.println(F(") bytes."));
+
+			TxState = TxStateEnum::TxStart;
+			Task::enable();
 
 			return true;
 		}
@@ -291,15 +284,50 @@ public:
 	}
 
 	/// <summary>
-	/// Estimate duration with baud-rate.
-	/// Packet size is not a factor, as serial will start outputing
-	///  as soon as the first byte is pushed.
+	/// Serial is always in Rx mode.
+	/// </summary>
+	/// <param name="channel"></param>
+	virtual void Rx(const uint8_t channel) final
+	{}
+
+	/// <summary>
+	/// Serial will start outputing as soon as the first byte is pushed.
+	/// The fixed delay is mostly hardware dependent and small (<10us).
 	/// </summary>
 	/// <param name="packetSize">Number of bytes in the packet.</param>
 	/// <returns>The expected transmission duration in microseconds.</returns>
 	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) final
 	{
-		return ByteDurationMicros;
+		return TransmitDelayMicros;
+	}
+
+private:
+	void EnableInterrupt()
+	{
+		attachInterrupt(digitalPinToInterrupt(RxInterruptPin), OnRxInterrupt, FALLING);
+	}
+
+	void DisableInterrupt()
+	{
+		detachInterrupt(digitalPinToInterrupt(RxInterruptPin));
+	}
+
+	void ClearRx()
+	{
+		// Clear input buffer and size.
+		RxSize = 0;
+		while (IO->available())
+		{
+			IO->read();
+		}
+
+		// Force pending interrupts and enabled for next.
+		RxState = RxStateEnum::RxStart;
+		EnableInterrupt();
+		interrupts();
+
+		RxState = RxStateEnum::NoRx;
+		EnableInterrupt();
 	}
 };
 #endif

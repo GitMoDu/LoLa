@@ -21,16 +21,13 @@
 #define TEST_PIN_0 15
 #define TEST_PIN_1 16
 #define TEST_PIN_2 17
-#define TEST_PIN_3 18
-#define TEST_PIN_4 19
-#define TEST_PIN_5 20
-#define TEST_PIN_6 6
-#define TEST_PIN_7 7
 
 #define SCHEDULER_TEST_PIN TEST_PIN_0
-#define TEST_TX_START_PIN TEST_PIN_1
+#define RX_TEST_PIN TEST_PIN_1
+#define RX_INTERRUPT_TEST_PIN TEST_PIN_2
 #else
-#define TEST_TX_START_PIN 0
+#define RX_INTERRUPT_TEST_PIN 0
+#define RX_TEST_PIN 0
 #endif
 
 
@@ -43,8 +40,7 @@
 
 #include <TaskScheduler.h>
 #include <ILoLaInclude.h>
-#include "TransmissionTester.h"
-
+#include "ReceptionTester.h"
 
 
 // Process scheduler.
@@ -53,19 +49,17 @@ Scheduler SchedulerBase;
 
 // Transceiver Drivers.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32)
-SerialTransceiver<HardwareSerial, 115200, 21> SerialDriver(SchedulerBase, &Serial3);
+SerialTransceiver<HardwareSerial, 500000, 7> SerialDriver(SchedulerBase, &Serial2);
 #else
-SerialTransceiver<HardwareSerial, 115200, 21> SerialDriver(SchedulerBase, &Serial);
+SerialTransceiver<HardwareSerial, 115200, 2> SerialDriver(SchedulerBase, &Serial);
 #endif
 
-VirtualTransceiver<IVirtualTransceiver::Configuration<1, 1, 1, 1, 1, 1>, 'T'> VirtualDriver(SchedulerBase);
 
 // Selected Driver for test.
-ILoLaTransceiver* TestTransceiver = &VirtualDriver;
+ILoLaTransceiver* TestTransceiver = &SerialDriver;
 
 // Test Task.
-static const uint32_t SendPeriodMillis = 10;
-TransmissionTester<SendPeriodMillis, TEST_TX_START_PIN> TestTask(SchedulerBase, TestTransceiver);
+ReceptionTester<RX_TEST_PIN> TestTask(TestTransceiver);
 
 void BootError()
 {
@@ -76,7 +70,6 @@ void BootError()
 	while (1);;
 }
 
-
 void setup()
 {
 #ifdef DEBUG
@@ -84,12 +77,19 @@ void setup()
 	while (!Serial)
 		;
 	delay(1000);
-#endif
+#endif	
 
 #ifdef SCHEDULER_TEST_PIN
 	digitalWrite(SCHEDULER_TEST_PIN, LOW);
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
 #endif
+
+#if (RX_INTERRUPT_TEST_PIN >0)
+	digitalWrite(RX_INTERRUPT_TEST_PIN, LOW);
+	pinMode(RX_INTERRUPT_TEST_PIN, OUTPUT);
+#endif
+
+	SerialDriver.SetupInterrupt(OnSerialInterrupt);
 
 	if (!TestTask.Setup())
 	{
@@ -98,8 +98,7 @@ void setup()
 		BootError();
 	}
 
-
-	Serial.println(F("TestTransceiver Send Start!"));
+	Serial.println(F("TestTransceiver Rx Start!"));
 }
 
 void loop()
@@ -109,4 +108,17 @@ void loop()
 	digitalWrite(SCHEDULER_TEST_PIN, LOW);
 #endif
 	SchedulerBase.execute();
+}
+
+void OnSerialInterrupt()
+{
+#if (RX_INTERRUPT_TEST_PIN > 0)
+	digitalWrite(RX_INTERRUPT_TEST_PIN, HIGH);
+#endif
+
+	SerialDriver.OnSeriaInterrupt();
+
+#if (RX_INTERRUPT_TEST_PIN > 0)
+	digitalWrite(RX_INTERRUPT_TEST_PIN, LOW);
+#endif
 }
