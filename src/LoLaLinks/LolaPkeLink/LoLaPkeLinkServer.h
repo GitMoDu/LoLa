@@ -19,7 +19,7 @@ private:
 	using BaseClass = AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 public:
-	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 5000;
+	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 10000;
 
 private:
 	using Unlinked = LoLaLinkDefinition::Unlinked;

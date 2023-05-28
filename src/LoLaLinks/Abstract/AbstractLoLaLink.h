@@ -54,7 +54,7 @@ protected:
 	using BaseClass::GetElapsedSinceLastValidReceived;
 
 private:
-	static constexpr uint16_t CALIBRATION_ROUNDS = (F_CPU / (3333000L));
+	static constexpr uint8_t CALIBRATION_ROUNDS = 10;
 
 	/// <summary>
 	/// Slow value, let the main services hog the CPU.
@@ -451,7 +451,7 @@ private:
 		}
 
 		start = micros();
-		for (uint_least16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
 			if (!BaseClass::MockSendPacket(OutPacket.Data, 0))
 			{
@@ -465,7 +465,7 @@ private:
 		shortDuration = ((micros() - start) / CALIBRATION_ROUNDS);
 
 		start = micros();
-		for (uint_least16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
 			if (!BaseClass::MockSendPacket(OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
 			{
