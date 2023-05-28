@@ -93,6 +93,27 @@ public:
 		{
 			// Tx duration has elapsed.
 			UpdateChannel(OutGoing.Channel);
+#if defined(ECO_CHANCE)
+			if (random(UINT8_MAX) < ECO_CHANCE)
+			{
+#if defined(DEBUG_LOLA)
+				PrintName();
+				Serial.println(F("Echo attack!"));
+#endif
+				ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
+			}
+#endif
+
+#if defined(DOUBLE_SEND_CHANCE)
+			if (random(UINT8_MAX) < DOUBLE_SEND_CHANCE)
+			{
+#if defined(DEBUG_LOLA)
+				PrintName();
+				Serial.println(F("Double send attack!"));
+#endif
+				Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
+			}
+#endif
 			Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
 
 #if defined(PRINT_PACKETS)
@@ -111,15 +132,25 @@ public:
 			// Rx duration has elapsed since the packet incoming start triggered.
 			if (Listener != nullptr)
 			{
-				if (!Listener->OnRx(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
+#if defined(DROP_CHANCE)
+				if (random(UINT8_MAX) < DROP_CHANCE)
 				{
 #if defined(DEBUG_LOLA)
-					Serial.print(millis());
-					Serial.print('\t');
 					PrintName();
-					Serial.println(F("Rx Collision. Packet Service rejected."));
+					Serial.println(F("Drop attack!"));
 #endif
 				}
+				else
+#endif
+					if (!Listener->OnRx(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
+					{
+#if defined(DEBUG_LOLA)
+						Serial.print(millis());
+						Serial.print('\t');
+						PrintName();
+						Serial.println(F("Rx Collision. Packet Service rejected."));
+#endif
+					}
 			}
 			Incoming.Clear();
 		}
