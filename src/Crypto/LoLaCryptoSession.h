@@ -71,10 +71,18 @@ public:
 		return ExpandedKey != nullptr && AccessPassword != nullptr;
 	}
 
+	virtual void SetSessionId(const uint8_t* sessionId)
+	{
+		LoLaLinkSession::SetSessionId(sessionId);
+		ClearCachedSessionToken();
+	}
+
 public:
 	void SetRandomSessionId(LoLaRandom* randomSource)
 	{
 		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+
+		ClearCachedSessionToken();
 	}
 
 	/// <summary>
@@ -190,6 +198,14 @@ public:
 		}
 
 		return true;
+	}
+
+	void ClearCachedSessionToken()
+	{
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
+		{
+			MatchToken[i] = 0;
+		}
 	}
 };
 #endif

@@ -14,7 +14,7 @@ protected:
 	uint8_t SessionId[LoLaLinkDefinition::SESSION_ID_SIZE];
 
 public:
-	void SetSessionId(const uint8_t* sessionId)
+	virtual void SetSessionId(const uint8_t* sessionId)
 	{
 		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::SESSION_ID_SIZE; i++)
 		{
