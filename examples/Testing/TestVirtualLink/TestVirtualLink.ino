@@ -105,6 +105,7 @@ using FastGHzRadio = IVirtualTransceiver::Configuration<125, 25, 100, 10, 50, 10
 using TypicalSubGHzRadio = IVirtualTransceiver::Configuration<25, 50, 250, 20, 250, 20>;
 using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 100, 500, 50, 400, 50>;
 using IdealRadio = IVirtualTransceiver::Configuration<1, 1, 1, 1, 1, 1>;
+
 // Used Virtual Driver Configuration.
 using TestRadioConfig = TypicalSubGHzRadio;
 //

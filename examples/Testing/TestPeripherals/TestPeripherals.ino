@@ -1,18 +1,32 @@
-/* Test Arduino LoLa Peripheral Drivers
+/* Test LoLa Peripheral Drivers.
 *
 */
 
+#define DEBUG
 
-#define WAIT_FOR_LOGGER
+#if defined(DEBUG)
+#define DEBUG_LOLA
+#endif
+
 #define SERIAL_BAUD_RATE 115200
+
+#define _TASK_SCHEDULE_NC // Disable task catch-up.
+#define _TASK_OO_CALLBACKS
+
+#ifndef ARDUINO_ARCH_ESP32
+#define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
+#endif
+
+#include <TaskScheduler.h>
 
 #include <ILoLaInclude.h>
 
-ArduinoEntropySource EntropySource(123);
+// Process scheduler.
+Scheduler SchedulerBase;
+//
 
-
-ArduinoMicrosClock<> TimerArduino;
-ArduinoMicrosClock<987654> TimerArduino2;
+ArduinoEntropySource ArduinoEntropy(123);
+ArduinoTaskTimerClockSource<> TimerArduino(SchedulerBase);
 
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -20,20 +34,29 @@ AvrTimer1Clock TimerAvr;
 #endif
 
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-static const uint8_t TimerStm32Index = 1;
-static const uint8_t TimerStm32Channel = 'A';
-Stm32TimerClock TimerStm32(TimerStm32Index, TimerStm32Channel);
+Stm32EntropySource Stm32Entropy;
+
+IClockSource* ServerClock = &TimerArduino;
+ITimerSource* ServerTimer = &TimerArduino;
+//static const uint8_t TimerStm32Index = 1;
+//static const uint8_t TimerStm32Channel = 'A';
 #endif
 
 #if defined(ARDUINO_ESP8266)
-static const uint8_t TimerEsp8266Index = 1;
-Esp8266TimerClock TimerEsp8266(TimerEsp8266Index);
+IClockSource* ServerClock = &TimerArduino;
+ITimerSource* ServerTimer = &TimerArduino;
+//static const uint8_t TimerEsp8266Index = 1;
+//Esp8266TimerClock TimerEsp8266(TimerEsp8266Index);
 #endif
 
 #if defined(ARDUINO_ESP32)
-static const uint8_t TimerEsp32Index = 1;
-Esp32TimerClock TimerEsp32(TimerEsp32Index);
+IClockSource* ServerClock = &TimerArduino;
+ITimerSource* ServerTimer = &TimerArduino;
+//static const uint8_t TimerEsp32Index = 1;
+//Esp32TimerClock TimerEsp32(TimerEsp32Index);
 #endif
+
+
 
 static const uint32_t TIME_TEST_DELAY_MILLIS = 3124;
 
@@ -55,11 +78,16 @@ void setup()
 	Serial.println();
 	Serial.println(F("Testing Entropy."));
 
-	if (!TestEntropySource(EntropySource))
+	if (!TestEntropySource(ArduinoEntropy))
+	{
+		return;
+	}	
+	
+	if (!TestEntropySource(Stm32Entropy))
 	{
 		return;
 	}
-	
+
 	if (!TestTimerSources())
 	{
 		return;
@@ -76,19 +104,10 @@ const bool TestEntropySource(IEntropySource& entropySource)
 	uint8_t idSize = 0;
 	const uint8_t* uniqueId = entropySource.GetUniqueId(idSize);
 
-	ArrayToUint32 atui;
-
 	for (size_t i = 0; i < idSize; i = i + 4)
 	{
-		atui.Array[0] = uniqueId[i];
-		atui.Array[1] = uniqueId[i + 1];
-		atui.Array[2] = uniqueId[i + 2];
-		atui.Array[3] = uniqueId[i + 3];
-		Serial.print(atui.UInt);
-		if ((i * 4) < idSize)
-		{
-			Serial.println(F(",\t"));
-		}
+		Serial.print(uniqueId[i]);
+		Serial.println(F(",\t"));
 	}
 
 	uint32_t samplePrevious = 0;
@@ -142,8 +161,8 @@ const bool TestTimerSources()
 #endif
 
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F1)
-	if (!TestTimerSource(TimerArduino2, "Arduino2"))
-	//if (!TestTimerSource(TimerStm32, "Stm32"))
+	if (!TestTimerSource(TimerArduino, "Arduino"))
+		//if (!TestTimerSource(TimerStm32, "Stm32"))
 	{
 		return false;
 	}
@@ -163,22 +182,22 @@ const bool TestTimerSources()
 #endif
 
 	return true;
-}
-const bool TestTimerSource(ITimerSource& testSource, char* name)
+	}
+const bool TestTimerSource(ITimerSource& testSource, String name)
 {
-	static ITimerSource::RollingTimeStruct time1;
-	static ITimerSource::RollingTimeStruct time2;
+	static uint32_t time1;
+	static uint32_t time2;
 	static int64_t timeDelta;
 	static int64_t timeError;
 
 	delay(1);
 
 	// Get a timestamp, block wait with arduino millis and get another timestamp.
-	testSource.GetTime(time1);
+	time1 = testSource.GetCounter();
 	delay(TIME_TEST_DELAY_MILLIS);
-	testSource.GetTime(time2);
+	time2 = testSource.GetCounter();
 
-	timeDelta = time1.GetDeltaTo(time2);
+	timeDelta = ((uint64_t)(time2 - time1) * ONE_SECOND_MICROS) / testSource.GetDefaultRollover();
 	timeError = ((int64_t)TIME_TEST_DELAY_MILLIS * 1000) - timeDelta;
 
 
