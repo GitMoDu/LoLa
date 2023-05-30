@@ -40,8 +40,6 @@ protected:
 	using BaseClass::RandomSource;
 	using BaseClass::PacketService;
 
-	using BaseClass::RegisterPort;
-	using BaseClass::RegisterPacketReceiver;
 	using BaseClass::RegisterPacketReceiverInternal;
 	using BaseClass::GetSendDuration;
 	using BaseClass::CanRequestSend;
@@ -101,7 +99,7 @@ public:
 	virtual const bool Setup()
 	{
 		if (BaseClass::Setup()
-			&& RegisterPort(Linked::PORT)
+			&& RegisterPacketReceiverInternal(this, Linked::PORT)
 			&& CalibrateSendDuration())
 		{
 			return true;

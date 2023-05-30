@@ -17,7 +17,7 @@ class LoLaLinkDefinition
 public:
 	// <summary>
 	/// When linked, top port is reserved.
-	/// When unlinked, top 2 ports are reserved.
+	/// When unlinked, only top 2 ports are used.
 	/// </summary>
 	static constexpr uint8_t LINK_PORT_ALLOCATION = 1;
 	static constexpr uint8_t MAX_DEFINITION_PORT = UINT8_MAX - LINK_PORT_ALLOCATION;
@@ -330,9 +330,8 @@ public:
 	{
 	public:
 		/// <summary>
-		/// Linked and Unlinked share the same port. Maybe not?
 		/// </summary>
-		static constexpr uint8_t PORT = Linking::PORT - 1;
+		static constexpr uint8_t PORT = UINT8_MAX;
 
 		/// <summary>
 		/// ||Average RSSI|ReceiveCounter|REQUEST_REPLY||
@@ -344,7 +343,7 @@ public:
 			static constexpr uint8_t PAYLOAD_REQUEST_INDEX = PAYLOAD_RECEIVE_COUNTER_INDEX + 1;
 		};
 
-		using ClockTuneMicrosRequest = ClockSyncDefinition<ReportUpdate::SUB_HEADER + 1 >;
+		using ClockTuneMicrosRequest = ClockSyncDefinition<ReportUpdate::SUB_HEADER + 1>;
 		using ClockTuneMicrosReply = ClockSyncDefinition<ClockTuneMicrosRequest::SUB_HEADER + 1>;
 	};
 
