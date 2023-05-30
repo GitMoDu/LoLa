@@ -14,8 +14,9 @@
 #pragma	region Available Packet Drivers
 #include "LoLaTransceivers\VirtualTransceiver\VirtualTransceiver.h"
 #include "LoLaTransceivers\SerialTransceiver\SerialTransceiver.h"
-//#include "LoLaTransceivers\PIMLoLaPacketDriver\PIMLoLaPacketDriver.h"
+#include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
 //#include "LoLaTransceivers\Si446xLolaPacketDriver\Si446xLolaPacketDriver.h"
+//#include "LoLaTransceivers\PIMLoLaPacketDriver\PIMLoLaPacketDriver.h"
 #pragma endregion
 
 
