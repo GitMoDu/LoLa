@@ -89,6 +89,7 @@ void setup()
 	pinMode(RX_INTERRUPT_TEST_PIN, OUTPUT);
 #endif
 
+	// Setup Serial Transceiver Interrupt.
 	SerialDriver.SetupInterrupt(OnSerialInterrupt);
 
 	if (!TestTask.Setup())

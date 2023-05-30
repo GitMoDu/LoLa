@@ -88,6 +88,7 @@ void setup()
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
 #endif
 
+	// Setup Serial Transceiver Interrupt.
 	SerialDriver.SetupInterrupt(OnSerialInterrupt);
 
 	if (!TestTask.Setup())
@@ -110,4 +111,6 @@ void loop()
 }
 
 void OnSerialInterrupt()
-{}
+{
+	SerialDriver.OnSeriaInterrupt();
+}
