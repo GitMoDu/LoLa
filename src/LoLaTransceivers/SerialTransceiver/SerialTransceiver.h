@@ -32,11 +32,11 @@ private:
 #endif
 
 	// TODO: Baudrate aware.
-	static constexpr uint32_t TxSeparationPauseMicros = 200;
+	static constexpr uint32_t TxSeparationPauseMicros = 250;
 	static constexpr uint32_t RxWaitPauseMicros = 150;
 
 	// TODO: Baudrate and size aware?
-	static constexpr uint32_t RxTimeoutMicros = 5000;
+	static constexpr uint32_t RxTimeoutMicros = 2000;
 
 
 private:
@@ -75,16 +75,17 @@ private:
 
 
 private:
+	void (*OnRxInterrupt)(void) = nullptr;
 	bool DriverEnabled = false;
 
 public:
 	SerialTransceiver(Scheduler& scheduler, SerialType* io)
-		: Task(0, TASK_FOREVER, &scheduler, false)
+		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, ILoLaTransceiver()
 		, IO(io)
-	{}
-
-	void (*OnRxInterrupt)(void) = nullptr;
+	{
+		pinMode(RxInterruptPin, INPUT);
+	}
 
 	void SetupInterrupt(void (*onRxInterrupt)(void))
 	{
@@ -141,7 +142,7 @@ public:
 			case RxStateEnum::NoRx:
 				break;
 			case RxStateEnum::RxStart:
-				if (micros() - RxStartTimestamp > RxWaitPauseMicros && IO->available() > 0)
+				if (micros() - RxStartTimestamp > RxWaitPauseMicros && IO->available() > LoLaPacketDefinition::MIN_PACKET_SIZE)
 				{
 					// First byte is the packet size.
 					RxSize = IO->read();
@@ -153,13 +154,11 @@ public:
 					}
 					else
 					{
-						Listener->OnRxLost(RxStartTimestamp);
 						ClearRx();
 					}
 				}
 				else if (micros() - RxStartTimestamp > RxTimeoutMicros)
 				{
-					Listener->OnRxLost(RxStartTimestamp);
 					ClearRx();
 				}
 				break;
@@ -173,10 +172,7 @@ public:
 
 				if (RxIndex >= RxSize)
 				{
-					if (RxSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
-					{
-						Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
-					}
+					Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
 					ClearRx();
 				}
 				else if (micros() - RxStartTimestamp > RxTimeoutMicros)
@@ -200,8 +196,8 @@ public:
 		return false;
 	}
 
-	// ILoLaPacketDriver overrides.
-	virtual const bool SetupListener(ILoLaTransceiverListener* listener)
+	// ILoLaTransceiver overrides.
+	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
 	{
 		Listener = listener;
 
@@ -267,13 +263,8 @@ public:
 	{
 		if (TxAvailable()
 			&& IO->write(&packetSize, 1) == 1
-			&& IO->write(data, packetSize) == packetSize
-			)
+			&& IO->write(data, packetSize) == packetSize)
 		{
-			Serial.print(F("Tx ("));
-			Serial.print(packetSize);
-			Serial.println(F(") bytes."));
-
 			TxState = TxStateEnum::TxStart;
 			Task::enable();
 
@@ -328,6 +319,7 @@ private:
 
 		RxState = RxStateEnum::NoRx;
 		EnableInterrupt();
+		Task::enable();
 	}
 };
 #endif
