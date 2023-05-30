@@ -483,16 +483,9 @@ protected:
 				Session.CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
 				StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 
-#if defined(DEBUG_LOLA)
-				//this->Owner();
-				//Serial.print(F("Sending Linking SwitchOver: "));
-				//Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
-				//Serial.println(F("us remaining."));
-#endif
 				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
-
 				}
 			}
 			else
@@ -621,13 +614,7 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOver::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOver::SUB_HEADER;
 				StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
-				
-#if defined(DEBUG_LOLA)
-				//this->Owner();
-				//Serial.print(F("Sending Link SwitchOver: "));
-				//Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
-				//Serial.println(F("us remaining."));
-#endif
+
 				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
