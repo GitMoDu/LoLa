@@ -284,7 +284,7 @@ public:
 			SendPending = true;
 
 			// Transmit packet.
-			Radio.write(data, packetSize));
+			Radio.write(data, packetSize);
 
 			Task::enable();
 
