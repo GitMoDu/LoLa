@@ -166,8 +166,10 @@ public:
 				}
 				Listener->OnChannelHopTime();
 
-				// We've just hopped index, we can sleep for the estimated delay with margin.
 				Task::delay(GetDelayPeriod());
+
+				// We've just hopped index, we can sleep for the estimated delay with margin.
+				return false;
 			}
 			else
 			{
