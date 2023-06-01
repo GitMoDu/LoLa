@@ -144,7 +144,7 @@ public:
 	{
 		if (((int32_t)(TransitionEnd - timestamp)) < 0)
 		{
-			return 0;
+			return TransitionTimeout;
 		}
 		else
 		{
