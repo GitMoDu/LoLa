@@ -7,12 +7,14 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ILoLaTransceiver.h>
+#include <SPI.h>
 
 // https://github.com/nRF24/RF24
 #define RF24_SPI_PTR
-#include <SPI.h>
 #include <RF24.h>
+
+#include <ILoLaTransceiver.h>
+
 
 /// <summary>
 /// TODO: Optimize hop by checking if already on the selected channel, before issuing command to IC.
@@ -275,7 +277,6 @@ public:
 	{
 		if (TxAvailable())
 		{
-			//TODO: Radio Tx.
 			Radio.stopListening();
 			Radio.setChannel(GetRealChannel(channel));
 
@@ -313,7 +314,7 @@ public:
 	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) final
 	{
 		//TODO: Measure Tx duration value.
-		return RadioCommsDelay;
+		return RadioCommsDelay + 500;
 	}
 
 private:
