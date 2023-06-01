@@ -3,7 +3,9 @@
 #ifndef _LOLA_PKE_LINK_CLIENT_
 #define _LOLA_PKE_LINK_CLIENT_
 
-#include "..\Abstract\AbstractPublicKeyLoLaLink.h"
+#include "..\Abstract\AbstractLoLaLink.h"
+
+#include "..\..\Crypto\LoLaCryptoPkeSession.h"
 
 /// <summary>
 /// LoLa Public-Key-Exchange Link Client.
@@ -13,10 +15,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class LoLaPkeLinkClient : public AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
+class LoLaPkeLinkClient : public AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 public:
 	static constexpr uint32_t CLIENT_SLEEP_TIMEOUT_MILLIS = 30000;
@@ -58,9 +60,10 @@ protected:
 	using BaseClass::LinkStage;
 	using BaseClass::OutPacket;
 	using BaseClass::SyncClock;
-	using BaseClass::Session;
 	using BaseClass::RandomSource;
 	using BaseClass::Transceiver;
+	using BaseClass::ExpandedKey;
+
 
 	using BaseClass::PacketService;
 
@@ -71,13 +74,16 @@ protected:
 	using BaseClass::PreLinkResendDelayMillis;
 
 private:
-	Timestamp OutEstimate{};
-	TimestampError EstimateErrorReply{};
+	LoLaCryptoPkeSession Session;
 
 	ClientTimedStateTransition<
 		LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS,
 		LoLaLinkDefinition::LINKING_TRANSITION_RESEND_PERIOD_MICROS>
 		StateTransition;
+
+	Timestamp OutEstimate{};
+	TimestampError EstimateErrorReply{};
+
 
 
 	uint32_t PreLinkPacketSchedule = 0;
@@ -107,8 +113,15 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, transceiver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
+		: BaseClass(scheduler, &Session, transceiver, entropySource, clockSource, timerSource, duplex, hop)
+		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
+		, StateTransition()
 	{}
+
+	virtual const bool Setup()
+	{
+		return Session.Setup() && BaseClass::Setup();
+	}
 
 #pragma region Packet Handling
 protected:
@@ -379,6 +392,7 @@ protected:
 			SetHopperFixedChannel(SearchChannel);
 			break;
 		case LinkStageEnum::Linking:
+			Session.GenerateLocalChallenge(&RandomSource);
 			SubState = (uint8_t)ClientLinkingEnum::WaitingForAuthenticationRequest;
 			break;
 		case LinkStageEnum::Linked:
@@ -749,7 +763,7 @@ protected:
 		}
 
 		return false;
-	}
+}
 #endif
 };
 #endif

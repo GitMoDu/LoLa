@@ -3,7 +3,9 @@
 #ifndef _LOLA_PKE_LINK_SERVER_
 #define _LOLA_PKE_LINK_SERVER_
 
-#include "..\Abstract\AbstractPublicKeyLoLaLink.h"
+#include "..\Abstract\AbstractLoLaLink.h"
+
+#include "..\..\Crypto\LoLaCryptoPkeSession.h"
 
 /// <summary>
 /// LoLa Public-Key-Exchange Link Server.
@@ -13,10 +15,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class LoLaPkeLinkServer : public AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
+class LoLaPkeLinkServer : public AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
 {
 private:
-	using BaseClass = AbstractPublicKeyLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 public:
 	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 10000;
@@ -25,7 +27,6 @@ private:
 	using Unlinked = LoLaLinkDefinition::Unlinked;
 	using Linking = LoLaLinkDefinition::Linking;
 	using Linked = LoLaLinkDefinition::Linked;
-
 
 	enum ServerAwaitingLinkEnum
 	{
@@ -49,9 +50,9 @@ protected:
 	using BaseClass::LinkStage;
 	using BaseClass::OutPacket;
 	using BaseClass::SyncClock;
-	using BaseClass::Session;
 	using BaseClass::RandomSource;
 	using BaseClass::Transceiver;
+	using BaseClass::ExpandedKey;
 
 	using BaseClass::PacketService;
 
@@ -63,6 +64,8 @@ protected:
 
 
 private:
+	LoLaCryptoPkeSession Session;
+
 	ServerTimedStateTransition<
 		LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS,
 		LoLaLinkDefinition::LINKING_TRANSITION_RESEND_PERIOD_MICROS>
@@ -118,9 +121,15 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, transceiver, entropySource, clockSource, timerSource, duplex, hop, publicKey, privateKey, accessPassword)
+		: BaseClass(scheduler, &Session, transceiver, entropySource, clockSource, timerSource, duplex, hop)
+		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
 		, StateTransition()
 	{}
+
+	virtual const bool Setup()
+	{
+		return Session.Setup() && BaseClass::Setup();
+	}
 
 public:
 #pragma region Packet Handling
@@ -351,6 +360,7 @@ protected:
 			SubState = (uint8_t)ServerAwaitingLinkEnum::Sleeping;
 			break;
 		case LinkStageEnum::Linking:
+			Session.GenerateLocalChallenge(&RandomSource);
 			SubState = (uint8_t)ServerLinkingEnum::AuthenticationRequest;
 			ClockReplyPending = false;
 			break;
