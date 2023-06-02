@@ -32,9 +32,6 @@ private:
 
 private:
 	uint8_t PartnerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE];
-	uint8_t LocalChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE];
-	uint8_t PartnerChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE];
-	uint8_t PartnerChallengeSignature[LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE];
 
 	/// <summary>
 	/// Shared secret key.
@@ -64,8 +61,7 @@ public:
 
 	virtual const bool Setup() final
 	{
-		return
-			LoLaCryptoEncoderSession::Setup() &&
+		return LoLaCryptoEncoderSession::Setup() &&
 			LocalPublicKey != nullptr && LocalPrivateKey != nullptr;
 	}
 
@@ -144,52 +140,6 @@ public:
 	void CompressPublicKeyTo(uint8_t* target)
 	{
 		uECC_compress(LocalPublicKey, target, ECC_CURVE);
-	}
-
-	const bool VerifyChallengeSignature(const uint8_t* signatureSource)
-	{
-		GetChallengeSignature(LocalChallengeCode, AccessPassword, PartnerChallengeSignature);
-
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE; i++)
-		{
-			if (PartnerChallengeSignature[i] != signatureSource[i])
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	void SetPartnerChallenge(const uint8_t* challengeSource)
-	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::CHALLENGE_CODE_SIZE; i++)
-		{
-			PartnerChallengeCode[i] = challengeSource[i];
-		}
-	}
-
-	void CopyLocalChallengeTo(uint8_t* challengeTarget)
-	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::CHALLENGE_CODE_SIZE; i++)
-		{
-			challengeTarget[i] = LocalChallengeCode[i];
-		}
-	}
-
-	void SignPartnerChallengeTo(uint8_t* signatureTarget)
-	{
-		GetChallengeSignature(PartnerChallengeCode, AccessPassword, signatureTarget);
-	}
-
-	void SignLocalChallengeTo(uint8_t* signatureTarget)
-	{
-		GetChallengeSignature(LocalChallengeCode, AccessPassword, signatureTarget);
-	}
-
-	void GenerateLocalChallenge(LoLaRandom* randomSource)
-	{
-		randomSource->GetRandomStreamCrypto(LocalChallengeCode, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
 	}
 };
 #endif
