@@ -55,7 +55,6 @@ private:
 		SwitchingToLinked
 	};
 
-
 protected:
 	using BaseClass::LinkStage;
 	using BaseClass::OutPacket;
@@ -125,241 +124,82 @@ public:
 
 #pragma region Packet Handling
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter)
+	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
-		switch (port)
+		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
 		{
-		case Unlinked::PORT:
-			if (LinkStage == LinkStageEnum::AwaitingLink)
+		case Unlinked::SearchReply::SUB_HEADER:
+			if (payloadSize == Unlinked::SearchReply::PAYLOAD_SIZE)
 			{
-				switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+				switch (SubState)
 				{
-				case Unlinked::SearchReply::SUB_HEADER:
-					if (payloadSize == Unlinked::SearchReply::PAYLOAD_SIZE)
-					{
-						switch (SubState)
-						{
-						case ClientAwaitingLinkEnum::SearchingServer:
-							SubState = (uint8_t)ClientAwaitingLinkEnum::RequestingSession;
-							Task::enable();
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.println(F("Found a server!"));
-#endif
-							break;
-						case ClientAwaitingLinkEnum::RequestingSession:
-							break;
-						default:
-							break;
-						}
-
-						PreLinkPacketSchedule = millis();
-						Task::enable();
-					}
-					break;
-				case Unlinked::SessionBroadcast::SUB_HEADER:
-					if (payloadSize == Unlinked::SessionBroadcast::PAYLOAD_SIZE)
-					{
-						switch (SubState)
-						{
-						case ClientAwaitingLinkEnum::RequestingSession:
-							SubState = (uint8_t)ClientAwaitingLinkEnum::ValidatingSession;
-							PreLinkPacketSchedule = millis();
-
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.println(F("Found a server! (session broadcast)"));
-#endif
-							break;
-						default:
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.println(F("Rejected a server! (session broadcast)"));
-#endif
-							return;
-							break;
-						}
-					}
-
-					//TODO: Validate Public Id.
-					Session.SetSessionId(&payload[Unlinked::SessionBroadcast::PAYLOAD_SESSION_ID_INDEX]);
-
-					// Slow operation (~8 ms)... but this call is already async and don't need to store the partners compresses public key.
-					Session.DecompressPartnerPublicKeyFrom(&payload[Unlinked::SessionBroadcast::PAYLOAD_PUBLIC_KEY_INDEX]);
+				case ClientAwaitingLinkEnum::SearchingServer:
+					SubState = (uint8_t)ClientAwaitingLinkEnum::RequestingSession;
 					Task::enable();
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Found a server!"));
+#endif
 					break;
-				case Unlinked::LinkingTimedSwitchOver::SUB_HEADER:
-					if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
-						&& Session.LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
-					{
-						switch (SubState)
-						{
-						case ClientAwaitingLinkEnum::TryLinking:
-							SubState = ClientAwaitingLinkEnum::SwitchingToLinking;
-							break;
-						case ClientAwaitingLinkEnum::SwitchingToLinking:
-							break;
-						default:
-							return;
-							break;
-						}
-
-						StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
-						Task::enable();
-					}
+				case ClientAwaitingLinkEnum::RequestingSession:
 					break;
 				default:
+					break;
+				}
+
+				PreLinkPacketSchedule = millis();
+				Task::enable();
+			}
+			break;
+		case Unlinked::SessionBroadcast::SUB_HEADER:
+			if (payloadSize == Unlinked::SessionBroadcast::PAYLOAD_SIZE)
+			{
+				switch (SubState)
+				{
+				case ClientAwaitingLinkEnum::RequestingSession:
+					SubState = (uint8_t)ClientAwaitingLinkEnum::ValidatingSession;
+					PreLinkPacketSchedule = millis();
+
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Found a server! (session broadcast)"));
+#endif
+					break;
+				default:
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Rejected a server! (session broadcast)"));
+#endif
+					return;
 					break;
 				}
 			}
+
+			//TODO: Validate Public Id.
+			Session.SetSessionId(&payload[Unlinked::SessionBroadcast::PAYLOAD_SESSION_ID_INDEX]);
+
+			// Slow operation (~8 ms)... but this call is already async and don't need to store the partners compresses public key.
+			Session.DecompressPartnerPublicKeyFrom(&payload[Unlinked::SessionBroadcast::PAYLOAD_PUBLIC_KEY_INDEX]);
+			Task::enable();
 			break;
-		case Linking::PORT:
-			if (LinkStage == LinkStageEnum::Linking)
+		case Unlinked::LinkingTimedSwitchOver::SUB_HEADER:
+			if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
+				&& Session.LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
-				switch (payload[Linking::ServerChallengeRequest::SUB_HEADER_INDEX])
+				switch (SubState)
 				{
-				case Linking::ServerChallengeRequest::SUB_HEADER:
-					if (payloadSize == Linking::ServerChallengeRequest::PAYLOAD_SIZE)
-					{
-						switch (SubState)
-						{
-						case ClientLinkingEnum::WaitingForAuthenticationRequest:
-							Session.SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
-							SubState = ClientLinkingEnum::AuthenticationReply;
-							PreLinkPacketSchedule = millis();
-							Task::enable();
-							break;
-						case ClientLinkingEnum::AuthenticationReply:
-							break;
-						default:
-							break;
-						}
-					}
-#if defined(DEBUG_LOLA)
-					else
-					{
-						this->Owner();
-						Serial.println(F("ServerChallengeRequest rejected."));
-					}
-#endif
+				case ClientAwaitingLinkEnum::TryLinking:
+					SubState = ClientAwaitingLinkEnum::SwitchingToLinking;
 					break;
-				case Linking::ServerChallengeReply::SUB_HEADER:
-					if (payloadSize == Linking::ServerChallengeReply::PAYLOAD_SIZE)
-					{
-						switch (SubState)
-						{
-						case ClientLinkingEnum::AuthenticationReply:
-							if (Session.VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
-							{
-#if defined(DEBUG_LOLA)
-								this->Owner();
-								Serial.println(F("Link Access Control granted."));
-#endif
-								PreLinkPacketSchedule = millis();
-								SubState = ClientLinkingEnum::ClockSyncing;
-								Task::enable();
-							}
-							break;
-						case ClientLinkingEnum::ClockSyncing:
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.println(F("Unexpected Access Control response."));
-#endif
-							break;
-						default:
-							break;
-						}
-					}
-					break;
-				case Linking::ClockSyncReply::SUB_HEADER:
-					if (payloadSize == Linking::ClockSyncReply::PAYLOAD_SIZE
-						&& SubState == ClientLinkingEnum::ClockSyncing)
-					{
-						EstimateErrorReply.Seconds = payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX];
-						EstimateErrorReply.Seconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] << 8;
-						EstimateErrorReply.Seconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] << 16;
-						EstimateErrorReply.Seconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 3] << 24;
-						EstimateErrorReply.SubSeconds = payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX];
-						EstimateErrorReply.SubSeconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 1] << 8;
-						EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
-						EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
-
-						if (!EstimateErrorReply.Validate())
-						{
-#if defined(DEBUG_LOLA)
-							// Invalid estimate, sub-seconds should never match one second.
-							this->Owner();
-							Serial.print(F("Clock Estimate Error Invalid. SubSeconds="));
-							Serial.print(EstimateErrorReply.SubSeconds);
-							Serial.println(F("us. "));
-#endif
-						}
-						// Adjust local clock to match estimation error.
-						SyncClock.ShiftSeconds(EstimateErrorReply.Seconds);
-						SyncClock.ShiftMicros(EstimateErrorReply.SubSeconds);
-
-						if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
-						{
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.println(F("Clock Accepted, starting final step."));
-#endif
-							SubState = ClientLinkingEnum::RequestingLinkStart;
-							StateTransition.OnStart();
-							PreLinkPacketSchedule = millis();
-						}
-						else
-						{
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.println(F("Clock Rejected, trying again."));
-#endif
-						}
-
-						PreLinkPacketSchedule = millis();
-						Task::enable();
-					}
-					break;
-				case Linking::LinkTimedSwitchOver::SUB_HEADER:
-					if (payloadSize == Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)
-					{
-
-						switch (SubState)
-						{
-						case ClientLinkingEnum::RequestingLinkStart:
-							SubState = (uint8_t)ClientLinkingEnum::SwitchingToLinked;
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.print(F("StateTransition Client received, started with"));
-							Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
-							Serial.println(F("us remaining."));
-#endif
-							break;
-						case ClientLinkingEnum::SwitchingToLinked:
-							break;
-						default:
-#if defined(DEBUG_LOLA)
-							this->Owner();
-							Serial.println(F("LinkSwitchOver rejected."));
-#endif
-							return;
-							break;
-						}
-						StateTransition.OnReceived(startTimestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
-
-						Task::enable();
-					}
-#if defined(DEBUG_LOLA)
-					else
-					{
-						this->Owner();
-						Serial.println(F("LinkSwitchOver rejected."));
-					}
-#endif
+				case ClientAwaitingLinkEnum::SwitchingToLinking:
 					break;
 				default:
+					return;
 					break;
 				}
+
+				StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+				Task::enable();
 			}
 			break;
 		default:
@@ -367,7 +207,154 @@ protected:
 		}
 	}
 
+	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
+	{
+		switch (payload[Linking::ServerChallengeRequest::SUB_HEADER_INDEX])
+		{
+		case Linking::ServerChallengeRequest::SUB_HEADER:
+			if (payloadSize == Linking::ServerChallengeRequest::PAYLOAD_SIZE)
+			{
+				switch (SubState)
+				{
+				case ClientLinkingEnum::WaitingForAuthenticationRequest:
+					Session.SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
+					SubState = ClientLinkingEnum::AuthenticationReply;
+					PreLinkPacketSchedule = millis();
+					Task::enable();
+					break;
+				case ClientLinkingEnum::AuthenticationReply:
+					break;
+				default:
+					break;
+				}
+			}
+#if defined(DEBUG_LOLA)
+			else
+			{
+				this->Owner();
+				Serial.println(F("ServerChallengeRequest rejected."));
+			}
+#endif
+			break;
+		case Linking::ServerChallengeReply::SUB_HEADER:
+			if (payloadSize == Linking::ServerChallengeReply::PAYLOAD_SIZE)
+			{
+				switch (SubState)
+				{
+				case ClientLinkingEnum::AuthenticationReply:
+					if (Session.VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
+					{
+#if defined(DEBUG_LOLA)
+						this->Owner();
+						Serial.println(F("Link Access Control granted."));
+#endif
+						PreLinkPacketSchedule = millis();
+						SubState = ClientLinkingEnum::ClockSyncing;
+						Task::enable();
+					}
+					break;
+				case ClientLinkingEnum::ClockSyncing:
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Unexpected Access Control response."));
+#endif
+					break;
+				default:
+					break;
+				}
+			}
+			break;
+		case Linking::ClockSyncReply::SUB_HEADER:
+			if (payloadSize == Linking::ClockSyncReply::PAYLOAD_SIZE
+				&& SubState == ClientLinkingEnum::ClockSyncing)
+			{
+				EstimateErrorReply.Seconds = payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX];
+				EstimateErrorReply.Seconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] << 8;
+				EstimateErrorReply.Seconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] << 16;
+				EstimateErrorReply.Seconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 3] << 24;
+				EstimateErrorReply.SubSeconds = payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX];
+				EstimateErrorReply.SubSeconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 1] << 8;
+				EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
+				EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
 
+				if (!EstimateErrorReply.Validate())
+				{
+#if defined(DEBUG_LOLA)
+					// Invalid estimate, sub-seconds should never match one second.
+					this->Owner();
+					Serial.print(F("Clock Estimate Error Invalid. SubSeconds="));
+					Serial.print(EstimateErrorReply.SubSeconds);
+					Serial.println(F("us. "));
+#endif
+				}
+				// Adjust local clock to match estimation error.
+				SyncClock.ShiftSeconds(EstimateErrorReply.Seconds);
+				SyncClock.ShiftMicros(EstimateErrorReply.SubSeconds);
+
+				if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
+				{
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Clock Accepted, starting final step."));
+#endif
+					SubState = ClientLinkingEnum::RequestingLinkStart;
+					StateTransition.OnStart();
+					PreLinkPacketSchedule = millis();
+				}
+				else
+				{
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Clock Rejected, trying again."));
+#endif
+				}
+
+				PreLinkPacketSchedule = millis();
+				Task::enable();
+			}
+			break;
+		case Linking::LinkTimedSwitchOver::SUB_HEADER:
+			if (payloadSize == Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)
+			{
+
+				switch (SubState)
+				{
+				case ClientLinkingEnum::RequestingLinkStart:
+					SubState = (uint8_t)ClientLinkingEnum::SwitchingToLinked;
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.print(F("StateTransition Client received, started with"));
+					Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
+					Serial.println(F("us remaining."));
+#endif
+					break;
+				case ClientLinkingEnum::SwitchingToLinked:
+					break;
+				default:
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("LinkSwitchOver rejected."));
+#endif
+					return;
+					break;
+				}
+				StateTransition.OnReceived(startTimestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+
+				Task::enable();
+			}
+#if defined(DEBUG_LOLA)
+			else
+			{
+				this->Owner();
+				Serial.println(F("LinkSwitchOver rejected."));
+			}
+#endif
+			break;
+		default:
+			break;
+
+		}
+	}
 #pragma endregion
 
 #pragma region Linking
@@ -763,7 +750,7 @@ protected:
 		}
 
 		return false;
-}
+	}
 #endif
 };
 #endif

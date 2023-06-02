@@ -14,6 +14,9 @@ class AbstractLoLaReceiver : public AbstractLoLaSender<MaxPayloadLinkSend, MaxPa
 private:
 	using BaseClass = AbstractLoLaSender<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
 
+	using Unlinked = LoLaLinkDefinition::Unlinked;
+	using Linking = LoLaLinkDefinition::Linking;
+
 protected:
 	using BaseClass::SyncClock;
 	using BaseClass::Encoder;
@@ -62,7 +65,9 @@ protected:
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
 	/// <param name="port"></param>
-	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port, const uint8_t counter) { }
+	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
+
+	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
 
 	/// <summary>
 	/// Inform any Link class of packet loss detection.
@@ -176,32 +181,45 @@ public:
 		}
 
 		/// <summary>
-		/// From here forward, the packet has validated:
+		/// From here forward, the packet has been validated for:
 		/// - Data integrity.
 		/// - Source authenticity.
 		/// - Replay/Echo denied.
 		/// </summary>
 		const uint8_t port = InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
-
-		OnEvent(PacketEventEnum::Received);
-
-		if (LinkStage == LinkStageEnum::Linked)
+		switch (LinkStage)
 		{
-			LastValidReceived = millis();
-
-			NotifyPacketReceived(receiveTimestamp, port, LoLaPacketDefinition::GetPayloadSize(packetSize));
-		}
-		else
-		{
-			if (LinkStage != LinkStageEnum::Disabled)
+		case LinkStageEnum::AwaitingLink:
+			if (port == Unlinked::PORT)
 			{
 				OnUnlinkedPacketReceived(receiveTimestamp,
 					&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
 					LoLaPacketDefinition::GetPayloadSize(packetSize),
-					port,
 					ReceivingCounter);
 			}
+			break;
+		case LinkStageEnum::Linking:
+			if (port == Linking::PORT)
+			{
+				OnLinkingPacketReceived(receiveTimestamp,
+					&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+					LoLaPacketDefinition::GetPayloadSize(packetSize),
+					ReceivingCounter);
+			}
+			break;
+		case LinkStageEnum::Linked:
+			LastValidReceived = millis();
+
+			NotifyPacketReceived(receiveTimestamp,
+				InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX],
+				LoLaPacketDefinition::GetPayloadSize(packetSize));
+			break;
+		default:
+			return;
+			break;
 		}
+
+		OnEvent(PacketEventEnum::Received);
 	}
 
 protected:
