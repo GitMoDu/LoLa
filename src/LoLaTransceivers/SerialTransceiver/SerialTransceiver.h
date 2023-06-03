@@ -38,19 +38,6 @@ private:
 	// TODO: Baudrate and size aware?
 	static constexpr uint32_t RxTimeoutMicros = 2000;
 
-
-private:
-	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
-
-	ILoLaTransceiverListener* Listener = nullptr;
-
-	SerialType* IO;
-	uint32_t ReceiveTimestamp = 0;
-
-
-private:
-	uint32_t TxEndTimestamp = 0;
-
 	enum TxStateEnum
 	{
 		NoTx,
@@ -58,21 +45,29 @@ private:
 		TxEnd
 	};
 
-	TxStateEnum TxState = TxStateEnum::NoTx;
-
-private:
 	enum RxStateEnum
 	{
 		NoRx,
 		RxStart,
 		RxEnd
 	};
+
+private:
+	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
+
+	ILoLaTransceiverListener* Listener = nullptr;
+
+	SerialType* IO;
+
+private:
 	volatile uint32_t RxStartTimestamp = 0;
+	uint32_t TxEndTimestamp = 0;
 
 	volatile RxStateEnum RxState = RxStateEnum::NoRx;
+	TxStateEnum TxState = TxStateEnum::NoTx;
+
 	uint8_t RxIndex = 0;
 	uint8_t RxSize = 0;
-
 
 private:
 	void (*OnRxInterrupt)(void) = nullptr;
@@ -84,7 +79,15 @@ public:
 		, ILoLaTransceiver()
 		, IO(io)
 	{
-		pinMode(RxInterruptPin, INPUT);
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, LOW);
+		pinMode(RX_TEST_PIN, OUTPUT);
+#endif
+
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, LOW);
+		pinMode(TX_TEST_PIN, OUTPUT);
+#endif
 	}
 
 	void SetupInterrupt(void (*onRxInterrupt)(void))
@@ -97,6 +100,11 @@ public:
 	/// </summary>
 	void OnSeriaInterrupt()
 	{
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, HIGH);
+		digitalWrite(RX_TEST_PIN, LOW);
+#endif
+
 		// Only one interrupt expected for each packet.
 		DisableInterrupt();
 
@@ -261,14 +269,20 @@ public:
 	/// <returns></returns>
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-		if (TxAvailable()
-			&& IO->write(&packetSize, 1) == 1
-			&& IO->write(data, packetSize) == packetSize)
+		if (TxAvailable())
 		{
-			TxState = TxStateEnum::TxStart;
-			Task::enable();
+#ifdef TX_TEST_PIN
+			digitalWrite(TX_TEST_PIN, HIGH);
+			digitalWrite(TX_TEST_PIN, LOW);
+#endif
+			if (IO->write(&packetSize, 1) == 1
+				&& IO->write(data, packetSize) == packetSize)
+			{
+				TxState = TxStateEnum::TxStart;
+				Task::enable();
 
-			return true;
+				return true;
+			}
 		}
 
 		return false;
@@ -296,6 +310,7 @@ private:
 	void EnableInterrupt()
 	{
 		attachInterrupt(digitalPinToInterrupt(RxInterruptPin), OnRxInterrupt, FALLING);
+		interrupts();
 	}
 
 	void DisableInterrupt()
@@ -312,13 +327,11 @@ private:
 			IO->read();
 		}
 
-		// Force pending interrupts and enabled for next.
 		RxState = RxStateEnum::RxStart;
+		// Force pending interrupts and enable for next.
 		EnableInterrupt();
-		interrupts();
 
 		RxState = RxStateEnum::NoRx;
-		EnableInterrupt();
 		Task::enable();
 	}
 };
