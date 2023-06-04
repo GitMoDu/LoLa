@@ -22,8 +22,8 @@
 #define TEST_PIN_2 17
 
 #define SCHEDULER_TEST_PIN TEST_PIN_0
-#define TX_TEST_PIN TEST_PIN_1
-#define RX_TEST_PIN TEST_PIN_2
+#define RX_TEST_PIN TEST_PIN_1
+#define TX_TEST_PIN TEST_PIN_2
 #else
 #define TX_TEST_PIN 0
 #define RX_TEST_PIN 0
