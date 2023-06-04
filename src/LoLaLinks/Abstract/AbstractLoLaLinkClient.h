@@ -32,6 +32,7 @@ protected:
 	using BaseClass::SyncClock;
 	using BaseClass::RandomSource;
 	using BaseClass::Transceiver;
+	using BaseClass::LinkTimestamp;
 
 	using BaseClass::GetElapsedSinceLastValidReceived;
 	using BaseClass::GetSendDuration;
@@ -45,7 +46,6 @@ protected:
 		LoLaLinkDefinition::LINKING_TRANSITION_RESEND_PERIOD_MICROS>
 		StateTransition;
 
-	Timestamp OutEstimate{};
 	TimestampError EstimateErrorReply{};
 
 	uint32_t PreLinkPacketSchedule = 0;
@@ -261,13 +261,13 @@ protected:
 		switch (SubState)
 		{
 		case ClientLinkingEnum::WaitingForAuthenticationRequest:
-			// Server will be the one initiating the authentication step.
 			if (stateElapsed > CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("WaitingForAuthenticationRequest timed out!"));
 #endif
+				// Server will be the one initiating the authentication step.
 				UpdateLinkStage(LinkStageEnum::AwaitingLink);
 			}
 			else
@@ -308,25 +308,25 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClockSyncRequest::SUB_HEADER_INDEX] = Linking::ClockSyncRequest::SUB_HEADER;
 
-				SyncClock.GetTimestamp(OutEstimate);
-				OutEstimate.ShiftSubSeconds((int32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE));
+				SyncClock.GetTimestamp(LinkTimestamp);
+				LinkTimestamp.ShiftSubSeconds((int32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE));
 
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX] = OutEstimate.Seconds;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 1] = OutEstimate.Seconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 2] = OutEstimate.Seconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 3] = OutEstimate.Seconds >> 24;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX] = LinkTimestamp.Seconds;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 1] = LinkTimestamp.Seconds >> 8;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 2] = LinkTimestamp.Seconds >> 16;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 3] = LinkTimestamp.Seconds >> 24;
 
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX] = OutEstimate.SubSeconds;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 1] = OutEstimate.SubSeconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] = OutEstimate.SubSeconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] = OutEstimate.SubSeconds >> 24;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX] = LinkTimestamp.SubSeconds;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 1] = LinkTimestamp.SubSeconds >> 8;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] = LinkTimestamp.SubSeconds >> 16;
+				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] = LinkTimestamp.SubSeconds >> 24;
 
 				if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.print(F("Sent ClockSync "));
-					Serial.print(OutEstimate.Seconds);
+					Serial.print(LinkTimestamp.Seconds);
 					Serial.println('s');
 #endif
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::ClockSyncRequest::PAYLOAD_SIZE);

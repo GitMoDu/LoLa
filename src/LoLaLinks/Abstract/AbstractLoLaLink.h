@@ -60,6 +60,9 @@ private:
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
 
+protected:
+	Timestamp LinkTimestamp{};
+
 private:
 	ReportTracker<LoLaLinkDefinition::REPORT_UPDATE_PERIOD,
 		LoLaLinkDefinition::REPORT_RESEND_PERIOD,
@@ -110,7 +113,9 @@ public:
 
 	virtual const uint32_t GetLinkDuration() final
 	{
-		return SyncClock.GetSeconds(0) - LinkStartSeconds;
+		SyncClock.GetTimestamp(LinkTimestamp);
+
+		return LinkTimestamp.Seconds - LinkStartSeconds;
 	}
 
 	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port)
@@ -232,7 +237,8 @@ protected:
 		case LinkStageEnum::Linking:
 			break;
 		case LinkStageEnum::Linked:
-			LinkStartSeconds = SyncClock.GetSeconds(0);
+			SyncClock.GetTimestamp(LinkTimestamp);
+			LinkStartSeconds = LinkTimestamp.Seconds;
 			ResetLastValidReceived();
 			RequestReportUpdate();
 			PacketService.RefreshChannel();

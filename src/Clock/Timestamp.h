@@ -115,5 +115,23 @@ struct TimestampError
 	{
 		return (((int64_t)Seconds * ONE_SECOND_MICROS)) + SubSeconds;
 	}
+
+	void CalculateError(const Timestamp& timestamp, const Timestamp& estimation)
+	{
+		Seconds = timestamp.Seconds - estimation.Seconds;
+		SubSeconds = timestamp.SubSeconds - estimation.SubSeconds;
+
+		// Consolidate SubSeconds.
+		while (SubSeconds < 0)
+		{
+			SubSeconds += ONE_SECOND_MICROS;
+			Seconds--;
+		}
+		while (SubSeconds > ONE_SECOND_MICROS)
+		{
+			SubSeconds -= ONE_SECOND_MICROS;
+			Seconds++;
+		}
+	}
 };
 #endif

@@ -21,10 +21,6 @@ private:
 	static constexpr uint16_t MICROS_OVERFLOW_WRAP_SECONDS = 4294;
 	static constexpr uint32_t MICROS_OVERFLOW_WRAP_REMAINDER = 967295;
 
-
-	/// <summary>
-	/// Offsets that determine the current clock result.
-	/// </summary>
 private:
 	int32_t OffsetMicros = 0;
 
@@ -33,9 +29,6 @@ private:
 	volatile uint32_t CountsOneSecond = 0;
 	volatile uint32_t Seconds = 0;
 
-	/// <summary>
-	/// Offsets to keep Seconds monotonic in-line with the micros source.
-	/// </summary>
 private:
 	/// <summary>
 	/// 32 bit, us clock source.
@@ -98,16 +91,6 @@ public:
 		ClockSource->TuneClock(ppm);
 	}
 
-	const uint32_t GetSeconds(const int32_t offsetMicros)
-	{
-		static Timestamp timestamp;
-
-		GetTimestamp(timestamp);
-		timestamp.ShiftSubSeconds(offsetMicros);
-
-		return timestamp.Seconds;
-	}
-
 	void ShiftSeconds(const int32_t offsetSeconds)
 	{
 		noInterrupts();
@@ -125,23 +108,21 @@ public:
 
 		if (ClockHasTick)
 		{
-			// Update the SubSeconds field by
-			// scaling the delta of the counter and counts to tick,
-			// to one second in us.
-
 			if (timestamp.SubSeconds < TickCounter)
 			{
-				//Overflow detected and compensated before final subseconds calculation.
+				// Overflow detected and compensated before final subseconds calculation.
 				timestamp.Seconds++;
 				timestamp.SubSeconds += CountsOneSecond;
 			}
 
+			// Update the SubSeconds field to one second in us,
+			// by scaling the delta of the counter and counts to tick.
 			timestamp.SubSeconds = (((uint64_t)(timestamp.SubSeconds - TickCounter)) * ONE_SECOND_MICROS) / CountsOneSecond;
 		}
 		else
 		{
 			// On tickless sources (i.e. micros()), compensate with external overflow count.
-			uint32_t overflows = ClockSource->GetTicklessOverflows();
+			const uint32_t overflows = ClockSource->GetTicklessOverflows();
 			timestamp.Seconds += overflows * MICROS_OVERFLOW_WRAP_SECONDS;
 			timestamp.SubSeconds += overflows * MICROS_OVERFLOW_WRAP_REMAINDER;
 		}
@@ -155,51 +136,6 @@ public:
 	void ShiftMicros(const int32_t offsetMicros)
 	{
 		OffsetMicros += offsetMicros;
-	}
-
-	void CalculateError(TimestampError& error, const Timestamp& estimation, const int32_t offsetMicros)
-	{
-		static Timestamp timestamp;
-		GetTimestamp(timestamp);
-		timestamp.ShiftSubSeconds(offsetMicros);
-
-
-		error.Seconds = timestamp.Seconds - estimation.Seconds;
-		error.SubSeconds = timestamp.SubSeconds - estimation.SubSeconds;
-
-		// Consolidate SubSeconds.
-		while (error.SubSeconds < 0)
-		{
-			error.SubSeconds += ONE_SECOND_MICROS;
-			error.Seconds--;
-		}
-		while (error.SubSeconds > ONE_SECOND_MICROS)
-		{
-			error.SubSeconds -= ONE_SECOND_MICROS;
-			error.Seconds++;
-		}
-
-#if defined(DEBUG_LOLA)
-		//Serial.print(F("\tComparing estimation:"));
-		//Serial.print(estimation.Seconds);
-		//Serial.print('s');
-		//Serial.print(estimation.SubSeconds);
-		//Serial.println(F("us"));
-		//Serial.print(F("\tto "));
-		//Serial.print(timestamp.Seconds);
-		//Serial.print('s');
-		//Serial.print(timestamp.SubSeconds);
-		//Serial.println(F("us"));
-
-		//Serial.print(F("\tResult: "));
-		//Serial.print(error.Seconds);
-		//Serial.print('s');
-		//if (error.SubSeconds >= 0) {
-		//	Serial.print('+');
-		//}
-		//Serial.print(error.SubSeconds);
-		//Serial.println(F("us"));
-#endif
 	}
 };
 #endif

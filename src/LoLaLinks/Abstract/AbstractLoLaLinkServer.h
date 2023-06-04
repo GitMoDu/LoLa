@@ -28,6 +28,7 @@ protected:
 	using BaseClass::SyncClock;
 	using BaseClass::RandomSource;
 	using BaseClass::Transceiver;
+	using BaseClass::LinkTimestamp;
 
 	using BaseClass::PreLinkResendDelayMillis;
 	using BaseClass::GetSendDuration;
@@ -41,7 +42,6 @@ protected:
 		StateTransition;
 
 	uint32_t PreLinkPacketSchedule = 0;
-	Timestamp InTimestamp{};
 	Timestamp InEstimate{};
 	TimestampError EstimateErrorReply{};
 
@@ -124,20 +124,28 @@ protected:
 				InEstimate.SubSeconds += (uint32_t)payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
 				InEstimate.SubSeconds += (uint32_t)payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
 
-				if (!InTimestamp.Validate())
+				if (!InEstimate.Validate())
 				{
 					// Invalid estimate, sub-seconds should never match one second.
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.print(F("Clock sync Invalid estimate. SubSeconds="));
-					Serial.print(InTimestamp.SubSeconds);
+					Serial.print(InEstimate.SubSeconds);
 					Serial.println(F("us. "));
 #endif
 					ClockReplyPending = false;
 					break;
 				}
 
-				CalculateInEstimateErrorReply(startTimestamp);
+				SyncClock.GetTimestamp(LinkTimestamp);
+				LinkTimestamp.ShiftSubSeconds(startTimestamp - micros());
+				EstimateErrorReply.CalculateError(LinkTimestamp, InEstimate);
+
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.print(F("\tClock Sync Error: "));
+				Serial.println(EstimateErrorReply.ErrorMicros());
+#endif
 				ClockReplyPending = true;
 				Task::enable();
 			}
@@ -355,20 +363,8 @@ protected:
 	}
 #endif
 
+
 private:
-	void CalculateInEstimateErrorReply(const uint32_t receiveTimestamp)
-	{
-		const int32_t elapsedSinceReceived = micros() - receiveTimestamp;
-
-		SyncClock.CalculateError(EstimateErrorReply, InEstimate, -elapsedSinceReceived);
-
-#if defined(DEBUG_LOLA)
-		this->Owner();
-		Serial.print(F("\tError: "));
-		Serial.println(EstimateErrorReply.ErrorMicros());
-#endif
-	}
-
 	const bool InEstimateWithinTolerance()
 	{
 		const int32_t errorMicros = EstimateErrorReply.ErrorMicros();
