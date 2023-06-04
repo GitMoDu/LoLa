@@ -13,8 +13,10 @@ private:
 	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
 	using Linking = LoLaLinkDefinition::Linking;
+	using Linked = LoLaLinkDefinition::Linked;
 
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
+	static constexpr uint8_t CLOCK_TUNE_FILTER_RATIO = 110;
 
 	enum ClientLinkingEnum
 	{
@@ -34,11 +36,14 @@ protected:
 	using BaseClass::Transceiver;
 	using BaseClass::LinkTimestamp;
 
-	using BaseClass::GetElapsedSinceLastValidReceived;
-	using BaseClass::GetSendDuration;
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
+	using BaseClass::GetSendDuration;
 	using BaseClass::PreLinkResendDelayMillis;
+
+	using BaseClass::RequestSendPacket;
+	using BaseClass::CanRequestSend;
+	using BaseClass::GetElapsedSinceLastSent;
 
 protected:
 	ClientTimedStateTransition<
@@ -55,6 +60,12 @@ protected:
 	uint8_t SearchChannel = 0;
 	uint8_t LastKnownBroadCastChannel = INT8_MAX + 1;
 
+private:
+	int32_t ClockErrorFiltered = 0;
+	uint32_t LastCLockSync = 0;
+	uint32_t LastCLockSent = 0;
+	bool WaitingForClockReply = 0;
+
 public:
 	AbstractLoLaLinkClient(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
@@ -68,8 +79,6 @@ public:
 	{}
 
 protected:
-	//virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
-
 	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
 		switch (payload[Linking::ServerChallengeRequest::SUB_HEADER_INDEX])
@@ -217,6 +226,57 @@ protected:
 		}
 	}
 
+	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
+	{
+		if (port == Linked::PORT)
+		{
+			switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+			{
+			case Linked::ClockTuneMicrosReply::SUB_HEADER:
+				if (payloadSize == Linked::ClockTuneMicrosReply::PAYLOAD_SIZE
+					&& WaitingForClockReply)
+				{
+					// Re-use linking-time estimate holder.
+					EstimateErrorReply.Seconds = 0;
+					EstimateErrorReply.SubSeconds = payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX];
+					EstimateErrorReply.SubSeconds += (uint_least16_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 1] << 8;
+					EstimateErrorReply.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 2] << 16;
+					EstimateErrorReply.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 3] << 24;
+
+					if (((int32_t)EstimateErrorReply.SubSeconds >= 0 && (int32_t)EstimateErrorReply.SubSeconds < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+						|| ((int32_t)EstimateErrorReply.SubSeconds < 0 && (int32_t)EstimateErrorReply.SubSeconds > -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
+					{
+						// Due to error limit of LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS, operation doesn't need to be elevated to uint64_t.
+						ClockErrorFiltered += (((int32_t)EstimateErrorReply.SubSeconds - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
+
+						// Adjust client clock with filtered estimation error.
+						if (ClockErrorFiltered != 0)
+						{
+							SyncClock.ShiftMicros(ClockErrorFiltered);
+						}
+
+						LastCLockSync = millis();
+					}
+					else
+					{
+						// Error too big, discarding.
+#if defined(DEBUG_LOLA)
+						this->Owner();
+						Serial.print(F("Clock Tune rejected:"));
+						Serial.print((int32_t)EstimateErrorReply.SubSeconds);
+						Serial.println(F("us."));
+#endif
+					}
+
+					WaitingForClockReply = false;
+				}
+				break;
+			default:
+				BaseClass::OnPacketReceived(startTimestamp, payload, payloadSize, port);
+				break;
+			}
+		}
+	}
 protected:
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
 	{
@@ -241,6 +301,10 @@ protected:
 			break;
 		case LinkStageEnum::Linked:
 			LastKnownBroadCastChannel = SearchChannel;
+			ClockErrorFiltered = 0;
+			WaitingForClockReply = false;
+			LastCLockSync = millis();
+			LastCLockSent = millis();
 			break;
 		default:
 			break;
@@ -413,22 +477,50 @@ protected:
 		}
 	}
 
-#if defined(CLIENT_DROP_LINK_TEST)
+	virtual void OnPreSend()
+	{
+		if (OutPacket.GetPort() == Linked::PORT &&
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::SUB_HEADER_INDEX] == Linked::ClockTuneMicrosRequest::SUB_HEADER)
+		{
+			SyncClock.GetTimestamp(LinkTimestamp);
+			LinkTimestamp.ShiftSubSeconds((int32_t)GetSendDuration(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE));
+
+			const uint32_t rolling = LinkTimestamp.GetRollingMicros();
+
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX] = rolling;
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 1] = rolling >> 8;
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 2] = rolling >> 16;
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 3] = rolling >> 24;
+		}
+	}
+
 	virtual const bool CheckForClockSyncUpdate() final
 	{
-		if (this->GetLinkDuration() > CLIENT_DROP_LINK_TEST)
+		if (WaitingForClockReply)
 		{
-#if defined(DEBUG_LOLA)
-			this->Owner();
-			Serial.print(("Test disconnect after "));
-			Serial.print(CLIENT_DROP_LINK_TEST);
-			Serial.println((" seconds."));
-#endif
-			UpdateLinkStage(LinkStageEnum::AwaitingLink);
+			if (WaitingForClockReply && (millis() - LastCLockSent > LoLaLinkDefinition::CLOCK_TUNE_RETRY_PERIOD))
+			{
+				WaitingForClockReply = false;
+				// Wait for reply before trying again.
+				Task::enable();
+				return true;
+			}
+		}
+		else if (millis() - LastCLockSync > LoLaLinkDefinition::CLOCK_TUNE_PERIOD && CanRequestSend())
+		{
+			WaitingForClockReply = true;
+			OutPacket.SetPort(Linked::PORT);
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::SUB_HEADER_INDEX] = Linked::ClockTuneMicrosRequest::SUB_HEADER;
+			if (RequestSendPacket(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE))
+			{
+				LastCLockSent = millis();
+
+				return true;
+			}
+
 		}
 
 		return false;
 	}
-#endif
 };
 #endif

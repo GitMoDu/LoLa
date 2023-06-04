@@ -11,8 +11,9 @@ class AbstractLoLaLinkServer : public AbstractLoLaLink<MaxPacketReceiveListeners
 {
 private:
 	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
-	
+
 	using Linking = LoLaLinkDefinition::Linking;
+	using Linked = LoLaLinkDefinition::Linked;
 
 	enum ServerLinkingEnum
 	{
@@ -30,10 +31,14 @@ protected:
 	using BaseClass::Transceiver;
 	using BaseClass::LinkTimestamp;
 
-	using BaseClass::PreLinkResendDelayMillis;
-	using BaseClass::GetSendDuration;
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
+	using BaseClass::GetSendDuration;
+	using BaseClass::PreLinkResendDelayMillis;
+
+	using BaseClass::RequestSendPacket;
+	using BaseClass::CanRequestSend;
+	using BaseClass::GetElapsedSinceLastSent;
 
 protected:
 	ServerTimedStateTransition<
@@ -63,8 +68,6 @@ public:
 	{}
 
 protected:
-	//virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
-
 	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
 		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
@@ -187,6 +190,38 @@ protected:
 			break;
 		default:
 			break;
+		}
+	}
+
+	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
+	{
+		if (port == Linked::PORT)
+		{
+			switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+			{
+			case Linked::ClockTuneMicrosRequest::SUB_HEADER:
+				if (payloadSize == Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE
+					&& !ClockReplyPending)
+				{
+					// Re-use linking-time clock sync holders.
+					InEstimate.SubSeconds = payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX];
+					InEstimate.SubSeconds += (uint_least16_t)payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 1] << 8;
+					InEstimate.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 2] << 16;
+					InEstimate.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 3] << 24;
+
+					SyncClock.GetTimestamp(LinkTimestamp);
+					LinkTimestamp.ShiftSubSeconds(startTimestamp - micros());
+					EstimateErrorReply.Seconds = 0;
+					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - InEstimate.SubSeconds;
+
+					ClockReplyPending = true;
+					Task::enable();
+				}
+				break;
+			default:
+				BaseClass::OnPacketReceived(startTimestamp, payload, payloadSize, port);
+				break;
+			}
 		}
 	}
 
@@ -345,23 +380,34 @@ protected:
 		}
 	}
 
-#if defined(SERVER_DROP_LINK_TEST)
 	virtual const bool CheckForClockSyncUpdate() final
 	{
-		if (this->GetLinkDuration() > SERVER_DROP_LINK_TEST)
+		if (ClockReplyPending && CanRequestSend())
 		{
+			OutPacket.SetPort(Linked::PORT);
+			OutPacket.Payload[Linked::ClockTuneMicrosReply::SUB_HEADER_INDEX] = Linked::ClockTuneMicrosReply::SUB_HEADER;
+			OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 0] = EstimateErrorReply.SubSeconds;
+			OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 1] = EstimateErrorReply.SubSeconds >> 8;
+			OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 2] = EstimateErrorReply.SubSeconds >> 16;
+			OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 3] = EstimateErrorReply.SubSeconds >> 24;
+
 #if defined(DEBUG_LOLA)
 			this->Owner();
-			Serial.print(("Test disconnect after "));
-			Serial.print(SERVER_DROP_LINK_TEST);
-			Serial.println((" seconds."));
+			Serial.print(F("Sending Clock Tune Error:"));
+			Serial.print((int32_t)EstimateErrorReply.SubSeconds);
+			Serial.println(F("us."));
 #endif
-			UpdateLinkStage(LinkStageEnum::AwaitingLink);
+			if (RequestSendPacket(Linked::ClockTuneMicrosReply::PAYLOAD_SIZE))
+			{
+				// Only send a time reply once.
+				ClockReplyPending = false;
+
+				return true;
+			}
 		}
 
 		return false;
 	}
-#endif
 
 
 private:
