@@ -26,17 +26,17 @@ class SerialTransceiver : private Task, public virtual ILoLaTransceiver
 {
 private:
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32)
-	static constexpr uint32_t TransmitDelayMicros = 10;
+	static constexpr uint32_t TransmitDelayMicros = 3;
 #else
-	static constexpr uint32_t TransmitDelayMicros = 25;
+	static constexpr uint32_t TransmitDelayMicros = 6;
 #endif
 
 	// TODO: Baudrate aware.
-	static constexpr uint32_t TxSeparationPauseMicros = 250;
+	static constexpr uint32_t TxSeparationPauseMicros = 200;
 	static constexpr uint32_t RxWaitPauseMicros = 150;
 
 	// TODO: Baudrate and size aware?
-	static constexpr uint32_t RxTimeoutMicros = 2000;
+	static constexpr uint32_t RxTimeoutMicros = 800;
 
 	enum TxStateEnum
 	{
@@ -150,24 +150,28 @@ public:
 			case RxStateEnum::NoRx:
 				break;
 			case RxStateEnum::RxStart:
-				if (micros() - RxStartTimestamp > RxWaitPauseMicros && IO->available() > LoLaPacketDefinition::MIN_PACKET_SIZE)
+				if (micros() - RxStartTimestamp > RxWaitPauseMicros)
 				{
-					// First byte is the packet size.
-					RxSize = IO->read();
-					if (RxSize >= LoLaPacketDefinition::MIN_PACKET_SIZE
-						&& RxSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+					if (IO->available())
 					{
-						RxIndex = 0;
-						RxState = RxStateEnum::RxEnd;
+						// First byte is the packet size.
+						RxSize = IO->read();
+						if (RxSize >= LoLaPacketDefinition::MIN_PACKET_SIZE
+							&& RxSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+						{
+							RxIndex = 0;
+							RxState = RxStateEnum::RxEnd;
+						}
+						else
+						{
+							ClearRx();
+						}
 					}
 					else
 					{
+						// Interrupt fired but no data was found on serial buffer after the wait period.
 						ClearRx();
 					}
-				}
-				else if (micros() - RxStartTimestamp > RxTimeoutMicros)
-				{
-					ClearRx();
 				}
 				break;
 			case RxStateEnum::RxEnd:
@@ -218,7 +222,7 @@ public:
 			&& Listener != nullptr
 			&& OnRxInterrupt != nullptr)
 		{
-			pinMode(RxInterruptPin, INPUT);
+			pinMode(RxInterruptPin, INPUT_PULLUP);
 
 			IO->begin(BaudRate);
 			IO->clearWriteError();
