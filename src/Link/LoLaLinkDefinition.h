@@ -138,6 +138,7 @@ public:
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
 	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 200;
+
 	/// <summary>
 	/// How long without an input message from partner before disconnect.
 	/// </summary>
@@ -156,17 +157,25 @@ public:
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.
 	/// </summary>
-	static constexpr uint32_t REPORT_UPDATE_PERIOD = 333;
+	static constexpr uint32_t REPORT_UPDATE_PERIOD = 250;
 
 	/// <summary>
 	/// If no other service is getting messages, how long to trigger a report back.
 	/// </summary>
-	static constexpr uint32_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 100;
+	static constexpr uint32_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 150;
 
 	/// <summary>
 	/// Report (average) send back off period.
 	/// </summary>
 	static constexpr uint8_t REPORT_RESEND_PERIOD = 40;
+
+	/// <summary>
+	/// How many microseconds is the client allowed to tune its clock on one tune request. 
+	/// </summary>
+	static constexpr uint32_t CLOCK_TUNE_RANGE_MICROS = 150;
+
+	static constexpr uint32_t CLOCK_TUNE_PERIOD = 666;
+	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
 
 private:
 	template<const uint8_t SubHeader>
@@ -185,14 +194,6 @@ private:
 		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 	};
 
-	/// <summary>
-	/// Clock Sync request have the same format.
-	/// </summary>
-	template<const uint8_t SubHeader>
-	struct ClockSyncDefinition : public TemplateSubHeaderDefinition<SubHeader, TIME_SIZE>
-	{
-		static constexpr uint8_t PAYLOAD_TIME_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
-	};
 
 	template<const uint8_t SubHeader, const uint8_t ExtraSize = 0>
 	struct ClockTimestampDefinition : public TemplateSubHeaderDefinition<SubHeader, (TIME_SIZE * 2) + ExtraSize>
@@ -343,8 +344,21 @@ public:
 			static constexpr uint8_t PAYLOAD_REQUEST_INDEX = PAYLOAD_RECEIVE_COUNTER_INDEX + 1;
 		};
 
-		using ClockTuneMicrosRequest = ClockSyncDefinition<ReportUpdate::SUB_HEADER + 1>;
-		using ClockTuneMicrosReply = ClockSyncDefinition<ClockTuneMicrosRequest::SUB_HEADER + 1>;
+		/// <summary>
+		/// ||Rolling Time (us)||
+		/// </summary>
+		struct ClockTuneMicrosRequest : public TemplateSubHeaderDefinition<ReportUpdate::SUB_HEADER + 1, TIME_SIZE>
+		{
+			static constexpr uint8_t PAYLOAD_ROLLING_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+		};
+
+		/// <summary>
+		/// ||Rolling Time error (us)||
+		/// </summary>
+		struct ClockTuneMicrosReply : public TemplateSubHeaderDefinition<ClockTuneMicrosRequest::SUB_HEADER + 1, TIME_SIZE>
+		{
+			static constexpr uint8_t PAYLOAD_ERROR_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+		};
 	};
 
 	/// <summary>

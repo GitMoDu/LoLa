@@ -64,9 +64,7 @@ protected:
 	Timestamp LinkTimestamp{};
 
 private:
-	ReportTracker<LoLaLinkDefinition::REPORT_UPDATE_PERIOD,
-		LoLaLinkDefinition::REPORT_RESEND_PERIOD,
-		LoLaLinkDefinition::REPORT_PARTNER_SILENCE_TRIGGER_PERIOD> ReportTracking;
+	ReportTracker ReportTracking;
 
 	uint32_t LinkStartSeconds = 0;
 
@@ -145,7 +143,7 @@ public:
 					// Check if partner is requesting a report back.
 					if (payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] > 0)
 					{
-						RequestReportUpdate();
+						ReportTracking.RequestReportUpdate(false);
 					}
 				}
 				break;
@@ -240,7 +238,7 @@ protected:
 			SyncClock.GetTimestamp(LinkTimestamp);
 			LinkStartSeconds = LinkTimestamp.Seconds;
 			ResetLastValidReceived();
-			RequestReportUpdate();
+			ReportTracking.RequestReportUpdate(true);
 			PacketService.RefreshChannel();
 			break;
 		default:
@@ -331,7 +329,7 @@ protected:
 		switch (packetEvent)
 		{
 		case PacketEventEnum::ReceiveRejectedCounter:
-			RequestReportUpdate();
+			ReportTracking.RequestReportUpdate(true);
 			break;
 		default:
 			break;
@@ -397,9 +395,9 @@ protected:
 	virtual const bool CheckForReportUpdate() final
 	{
 		const uint32_t timestamp = millis();
-		if (ReportTracking.IsRequested(timestamp))
+		if (ReportTracking.IsSendRequested())
 		{
-			if (CanRequestSend() && ReportTracking.IsSendRequested(timestamp))
+			if (CanRequestSend())
 			{
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.Payload[Linked::ReportUpdate::SUB_HEADER_INDEX] = Linked::ReportUpdate::SUB_HEADER;
@@ -410,15 +408,14 @@ protected:
 				if (RequestSendPacket(Linked::ReportUpdate::PAYLOAD_SIZE))
 				{
 					ReportTracking.OnReportSent(timestamp);
+					return true;
 				}
 			}
 
 			Task::enableIfNot();
-			return true;
 		}
 		else if (ReportTracking.IsReportNeeded(timestamp, GetElapsedSinceLastValidReceived()))
 		{
-			RequestReportUpdate();
 			Task::enableIfNot();
 			return true;
 		}
@@ -427,15 +424,6 @@ protected:
 	}
 
 private:
-	/// <summary>
-	/// Schedule next report for dispatch.
-	/// </summary>
-	void RequestReportUpdate()
-	{
-		ReportTracking.RequestReportUpdate(RandomSource.GetRandomShort() - INT8_MAX);
-		Task::enableIfNot();
-	}
-
 	/// <summary>
 	/// Calibrate CPU dependent durations.
 	/// </summary>
