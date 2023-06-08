@@ -124,10 +124,10 @@ public:
 	static constexpr uint8_t ROLLING_COUNTER_ERROR = UINT8_MAX / 5;
 
 	/// <summary>
-	/// Link switch over will tolerate some error (us) at the start.
+	/// Link switch over will tolerate +-0.5% error (us) at the start.
 	/// During link time, clock will be continously tuned for higher accuracy.
 	/// </summary>
-	static constexpr int32_t LINKING_CLOCK_TOLERANCE = 60;
+	static constexpr int32_t LINKING_CLOCK_TOLERANCE = 50;
 
 	/// <summary>
 	/// </summary>

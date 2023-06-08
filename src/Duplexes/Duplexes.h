@@ -70,7 +70,7 @@ public:
 /// <typeparam name="IsOddSlot">First or Second half of duplex.</typeparam>
 template<const uint16_t DuplexPeriodMicros,
 	const bool IsOddSlot,
-	const uint32_t DeadZoneMicros = 0>
+	const uint32_t DeadZoneMicros = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE>
 class HalfDuplex : public TemplateHalfDuplex<
 	DuplexPeriodMicros,
 	DuplexPeriodMicros / 2,
