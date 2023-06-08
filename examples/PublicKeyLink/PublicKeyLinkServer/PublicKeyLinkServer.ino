@@ -1,5 +1,5 @@
-/* 
-*
+/*
+* Publick Key Link Server
 */
 
 #define DEBUG
@@ -14,6 +14,12 @@
 #define LED_BUILTIN 33
 #endif // !LED_BUILTIN
 
+// Selected Driver for test.
+#define USE_SERIAL_TRANSCEIVER
+//#define USE_NRF21_TRANSCEIVER
+
+#define LINK_USE_CHANNEL_HOP
+//#define LINK_USE_TIMER_AND_RTC
 
 // Test pins for logic analyser.
 #if defined(ARDUINO_ARCH_STM32F1)
@@ -24,14 +30,7 @@
 #define SCHEDULER_TEST_PIN TEST_PIN_0
 #define RX_TEST_PIN TEST_PIN_1
 #define TX_TEST_PIN TEST_PIN_2
-#else
-#define TX_TEST_PIN 0
-#define RX_TEST_PIN 0
 #endif
-
-
-#define LINK_USE_CHANNEL_HOP
-//#define LINK_USE_TIMER_AND_RTC
 
 #define _TASK_SCHEDULE_NC // Disable task catch-up.
 #define _TASK_OO_CALLBACKS
@@ -39,14 +38,49 @@
 #ifndef ARDUINO_ARCH_ESP32
 #define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
 #endif
-
 #include <TaskScheduler.h>
 
 #include <ILoLaInclude.h>
 
+// Transceiver Definitions.
+#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32)
+#if defined(USE_SERIAL_TRANSCEIVER)
+#define SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN 7
+#define SERIAL_TRANSCEIVER_INSTANCE			Serial2
+#define SERIAL_TRANSCEIVER_BAUDRATE			500000
+#elif defined(USE_NRF21_TRANSCEIVER)
+#define NRF21_TRANSCEIVER_SPI_INSTANCE		SpiNRF(2)
+#define NRF21_TRANSCEIVER_PIN_CE			27
+#define NRF21_TRANSCEIVER_PIN_CS			31
+#define NRF21_TRANSCEIVER_RX_INTERRUPT_PIN	26
+#define NRF21_TRANSCEIVER_DATA_RATE			RF24_250KBPS
+#endif
+#else
+#if defined(USE_SERIAL_TRANSCEIVER)
+#define SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN 2
+#define SERIAL_TRANSCEIVER_INSTANCE			Serial
+#define SERIAL_TRANSCEIVER_BAUDRATE			115200
+#elif defined(USE_NRF21_TRANSCEIVER)
+#define NRF21_TRANSCEIVER_SPI_INSTANCE		SpiNRF
+#define NRF21_TRANSCEIVER_PIN_CE			9
+#define NRF21_TRANSCEIVER_PIN_CS			10
+#define NRF21_TRANSCEIVER_RX_INTERRUPT_PIN	2
+#define NRF21_TRANSCEIVER_DATA_RATE			RF24_250KBPS
+#endif
+#endif
+//
 
 // Process scheduler.
 Scheduler SchedulerBase;
+//
+
+// Transceiver Driver.
+#if defined(USE_SERIAL_TRANSCEIVER)
+SerialTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
+#elif defined(USE_NRF21_TRANSCEIVER)
+SPIClass NRF21_TRANSCEIVER_SPI_INSTANCE;
+nRF24Transceiver<NRF21_TRANSCEIVER_PIN_CE, NRF21_TRANSCEIVER_PIN_CS, NRF21_TRANSCEIVER_RX_INTERRUPT_PIN, NRF21_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase, &SpiNRF);
+#endif
 //
 
 // Diceware created access control password.
@@ -61,7 +95,6 @@ static const uint8_t ServerPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 5000;
 static const uint32_t ChannelHopPeriod = 20000;
-static const uint32_t DuplexDeadZone = 50;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
@@ -86,30 +119,20 @@ Stm32RtcClockSource ClockSource(SchedulerBase);
 #endif
 
 #if defined(LINK_USE_CHANNEL_HOP)
-TimedChannelHopper<ChannelHopPeriod> ServerChannelHop(SchedulerBase);
+TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
 #else
-NoHopNoChannel ServerChannelHop;
+NoHopNoChannel ChannelHop;
 #endif
 
-// Transceiver Drivers.
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32)
-SerialTransceiver<HardwareSerial, 500000, 7> SerialDriver(SchedulerBase, &Serial2);
-#else
-SerialTransceiver<HardwareSerial, 115200, 2> SerialDriver(SchedulerBase, &Serial);
-#endif
+HalfDuplex<DuplexPeriod, false> Duplex;
 
-
-// Selected Driver for test.
-ILoLaTransceiver* Transceiver = &SerialDriver;
-
-HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 LoLaPkeLinkServer<> Server(SchedulerBase,
-	Transceiver,
+	&TransceiverDriver,
 	&EntropySource,
 	&TimerClockSource,
 	&TimerClockSource,
-	&ServerDuplex,
-	&ServerChannelHop,
+	&Duplex,
+	&ChannelHop,
 	ServerPublicKey,
 	ServerPrivateKey,
 	Password);
@@ -119,7 +142,7 @@ void BootError()
 {
 #ifdef DEBUG
 	Serial.println("Critical Error");
-#endif  
+#endif 
 	delay(1000);
 	while (1);;
 }
@@ -138,8 +161,12 @@ void setup()
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
 #endif
 
-	// Setup Serial Transceiver Interrupt.
-	SerialDriver.SetupInterrupt(OnSerialInterrupt);
+#if defined(USE_SERIAL_TRANSCEIVER)
+	TransceiverDriver.SetupInterrupt(OnSeriaInterrupt);
+#endif
+#if defined(USE_NRF21_TRANSCEIVER)
+	TransceiverDriver.SetupInterrupt(OnRxInterrupt);
+#endif
 
 	// Setup Link instance.
 	if (!Server.Setup())
@@ -174,7 +201,15 @@ void loop()
 	SchedulerBase.execute();
 }
 
-void OnSerialInterrupt()
+#if defined(USE_SERIAL_TRANSCEIVER)
+void OnSeriaInterrupt()
 {
-	SerialDriver.OnSeriaInterrupt();
+	TransceiverDriver.OnSeriaInterrupt();
 }
+#endif
+#if defined(USE_NRF21_TRANSCEIVER)
+void OnRxInterrupt()
+{
+	TransceiverDriver.OnRfInterrupt();
+}
+#endif

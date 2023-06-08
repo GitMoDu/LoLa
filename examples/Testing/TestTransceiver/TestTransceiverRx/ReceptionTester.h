@@ -8,7 +8,6 @@
 #include <Arduino.h>
 
 
-template<const uint8_t RxActivePin = 0>
 class ReceptionTester : public virtual ILoLaTransceiverListener
 {
 private:
@@ -17,20 +16,11 @@ private:
 	// Selected Driver for test.
 	ILoLaTransceiver* Transceiver;
 
-	uint32_t LastSentMicros = 0;
-
-	uint32_t TxStarTimestamp = 0;
-
-
 public:
 	ReceptionTester(ILoLaTransceiver* transceiver)
 		: Transceiver(transceiver)
 		, ILoLaTransceiverListener()
 	{
-		if (RxActivePin > 0)
-		{
-			pinMode(RxActivePin, OUTPUT);
-		}
 	}
 
 	const bool Setup()
@@ -47,11 +37,6 @@ public:
 public:
 	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
-		if (RxActivePin > 0)
-		{
-			digitalWrite(RxActivePin, HIGH);
-		}
-
 		Serial.print(F("OnRx ("));
 		Serial.print(packetSize);
 		Serial.print(F(" bytes)"));
