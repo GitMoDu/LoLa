@@ -10,9 +10,7 @@
 #include "..\Clock\SynchronizedClock.h"
 #include "..\Clock\Timestamp.h"
 
-template<const uint32_t HopPeriodMicros,
-	const uint8_t PinTestHop = 0,
-	const uint8_t PinTestHop2 = 0>
+template<const uint32_t HopPeriodMicros>
 class TimedChannelHopper final : private Task, public virtual IChannelHop
 {
 private:
@@ -24,7 +22,7 @@ private:
 	};
 
 	static constexpr uint32_t MARGIN_MILLIS = 1;
-	static constexpr uint32_t CLOCK_MARGIN_PERCENTAGE = 5;
+	static constexpr uint32_t CLOCK_MARGIN_PERCENTAGE = 2;
 
 	static constexpr uint32_t HopPeriodMillis()
 	{
@@ -61,17 +59,10 @@ public:
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, IChannelHop()
 	{
-		if (PinTestHop > 0)
-		{
-			digitalWrite(PinTestHop, LOW);
-			pinMode(PinTestHop, OUTPUT);
-		}	
-		
-		if (PinTestHop2 > 0)
-		{
-			digitalWrite(PinTestHop2, LOW);
-			pinMode(PinTestHop2, OUTPUT);
-		}
+#if defined(HOP_TEST_PIN)
+		digitalWrite(HOP_TEST_PIN, LOW);
+		pinMode(HOP_TEST_PIN, OUTPUT);
+#endif
 	}
 
 	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock, const uint32_t forwardLookMicros) final
@@ -137,13 +128,6 @@ public:
 		SyncClock->GetTimestamp(CheckTimestamp);
 		CheckTimestamp.ShiftSubSeconds(ForwardLookMicros);
 
-		if (PinTestHop2 > 0)
-		{
-			digitalWrite(PinTestHop2, HIGH);
-			digitalWrite(PinTestHop2, LOW);
-		}
-
-
 		HopIndex = GetHopIndex(CheckTimestamp.GetRollingMicros());
 
 		switch (HopperState)
@@ -159,11 +143,10 @@ public:
 			if (HopIndex != LastHopIndex)
 			{
 				LastHopIndex = HopIndex;
-				if (PinTestHop > 0)
-				{
-					digitalWrite(PinTestHop, HIGH);
-					digitalWrite(PinTestHop, LOW);
-				}
+#if defined(HOP_TEST_PIN)
+				digitalWrite(HOP_TEST_PIN, HIGH);
+				digitalWrite(HOP_TEST_PIN, LOW);
+#endif
 				Listener->OnChannelHopTime();
 
 				Task::delay(GetDelayPeriod());

@@ -8,6 +8,7 @@
 #include <TaskScheduler.h>
 
 #include <ILoLaInclude.h>
+#include <Arduino.h>
 #include "Tests.h"
 
 Scheduler SchedulerBase;
@@ -187,14 +188,14 @@ const bool TestHopperSleepPeriod()
 	if (!TestTimedChannelHopper<5000, 4>()) { return false; }
 	if (!TestTimedChannelHopper<10000, 9>()) { return false; }
 	if (!TestTimedChannelHopper<15000, 14>()) { return false; }
-	if (!TestTimedChannelHopper<20000, 18>()) { return false; }
-	if (!TestTimedChannelHopper<25000, 23>()) { return false; }
-	if (!TestTimedChannelHopper<30000, 28>()) { return false; }
-	if (!TestTimedChannelHopper<40000, 37>()) { return false; }
-	if (!TestTimedChannelHopper<45000, 42>()) { return false; }
-	if (!TestTimedChannelHopper<50000, 47>()) { return false; }
-	if (!TestTimedChannelHopper<75000, 70>()) { return false; }
-	if (!TestTimedChannelHopper<100000, 94>()) { return false; }
+	if (!TestTimedChannelHopper<20000, 19>()) { return false; }
+	if (!TestTimedChannelHopper<25000, 24>()) { return false; }
+	if (!TestTimedChannelHopper<30000, 29>()) { return false; }
+	if (!TestTimedChannelHopper<40000, 39>()) { return false; }
+	if (!TestTimedChannelHopper<45000, 44>()) { return false; }
+	if (!TestTimedChannelHopper<50000, 49>()) { return false; }
+	if (!TestTimedChannelHopper<75000, 73>()) { return false; }
+	if (!TestTimedChannelHopper<100000, 98>()) { return false; }
 
 	return true;
 }
