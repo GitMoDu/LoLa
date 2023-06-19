@@ -103,11 +103,11 @@ struct TimestampError
 	{
 		if (SubSeconds >= 0)
 		{
-			return SubSeconds < ONE_SECOND_MICROS;
+			return SubSeconds < (int32_t)ONE_SECOND_MICROS;
 		}
 		else
 		{
-			return SubSeconds > -ONE_SECOND_MICROS;
+			return SubSeconds > -((int32_t)ONE_SECOND_MICROS);
 		}
 	}
 
@@ -127,7 +127,7 @@ struct TimestampError
 			SubSeconds += ONE_SECOND_MICROS;
 			Seconds--;
 		}
-		while (SubSeconds > ONE_SECOND_MICROS)
+		while (SubSeconds > (int32_t)ONE_SECOND_MICROS)
 		{
 			SubSeconds -= ONE_SECOND_MICROS;
 			Seconds++;
