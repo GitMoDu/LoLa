@@ -1,20 +1,19 @@
-// PIMLoLaPacketDriver.h
+// PimTransceiver.h
 // For use with Pulse Interval Modulator (https://github.com/GitMoDu/PulseIntervalModulator).
 
-#ifndef _LOLA_PIM_PACKET_DRIVER_h
-#define _LOLA_PIM_PACKET_DRIVER_h
+#ifndef _PIM_TRANSCEIVER_h
+#define _PIM_TRANSCEIVER_h
 
-
-#include <ILoLaPacketDriver.h>
+#include <ILoLaTransceiver.h>
 
 #define PIM_NO_CHECKS
 #include <PulsePacketTaskDriver.h>
 
 
 template<const uint8_t MaxPayloadSize>
-class PIMLoLaPacketDriver
+class PimTransceiver
 	: public PulsePacketTaskDriver<LoLaPacketDefinition::GetTotalSize(MaxPayloadSize)>
-	, public virtual ILoLaPacketDriver
+	, public virtual ILoLaTransceiver
 {
 private:
 	using BaseClass = PulsePacketTaskDriver<LoLaPacketDefinition::GetTotalSize(MaxPayloadSize)>;
@@ -25,67 +24,70 @@ private:
 	using BaseClass::CanSend;
 	using BaseClass::SendPacket;
 
-	ILoLaPacketDriverListener* PacketListener = nullptr;
+	ILoLaTransceiverListener* Listener = nullptr;
 
 public:
 #if defined(ARDUINO_ARCH_AVR)
-	PIMLoLaPacketDriver(Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin)
+	PimTransceiver(Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin)
 		: BaseClass(scheduler, readPin, writePin)
 #elif defined(ARDUINO_ARCH_STM32F1)
-	PIMLoLaPacketDriver(Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin, const uint8_t timerIndex, const uint8_t timerChannel)
+	PimTransceiver(Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin, const uint8_t timerIndex, const uint8_t timerChannel)
 		: BaseClass(scheduler, readPin, writePin, timerIndex, timerChannel)
 #endif
-		, ILoLaPacketDriver()
+		, ILoLaTransceiver()
 	{}
 
 public:
 	// PIM Driver overrides.
 	virtual void OnDriverPacketReceived(const uint32_t startTimestamp, const uint8_t packetSize) final
 	{
-		PacketListener->OnReceived(IncomingPacket, startTimestamp, packetSize, UINT8_MAX);
+		Listener->OnRx(IncomingPacket, startTimestamp, packetSize, UINT8_MAX);
 	}
 
 	virtual void OnDriverPacketLost(const uint32_t startTimestamp) final
 	{
-		PacketListener->OnReceiveLost(startTimestamp);
+		Listener->OnRxLost(startTimestamp);
 	}
 
 	virtual void OnDriverPacketSent() final
 	{
-		PacketListener->OnSent(true);
+		Listener->OnTx();
 	}
 
 	// ILoLaPacketDriver overrides.
-	virtual const bool DriverSetup(ILoLaPacketDriverListener* packetListener) final
+	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
 	{
-		PacketListener = packetListener;
+		Listener = listener;
 
-		return PacketListener != nullptr;
+		return Listener != nullptr;
 	}
 
-	virtual const bool DriverStart() final
+	virtual const bool Start() final
 	{
-		Start();
+		BaseClass::Start();
 
-		return PacketListener != nullptr;
+		return false;
 	}
 
-	virtual const bool DriverStop() final
+	virtual const bool Stop() final
 	{
-		Stop();
+		BaseClass::Stop();
 
-		return true;
+		return false;
 	}
 
-	virtual const bool DriverCanTransmit() final
+	virtual const bool TxAvailable() final
 	{
 		// Make sure we wait at least a bit over a pre amble before sending again.
 		return CanSend();
 	}
 
-	virtual void DriverReceive(const uint8_t channel) final {}
+	virtual void Rx(const uint8_t channel) final
+	{
 
-	virtual const bool DriverTransmit(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
+	}
+
+	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		// Packet copied, freeing the output buffer.
 		return SendPacket(data, packetSize);

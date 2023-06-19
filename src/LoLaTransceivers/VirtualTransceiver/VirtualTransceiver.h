@@ -88,8 +88,8 @@ public:
 public:
 	virtual bool Callback() final
 	{
-		// Simulate transmit delay, from request to on-air start.
-		if (OutGoing.HasPending() && (micros() - OutGoing.Started > GetTransmitDurationMicros(OutGoing.Size)))
+		// Simulate transmit delay, from request to on-air end.
+		if (OutGoing.HasPending() && ((micros() - OutGoing.Started) > (GetTimeToAir(OutGoing.Size))))
 		{
 			// Tx duration has elapsed.
 			UpdateChannel(OutGoing.Channel);
@@ -127,7 +127,7 @@ public:
 		}
 
 		// Simulate delay from start event to received packet buffer.
-		if (Incoming.HasPending() && (micros() - Incoming.Started > GetRxDuration(Incoming.Size)))
+		if (Incoming.HasPending() && (micros() - Incoming.Started > GetDurationInAir(Incoming.Size)))
 		{
 			// Rx duration has elapsed since the packet incoming start triggered.
 			if (Listener != nullptr)
@@ -241,9 +241,9 @@ public:
 		{
 			OutGoing.Buffer[i] = data[i];
 		}
-		OutGoing.Started = micros();
-
 		Task::enable();
+
+		OutGoing.Started = timestamp;
 
 		return true;
 	}
@@ -253,9 +253,19 @@ public:
 		UpdateChannel(channel);
 	}
 
-	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) final
+	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
 		return Config::TxBase + ((Config::TxByteNanos * packetSize) / 1000);
+	}
+
+	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
+	{
+		return Config::RxBase + ((Config::RxByteNanos * packetSize) / 1000);
+	}
+
+	virtual const uint16_t GetTimeToHop() final
+	{
+		return Config::HopMicros;
 	}
 
 	virtual const bool TxAvailable() final
@@ -320,11 +330,6 @@ public:
 		}
 #endif
 		Task::enable();
-	}
-
-	const uint32_t GetRxDuration(const uint8_t size)
-	{
-		return Config::RxBase + ((Config::RxByteNanos * size)) / 1000;
 	}
 
 private:

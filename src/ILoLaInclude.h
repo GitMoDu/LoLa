@@ -10,13 +10,18 @@
 #include "Link\ILoLaLink.h"
 #include "Link\LoLaLinkDefinition.h"
 
-//TODO: Refactor as individual driver includes?
+//TODO: Refactor as individual driver includes
 #pragma	region Available Packet Drivers
 #include "LoLaTransceivers\VirtualTransceiver\VirtualTransceiver.h"
 #include "LoLaTransceivers\SerialTransceiver\SerialTransceiver.h"
 #include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
-//#include "LoLaTransceivers\Si446xLolaPacketDriver\Si446xLolaPacketDriver.h"
-//#include "LoLaTransceivers\PIMLoLaPacketDriver\PIMLoLaPacketDriver.h"
+#include "LoLaTransceivers\Si446xTransceiver\Si446xTransceiver.h"
+#include "LoLaTransceivers\EspNowTransceiver\EspNowTransceiver.h"
+#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1)
+#include "LoLaTransceivers\PimTransceiver\PimTransceiver.h"
+#else 
+#warning No Implementation available for PIM transceiver.
+#endif
 #pragma endregion
 
 

@@ -45,15 +45,12 @@ protected:
 	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::ResetLastValidReceived;
-	using BaseClass::SetSendCalibration;
 
 	using BaseClass::PostLinkState;
 	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::GetElapsedSinceLastValidReceived;
 
 private:
-	static constexpr uint8_t CALIBRATION_ROUNDS = 10;
-
 	/// <summary>
 	/// Slow value, let the main services hog the CPU.
 	/// </summary>
@@ -100,8 +97,7 @@ public:
 	virtual const bool Setup()
 	{
 		if (BaseClass::Setup()
-			&& RegisterPacketReceiverInternal(this, Linked::PORT)
-			&& CalibrateSendDuration())
+			&& RegisterPacketReceiverInternal(this, Linked::PORT))
 		{
 			return true;
 		}
@@ -206,7 +202,7 @@ protected:
 			GetSendDuration(payloadSize))
 			/ 1000;
 
-		if (Duplex->IsFullDuplex())
+		if (Duplex->GetRange() == IDuplex::DUPLEX_FULL)
 		{
 			return duration;
 		}
@@ -421,95 +417,6 @@ protected:
 		}
 
 		return false;
-	}
-
-private:
-	/// <summary>
-	/// Calibrate CPU dependent durations.
-	/// </summary>
-	const bool CalibrateSendDuration()
-	{
-		uint32_t calibrationStart = micros();
-
-		// Measure short (baseline) packet first.
-		uint32_t start = 0;
-		uint32_t shortDuration = 0;
-		uint32_t longDuration = 0;
-
-		OutPacket.SetPort(123);
-		for (uint_least8_t i = 0; i < LoLaPacketDefinition::MAX_PAYLOAD_SIZE; i++)
-		{
-			OutPacket.Payload[i] = i + 1;
-		}
-
-		start = micros();
-		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
-		{
-			if (!BaseClass::MockSendPacket(OutPacket.Data, 0))
-			{
-				// Calibration failed.
-#if defined(DEBUG_LOLA)
-				Serial.print(F("Calibration failed on short test."));
-#endif
-				return false;
-			}
-		}
-		shortDuration = ((micros() - start) / CALIBRATION_ROUNDS);
-
-		start = micros();
-		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
-		{
-			if (!BaseClass::MockSendPacket(OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
-			{
-				// Calibration failed.
-#if defined(DEBUG_LOLA)
-				Serial.print(F("Calibration failed on long test."));
-#endif
-				return false;
-			}
-		}
-
-		longDuration = (micros() - start) / CALIBRATION_ROUNDS;
-
-		const uint32_t scaleDuration = longDuration - shortDuration;
-
-		//// +1 to mitigate low bias by integer rounding.
-		const uint32_t byteDurationMicros = (scaleDuration / (LoLaPacketDefinition::MAX_PAYLOAD_SIZE - LoLaPacketDefinition::PAYLOAD_INDEX)) + 1;
-
-		//// Remove the base bytes from the base duration,
-		//// as well as the remainder from (now) high-biased byte duration.
-		const uint32_t baseDurationMicros = shortDuration
-			- (byteDurationMicros * LoLaPacketDefinition::PAYLOAD_INDEX)
-			- (scaleDuration % (LoLaPacketDefinition::MAX_PAYLOAD_SIZE - LoLaPacketDefinition::PAYLOAD_INDEX));
-
-		const uint32_t calibrationDuration = micros() - calibrationStart;
-
-#if defined(DEBUG_LOLA)
-		SetSendCalibration(shortDuration, longDuration);
-		Serial.println();
-		Serial.print(F("Calibration done. (max payload size"));
-		Serial.print(LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
-		Serial.println(')');
-		Serial.println(F("Short\tLong"));
-		Serial.print(shortDuration);
-		Serial.print('\t');
-		Serial.println(longDuration);
-		Serial.println();
-		Serial.println(F("Full estimation"));
-		Serial.println(F("Short\tLong"));
-		Serial.print(GetSendDuration(0));
-		Serial.print('\t');
-		Serial.println(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
-		Serial.println();
-		Serial.print(F("Calibration ("));
-		Serial.print(CALIBRATION_ROUNDS);
-		Serial.print(F(" rounds) took "));
-		Serial.print(calibrationDuration);
-		Serial.println(F(" us"));
-		Serial.println();
-#endif
-
-		return SetSendCalibration(shortDuration, longDuration);
 	}
 };
 

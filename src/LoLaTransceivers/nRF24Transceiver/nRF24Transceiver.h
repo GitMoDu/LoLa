@@ -1,5 +1,5 @@
 // nRF24Transceiverr.h
-// For use with nRF24L01.
+// For use with nRF24L01+.
 
 #ifndef _LOLA_NRF24_TRANSCEIVER_h
 #define _LOLA_NRF24_TRANSCEIVER_h
@@ -13,31 +13,15 @@
 #define RF24_SPI_PTR
 #include <RF24.h>
 
+#include "nRF24Support.h"
+
 #include <ILoLaTransceiver.h>
 
-
 /// <summary>
-/// Used to estimate Tx duration and Rx compensation.
-/// </summary>
-struct nRF24Timings
-{
-	uint16_t RxDelayMin;
-	uint16_t RxDelayMax;
-	uint16_t TxDelayMin;
-	uint16_t TxDelayMax;
-};
-
-/// <summary>
-/// Timings ordered by Baudarate enum value.
-/// [RF24_1MBPS|RF24_2MBPS|RF24_250KBPS] 
-/// </summary>
-static const nRF24Timings TimingsNRF[3] = { {220, 470, 60, 116}, {190, 310, 60, 116}, {400, 1390, 60, 120} };
-
-
-/// <summary>
-/// TODO: Fix 1st RX always fails (no interrupt).
 /// TODO: Optimize hop by checking if already on the selected channel, before issuing command to IC.
-/// TODO: MAke SPI speed configurable.
+/// TODO: DataRate RF24_2MBPS is specified to need 2 MHz of channel separation.
+/// TODO: Make SPI speed configurable.
+/// TODO: Rx is not working if no CRC is used.
 /// </summary>
 /// <typeparam name="CePin"></typeparam>
 /// <typeparam name="CsPin"></typeparam>
@@ -50,43 +34,26 @@ template<const uint8_t CePin,
 class nRF24Transceiver : private Task, public virtual ILoLaTransceiver
 {
 private:
-	// 0 to 125 are valid channels.
+	static constexpr uint32_t EVENT_TIMEOUT_MICROS = 2000;
+
+	// 126 RF channels, 1 MHz steps.
 	static constexpr uint8_t ChannelCount = 126;
+
+	// 130us according to datasheet.
+	static constexpr uint16_t RxHopDelay = 130;
 
 	// Only one pipe for protocol.
 	static constexpr uint8_t AddressPipe = 0;
 
-	// Generic addressing, identifies protocol.
-	static constexpr uint8_t AddressSize = 4;
-	const uint8_t BaseAddress[AddressSize] = { 'L', 'o', 'L' , 'a' };
+	// Fixed addressing identifies protocol.
+	static constexpr uint8_t AddressSize = 3;
 
 	// The used timings' constants, based on baudrate.
-	const uint16_t TX_DELAY_MIN = TimingsNRF[DataRate].TxDelayMin;
-	const uint16_t TX_DELAY_RANGE = TimingsNRF[DataRate].TxDelayMax - TX_DELAY_MIN;
-	const uint16_t RX_DELAY_MIN = TimingsNRF[DataRate].RxDelayMin;
-	const uint16_t RX_DELAY_RANGE = TimingsNRF[DataRate].RxDelayMax - RX_DELAY_MIN;
-
-	static constexpr uint32_t EVENT_TIMEOUT_MICROS = 5000;
-	
-	struct EventStruct
-	{
-		uint32_t Timestamp = 0;
-		bool TxOk = false;
-		bool TxFail = false;
-		bool RxReady = false;
-
-		const bool Pending()
-		{
-			return TxOk || TxFail || RxReady;
-		}
-
-		void Clear()
-		{
-			TxOk = false;
-			TxFail = false;
-			RxReady = false;
-		}
-	};
+	// Used to estimate Tx duration and Rx compensation.
+	const uint16_t TX_DELAY_MIN = NRF_TIMINGS[DataRate].TxDelayMin;
+	const uint16_t TX_DELAY_RANGE = NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
+	const uint16_t RX_DELAY_MIN = NRF_TIMINGS[DataRate].RxDelayMin;
+	const uint16_t RX_DELAY_RANGE = NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
 
 private:
 	RF24 Radio;
@@ -99,6 +66,8 @@ private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
 	void (*OnInterrupt)(void) = nullptr;
+
+	uint8_t RssiHistory = 0;
 
 private:
 	volatile bool InterruptTimestamp = 0;
@@ -153,6 +122,103 @@ public:
 	}
 
 public:
+	// ILoLaTransceiver overrides.
+	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
+	{
+		Listener = listener;
+
+		return Listener != nullptr;
+	}
+
+	virtual const bool Start() final
+	{
+		if (Listener != nullptr)
+		{
+			// Set pins again, in case Transceiver has been reset.
+			DisableInterrupt();
+			pinMode(InterruptPin, INPUT);
+			pinMode(CsPin, OUTPUT);
+			pinMode(CePin, OUTPUT);
+
+			// Radio driver handles CePin and CsPin setup.
+			if (!Radio.begin(CePin, CsPin))
+			{
+				return false;
+			}
+
+			// Ensure the IC is present.
+			if (!Radio.isChipConnected())
+			{
+				return false;
+			}
+
+			// LoLa already ensures integrity AND authenticity with its own MAC-CRC.
+			//Radio.setCRCLength(RF24_CRC_DISABLED);
+			//Radio.disableCRC();
+			// Rx is not working if no CRC is used.
+			Radio.setCRCLength(RF24_CRC_8);
+
+
+			// LoLa doesn't specify any data rate, this should be defined in the user Link Protocol.
+			if (!Radio.setDataRate(DataRate))
+			{
+				return false;
+			}
+
+			// LoLa requires no auto ack.
+			Radio.setAutoAck(false);
+			Radio.setRetries(0, 0);
+			Radio.disableAckPayload();
+
+			// Minimize total packet size to reduce on-air time.
+			Radio.enableDynamicPayloads();
+
+			// Set address witdh to minimum, as it is not required to distinguish between devices.
+			Radio.setAddressWidth(4);
+
+			// Interrupt approach requires no delays.
+			Radio.csDelay = 0;
+			Radio.txDelay = 0;
+
+			// Enable Tx and Rx interrupts. TxFail are disabled when Ack are disabled.
+			Radio.maskIRQ(false, true, false);
+
+			// Open radio pipes.
+			Radio.openReadingPipe(AddressPipe, HighEntropyShortAddress);
+			Radio.openWritingPipe(HighEntropyShortAddress);
+
+			// Initialize with low power level, let power manager adjust it after boot.
+			Radio.setPALevel(RF24_PA_MIN);
+
+			// Clear RSSI history.
+			RssiHistory = 0;
+
+			// Set random channel to start with.
+			Rx(0);
+			Task::enable();
+
+			// Start listening to IRQ.
+			EnableInterrupt();
+
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	virtual const bool Stop() final
+	{
+		Radio.stopListening();
+		Radio.closeReadingPipe(AddressPipe);
+		DisableInterrupt();
+		Task::disable();
+
+		return true;
+	}
+
+public:
 	virtual bool Callback() final
 	{
 		if (InterruptPending)
@@ -165,6 +231,7 @@ public:
 				if (TxPending)
 				{
 					TxPending = false;
+					Radio.flush_tx();
 					Listener->OnTx();
 				}
 #if defined(DEBUG_LOLA)
@@ -205,6 +272,12 @@ public:
 					Serial.print(F(": "));
 					Serial.println(F("Event Timeout."));
 #endif
+					Radio.whatHappened(Event.TxOk, Event.TxFail, Event.RxReady);
+					Radio.flush_rx();
+					Radio.flush_tx();
+					Radio.startListening();
+					Event.Clear();
+					TxPending = false;
 					InterruptPending = false;
 				}
 			}
@@ -251,12 +324,18 @@ public:
 
 				if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
 				{
-					// Copy packet from radio to InBuffer.
+					// Store 8 packet history of 1-bit RSSI. 
+					RssiHistory <<= 1;
+					if (Radio.testRPD())
+					{
+						RssiHistory |= 1; // Received power > -64 dBm.
+					}
+
+					// Read packet from radio to InBuffer.
 					Radio.read(InBuffer, packetSize);
 
-					// Radio has no RSSI measure, all reception is perfect reception.
-					// Rx Interrupt only occurs when packet has been fully received, the timestamp must be compensated with RxDelay.
-					Listener->OnRx(InBuffer, Event.Timestamp - GetRxDelay(packetSize), packetSize, UINT8_MAX);
+					// Rx Interrupt only occurs when packet has been fully received, so the timestamp must be compensated with RxDelay.
+					Listener->OnRx(InBuffer, Event.Timestamp - GetRxDelay(packetSize), packetSize, GetRxRssi());
 				}
 				else
 				{
@@ -285,96 +364,6 @@ public:
 		}
 	}
 
-public:
-	// ILoLaTransceiver overrides.
-	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
-	{
-		Listener = listener;
-
-		return Listener != nullptr;
-	}
-
-	virtual const bool Start() final
-	{
-		if (Listener != nullptr)
-		{
-			// Set pins again, in case Transceiver has been reset.
-			DisableInterrupt();
-			pinMode(InterruptPin, INPUT);
-			pinMode(CsPin, OUTPUT);
-			pinMode(CePin, OUTPUT);
-
-			// Radio driver handles CePin and CsPin setup.
-			if (!Radio.begin(CePin, CsPin))
-			{
-				return false;
-			}
-
-			// Ensure the IC is present.
-			if (!Radio.isChipConnected())
-			{
-				return false;
-			}
-
-			// LoLa already ensures integrity AND authenticity with its own MAC-CRC.
-			Radio.setCRCLength(RF24_CRC_DISABLED);
-			Radio.disableCRC();
-
-			// LoLa doesn't specify any data rate, this should be defined in the user Link Protocol.
-			if (!Radio.setDataRate(DataRate))
-			{
-				return false;
-			}
-
-			// LoLa requires no auto ack.
-			Radio.setAutoAck(false);
-			Radio.setRetries(0, 0);
-			Radio.disableAckPayload();
-
-			// Minimize total packet size to reduce on-air time.
-			Radio.enableDynamicPayloads();
-
-			// Set address witdh to minimum, as it is not required to distinguish between devices.
-			Radio.setAddressWidth(4);
-
-			// Interrupt approach requires no delays.
-			Radio.csDelay = 0;
-			Radio.txDelay = 0;
-
-			// Enable Tx and Rx interrupts. TxFail are disabled when Ack are disabled.
-			Radio.maskIRQ(false, true, false);
-
-			// Open radio pipes.
-			Radio.openReadingPipe(AddressPipe, BaseAddress);
-			Radio.openWritingPipe(BaseAddress);
-
-			// Initialize with low power level, let power manager adjust it after boot.
-			Radio.setPALevel(RF24_PA_MIN);
-
-			// Set random channel to start with.
-			Rx(0);
-			Task::enable();
-
-			// Start listening to IRQ.
-			EnableInterrupt();
-
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	virtual const bool Stop() final
-	{
-		Radio.stopListening();
-		Radio.closeReadingPipe(AddressPipe);
-		DisableInterrupt();
-		Task::disable();
-
-		return true;
-	}
 
 	/// <summary>
 	/// </summary>
@@ -382,7 +371,7 @@ public:
 	virtual const bool TxAvailable() final
 	{
 		//TODO: Check radio status.
-		return !TxPending && !InterruptPending;
+		return !TxPending && !InterruptPending && !Event.Pending();
 	}
 
 	/// <summary>
@@ -402,6 +391,7 @@ public:
 			digitalWrite(TX_TEST_PIN, LOW);
 #endif
 			Radio.stopListening();
+			Radio.setChannel(GetRealChannel(channel));
 
 			// Sending clears interrupt flags.
 			// Wait for on Sent interrupt.
@@ -409,6 +399,7 @@ public:
 			Event.TxOk = false;
 			Event.TxFail = false;
 			Task::enable();
+
 
 			// Transmit packet.
 			Radio.startFastWrite(data, packetSize, 0);
@@ -429,14 +420,19 @@ public:
 		Task::enable();
 	}
 
-	/// <summary>
-	/// </summary>
-	/// <param name="packetSize">Number of bytes in the packet.</param>
-	/// <returns>The expected transmission duration in microseconds.</returns>
-	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) final
+	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		//Measure Tx duration value.
 		return GetTxDelay(packetSize);
+	}
+
+	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
+	{
+		return GetRxDelay(packetSize);
+	}
+
+	virtual const uint16_t GetTimeToHop() final
+	{
+		return TX_DELAY_MIN;
 	}
 
 private:
@@ -455,7 +451,7 @@ private:
 	/// </summary>
 	/// <param name="abstractChannel">LoLa abstract channel [0;255].</param>
 	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
-	const uint8_t GetRealChannel(const uint8_t abstractChannel)
+	constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
 	{
 		return (abstractChannel % ChannelCount);
 	}
@@ -477,6 +473,66 @@ private:
 	const uint_least16_t GetTxDelay(const uint8_t packetSize)
 	{
 		return TX_DELAY_MIN + ((((uint32_t)TX_DELAY_RANGE) * packetSize) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+	}
+
+	/// <summary>
+	/// Turns packet history of 1-bit RSSI into absctract RSSI.
+	/// Uses history of the latest 3 packets' RSSI to get more precision.
+	/// </summary>
+	/// <returns>Abstract RSSI [0;255].</returns>
+	const uint8_t GetRxRssi()
+	{
+		// Check latest position first.
+		if (RssiHistory & (1))
+		{
+			if (RssiHistory & (1 << 2))
+			{
+				if (RssiHistory & (1 << 3))
+				{
+					return ((uint16_t)UINT8_MAX * 14) / 16;
+				}
+				else
+				{
+					return ((uint16_t)UINT8_MAX * 10) / 16;
+				}
+			}
+			else
+			{
+				if (RssiHistory & (1 << 3))
+				{
+					return ((uint16_t)UINT8_MAX * 6) / 16;
+				}
+				else
+				{
+					return ((uint16_t)UINT8_MAX * 2) / 16;
+				}
+			}
+		}
+		else
+		{
+			if (RssiHistory & (1 << 2))
+			{
+				if (RssiHistory & (1 << 3))
+				{
+					return ((uint16_t)UINT8_MAX * 7) / 16;
+				}
+				else
+				{
+					return ((uint16_t)UINT8_MAX * 5) / 16;
+				}
+			}
+			else
+			{
+				if (RssiHistory & (1 << 3))
+				{
+					return ((uint16_t)UINT8_MAX * 3) / 16;
+				}
+				else
+				{
+					return ((uint16_t)UINT8_MAX * 1) / 16;
+				}
+			}
+		}
 	}
 };
 #endif

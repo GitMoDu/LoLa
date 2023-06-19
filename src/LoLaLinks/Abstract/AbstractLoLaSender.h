@@ -109,7 +109,17 @@ protected:
 	{
 		return SendShortDurationMicros
 			+ ((SendVariableDurationMicros * payloadSize) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE)
-			+ Transceiver->GetTransmitDurationMicros(LoLaPacketDefinition::GetTotalSize(payloadSize));
+			+ Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(payloadSize));
+	}
+
+	const uint16_t GetOnAirDuration(const uint8_t payloadSize)
+	{
+		return Transceiver->GetDurationInAir(LoLaPacketDefinition::GetTotalSize(payloadSize));
+	}
+
+	const uint16_t GetHopDuration()
+	{
+		return Transceiver->GetTimeToHop();
 	}
 
 protected:

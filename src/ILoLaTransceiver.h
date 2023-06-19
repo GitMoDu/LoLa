@@ -16,7 +16,7 @@ public:
 	/// <param name="packetSize">Packet size.</param>
 	/// <param name="rssi">Normalized RX RSSI [0:255].</param>
 	/// <returns>True if packet was successfully consumed. False, try again later.</returns>
-	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) { return false;}
+	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) { return false; }
 
 	/// <summary>
 	/// Transceiver was receiveing a packet but couldn't read it or finish it.
@@ -81,13 +81,28 @@ public:
 	virtual void Rx(const uint8_t channel) { }
 
 	/// <summary>
-	/// How long does the driver estimate transmiting will take
-	///  from Tx to detected start from partner.
+	/// How long does the driver estimate transmiting will take from Tx request to start In-Air.
 	/// This includes memory copies and SPI transactions and pre-ambles,
 	///	 but does not include medium delay (ex: lightspeed) or internal transceiver processing. 
+	/// In microseconds.
 	/// </summary>
-	/// <param name="packetSize">Number of bytes in the packet.</param>
-	/// <returns>The expected transmission duration in microseconds.</returns>
-	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) { return 0; }
+	/// <param name="packetSize"></param>
+	/// <returns></returns>
+	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) { return 0; }
+
+	/// <summary>
+	/// How long does the driver estimate transmiting will take from start to end of In-Air.
+	/// In microseconds.
+	/// </summary>
+	/// <param name="packetSize"></param>
+	/// <returns></returns>
+	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) { return 0; }
+
+	/// <summary>
+	/// How until a hop request takes effect.
+	/// In microseconds.
+	/// </summary>
+	/// <returns></returns>
+	virtual const uint16_t GetTimeToHop() { return 0; }
 };
 #endif

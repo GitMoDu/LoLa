@@ -38,6 +38,8 @@ class AbstractLoLaLinkPacket
 private:
 	using BaseClass = AbstractLoLaReceiver<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
 
+	static constexpr uint8_t CALIBRATION_ROUNDS = 10;
+
 protected:
 	using BaseClass::LinkStage;
 	using BaseClass::SyncClock;
@@ -47,10 +49,14 @@ protected:
 
 	using BaseClass::RawInPacket;
 	using BaseClass::RawOutPacket;
+	using BaseClass::OutPacket;
 
 	using BaseClass::RegisterPacketReceiverInternal;
+	using BaseClass::SetSendCalibration;
 	using BaseClass::PostLinkState;
 	using BaseClass::GetSendDuration;
+	using BaseClass::GetOnAirDuration;
+	using BaseClass::GetHopDuration;
 
 protected:
 	/// <summary>
@@ -109,12 +115,47 @@ public:
 	{
 		if (RandomSource.Setup() &&
 			ChannelHopper != nullptr &&
-			ChannelHopper->Setup(this, &SyncClock, GetSendDuration(0)))
+			ChannelHopper->Setup(this, &SyncClock, GetHopDuration()) &&
+			GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) < LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS &&
+			(Duplex->GetRange() == IDuplex::DUPLEX_FULL ||
+				(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) < Duplex->GetRange())) &&
+			CalibrateSendDuration())
 		{
+#if defined(DEBUG_LOLA)
+			Serial.print(F("TRANSMIT_BASE_TIMEOUT: "));
+			Serial.println(LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS);
+
+			Serial.print(F("Duplex Range: "));
+			Serial.println(Duplex->GetRange());
+
+			Serial.print(F("Max Time-On-Air: "));
+			Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+			Serial.println();
+#endif
 			return BaseClass::Setup();
 		}
 		else
 		{
+#if defined(DEBUG_LOLA)
+			if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
+			{
+				Serial.println(F("Estimated Time-On-Air is longer than the duplex slot duration."));
+			}
+			if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)
+			{
+				Serial.println(F("Estimated Time-On-Air is longer than transmit timeout."));
+			}
+
+			Serial.print(F("TRANSMIT_BASE_TIMEOUT: "));
+			Serial.println(LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS);
+
+			Serial.print(F("Duplex Range: "));
+			Serial.println(Duplex->GetRange());
+
+			Serial.print(F("Max Time-On-Air: "));
+			Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+			Serial.println();
+#endif
 			return false;
 		}
 	}
@@ -153,7 +194,9 @@ public:
 			SyncClock.GetTimestamp(HopTimestamp);
 			HopTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
-			return Duplex->IsInSlot(HopTimestamp.GetRollingMicros());
+			const uint32_t startTimestamp = HopTimestamp.GetRollingMicros();
+
+			return Duplex->IsInRange(startTimestamp, startTimestamp + GetOnAirDuration(payloadSize));
 		}
 		else
 		{
@@ -224,6 +267,7 @@ protected:
 				PacketService.RefreshChannel();
 				break;
 			case LinkStageEnum::Linking:
+				Task::enable();
 				break;
 			case LinkStageEnum::Linked:
 				ChannelHopper->OnLinkStarted();
@@ -296,6 +340,94 @@ private:
 
 		// Add Token Index and return the mod of the result.
 		return FastHasher.smbus_upd((uint8_t*)&tokenIndex, sizeof(uint32_t));
+	}
+
+	/// <summary>
+	/// Calibrate CPU dependent durations.
+	/// </summary>
+	const bool CalibrateSendDuration()
+	{
+		uint32_t calibrationStart = micros();
+
+		// Measure short (baseline) packet first.
+		uint32_t start = 0;
+		uint32_t shortDuration = 0;
+		uint32_t longDuration = 0;
+
+		OutPacket.SetPort(123);
+		for (uint_least8_t i = 0; i < LoLaPacketDefinition::MAX_PAYLOAD_SIZE; i++)
+		{
+			OutPacket.Payload[i] = i + 1;
+		}
+
+		start = micros();
+		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			if (!BaseClass::MockSendPacket(OutPacket.Data, 0))
+			{
+				// Calibration failed.
+#if defined(DEBUG_LOLA)
+				Serial.print(F("Calibration failed on short test."));
+#endif
+				return false;
+			}
+		}
+		shortDuration = ((micros() - start) / CALIBRATION_ROUNDS);
+
+		start = micros();
+		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			if (!BaseClass::MockSendPacket(OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
+			{
+				// Calibration failed.
+#if defined(DEBUG_LOLA)
+				Serial.print(F("Calibration failed on long test."));
+#endif
+				return false;
+			}
+		}
+
+		longDuration = (micros() - start) / CALIBRATION_ROUNDS;
+
+		//const uint32_t scaleDuration = longDuration - shortDuration;
+
+		//// +1 to mitigate low bias by integer rounding.
+		//const uint32_t byteDurationMicros = (scaleDuration / (LoLaPacketDefinition::MAX_PAYLOAD_SIZE - LoLaPacketDefinition::PAYLOAD_INDEX)) + 1;
+
+		//// Remove the base bytes from the base duration,
+		//// as well as the remainder from (now) high-biased byte duration.
+		//const uint32_t baseDurationMicros = shortDuration
+		//	- (byteDurationMicros * LoLaPacketDefinition::PAYLOAD_INDEX)
+		//	- (scaleDuration % (LoLaPacketDefinition::MAX_PAYLOAD_SIZE - LoLaPacketDefinition::PAYLOAD_INDEX));
+
+		const uint32_t calibrationDuration = micros() - calibrationStart;
+
+#if defined(DEBUG_LOLA)
+		SetSendCalibration(shortDuration, longDuration);
+		Serial.println();
+		Serial.print(F("Calibration done. (max payload size"));
+		Serial.print(LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
+		Serial.println(')');
+		Serial.println(F("Short\tLong"));
+		Serial.print(shortDuration);
+		Serial.print('\t');
+		Serial.println(longDuration);
+		Serial.println();
+		Serial.println(F("Full estimation"));
+		Serial.println(F("Short\tLong"));
+		Serial.print(GetSendDuration(0));
+		Serial.print('\t');
+		Serial.println(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+		Serial.println();
+		Serial.print(F("Calibration ("));
+		Serial.print(CALIBRATION_ROUNDS);
+		Serial.print(F(" rounds) took "));
+		Serial.print(calibrationDuration);
+		Serial.println(F(" us"));
+		Serial.println();
+#endif
+
+		return SetSendCalibration(shortDuration, longDuration);
 	}
 };
 #endif

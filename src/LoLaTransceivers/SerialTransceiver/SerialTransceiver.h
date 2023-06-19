@@ -30,14 +30,17 @@ private:
 #else
 	static constexpr uint32_t TransmitDelayMicros = 6;
 #endif
+	static constexpr uint32_t TxSeparationPauseMicros = 100;
 
-	// TODO: Baudrate aware.
-	static constexpr uint32_t TxSeparationPauseMicros = 200;
-	static constexpr uint32_t RxWaitPauseMicros = 150;
+	static constexpr uint32_t ReferenceLong = 1645000;
+	static constexpr uint32_t ReferenceShort = 45000;
+	static constexpr uint8_t ReferenceBaudrate = 200;
 
-	// TODO: Baudrate and size aware?
-	static constexpr uint32_t RxTimeoutMicros = 800;
+	static constexpr uint16_t DurationShort = (uint16_t)((ReferenceShort * ReferenceBaudrate) / BaudRate);
+	static constexpr uint16_t DurationLong = (uint16_t)((ReferenceLong * ReferenceBaudrate) / BaudRate);
+	static constexpr uint16_t DurationRange = DurationLong - DurationShort;
 
+private:
 	enum TxStateEnum
 	{
 		NoTx,
@@ -61,6 +64,7 @@ private:
 
 private:
 	volatile uint32_t RxStartTimestamp = 0;
+	uint32_t TxStartTimestamp = 0;
 	uint32_t TxEndTimestamp = 0;
 
 	volatile RxStateEnum RxState = RxStateEnum::NoRx;
@@ -68,6 +72,7 @@ private:
 
 	uint8_t RxIndex = 0;
 	uint8_t RxSize = 0;
+	uint8_t TxSize = 0;
 
 private:
 	void (*OnRxInterrupt)(void) = nullptr;
@@ -127,15 +132,16 @@ public:
 				break;
 			case TxStateEnum::TxStart:
 				// Wait for Tx buffer to be completely free.
-				if (IO->availableForWrite() >= TxBufferSize - 1)
+				if (((micros() - TxStartTimestamp) > GetTimeToAir(TxSize)) &&
+					(IO->availableForWrite() >= (TxBufferSize - 1)))
 				{
 					TxEndTimestamp = micros();
 					TxState = TxStateEnum::TxEnd;
 				}
 				break;
 			case TxStateEnum::TxEnd:
-				// Brief pause at the end, to clearly separate packets.
-				if (micros() - TxEndTimestamp > TxSeparationPauseMicros)
+				// TxSeparationPauseMicros at the end, to clearly separate packets.
+				if (micros() - TxStartTimestamp > (GetTimeToAir(TxSize) + GetDurationInAir(TxSize)))
 				{
 					Listener->OnTx();
 					TxState = TxStateEnum::NoTx;
@@ -150,7 +156,7 @@ public:
 			case RxStateEnum::NoRx:
 				break;
 			case RxStateEnum::RxStart:
-				if (micros() - RxStartTimestamp > RxWaitPauseMicros)
+				if (micros() - RxStartTimestamp > GetDurationInAir(1))
 				{
 					if (IO->available())
 					{
@@ -187,7 +193,7 @@ public:
 					Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
 					ClearRx();
 				}
-				else if (micros() - RxStartTimestamp > RxTimeoutMicros)
+				else if (micros() - RxStartTimestamp > DurationLong)
 				{
 					Listener->OnRxLost(RxStartTimestamp);
 					ClearRx();
@@ -279,9 +285,11 @@ public:
 			digitalWrite(TX_TEST_PIN, HIGH);
 			digitalWrite(TX_TEST_PIN, LOW);
 #endif
+			TxStartTimestamp = micros();
 			if (IO->write(&packetSize, 1) == 1
 				&& IO->write(data, packetSize) == packetSize)
 			{
+				TxSize = packetSize;
 				TxState = TxStateEnum::TxStart;
 				Task::enable();
 
@@ -297,7 +305,9 @@ public:
 	/// </summary>
 	/// <param name="channel"></param>
 	virtual void Rx(const uint8_t channel) final
-	{}
+	{
+		//TODO: Clear TX/RX buffers.
+	}
 
 	/// <summary>
 	/// Serial will start outputing as soon as the first byte is pushed.
@@ -305,9 +315,20 @@ public:
 	/// </summary>
 	/// <param name="packetSize">Number of bytes in the packet.</param>
 	/// <returns>The expected transmission duration in microseconds.</returns>
-	virtual const uint32_t GetTransmitDurationMicros(const uint8_t packetSize) final
+	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
 		return TransmitDelayMicros;
+	}
+
+	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
+	{
+		// +1 packet size for Size byte.
+		return (uint32_t)DurationShort + (((uint32_t)DurationRange * (packetSize + 1)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+	}
+
+	virtual const uint16_t GetTimeToHop() final
+	{
+		return 1;
 	}
 
 private:

@@ -207,7 +207,7 @@ public:
 		if ((size > 0 && channel == 0) || (size >= 0))
 		{
 			// Mock Transceiver call.
-			if (((Transceiver->GetTransmitDurationMicros(size) > 0)))
+			if (((Transceiver->GetTimeToAir(size) > 0)))
 			{
 				return true;
 			}
