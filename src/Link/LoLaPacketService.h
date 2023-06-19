@@ -51,7 +51,7 @@ private:
 	volatile StateEnum State = StateEnum::Done;
 
 public:
-	ILoLaTransceiver* Transceiver = nullptr;
+	ILoLaTransceiver* Transceiver;
 
 public:
 	LoLaPacketService(Scheduler& scheduler,
@@ -59,8 +59,8 @@ public:
 		ILoLaTransceiver* transceiver,
 		uint8_t* rawInPacket,
 		uint8_t* rawOutPacket)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILoLaTransceiverListener()
+		: ILoLaTransceiverListener()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, ServiceListener(serviceListener)
 		, RawInPacket(rawInPacket)
 		, RawOutPacket(rawOutPacket)
@@ -88,7 +88,6 @@ public:
 			State = StateEnum::Done;
 			Task::enable();
 			ServiceListener->OnSendComplete(SendResultEnum::Success);
-
 			break;
 		case StateEnum::Sending:
 			if (micros() - SendOutTimestamp > LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)

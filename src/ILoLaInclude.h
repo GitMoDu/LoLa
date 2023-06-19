@@ -59,7 +59,7 @@
 #pragma endregion
 
 
-#pragma	region Available Link modules
+#pragma	region Available Link Modules
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkServer.h"
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkClient.h"
 //#include "LoLaLinkLight\LoLaLinkLight.h"

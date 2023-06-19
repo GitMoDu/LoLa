@@ -75,8 +75,8 @@ private:
 
 public:
 	SerialTransceiver(Scheduler& scheduler, SerialType* io)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILoLaTransceiver()
+		: ILoLaTransceiver()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, IO(io)
 	{
 #ifdef RX_TEST_PIN

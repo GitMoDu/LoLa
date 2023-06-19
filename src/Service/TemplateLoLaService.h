@@ -67,8 +67,8 @@ public:
 
 public:
 	TemplateLoLaService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILinkPacketListener()
+		: ILinkPacketListener()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, LoLaLink(loLaLink)
 	{
 		SetSendRequestTimeout(sendRequestTimeout);

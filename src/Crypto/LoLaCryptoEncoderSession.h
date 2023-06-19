@@ -28,8 +28,8 @@ public:
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	LoLaCryptoEncoderSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey, const uint8_t* accessPassword)
 		: LoLaCryptoSession(expandedKey, accessPassword)
-		, CryptoHasher()
 		, CryptoCypher(LoLaCryptoDefinition::CYPHER_ROUNDS)
+		, CryptoHasher()
 	{
 		// Set tag zero values, above the tag size.
 		for (uint_fast8_t i = LoLaCryptoDefinition::CYPHER_TAG_SIZE; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)

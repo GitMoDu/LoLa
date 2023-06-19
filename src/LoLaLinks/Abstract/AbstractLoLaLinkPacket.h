@@ -85,16 +85,17 @@ public:
 		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
-		IDuplex* duplex, 
+		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
-		, IChannelHop::IHopListener()
+		: IChannelHop::IHopListener()
+		, BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
+		, ExpandedKey()
+		, RandomSource(entropySource)
+		, FastHasher()
 		, Duplex(duplex)
 		, ChannelHopper(hop)
-		, IsLinkHopper(hop->IsHopper())
-		, FastHasher()
-		, RandomSource(entropySource)
 		, HopTimestamp()
+		, IsLinkHopper(hop->IsHopper())
 	{}
 
 #if defined(DEBUG_LOLA)

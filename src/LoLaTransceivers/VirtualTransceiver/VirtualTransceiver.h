@@ -79,9 +79,9 @@ private:
 
 public:
 	VirtualTransceiver(Scheduler& scheduler)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		: IVirtualTransceiver()
 		, ILoLaTransceiver()
-		, IVirtualTransceiver()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
 	}
 

@@ -29,9 +29,9 @@ private:
 
 public:
 	ArduinoTaskTimerClockSource(Scheduler& scheduler)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, IClockSource()
+		: IClockSource()
 		, ITimerSource()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{}
 
 public:

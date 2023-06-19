@@ -14,10 +14,9 @@
 class LoLaRandom
 {
 private:
-	PCG::pcg32_random_t Rng;
-
-
 	IEntropySource* EntropySource; // Entropy source for CSPRNG.
+	
+	PCG::pcg32_random_t Rng;
 
 public:
 	LoLaRandom(IEntropySource* entropySource)

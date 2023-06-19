@@ -42,8 +42,8 @@ private:
 public:
 	SynchronizedClock(IClockSource* clockSource, ITimerSource* timerSource)
 		: IClockSource::IClockListener()
-		, ClockSource(clockSource)
 		, TimerSource(timerSource)
+		, ClockSource(clockSource)
 		, ClockHasTick(ClockSource->ClockHasTick())
 	{}
 

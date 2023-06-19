@@ -109,8 +109,8 @@ private:
 
 public:
 	nRF24Transceiver(Scheduler& scheduler)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILoLaTransceiver()
+		: ILoLaTransceiver()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, Radio(CePin, CsPin)
 		, Event()
 	{

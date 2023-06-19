@@ -18,8 +18,8 @@ private:
 
 public:
 	AbstractClockSource(Scheduler& scheduler) 
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, IClockSource()
+		: IClockSource()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
 	}
 

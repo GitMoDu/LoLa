@@ -56,8 +56,8 @@ private:
 
 public:
 	TimedChannelHopper(Scheduler& scheduler)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, IChannelHop()
+		: IChannelHop()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
 #if defined(HOP_TEST_PIN)
 		digitalWrite(HOP_TEST_PIN, LOW);
@@ -120,8 +120,6 @@ public:
 		Task::disable();
 	}
 #pragma endregion
-
-
 
 	virtual bool Callback() final
 	{

@@ -52,7 +52,6 @@ protected:
 	ILinkListener* LinkListeners[MaxLinkListeners]{};
 	uint8_t LinkListenersCount = 0;
 
-
 	// Packet service instance, templated to max packet size and reference low latency timeouts.
 	LoLaPacketService<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> PacketService;
 
@@ -88,14 +87,14 @@ public:
 		ILoLaTransceiver* transceiver,
 		IClockSource* clockSource,
 		ITimerSource* timerSource)
-		: BaseClass(scheduler, this)
-		, ILoLaLink()
+		: ILoLaLink()
 		, IPacketServiceListener()
+		, BaseClass(scheduler, this)
 		, LinkPacketServiceListeners()
-		, Encoder(encoder)
-		, Transceiver(transceiver)
-		, SyncClock(clockSource, timerSource)
 		, PacketService(scheduler, this, transceiver, RawInPacket, RawOutPacket)
+		, Transceiver(transceiver)
+		, Encoder(encoder)
+		, SyncClock(clockSource, timerSource)
 	{}
 
 	virtual const bool Setup()

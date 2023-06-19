@@ -33,11 +33,12 @@ private:
 
 public:
 	TestTask(Scheduler& scheduler, ILoLaLink* host, ILoLaLink* remote)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, ILinkPacketListener()
+		: ILinkPacketListener()
 		, ILinkListener()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, Server(host)
 		, Client(remote)
+		, OutData()
 	{
 		LastPing = millis();
 	}
