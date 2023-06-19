@@ -10,19 +10,6 @@
 #include <ILoLaInclude.h>
 #include "Tests.h"
 
-#define TEST_PIN_0 15
-#define TEST_PIN_1 16
-#define TEST_PIN_2 17
-#define TEST_PIN_3 18
-#define TEST_PIN_4 19
-#define TEST_PIN_5 20
-#define TEST_PIN_6 6
-#define TEST_PIN_7 7
-
-#define SCHEDULER_TEST_PIN TEST_PIN_0
-#define SLEEP_TEST_PIN TEST_PIN_1
-
-
 Scheduler SchedulerBase;
 
 static constexpr uint32_t CHANNEL_HOP_PERIOD_MICROS = 50000;
@@ -36,14 +23,14 @@ TimedChannelHopper<CHANNEL_HOP_PERIOD_MICROS> ChannelHop(SchedulerBase);
 
 
 FullDuplex DuplexFull;
-HalfDuplex<DUPLEX_PERIOD_MICROS, false> DuplexSymmetricalA;
-HalfDuplex<DUPLEX_PERIOD_MICROS, true> DuplexSymmetricalB;
-HalfDuplexAsymmetric< DUPLEX_PERIOD_MICROS, UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO, false> DuplexAssymmetricalA;
-HalfDuplexAsymmetric< DUPLEX_PERIOD_MICROS, UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO, true> DuplexAssymmetricalB;
+HalfDuplex<DUPLEX_PERIOD_MICROS, false, 0> DuplexSymmetricalA;
+HalfDuplex<DUPLEX_PERIOD_MICROS, true, 0> DuplexSymmetricalB;
+HalfDuplexAsymmetric< DUPLEX_PERIOD_MICROS, UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO, false, 0> DuplexAssymmetricalA;
+HalfDuplexAsymmetric< DUPLEX_PERIOD_MICROS, UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO, true, 0> DuplexAssymmetricalB;
 
-SlottedDuplex<DUPLEX_PERIOD_MICROS> DuplexSlottedA;
-SlottedDuplex<DUPLEX_PERIOD_MICROS> DuplexSlottedB;
-SlottedDuplex<DUPLEX_PERIOD_MICROS> DuplexSlottedC;
+SlottedDuplex<DUPLEX_PERIOD_MICROS, 0> DuplexSlottedA;
+SlottedDuplex<DUPLEX_PERIOD_MICROS, 0> DuplexSlottedB;
+SlottedDuplex<DUPLEX_PERIOD_MICROS, 0> DuplexSlottedC;
 
 void Halt()
 {
@@ -56,16 +43,6 @@ void Halt()
 
 void setup()
 {
-#ifdef SCHEDULER_TEST_PIN
-	digitalWrite(SCHEDULER_TEST_PIN, LOW);
-	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
-#endif
-
-#ifdef SLEEP_TEST_PIN
-	digitalWrite(SLEEP_TEST_PIN, LOW);
-	pinMode(SLEEP_TEST_PIN, OUTPUT);
-#endif
-
 	Serial.begin(SERIAL_BAUD_RATE);
 	while (!Serial)
 		;
@@ -126,15 +103,8 @@ const bool PerformUnitTests()
 
 void loop()
 {
-#ifdef SCHEDULER_TEST_PIN
-	digitalWrite(SCHEDULER_TEST_PIN, HIGH);
-#endif
-	SchedulerBase.execute();
-#ifdef SCHEDULER_TEST_PIN
-	digitalWrite(SCHEDULER_TEST_PIN, LOW);
-#endif
+	//SchedulerBase.execute();
 }
-
 
 const bool TestHopperTypes()
 {
@@ -168,14 +138,19 @@ const bool TestHopperTypes()
 
 const bool TestDuplexes()
 {
-	if (!TestDuplex<true, 0, 0, DUPLEX_PERIOD_MICROS * 2>(&DuplexFull)) { return false; }
+	if (!TestDuplex<true, 0, 0, DUPLEX_PERIOD_MICROS, 0>(&DuplexFull)) { return false; }
+	if (!TestDuplex<true, 0, 0, (DUPLEX_PERIOD_MICROS), 100>(&DuplexFull)) { return false; }
 
-	if (!TestDuplex<false, 0, DUPLEX_PERIOD_MICROS / 2, DUPLEX_PERIOD_MICROS>(&DuplexSymmetricalA)) { return false; }
-	if (!TestDuplex<false, DUPLEX_PERIOD_MICROS / 2, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS>(&DuplexSymmetricalB)) { return false; }
+	if (!TestDuplex<false, 0, DUPLEX_PERIOD_MICROS / 2, DUPLEX_PERIOD_MICROS, 0>(&DuplexSymmetricalA)) { return false; }
+	if (!TestDuplex<false, 0, (DUPLEX_PERIOD_MICROS / 2), DUPLEX_PERIOD_MICROS, 200>(&DuplexSymmetricalA)) { return false; }
+	if (!TestDuplex<false, DUPLEX_PERIOD_MICROS / 2, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 0>(&DuplexSymmetricalB)) { return false; }
+	if (!TestDuplex<false, (DUPLEX_PERIOD_MICROS / 2), DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 1333>(&DuplexSymmetricalB)) { return false; }
 
 
-	if (!TestDuplex<false, 0, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS>(&DuplexAssymmetricalA)) { return false; }
-	if (!TestDuplex<false, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS>(&DuplexAssymmetricalB)) { return false; }
+	if (!TestDuplex<false, 0, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, 0>(&DuplexAssymmetricalA)) { return false; }
+	if (!TestDuplex<false, 0, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, 100>(&DuplexAssymmetricalA)) { return false; }
+	if (!TestDuplex<false, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 0>(&DuplexAssymmetricalB)) { return false; }
+	if (!TestDuplex<false, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 100>(&DuplexAssymmetricalB)) { return false; }
 
 	if (!DuplexSlottedA.SetTotalSlots(3)
 		|| !DuplexSlottedB.SetTotalSlots(3)
@@ -193,9 +168,12 @@ const bool TestDuplexes()
 		return false;
 	}
 
-	if (!TestDuplex<false, 0, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS>(&DuplexSlottedA)) { return false; }
-	if (!TestDuplex<false, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS>(&DuplexSlottedB)) { return false; }
-	if (!TestDuplex<false, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS>(&DuplexSlottedC)) { return false; }
+	if (!TestDuplex<false, 0, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 0 >(&DuplexSlottedA)) { return false; }
+	if (!TestDuplex<false, 0, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS, 2555>(&DuplexSlottedA)) { return false; }
+	if (!TestDuplex<false, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 0>(&DuplexSlottedB)) { return false; }
+	if (!TestDuplex<false, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 450>(&DuplexSlottedB)) { return false; }
+	if (!TestDuplex<false, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 0>(&DuplexSlottedC)) { return false; }
+	if (!TestDuplex<false, (((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 4202>(&DuplexSlottedC)) { return false; }
 
 	return true;
 }

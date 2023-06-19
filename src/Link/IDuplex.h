@@ -11,17 +11,26 @@
 class IDuplex
 {
 public:
+	static const uint32_t DUPLEX_FULL = 0;
+
+public:
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="startTimestamp"></param>
+	/// <param name="endTimestamp"></param>
+	/// <returns>True when the duplex is in transmission range, for the given start end duration.</returns>
+	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) { return false; }
+
 	/// <summary>
 	/// </summary>
-	/// <param name="timestamp"></param>
-	/// <returns>True when the duplex is in transmission slot, for the given timestamp</returns>
-	virtual const bool IsInSlot(const uint32_t timestamp) { return false; }
-
+	/// <returns>DUPLEX_FULL if full duplex; usable range in microseconds otherwise.</returns>
+	virtual const uint32_t GetRange() { return DUPLEX_FULL; }
 
 	/// <summary>
 	/// </summary>
 	/// <param name="timestamp"></param>
 	/// <returns>True when there is no duplex, helps to optimize linking.</returns>
-	virtual const bool IsFullDuplex() { return false; }
+	//virtual const bool IsFullDuplex() { return false; }
 };
 #endif

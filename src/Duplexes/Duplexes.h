@@ -13,14 +13,14 @@
 class FullDuplex : public virtual IDuplex
 {
 public:
-	virtual const bool IsInSlot(const uint32_t timestamp) final
+	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) final
 	{
 		return true;
 	}
 
-	virtual const bool IsFullDuplex() final
+	virtual const uint32_t GetRange() final
 	{
-		return true;
+		return DUPLEX_FULL;
 	}
 };
 
@@ -30,10 +30,11 @@ public:
 /// </summary>
 /// <typeparam name="DuplexPeriodMicros">[2;65535]</typeparam>
 /// <typeparam name="IsOddSlot">First or Second half of duplex.</typeparam>
+/// <typeparam name="DeadZoneMicros"></typeparam>
 template<const uint16_t DuplexPeriodMicros,
 	const uint16_t SwitchOver,
 	const bool IsOddSlot,
-	const uint32_t DeadZoneMicros = 0>
+	const uint16_t DeadZoneMicros = 0>
 class TemplateHalfDuplex : public IDuplex
 {
 public:
@@ -41,24 +42,30 @@ public:
 	{}
 
 public:
-	virtual const bool IsInSlot(const uint32_t timestamp) final
+	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) final
 	{
-		const uint16_t remainder = timestamp % DuplexPeriodMicros;
+		const uint_least16_t startRemainder = startTimestamp % DuplexPeriodMicros;
+		const uint_least16_t endRemainder = endTimestamp % DuplexPeriodMicros;
 
-		// Check if remainder is before or after the switchover time.
 		if (IsOddSlot)
 		{
-			return (remainder >= SwitchOver + DeadZoneMicros) && (remainder < DuplexPeriodMicros - DeadZoneMicros);
+			return (startRemainder >= (SwitchOver + DeadZoneMicros)) &&
+				(startRemainder < (DuplexPeriodMicros - DeadZoneMicros)) &&
+				(endRemainder >= (SwitchOver + DeadZoneMicros)) &&
+				(endRemainder < (DuplexPeriodMicros - DeadZoneMicros));
 		}
 		else
 		{
-			return (remainder <= SwitchOver - DeadZoneMicros) && (remainder > DeadZoneMicros);
+			return (startRemainder >= DeadZoneMicros) &&
+				(startRemainder < (SwitchOver - DeadZoneMicros)) &&
+				(endRemainder >= DeadZoneMicros) &&
+				(endRemainder < (SwitchOver - DeadZoneMicros));
 		}
 	}
 
-	virtual const bool IsFullDuplex() final
+	virtual const uint32_t GetRange() final
 	{
-		return false;
+		return SwitchOver - (2 * DeadZoneMicros);
 	}
 };
 
@@ -68,9 +75,10 @@ public:
 /// </summary>
 /// <typeparam name="DuplexPeriodMicros">[2;65535]</typeparam>
 /// <typeparam name="IsOddSlot">First or Second half of duplex.</typeparam>
+/// <typeparam name="DeadZoneMicros"></typeparam>
 template<const uint16_t DuplexPeriodMicros,
 	const bool IsOddSlot,
-	const uint32_t DeadZoneMicros = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE>
+	const uint16_t DeadZoneMicros = 0>
 class HalfDuplex : public TemplateHalfDuplex<
 	DuplexPeriodMicros,
 	DuplexPeriodMicros / 2,
@@ -87,14 +95,15 @@ class HalfDuplex : public TemplateHalfDuplex<
 /// <typeparam name="DuplexPeriodMicros"></typeparam>
 /// <typeparam name="LongSlotRatio"></typeparam>
 /// <typeparam name="IsLongSlot"></typeparam>
+/// <typeparam name="DeadZoneMicros"></typeparam>
 template<const uint16_t DuplexPeriodMicros,
 	const uint8_t LongSlotRatio,
 	const bool IsLongSlot,
-	const uint32_t DeadZoneMicros = 0>
+	const uint16_t DeadZoneMicros = 0>
 class HalfDuplexAsymmetric : public TemplateHalfDuplex<
 	DuplexPeriodMicros,
 	((uint32_t)LongSlotRatio* DuplexPeriodMicros) / UINT8_MAX,
-	IsLongSlot, 
+	IsLongSlot,
 	DeadZoneMicros>
 {};
 
@@ -105,7 +114,9 @@ class HalfDuplexAsymmetric : public TemplateHalfDuplex<
 /// Suitable for WAN applications.
 /// </summary>
 /// <typeparam name="DuplexPeriodMicros"></typeparam>
-template<const uint16_t DuplexPeriodMicros>
+/// <typeparam name="DeadZoneMicros"></typeparam>
+template<const uint16_t DuplexPeriodMicros,
+	const uint16_t DeadZoneMicros = 0>
 class SlottedDuplex : public virtual IDuplex
 {
 private:
@@ -121,6 +132,9 @@ public:
 		if (slots > 0)
 		{
 			Slots = slots;
+
+			UpdateTimings();
+
 			return true;
 		}
 		else
@@ -131,25 +145,50 @@ public:
 
 	const bool SetSlot(const uint8_t slot)
 	{
-		Slot = slot;
-		return slot < Slots;
+		if (slot < Slots)
+		{
+			Slot = slot;
+			UpdateTimings();
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 public:
-	virtual const bool IsInSlot(const uint32_t timestamp) final
+	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) final
 	{
-		const uint16_t remainder = timestamp % DuplexPeriodMicros;
+		const uint_least16_t startRemainder = startTimestamp % DuplexPeriodMicros;
+		const uint_least16_t endRemainder = endTimestamp % DuplexPeriodMicros;
 
-		const uint16_t start = ((uint32_t)Slot * DuplexPeriodMicros) / Slots;
-
-		const uint16_t end = ((uint32_t)(Slot + 1) * DuplexPeriodMicros) / Slots;
-
-		return remainder >= start && remainder < end;
+		return (startRemainder >= (Start + DeadZoneMicros)) &&
+			(startRemainder < (End - DeadZoneMicros)) &&
+			(endRemainder >= (Start + DeadZoneMicros)) &&
+			(endRemainder < (End - DeadZoneMicros));
 	}
 
 	virtual const bool IsFullDuplex() final
 	{
 		return false;
 	}
+
+private:
+	uint_least16_t Start = 0;
+	uint_least16_t End = DuplexPeriodMicros / Slots;
+
+	void UpdateTimings()
+	{
+		Start = ((uint32_t)Slot * DuplexPeriodMicros) / Slots;
+		End = ((uint32_t)(Slot + 1) * DuplexPeriodMicros) / Slots;
+	}
+
+	virtual const uint32_t GetRange() final
+	{
+		return DuplexPeriodMicros / Slots - (2 * DuplexPeriodMicros);
+	}
 };
+
+
 #endif
