@@ -150,15 +150,15 @@ public:
 
 	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
-		const uint32_t timestamp = micros();
 #if defined(PRINT_TEST_PACKETS)
+		const uint32_t timestamp = micros();
 		PrintTag('C');
 		//Serial.print(port);
 		//Serial.print(payloadSize);
 
 
 		Serial.print(F("Received ("));
-		//Serial.print(startTimestamp);
+		Serial.print(startTimestamp);
 		Serial.print(')');
 		//Serial.print('|');
 		//Serial.print(payloadSize);

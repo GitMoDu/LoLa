@@ -25,21 +25,16 @@
 #define TEST_PIN_1 16
 #define TEST_PIN_2 17
 #define TEST_PIN_3 18
-#define TEST_PIN_4 19
-#define TEST_PIN_5 20
-#define TEST_PIN_6 6
-#define TEST_PIN_7 7
+//#define TEST_PIN_4 19
 
 #define SCHEDULER_TEST_PIN TEST_PIN_0
 
 #define HOP_TEST_PIN TEST_PIN_3
-#define HOP_TEST_PIN_2 TEST_PIN_4
 
 #define TX_SERVER_TEST_PIN TEST_PIN_1
 #define TX_CLIENT_TEST_PIN TEST_PIN_2
 #else
 #define HOP_TEST_PIN 0
-#define HOP_TEST_PIN_2 0
 #define TX_SERVER_TEST_PIN 0
 #define TX_CLIENT_TEST_PIN 0
 #endif
@@ -98,12 +93,11 @@ static const uint8_t ClientPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 
 static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x9E,0x78,0xBA,0x67,0xEA,0x57,0xA9,0xBD,0x4E,0x1A,0x35,0xFB,0xD3,0xA7,0x19,0x29,0x55,0xB9,0xA1,0x3A };
 //
 
-
-
 // Test Virtual Packet Driver configurations.
-using FastGHzRadio = IVirtualTransceiver::Configuration<125, 25, 100, 10, 50, 10>;
-using TypicalSubGHzRadio = IVirtualTransceiver::Configuration<25, 50, 250, 20, 250, 20>;
-using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 100, 500, 50, 400, 50>;
+// <ChannelCount, TxBaseMicros, TxByteNanos, RxBaseMicros, RxByteNanos, HopMicros>
+using FastGHzRadio = IVirtualTransceiver::Configuration<125, 25, 100, 10, 50, 100>;
+using TypicalSubGHzRadio = IVirtualTransceiver::Configuration<25, 50, 250, 100, 250, 50>;
+using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 1000, 250, 1000, 250, 200>;
 using IdealRadio = IVirtualTransceiver::Configuration<1, 1, 1, 1, 1, 1>;
 
 // Used Virtual Driver Configuration.
@@ -151,7 +145,7 @@ ITimerSource* ClientTimer = &ClientTimerSource;
 
 #if defined(LINK_USE_CHANNEL_HOP)
 TimedChannelHopper<ChannelHopPeriod> ServerChannelHop(SchedulerBase);
-TimedChannelHopper<ChannelHopPeriod, HOP_TEST_PIN, HOP_TEST_PIN_2> ClientChannelHop(SchedulerBase);
+TimedChannelHopper<ChannelHopPeriod> ClientChannelHop(SchedulerBase);
 #else
 NoHopNoChannel ServerChannelHop;
 NoHopNoChannel ClientChannelHop;
