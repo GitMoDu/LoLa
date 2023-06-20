@@ -24,10 +24,12 @@
 #define TEST_PIN_0 15
 #define TEST_PIN_1 16
 #define TEST_PIN_2 17
+#define TEST_PIN_3 18
 
 #define SCHEDULER_TEST_PIN TEST_PIN_0
 #define RX_TEST_PIN TEST_PIN_1
 #define TX_TEST_PIN TEST_PIN_2
+#define HOP_TEST_PIN TEST_PIN_3
 #endif
 
 
@@ -89,7 +91,7 @@ nRF24Transceiver<NRF21_TRANSCEIVER_PIN_CE, NRF21_TRANSCEIVER_PIN_CS, NRF21_TRANS
 //
 
 // Test Task.
-TransmitReceiveTester TestTask(SchedulerBase, &TransceiverDriver);
+TransmitReceiveTester<true> TestTask(SchedulerBase, &TransceiverDriver);
 
 
 void BootError()

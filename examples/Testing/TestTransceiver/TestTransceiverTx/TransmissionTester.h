@@ -23,16 +23,15 @@ private:
 	// Selected Driver for test.
 	ILoLaTransceiver* Transceiver;
 
-	uint32_t LastSentMicros = 0;
-
 	uint32_t TxStarTimestamp = 0;
 
+	bool TxActive = false;
 
 public:
 	TransmissionTester(Scheduler& scheduler, ILoLaTransceiver* transceiver)
-		: Task(SendPeriodMillis, TASK_FOREVER, &scheduler, true)
+		: ILoLaTransceiverListener()
+		, Task(SendPeriodMillis, TASK_FOREVER, &scheduler, true)
 		, Transceiver(transceiver)
-		, ILoLaTransceiverListener()
 	{
 		if (TxActivePin > 0)
 		{
@@ -47,7 +46,12 @@ public:
 			TestPacket[i] = i;
 		}
 
-		return Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start();
+		if (Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start())
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	// ILoLaTransceiverListener overrides
@@ -67,6 +71,7 @@ public:
 		{
 			digitalWrite(TxActivePin, LOW);
 		}
+		TxActive = false;
 		const uint32_t endTimestamp = micros();
 
 		Serial.print(F("OnTx. Took "));
@@ -77,7 +82,10 @@ public:
 public:
 	virtual bool Callback() final
 	{
-		if (Transceiver->TxAvailable())
+		const uint32_t timestamp = millis();
+
+		if (!TxActive &&
+			Transceiver->TxAvailable())
 		{
 			TxStarTimestamp = micros();
 
@@ -86,21 +94,25 @@ public:
 				digitalWrite(TxActivePin, HIGH);
 			}
 
+			Serial.println(F("Tx..."));
 			if (Transceiver->Tx(TestPacket, TestPacketSize, 0))
 			{
-				/*			Serial.print(F("Tx ("));
-							Serial.print(TestPacketSize);
-							Serial.println(F(") bytes."));*/
+				TxActive = true;
+				TestPacket[0]++;
+
+				Serial.print(F("Tx ("));
+				Serial.print(TestPacketSize);
+				Serial.println(F(") bytes."));
 			}
 			else
 			{
 				Serial.println(F("Tx Failed."));
 			}
-
-			//if (TxActivePin > 0)
-			//{
-			//	digitalWrite(TxActivePin, LOW);
-			//}
+		}
+		else
+		{
+			Serial.println(F("Tx not available"));
+			Task::delay(1000);
 		}
 
 		return true;

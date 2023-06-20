@@ -18,8 +18,8 @@ private:
 
 public:
 	ReceptionTester(ILoLaTransceiver* transceiver)
-		: Transceiver(transceiver)
-		, ILoLaTransceiverListener()
+		: ILoLaTransceiverListener()
+		, Transceiver(transceiver)
 	{
 	}
 
@@ -30,7 +30,13 @@ public:
 			TestPacket[i] = i;
 		}
 
-		return Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start();
+		if (Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start())
+		{
+			Transceiver->Rx(0);
+			return true;
+		}
+
+		return false;
 	}
 
 	// ILoLaTransceiverListener overrides
