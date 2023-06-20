@@ -152,7 +152,7 @@ public:
 	/// <summary>
 	/// How long to wait before timing out an ACK reply.
 	/// </summary>
-	static constexpr uint32_t REPLY_BASE_TIMEOUT_MICROS = (TRANSMIT_BASE_TIMEOUT_MICROS * 2) + 5000;
+	static constexpr uint32_t REPLY_BASE_TIMEOUT_MICROS = 10000;
 
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.
