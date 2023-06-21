@@ -68,7 +68,7 @@ public:
 		return SendRequested;
 	}
 
-	const bool IsReportNeeded(const uint32_t timestamp, const uint32_t elapsedSinceLastValidReceived)
+	const bool CheckReportNeeded(const uint32_t timestamp, const uint32_t elapsedSinceLastValidReceived)
 	{
 		if (!SendRequested)
 		{

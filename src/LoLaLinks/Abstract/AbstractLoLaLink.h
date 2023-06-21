@@ -52,7 +52,7 @@ protected:
 
 private:
 	/// <summary>
-	/// Slow value, let the main services hog the CPU.
+	/// Slow value, let the main services hog the CPU during Link time.
 	/// </summary>
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
@@ -300,12 +300,12 @@ protected:
 			}
 			else if (CheckForReportUpdate())
 			{
-				// Sending report packet.
 				// Report takes priority over clock, as it refers to counters and RSSI.
+				Task::enableIfNot();
 			}
 			else if (CheckForClockSyncUpdate())
 			{
-				// Sending clock sync packet.
+				Task::enableIfNot();
 			}
 			else
 			{
@@ -383,12 +383,12 @@ protected:
 
 	}
 
-protected:
+private:
 	/// <summary>
 	/// Sends update Report, if needed.
 	/// </summary>
 	/// <returns>True if a report update is due or pending to send.</returns>
-	virtual const bool CheckForReportUpdate() final
+	const bool CheckForReportUpdate()
 	{
 		const uint32_t timestamp = millis();
 		if (ReportTracking.IsSendRequested())
@@ -404,13 +404,12 @@ protected:
 				if (RequestSendPacket(Linked::ReportUpdate::PAYLOAD_SIZE))
 				{
 					ReportTracking.OnReportSent(timestamp);
-					return true;
 				}
 			}
 
-			Task::enableIfNot();
+			return true;
 		}
-		else if (ReportTracking.IsReportNeeded(timestamp, GetElapsedSinceLastValidReceived()))
+		else if (ReportTracking.CheckReportNeeded(timestamp, GetElapsedSinceLastValidReceived()))
 		{
 			Task::enableIfNot();
 			return true;

@@ -244,7 +244,7 @@ protected:
 					EstimateErrorReply.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 3] << 24;
 
 					if (((int32_t)EstimateErrorReply.SubSeconds >= 0 && (int32_t)EstimateErrorReply.SubSeconds < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
-						|| ((int32_t)EstimateErrorReply.SubSeconds < 0 && (int32_t)EstimateErrorReply.SubSeconds > -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
+						|| ((int32_t)EstimateErrorReply.SubSeconds < 0 && (int32_t)EstimateErrorReply.SubSeconds > -(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
 					{
 						// Due to error limit of LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS, operation doesn't need to be elevated to uint64_t.
 						ClockErrorFiltered += (((int32_t)EstimateErrorReply.SubSeconds - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
@@ -498,26 +498,23 @@ protected:
 	{
 		if (WaitingForClockReply)
 		{
-			if (WaitingForClockReply && (millis() - LastCLockSent > LoLaLinkDefinition::CLOCK_TUNE_RETRY_PERIOD))
+			if (millis() - LastCLockSent > LoLaLinkDefinition::CLOCK_TUNE_RETRY_PERIOD)
 			{
 				WaitingForClockReply = false;
 				// Wait for reply before trying again.
-				Task::enable();
 				return true;
 			}
 		}
 		else if (millis() - LastCLockSync > LoLaLinkDefinition::CLOCK_TUNE_PERIOD && CanRequestSend())
 		{
-			WaitingForClockReply = true;
 			OutPacket.SetPort(Linked::PORT);
 			OutPacket.Payload[Linked::ClockTuneMicrosRequest::SUB_HEADER_INDEX] = Linked::ClockTuneMicrosRequest::SUB_HEADER;
 			if (RequestSendPacket(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE))
 			{
+				WaitingForClockReply = true;
 				LastCLockSent = millis();
-
-				return true;
 			}
-
+			return true;
 		}
 
 		return false;

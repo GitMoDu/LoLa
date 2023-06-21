@@ -401,9 +401,9 @@ protected:
 			{
 				// Only send a time reply once.
 				ClockReplyPending = false;
-
-				return true;
 			}
+
+			return true;
 		}
 
 		return false;
