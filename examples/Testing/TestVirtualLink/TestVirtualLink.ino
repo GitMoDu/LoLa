@@ -64,8 +64,8 @@
 #define _TASK_SCHEDULE_NC // Disable task catch-up.
 #define _TASK_OO_CALLBACKS
 
-#ifndef ARDUINO_ARCH_ESP32
-#define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
+#ifndef _TASK_SLEEP_ON_IDLE_RUN
+#undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
 #endif
 
 #include <TaskScheduler.h>
@@ -101,7 +101,7 @@ using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 1000, 250, 
 using IdealRadio = IVirtualTransceiver::Configuration<1, 1, 1, 1, 1, 1>;
 
 // Used Virtual Driver Configuration.
-using TestRadioConfig = TypicalSubGHzRadio;
+using TestRadioConfig = SlowSingleChannelRadio;
 //
 
 // Shared Link configuration.
