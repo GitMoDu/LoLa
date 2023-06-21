@@ -66,6 +66,7 @@ protected:
 
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
+	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::PreLinkResendDelayMillis;
 
 private:
@@ -184,6 +185,7 @@ protected:
 			}
 			break;
 		default:
+			OnUnlinkedPacketReceived(startTimestamp, payload, payloadSize, counter);
 			break;
 		}
 	}
@@ -213,9 +215,9 @@ protected:
 	}
 
 
-	virtual void OnAwaitingLink(const uint32_t stateElapsed) final
+	virtual void OnServiceAwaitingLink() final
 	{
-		if (stateElapsed > CLIENT_SLEEP_TIMEOUT_MILLIS)
+		if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
 		{
 #if defined(DEBUG_LOLA)
 			this->Owner();

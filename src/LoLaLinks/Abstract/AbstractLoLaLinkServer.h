@@ -39,6 +39,7 @@ protected:
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
 	using BaseClass::GetElapsedSinceLastSent;
+	using BaseClass::GetStageElapsedMillis;
 
 protected:
 	ServerTimedStateTransition<
@@ -252,9 +253,9 @@ protected:
 		}
 	}
 
-	virtual void OnLinking(const uint32_t stateElapsed) final
+	virtual void OnServiceLinking() final
 	{
-		if (stateElapsed > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
+		if (GetStageElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
 		{
 #if defined(DEBUG_LOLA)
 			this->Owner();

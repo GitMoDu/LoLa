@@ -44,6 +44,7 @@ protected:
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
 	using BaseClass::GetElapsedSinceLastSent;
+	using BaseClass::GetStageElapsedMillis;
 
 protected:
 	ClientTimedStateTransition<
@@ -313,9 +314,9 @@ protected:
 		}
 	}
 
-	virtual void OnLinking(const uint32_t stateElapsed) final
+	virtual void OnServiceLinking() final
 	{
-		if (stateElapsed > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
+		if (GetStageElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
 		{
 #if defined(DEBUG_LOLA)
 			this->Owner();
@@ -327,7 +328,7 @@ protected:
 		switch (SubState)
 		{
 		case ClientLinkingEnum::WaitingForAuthenticationRequest:
-			if (stateElapsed > CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS)
+			if (GetStageElapsedMillis() > CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();

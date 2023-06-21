@@ -68,13 +68,11 @@ private:
 protected:
 	/// <summary>
 	/// </summary>
-	/// <param name="stateElapsed">Millis elapsed since link state start.</param>
-	virtual void OnLinking(const uint32_t stateElapsed) {}
+	virtual void OnServiceLinking() {}
 
 	/// <summary>
 	/// </summary>
-	/// <param name="stateElapsed">Millis elapsed since link state start.</param>
-	virtual void OnAwaitingLink(const uint32_t stateElapsed) {}
+	virtual void OnServiceAwaitingLink() {}
 
 	/// <summary>
 	/// </summary>
@@ -288,10 +286,10 @@ protected:
 			}
 			break;
 		case LinkStageEnum::AwaitingLink:
-			OnAwaitingLink(GetStageElapsedMillis());
+			OnServiceAwaitingLink();
 			break;
 		case LinkStageEnum::Linking:
-			OnLinking(GetStageElapsedMillis());
+			OnServiceLinking();
 			break;
 		case LinkStageEnum::Linked:
 			if (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::LINK_STAGE_TIMEOUT)

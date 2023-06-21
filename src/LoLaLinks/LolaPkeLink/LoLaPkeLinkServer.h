@@ -52,6 +52,7 @@ protected:
 	using BaseClass::ResetStageStartTime;
 	using BaseClass::PreLinkResendDelayMillis;
 	using BaseClass::GetSendDuration;
+	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::SendPacket;
 
 private:
@@ -168,6 +169,7 @@ protected:
 			}
 			break;
 		default:
+			OnUnlinkedPacketReceived(startTimestamp, payload, payloadSize, counter);
 			break;
 		}
 	}
@@ -196,9 +198,9 @@ protected:
 		}
 	}
 
-	virtual void OnAwaitingLink(const uint32_t stateElapsed) final
+	virtual void OnServiceAwaitingLink() final
 	{
-		if (stateElapsed > SERVER_SLEEP_TIMEOUT_MILLIS)
+		if (GetStageElapsedMillis() > SERVER_SLEEP_TIMEOUT_MILLIS)
 		{
 #if defined(DEBUG_LOLA)
 			this->Owner();
