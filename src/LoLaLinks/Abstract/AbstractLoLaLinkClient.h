@@ -484,8 +484,10 @@ protected:
 		if (OutPacket.GetPort() == Linked::PORT &&
 			OutPacket.Payload[Linked::ClockTuneMicrosRequest::SUB_HEADER_INDEX] == Linked::ClockTuneMicrosRequest::SUB_HEADER)
 		{
+			const int32_t sendDuration = GetSendDuration(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE);
+
 			SyncClock.GetTimestamp(LinkTimestamp);
-			LinkTimestamp.ShiftSubSeconds((int32_t)GetSendDuration(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE));
+			LinkTimestamp.ShiftSubSeconds(sendDuration);
 
 			const uint32_t rolling = LinkTimestamp.GetRollingMicros();
 

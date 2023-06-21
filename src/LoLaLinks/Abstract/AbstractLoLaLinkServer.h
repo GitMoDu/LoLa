@@ -211,8 +211,9 @@ protected:
 
 					SyncClock.GetTimestamp(LinkTimestamp);
 					LinkTimestamp.ShiftSubSeconds(startTimestamp - micros());
+					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros();
+					EstimateErrorReply.SubSeconds -= InEstimate.SubSeconds;
 					EstimateErrorReply.Seconds = 0;
-					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - InEstimate.SubSeconds;
 
 					ClockReplyPending = true;
 					Task::enable();
