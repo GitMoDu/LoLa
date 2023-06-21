@@ -50,9 +50,9 @@ protected:
 	Timestamp InEstimate{};
 	TimestampError EstimateErrorReply{};
 
-	uint8_t SubState = 0;
-
 private:
+	ServerLinkingEnum SubState = ServerLinkingEnum::AuthenticationRequest;
+
 	bool ClockReplyPending = false;
 
 public:
@@ -73,7 +73,7 @@ protected:
 		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
 		{
 		case Linking::ClientChallengeReplyRequest::SUB_HEADER:
-			if (SubState == (uint8_t)ServerLinkingEnum::AuthenticationRequest
+			if (SubState == ServerLinkingEnum::AuthenticationRequest
 				&& payloadSize == Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE
 				&& Encoder->VerifyChallengeSignature(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]))
 			{
@@ -83,7 +83,7 @@ protected:
 #endif
 
 				Encoder->SetPartnerChallenge(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
-				SubState = (uint8_t)ServerLinkingEnum::AuthenticationReply;
+				SubState = ServerLinkingEnum::AuthenticationReply;
 				Task::enable();
 			}
 			break;
@@ -99,7 +99,7 @@ protected:
 				case ServerLinkingEnum::ClockSyncing:
 					break;
 				case ServerLinkingEnum::AuthenticationReply:
-					SubState = (uint8_t)ServerLinkingEnum::ClockSyncing;
+					SubState = ServerLinkingEnum::ClockSyncing;
 					PreLinkPacketSchedule = millis();
 					Task::enable();
 #if defined(DEBUG_LOLA)
@@ -108,7 +108,7 @@ protected:
 #endif
 					break;
 				case ServerLinkingEnum::SwitchingToLinked:
-					SubState = (uint8_t)ServerLinkingEnum::ClockSyncing;
+					SubState = ServerLinkingEnum::ClockSyncing;
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.println(F("Re-Started Clock sync"));
@@ -162,7 +162,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Got Link Start Request."));
 #endif
-				SubState = (uint8_t)ServerLinkingEnum::SwitchingToLinked;
+				SubState = ServerLinkingEnum::SwitchingToLinked;
 				StateTransition.OnStart(micros());
 				Task::enableIfNot();
 			}
@@ -176,7 +176,7 @@ protected:
 			break;
 		case Linking::LinkTimedSwitchOverAck::SUB_HEADER:
 			if (payloadSize == Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE
-				&& SubState == (uint8_t)ServerLinkingEnum::SwitchingToLinked)
+				&& SubState == ServerLinkingEnum::SwitchingToLinked)
 			{
 				StateTransition.OnReceived();
 #if defined(DEBUG_LOLA)
@@ -241,7 +241,7 @@ protected:
 			break;
 		case LinkStageEnum::Linking:
 			Encoder->GenerateLocalChallenge(&RandomSource);
-			SubState = (uint8_t)ServerLinkingEnum::AuthenticationRequest;
+			SubState = ServerLinkingEnum::AuthenticationRequest;
 			ClockReplyPending = false;
 			break;
 		case LinkStageEnum::Linked:
@@ -353,7 +353,7 @@ protected:
 				else
 				{
 					// No Ack before time out.
-					SubState = (uint8_t)ServerLinkingEnum::ClockSyncing;
+					SubState = ServerLinkingEnum::ClockSyncing;
 					ClockReplyPending = false;
 					PreLinkPacketSchedule = millis();
 					Task::enable();

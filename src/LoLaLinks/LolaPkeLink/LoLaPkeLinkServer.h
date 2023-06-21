@@ -47,7 +47,6 @@ protected:
 	using BaseClass::Transceiver;
 
 	using BaseClass::StateTransition;
-	using BaseClass::SubState;
 	using BaseClass::PreLinkPacketSchedule;
 
 	using BaseClass::ResetStageStartTime;
@@ -57,6 +56,8 @@ protected:
 
 private:
 	LoLaCryptoPkeSession Session;
+
+	ServerAwaitingLinkEnum SubState = ServerAwaitingLinkEnum::Sleeping;
 
 	bool SearchReplyPending = false;
 
@@ -106,7 +107,7 @@ protected:
 #endif
 					// Wake up!
 					ResetStageStartTime();
-					SubState = (uint8_t)ServerAwaitingLinkEnum::NewSessionStart;
+					SubState = ServerAwaitingLinkEnum::NewSessionStart;
 					PreLinkPacketSchedule = millis();
 					SearchReplyPending = true;
 					Task::enable();
@@ -140,20 +141,20 @@ protected:
 			}
 			break;
 		case Unlinked::LinkingStartRequest::SUB_HEADER:
-			if (SubState == (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession
+			if (SubState == ServerAwaitingLinkEnum::BroadcastingSession
 				&& payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
 				&& Session.SessionIdMatches(&payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
 			{
 				// Slow operation (~8 ms).
 				// The async alternative to inline decompressing of key would require a copy-buffer to hold the compressed key.
 				Session.DecompressPartnerPublicKeyFrom(&payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX]);
-				SubState = (uint8_t)ServerAwaitingLinkEnum::ValidatingSession;
+				SubState = ServerAwaitingLinkEnum::ValidatingSession;
 				Task::enable();
 			}
 			break;
 		case Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER:
 			if (payloadSize == Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE
-				&& SubState == (uint8_t)ServerAwaitingLinkEnum::SwitchingToLinking
+				&& SubState == ServerAwaitingLinkEnum::SwitchingToLinking
 				&& Session.LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
 				StateTransition.OnReceived();
@@ -184,7 +185,7 @@ protected:
 			SearchReplyPending = false;
 			break;
 		case LinkStageEnum::AwaitingLink:
-			SubState = (uint8_t)ServerAwaitingLinkEnum::Sleeping;
+			SubState = ServerAwaitingLinkEnum::Sleeping;
 			break;
 		case LinkStageEnum::Linking:
 			break;
@@ -204,7 +205,7 @@ protected:
 			Serial.println(F("OnAwaitingLink timed out. Going to sleep."));
 #endif
 
-			SubState = (uint8_t)ServerAwaitingLinkEnum::Sleeping;
+			SubState = ServerAwaitingLinkEnum::Sleeping;
 		}
 
 		switch (SubState)
@@ -213,7 +214,7 @@ protected:
 			Session.SetRandomSessionId(&RandomSource);
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 
-			SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
+			SubState = ServerAwaitingLinkEnum::BroadcastingSession;
 			PreLinkPacketSchedule = millis();
 			SearchReplyPending = true;
 			Task::enable();
@@ -262,7 +263,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Local and Partner public keys match, link is impossible."));
 #endif
-				SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
+				SubState = ServerAwaitingLinkEnum::BroadcastingSession;
 			}
 			else if (Session.SessionIsCached())
 			{
@@ -271,21 +272,21 @@ protected:
 				Serial.println(F("Session secrets are cached, let's start linking."));
 #endif
 
-				SubState = (uint8_t)ServerAwaitingLinkEnum::SwitchingToLinking;
+				SubState = ServerAwaitingLinkEnum::SwitchingToLinking;
 				StateTransition.OnStart(micros());
 				PreLinkPacketSchedule = millis();
 			}
 			else
 			{
 				Session.ResetPke();
-				SubState = (uint8_t)ServerAwaitingLinkEnum::ComputingSecretKey;
+				SubState = ServerAwaitingLinkEnum::ComputingSecretKey;
 			}
 			Task::enable();
 			break;
 		case ServerAwaitingLinkEnum::ComputingSecretKey:
 			if (Session.CalculatePke()) {
 				// PKE calculation took a lot of time, let's go for another start request, now with cached secrets.
-				SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
+				SubState = ServerAwaitingLinkEnum::BroadcastingSession;
 				PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);;
 			}
 			Task::enable();
@@ -304,7 +305,7 @@ protected:
 				else
 				{
 					// No Ack before time out.
-					SubState = (uint8_t)ServerAwaitingLinkEnum::BroadcastingSession;
+					SubState = ServerAwaitingLinkEnum::BroadcastingSession;
 					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionBroadcast::PAYLOAD_SIZE);
 					Task::enable();
 				}

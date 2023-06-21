@@ -60,7 +60,7 @@ protected:
 	using BaseClass::Transceiver;
 
 	using BaseClass::StateTransition;
-	using BaseClass::SubState;
+
 	using BaseClass::PreLinkPacketSchedule;
 	using BaseClass::SearchChannel;
 
@@ -72,6 +72,8 @@ private:
 	LoLaCryptoPkeSession Session;
 
 	uint8_t SearchChannelTryCount = 0;
+
+	ClientAwaitingLinkEnum SubState = ClientAwaitingLinkEnum::Sleeping;
 
 protected:
 #if defined(DEBUG_LOLA)
@@ -113,7 +115,7 @@ protected:
 				switch (SubState)
 				{
 				case ClientAwaitingLinkEnum::SearchingServer:
-					SubState = (uint8_t)ClientAwaitingLinkEnum::RequestingSession;
+					SubState = ClientAwaitingLinkEnum::RequestingSession;
 					Task::enable();
 #if defined(DEBUG_LOLA)
 					this->Owner();
@@ -136,7 +138,7 @@ protected:
 				switch (SubState)
 				{
 				case ClientAwaitingLinkEnum::RequestingSession:
-					SubState = (uint8_t)ClientAwaitingLinkEnum::ValidatingSession;
+					SubState = ClientAwaitingLinkEnum::ValidatingSession;
 					PreLinkPacketSchedule = millis();
 
 #if defined(DEBUG_LOLA)
@@ -198,7 +200,7 @@ protected:
 		case LinkStageEnum::Booting:
 			break;
 		case LinkStageEnum::AwaitingLink:
-			SubState = (uint8_t)ClientAwaitingLinkEnum::SearchingServer;
+			SubState = ClientAwaitingLinkEnum::SearchingServer;
 			SearchChannelTryCount = 0;
 			break;
 		case LinkStageEnum::Linking:
@@ -219,7 +221,7 @@ protected:
 			this->Owner();
 			Serial.println(F("OnAwaitingLink timed out. Going to sleep."));
 #endif
-			SubState = (uint8_t)ClientAwaitingLinkEnum::Sleeping;
+			SubState = ClientAwaitingLinkEnum::Sleeping;
 		}
 
 		switch (SubState)
@@ -281,7 +283,7 @@ protected:
 				this->Owner();
 				Serial.println(F("Local and Partner public keys match, link is impossible."));
 #endif
-				SubState = (uint8_t)ClientAwaitingLinkEnum::RequestingSession;
+				SubState = ClientAwaitingLinkEnum::RequestingSession;
 			}
 			else if (Session.SessionIsCached())
 			{
@@ -289,14 +291,14 @@ protected:
 				this->Owner();
 				Serial.println(F("Session token is cached, let's start linking."));
 #endif
-				SubState = (uint8_t)ClientAwaitingLinkEnum::TryLinking;
+				SubState = ClientAwaitingLinkEnum::TryLinking;
 				StateTransition.OnStart();
 				PreLinkPacketSchedule = millis();
 			}
 			else
 			{
 				Session.ResetPke();
-				SubState = (uint8_t)ClientAwaitingLinkEnum::ComputingSecretKey;
+				SubState = ClientAwaitingLinkEnum::ComputingSecretKey;
 			}
 			Task::enable();
 			break;
@@ -304,7 +306,7 @@ protected:
 			if (Session.CalculatePke())
 			{
 				// PKE calculation took a lot of time, let's reset to start now with a cached key-pair.
-				SubState = (uint8_t)ClientAwaitingLinkEnum::ValidatingSession;
+				SubState = ClientAwaitingLinkEnum::ValidatingSession;
 				PreLinkPacketSchedule = millis();
 			}
 			Task::enable();
@@ -345,7 +347,7 @@ protected:
 					this->Owner();
 					Serial.println(F("StateTransition timed out."));
 #endif
-					SubState = (uint8_t)ClientAwaitingLinkEnum::TryLinking;
+					SubState = ClientAwaitingLinkEnum::TryLinking;
 					PreLinkPacketSchedule = millis();
 				}
 			}

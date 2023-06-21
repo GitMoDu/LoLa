@@ -54,7 +54,6 @@ protected:
 	TimestampError EstimateErrorReply{};
 
 	uint32_t PreLinkPacketSchedule = 0;
-	uint8_t SubState = 0;
 
 protected:
 	uint8_t SearchChannel = 0;
@@ -64,6 +63,9 @@ private:
 	int32_t ClockErrorFiltered = 0;
 	uint32_t LastCLockSync = 0;
 	uint32_t LastCLockSent = 0;
+
+	ClientLinkingEnum SubState = ClientLinkingEnum::WaitingForAuthenticationRequest;
+
 	bool WaitingForClockReply = 0;
 
 public:
@@ -191,7 +193,7 @@ protected:
 				switch (SubState)
 				{
 				case ClientLinkingEnum::RequestingLinkStart:
-					SubState = (uint8_t)ClientLinkingEnum::SwitchingToLinked;
+					SubState = ClientLinkingEnum::SwitchingToLinked;
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.print(F("StateTransition Client received, started with"));
@@ -297,7 +299,7 @@ protected:
 			break;
 		case LinkStageEnum::Linking:
 			Encoder->GenerateLocalChallenge(&RandomSource);
-			SubState = (uint8_t)ClientLinkingEnum::WaitingForAuthenticationRequest;
+			SubState = ClientLinkingEnum::WaitingForAuthenticationRequest;
 			break;
 		case LinkStageEnum::Linked:
 			LastKnownBroadCastChannel = SearchChannel;
