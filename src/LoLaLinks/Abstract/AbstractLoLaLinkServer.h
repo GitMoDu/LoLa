@@ -409,7 +409,6 @@ protected:
 		return false;
 	}
 
-
 private:
 	const bool InEstimateWithinTolerance()
 	{

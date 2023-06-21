@@ -7,7 +7,7 @@
 
 class LoLaCryptoDefinition
 {
-#pragma region Public Key Exchange
+	// Public Key Exchange
 public:
 	/// <summary>
 	/// Elliptic-curve Diffie–Hellman public key exchange.
@@ -34,8 +34,7 @@ public:
 	/// </summary>
 	static constexpr uint8_t PRIVATE_KEY_SIZE = COMPRESSED_KEY_SIZE;
 
-#pragma endregion
-#pragma region Encryption
+	// Encryption
 public:
 	/// <summary>
 	/// Blake2S (Cryptographic Hash function) - secret key expansion using HKDF.
@@ -55,8 +54,7 @@ public:
 	static constexpr uint8_t CYPHER_IV_SIZE = 8;
 	static constexpr uint8_t CYPHER_ROUNDS = 20;
 
-#pragma endregion
-#pragma region Integrity and Authenticity
+	// Integrity and Authenticity
 public:
 	/// <summary>
 	/// Poly1305 (Cryptographic Message Authentication function) - verify the data integrity and the authenticity.
@@ -117,7 +115,6 @@ public:
 	static constexpr uint8_t CYPHER_TAG_ROLL_INDEX = CYPHER_TAG_SIZE_INDEX + CYPHER_TAG_ID_SIZE;
 	static constexpr uint8_t CYPHER_TAG_TIMESTAMP_INDEX = CYPHER_TAG_ROLL_INDEX + TIME_SUB_TOKEN_KEY_SIZE;
 	static constexpr uint8_t CYPHER_TAG_SIZE = CYPHER_TAG_TIMESTAMP_INDEX + TIME_TOKEN_KEY_SIZE;
-#pragma endregion
 };
 
 static const uint8_t EmptyKey[LoLaCryptoDefinition::MAC_KEY_SIZE] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };

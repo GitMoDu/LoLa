@@ -419,5 +419,4 @@ protected:
 		return false;
 	}
 };
-
 #endif

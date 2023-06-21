@@ -11,7 +11,7 @@
 #include "Link\LoLaLinkDefinition.h"
 
 //TODO: Refactor as individual driver includes
-#pragma	region Available Packet Drivers
+/// Available Packet Drivers
 #include "LoLaTransceivers\VirtualTransceiver\VirtualTransceiver.h"
 #include "LoLaTransceivers\SerialTransceiver\SerialTransceiver.h"
 #include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
@@ -22,10 +22,10 @@
 #else 
 #warning No Implementation available for PIM transceiver.
 #endif
-#pragma endregion
+///
 
 
-#pragma	region Entropy Sources
+/// Entropy Sources
 #if defined(ARDUINO)
 #include "EntropySources\ArduinoEntropySource.h"
 #endif
@@ -41,10 +41,10 @@
 #if defined(ARDUINO_ARCH_ESP32)
 //#include "EntropySources\Esp32EntropySource.h"
 #endif 
-#pragma endregion
+///
 
 
-#pragma	region Clock Timer Sources
+/// Clock Timer Sources
 #if defined(ARDUINO)
 #include "ClockSources\ArduinoTaskTimerClockSource.h"
 #endif
@@ -61,16 +61,15 @@
 #if defined(ARDUINO_ARCH_ESP32)
 //#include "TimerSources\Esp32TimerSource.h"
 #endif
-#pragma endregion
+///
 
 
-#pragma	region Available Link Modules
+/// Available Link Modules
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkServer.h"
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkClient.h"
 //#include "LoLaLinkLight\LoLaLinkLight.h"
-#pragma endregion
 
-#pragma	region Available Link Based Services
+/// Available Link Based Services
 #if defined(LOLA_DEBUG)
 //#include "Services\Debug\DiscoveryTestService.h"
 #endif
@@ -78,17 +77,16 @@
 #include "LoLaServices\SyncSurface\SyncSurfaceWriter.h"
 //#include "Services\BinaryDelivery\BinaryDeliveryService.h"
 //#include "Services\Stream\ForwardCorrectedLossyStream.h"
-#pragma endregion
+///
 
-#pragma	region Duplex Options
+/// Duplex Options
 #include "Duplexes\Duplexes.h"
-#pragma endregion
+///
 
 
-#pragma	region Channel Hopper Options
+/// Channel Hopper Options
 #include "ChannelHoppers\FixedHoppers.h"
 #include "ChannelHoppers\TimedHoppers.h"
-#pragma endregion
-
+///
 
 #endif

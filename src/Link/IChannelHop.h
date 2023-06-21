@@ -18,7 +18,8 @@ public:
 public:
 	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock, const uint32_t forwardLookMicros) { return false; }
 
-#pragma region General Channel Interfaces
+	/// General Channel Interfaces
+public:
 	/// <summary>
 	/// Fixed broadcast channel.
 	/// </summary>
@@ -30,9 +31,10 @@ public:
 	virtual const uint8_t GetFixedChannel() { return 0; }
 
 	virtual void SetFixedChannel(const uint8_t channel) {}
-#pragma endregion
+	///
 
-#pragma region Hopper Interfaces
+	/// Hopper Interfaces
+public:
 	virtual const bool IsHopper() { return false; }
 
 	virtual const uint32_t GetHopIndex(const uint32_t timestamp) { return 0; }
@@ -42,7 +44,7 @@ public:
 	virtual void OnLinkStarted() { }
 
 	virtual void OnLinkStopped() { }
-#pragma endregion
+	///
 };
 
 #endif

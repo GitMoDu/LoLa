@@ -102,7 +102,6 @@ public:
 		return Session.Setup() && BaseClass::Setup();
 	}
 
-#pragma region Packet Handling
 protected:
 	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
@@ -186,9 +185,7 @@ protected:
 			break;
 		}
 	}
-#pragma endregion
 
-#pragma region Linking
 protected:
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage) final
 	{
@@ -383,6 +380,5 @@ protected:
 			break;
 		}
 	}
-#pragma endregion
 };
 #endif

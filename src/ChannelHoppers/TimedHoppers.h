@@ -74,7 +74,7 @@ public:
 		return SyncClock != nullptr && Listener != nullptr && HopPeriodMicros > 1;
 	}
 
-#pragma region General Channel Interfaces
+	// General Channel Interfaces //
 	virtual const uint8_t GetBroadcastChannel() final
 	{
 		return FixedChannel;
@@ -89,9 +89,9 @@ public:
 	{
 		FixedChannel = channel;
 	}
-#pragma endregion
+	////
 
-#pragma region Hopper Interfaces
+	// Hopper Interfaces //
 	virtual const bool IsHopper() final
 	{
 		return true;
@@ -119,7 +119,7 @@ public:
 		HopperState = HopperStateEnum::Disabled;
 		Task::disable();
 	}
-#pragma endregion
+	////
 
 	virtual bool Callback() final
 	{
