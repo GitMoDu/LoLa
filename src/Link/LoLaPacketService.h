@@ -41,7 +41,6 @@ private:
 	uint8_t* RawInPacket = nullptr;
 	uint8_t* RawOutPacket = nullptr;
 
-
 	uint32_t SendOutTimestamp = 0;
 
 	volatile uint32_t ReceiveTimestamp = 0;
@@ -178,15 +177,15 @@ public:
 		if (Transceiver->Tx(RawOutPacket, size, channel))
 		{
 			SendOutTimestamp = micros();
-			Task::enable();
 			State = StateEnum::Sending;
+			Task::enable();
 
 			return true;
 		}
 		else
 		{
-			Task::enable();
 			State = StateEnum::Done;
+			Task::enable();
 
 			// Turns out we can't send right now, try again later.
 			return false;

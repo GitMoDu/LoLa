@@ -56,7 +56,7 @@ private:
 	};
 
 private:
-	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
+	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE] {};
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
