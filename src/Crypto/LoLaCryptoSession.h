@@ -113,7 +113,7 @@ public:
 		KeyHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
 
 		// Clear hasher from sensitive material.
-		KeyExpander.clear();
+		KeyHasher.clear();
 	}
 
 	void CalculateExpandedKey()
