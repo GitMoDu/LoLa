@@ -63,6 +63,9 @@ protected:
 private:
 	ReportTracker ReportTracking;
 
+	uint32_t LastUnlinkedSent = 0;
+
+
 	uint32_t LinkStartSeconds = 0;
 
 protected:
@@ -108,6 +111,22 @@ public:
 		SyncClock.GetTimestamp(LinkTimestamp);
 
 		return LinkTimestamp.Seconds - LinkStartSeconds;
+	}
+
+	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result)
+	{
+		switch (LinkStage)
+		{
+		case LinkStageEnum::AwaitingLink:
+		case LinkStageEnum::Linking:
+			if (result == IPacketServiceListener::SendResultEnum::Success)
+			{
+				LastUnlinkedSent = micros();
+			}
+			break;
+		default:
+			break;
+		}
 	}
 
 	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port)
@@ -173,11 +192,6 @@ public:
 	}
 
 protected:
-#if defined(DEBUG_LOLA)
-	virtual void Owner() {}
-#endif
-
-protected:
 	/// <summary>
 	/// Inform any Link class of packet loss detection,
 	/// due to skipped counter.
@@ -189,26 +203,9 @@ protected:
 		OnEvent(PacketEventEnum::ReceiveLossDetected);
 	}
 
-	/// <summary>
-	/// Calculates a re-send delay, with a random jitter if Duplex is not full.
-	/// Since we are in a pre-link state, jitter is added for collision avoidance.
-	/// </summary>
-	/// <returns>Delay to apply to resend (in milliseconds).</returns>
-	const uint32_t PreLinkResendDelayMillis(const uint8_t payloadSize)
+	const uint32_t GetElapsedMicrosSinceLastUnlinkedSent()
 	{
-		const uint32_t duration = (LoLaLinkDefinition::REPLY_BASE_TIMEOUT_MICROS +
-			GetSendDuration(payloadSize))
-			/ 1000;
-
-		if (Duplex->GetRange() == IDuplex::DUPLEX_FULL)
-		{
-			return duration;
-		}
-		else
-		{
-
-			return duration + RandomSource.GetRandomLong(duration);
-		}
+		return micros() - LastUnlinkedSent;
 	}
 
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
@@ -378,7 +375,6 @@ protected:
 			break;
 		}
 #endif
-
 	}
 
 private:

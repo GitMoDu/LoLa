@@ -150,6 +150,11 @@ public:
 	static constexpr uint32_t TRANSMIT_BASE_TIMEOUT_MICROS = 2000;
 
 	/// <summary>
+	/// How long, on average, to wait before re-sending a packet.
+	/// </summary>
+	static constexpr uint32_t RE_TRANSMIT_TIMEOUT_MICROS = 4000;
+
+	/// <summary>
 	/// How long to wait before timing out an ACK reply.
 	/// </summary>
 	static constexpr uint32_t REPLY_BASE_TIMEOUT_MICROS = 10000;

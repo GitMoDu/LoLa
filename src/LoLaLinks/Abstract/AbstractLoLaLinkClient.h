@@ -33,13 +33,13 @@ protected:
 	using BaseClass::Encoder;
 	using BaseClass::SyncClock;
 	using BaseClass::RandomSource;
-	using BaseClass::Transceiver;
+	using BaseClass::PacketService;
 	using BaseClass::LinkTimestamp;
 
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
 	using BaseClass::GetSendDuration;
-	using BaseClass::PreLinkResendDelayMillis;
+	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
@@ -54,7 +54,6 @@ protected:
 
 	TimestampError EstimateErrorReply{};
 
-	uint32_t PreLinkPacketSchedule = 0;
 
 protected:
 	uint8_t SearchChannel = 0;
@@ -94,7 +93,6 @@ protected:
 				case ClientLinkingEnum::WaitingForAuthenticationRequest:
 					Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 					SubState = ClientLinkingEnum::AuthenticationReply;
-					PreLinkPacketSchedule = millis();
 					Task::enable();
 					break;
 				case ClientLinkingEnum::AuthenticationReply:
@@ -123,7 +121,6 @@ protected:
 						this->Owner();
 						Serial.println(F("Link Access Control granted."));
 #endif
-						PreLinkPacketSchedule = millis();
 						SubState = ClientLinkingEnum::ClockSyncing;
 						Task::enable();
 					}
@@ -174,7 +171,6 @@ protected:
 #endif
 					SubState = ClientLinkingEnum::RequestingLinkStart;
 					StateTransition.OnStart();
-					PreLinkPacketSchedule = millis();
 				}
 				else
 				{
@@ -183,8 +179,6 @@ protected:
 					Serial.println(F("Clock Rejected, trying again."));
 #endif
 				}
-
-				PreLinkPacketSchedule = millis();
 				Task::enable();
 			}
 			break;
@@ -197,7 +191,7 @@ protected:
 					SubState = ClientLinkingEnum::SwitchingToLinked;
 #if defined(DEBUG_LOLA)
 					this->Owner();
-					Serial.print(F("StateTransition Client received, started with"));
+					Serial.print(F("StateTransition Client received, started with "));
 					Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
 					Serial.println(F("us remaining."));
 #endif
@@ -343,21 +337,20 @@ protected:
 			}
 			break;
 		case ClientLinkingEnum::AuthenticationReply:
-			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
+				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClientChallengeReplyRequest::SUB_HEADER_INDEX] = Linking::ClientChallengeReplyRequest::SUB_HEADER;
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending ClientChallengeReplyRequest."));
-#endif
-
 				if (SendPacket(OutPacket.Data, Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE))
 				{
-					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE);
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent ClientChallengeReplyRequest."));
+#endif
 				}
 				else
 				{
@@ -370,7 +363,8 @@ protected:
 			}
 			break;
 		case ClientLinkingEnum::ClockSyncing:
-			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
+				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClockSyncRequest::SUB_HEADER_INDEX] = Linking::ClockSyncRequest::SUB_HEADER;
@@ -396,7 +390,6 @@ protected:
 					Serial.print(LinkTimestamp.Seconds);
 					Serial.println('s');
 #endif
-					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::ClockSyncRequest::PAYLOAD_SIZE);
 				}
 				else
 				{
@@ -409,18 +402,18 @@ protected:
 			}
 			break;
 		case ClientLinkingEnum::RequestingLinkStart:
-			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
+				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::StartLinkRequest::SUB_HEADER_INDEX] = Linking::StartLinkRequest::SUB_HEADER;
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending Linking Start Request."));
-#endif
 				if (SendPacket(OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
 				{
-					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Linking::StartLinkRequest::PAYLOAD_SIZE);
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent RequestingLinkStart."));
+#endif
 				}
 				else
 				{
@@ -452,18 +445,18 @@ protected:
 					UpdateLinkStage(LinkStageEnum::AwaitingLink);
 				}
 			}
-			else if (Transceiver->TxAvailable() && StateTransition.IsSendRequested(micros()))
+			else if (PacketService.CanSendPacket() && StateTransition.IsSendRequested(micros()))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending StateTransition Ack."));
-#endif
 				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent StateTransition Ack."));
+#endif
 				}
 				else
 				{

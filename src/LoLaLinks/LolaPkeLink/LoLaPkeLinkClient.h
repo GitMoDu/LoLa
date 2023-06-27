@@ -57,17 +57,17 @@ protected:
 	using BaseClass::ExpandedKey;
 	using BaseClass::OutPacket;
 	using BaseClass::RandomSource;
-	using BaseClass::Transceiver;
+	using BaseClass::PacketService;
 
 	using BaseClass::StateTransition;
 
-	using BaseClass::PreLinkPacketSchedule;
 	using BaseClass::SearchChannel;
 
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
 	using BaseClass::GetStageElapsedMillis;
-	using BaseClass::PreLinkResendDelayMillis;
+	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
+
 
 private:
 	LoLaCryptoPkeSession Session;
@@ -129,7 +129,6 @@ protected:
 					break;
 				}
 
-				PreLinkPacketSchedule = millis();
 				Task::enable();
 			}
 			break;
@@ -140,7 +139,6 @@ protected:
 				{
 				case ClientAwaitingLinkEnum::RequestingSession:
 					SubState = ClientAwaitingLinkEnum::ValidatingSession;
-					PreLinkPacketSchedule = millis();
 
 #if defined(DEBUG_LOLA)
 					this->Owner();
@@ -150,7 +148,8 @@ protected:
 				default:
 #if defined(DEBUG_LOLA)
 					this->Owner();
-					Serial.println(F("Rejected a server! (session broadcast)"));
+					Serial.print(F("Rejected a server! (session broadcast). Substate: "));
+					Serial.println(SubState);
 #endif
 					return;
 					break;
@@ -168,6 +167,10 @@ protected:
 			if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
 				&& Session.LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Got LinkingTimedSwitchOver."));
+#endif
 				switch (SubState)
 				{
 				case ClientAwaitingLinkEnum::TryLinking:
@@ -185,7 +188,7 @@ protected:
 			}
 			break;
 		default:
-			OnUnlinkedPacketReceived(startTimestamp, payload, payloadSize, counter);
+			BaseClass::OnUnlinkedPacketReceived(startTimestamp, payload, payloadSize, counter);
 			break;
 		}
 	}
@@ -229,7 +232,8 @@ protected:
 		switch (SubState)
 		{
 		case ClientAwaitingLinkEnum::SearchingServer:
-			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
+				&& PacketService.CanSendPacket())
 			{
 				if (SearchChannelTryCount >= CHANNEL_SEARCH_TRY_COUNT)
 				{
@@ -238,7 +242,6 @@ protected:
 					SearchChannel++;
 					SetHopperFixedChannel(SearchChannel);
 					SearchChannelTryCount = 0;
-					PreLinkPacketSchedule = millis();
 					Task::enable();
 					return;
 				}
@@ -248,32 +251,31 @@ protected:
 					OutPacket.SetPort(Unlinked::PORT);
 					OutPacket.Payload[Unlinked::SearchRequest::SUB_HEADER_INDEX] = Unlinked::SearchRequest::SUB_HEADER;
 
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sending Broadcast Search."));
-#endif
 					if (SendPacket(OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
-						PreLinkPacketSchedule = millis() + CHANNEL_SEARCH_PERIOD_MILLIS + RandomSource.GetRandomShort(CHANNEL_SEARCH_JITTER_MILLIS);
 						SearchChannelTryCount++;
+#if defined(DEBUG_LOLA)
+						this->Owner();
+						Serial.println(F("Sent Broadcast Search."));
+#endif
 					}
 				}
 			}
 			break;
 		case ClientAwaitingLinkEnum::RequestingSession:
-			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
+				&& PacketService.CanSendPacket())
 			{
 				// Session PKE start request packet.
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::SessionRequest::SUB_HEADER_INDEX] = Unlinked::SessionRequest::SUB_HEADER;
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending Session Start Request."));
-#endif
 				if (SendPacket(OutPacket.Data, Unlinked::SessionRequest::PAYLOAD_SIZE))
 				{
-					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::SessionRequest::PAYLOAD_SIZE);
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent Session Start Request."));
+#endif
 				}
 			}
 			Task::enable();
@@ -295,7 +297,6 @@ protected:
 #endif
 				SubState = ClientAwaitingLinkEnum::TryLinking;
 				StateTransition.OnStart();
-				PreLinkPacketSchedule = millis();
 			}
 			else
 			{
@@ -309,25 +310,24 @@ protected:
 			{
 				// PKE calculation took a lot of time, let's reset to start now with a cached key-pair.
 				SubState = ClientAwaitingLinkEnum::ValidatingSession;
-				PreLinkPacketSchedule = millis();
 			}
 			Task::enable();
 			break;
 		case ClientAwaitingLinkEnum::TryLinking:
-			if (Transceiver->TxAvailable() && (millis() > PreLinkPacketSchedule))
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
+				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::LinkingStartRequest::SUB_HEADER_INDEX] = Unlinked::LinkingStartRequest::SUB_HEADER;
 				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
 				Session.CompressPublicKeyTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX]);
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending Linking Start Request."));
-#endif
 				if (SendPacket(OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
 				{
-					PreLinkPacketSchedule = millis() + PreLinkResendDelayMillis(Unlinked::LinkingStartRequest::PAYLOAD_SIZE);
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent Linking Start Request."));
+#endif
 				}
 			}
 			Task::enable();
@@ -349,23 +349,21 @@ protected:
 					this->Owner();
 					Serial.println(F("StateTransition timed out."));
 #endif
-					SubState = ClientAwaitingLinkEnum::TryLinking;
-					PreLinkPacketSchedule = millis();
 				}
 			}
-			else if (Transceiver->TxAvailable() && StateTransition.IsSendRequested(micros()))
+			else if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER;
 				Session.CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending StateTransition Ack."));
-#endif
 				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent(micros());
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent StateTransition Ack."));
+#endif
 				}
 				else
 				{

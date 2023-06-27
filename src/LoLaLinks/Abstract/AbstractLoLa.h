@@ -81,6 +81,12 @@ protected:
 protected:
 	virtual void OnEvent(const PacketEventEnum packetEvent) {}
 
+#if defined(DEBUG_LOLA)
+protected:
+	virtual void Owner() {}
+#endif
+
+
 public:
 	AbstractLoLa(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
@@ -107,7 +113,7 @@ public:
 	/// Overridable callback.
 	/// </summary>
 	/// <param name="result">SendResultEnum</param>
-	virtual void OnSendComplete(const SendResultEnum result)
+	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result)
 	{}
 
 public:
