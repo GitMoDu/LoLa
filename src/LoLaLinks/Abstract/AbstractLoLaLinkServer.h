@@ -26,7 +26,6 @@ private:
 		SwitchingToLinking
 	};
 
-
 	enum ServerLinkingEnum
 	{
 		AuthenticationRequest,
@@ -76,6 +75,7 @@ private:
 
 protected:
 	virtual void OnServiceSessionCreation() {}
+	virtual void ResetSessionCreation() {}
 
 public:
 	AbstractLoLaLinkServer(Scheduler& scheduler,
@@ -122,7 +122,7 @@ protected:
 		if (WaitingState != WaitingStateEnum::SessionCreation)
 		{
 			WaitingState = WaitingStateEnum::SessionCreation;
-			ResetLastSent();
+			ResetSessionCreation();
 			Task::enable();
 		}
 	}
@@ -134,6 +134,53 @@ protected:
 	}
 
 protected:
+	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
+	{
+		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+		{
+		case Unlinked::SearchRequest::SUB_HEADER:
+			if (payloadSize == Unlinked::SearchRequest::PAYLOAD_SIZE)
+			{
+				switch (WaitingState)
+				{
+				case WaitingStateEnum::Sleeping:
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Broadcast wake up!"));
+#endif
+					// Wake up!
+					WaitingState = WaitingStateEnum::SearchingLink;
+					break;
+				case WaitingStateEnum::SearchingLink:
+					break;
+				default:
+					return;
+					break;
+				}
+				Task::enable();
+				SearchReplyPending = true;
+			}
+			break;
+		case Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER:
+			if (payloadSize == Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE
+				&& WaitingState == WaitingStateEnum::SwitchingToLinking
+				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]))
+			{
+				StateTransition.OnReceived();
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.print(F("StateTransition Server got Ack: "));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
+				Serial.println(F("us remaining."));
+#endif
+				Task::enable();
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
 	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
 		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
@@ -319,59 +366,12 @@ protected:
 		}
 	}
 
-	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
-	{
-		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
-		{
-		case Unlinked::SearchRequest::SUB_HEADER:
-			if (payloadSize == Unlinked::SearchRequest::PAYLOAD_SIZE)
-			{
-				switch (WaitingState)
-				{
-				case WaitingStateEnum::Sleeping:
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Broadcast wake up!"));
-#endif
-					// Wake up!
-					ResetStageStartTime();
-					WaitingState = WaitingStateEnum::SearchingLink;
-					break;
-				case WaitingStateEnum::SearchingLink:
-					break;
-				default:
-					return;
-					break;
-				}
-				Task::enable();
-				SearchReplyPending = true;
-			}
-			break;
-		case Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER:
-			if (payloadSize == Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE
-				&& WaitingState == WaitingStateEnum::SwitchingToLinking
-				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]))
-			{
-				StateTransition.OnReceived();
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.print(F("StateTransition Server got Ack: "));
-				Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
-				Serial.println(F("us remaining."));
-#endif
-				Task::enable();
-			}
-			break;
-		default:
-			break;
-		}
-	}
-
 	virtual void OnServiceAwaitingLink() final
 	{
 		switch (WaitingState)
 		{
 		case WaitingStateEnum::Sleeping:
+			ResetStageStartTime();
 			Task::disable();
 			break;
 		case WaitingStateEnum::SearchingLink:
@@ -591,8 +591,8 @@ private:
 	{
 		Encoder->SetRandomSessionId(&RandomSource);
 		SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
-
 	}
+
 	void OnServiceSearchingLink()
 	{
 		switch (WaitingState)

@@ -32,7 +32,7 @@ private:
 	{
 		BroadcastingSession,
 		ValidatingSession,
-		ComputingSecretKey,
+		ComputingSecretKey
 	};
 
 protected:
@@ -120,26 +120,9 @@ protected:
 	}
 
 protected:
-	virtual void UpdateLinkStage(const LinkStageEnum linkStage) final
+	virtual void ResetSessionCreation() final
 	{
-		BaseClass::UpdateLinkStage(linkStage);
-
-		switch (linkStage)
-		{
-		case LinkStageEnum::Disabled:
-			break;
-		case LinkStageEnum::Booting:
-			break;
-		case LinkStageEnum::AwaitingLink:
-			PkeState = ServerAwaitingLinkEnum::BroadcastingSession;
-			break;
-		case LinkStageEnum::Linking:
-			break;
-		case LinkStageEnum::Linked:
-			break;
-		default:
-			break;
-		}
+		PkeState = ServerAwaitingLinkEnum::BroadcastingSession;
 	}
 
 	virtual void OnServiceSessionCreation() final
