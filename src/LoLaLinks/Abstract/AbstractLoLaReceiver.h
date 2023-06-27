@@ -146,8 +146,6 @@ public:
 			}
 			else
 			{
-				// We can try a fallback decode here while in this state.
-				// Try Recover only after sending an acknowledgment/crypto transition.
 				OnEvent(PacketEventEnum::ReceiveRejectedMac);
 				return;
 			}
