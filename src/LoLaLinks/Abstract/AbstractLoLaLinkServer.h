@@ -26,7 +26,7 @@ private:
 		SwitchingToLinking
 	};
 
-	enum ServerLinkingEnum
+	enum LinkingStateEnum
 	{
 		AuthenticationRequest,
 		AuthenticationReply,
@@ -68,7 +68,7 @@ protected:
 private:
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
-	ServerLinkingEnum LinkingState = ServerLinkingEnum::AuthenticationRequest;
+	LinkingStateEnum LinkingState = LinkingStateEnum::AuthenticationRequest;
 
 	bool SearchReplyPending = false;
 	bool ClockReplyPending = false;
@@ -186,7 +186,7 @@ protected:
 		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
 		{
 		case Linking::ClientChallengeReplyRequest::SUB_HEADER:
-			if (LinkingState == ServerLinkingEnum::AuthenticationRequest
+			if (LinkingState == LinkingStateEnum::AuthenticationRequest
 				&& payloadSize == Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE
 				&& Encoder->VerifyChallengeSignature(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]))
 			{
@@ -196,7 +196,7 @@ protected:
 #endif
 
 				Encoder->SetPartnerChallenge(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
-				LinkingState = ServerLinkingEnum::AuthenticationReply;
+				LinkingState = LinkingStateEnum::AuthenticationReply;
 				Task::enable();
 			}
 			break;
@@ -209,18 +209,18 @@ protected:
 #endif
 				switch (LinkingState)
 				{
-				case ServerLinkingEnum::ClockSyncing:
+				case LinkingStateEnum::ClockSyncing:
 					break;
-				case ServerLinkingEnum::AuthenticationReply:
-					LinkingState = ServerLinkingEnum::ClockSyncing;
+				case LinkingStateEnum::AuthenticationReply:
+					LinkingState = LinkingStateEnum::ClockSyncing;
 					Task::enable();
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.println(F("Started Clock sync"));
 #endif
 					break;
-				case ServerLinkingEnum::SwitchingToLinked:
-					LinkingState = ServerLinkingEnum::ClockSyncing;
+				case LinkingStateEnum::SwitchingToLinked:
+					LinkingState = LinkingStateEnum::ClockSyncing;
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.println(F("Re-Started Clock sync"));
@@ -267,14 +267,14 @@ protected:
 			break;
 		case Linking::StartLinkRequest::SUB_HEADER:
 			if (payloadSize == Linking::StartLinkRequest::PAYLOAD_SIZE
-				&& LinkingState == ServerLinkingEnum::ClockSyncing)
+				&& LinkingState == LinkingStateEnum::ClockSyncing)
 			{
 
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("Got Link Start Request."));
 #endif
-				LinkingState = ServerLinkingEnum::SwitchingToLinked;
+				LinkingState = LinkingStateEnum::SwitchingToLinked;
 				StateTransition.OnStart(micros());
 				Task::enableIfNot();
 			}
@@ -288,7 +288,7 @@ protected:
 			break;
 		case Linking::LinkTimedSwitchOverAck::SUB_HEADER:
 			if (payloadSize == Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE
-				&& LinkingState == ServerLinkingEnum::SwitchingToLinked)
+				&& LinkingState == LinkingStateEnum::SwitchingToLinked)
 			{
 				StateTransition.OnReceived();
 #if defined(DEBUG_LOLA)
@@ -356,7 +356,7 @@ protected:
 			break;
 		case LinkStageEnum::Linking:
 			Encoder->GenerateLocalChallenge(&RandomSource);
-			LinkingState = ServerLinkingEnum::AuthenticationRequest;
+			LinkingState = LinkingStateEnum::AuthenticationRequest;
 			ClockReplyPending = false;
 			break;
 		case LinkStageEnum::Linked:
@@ -425,7 +425,7 @@ protected:
 
 		switch (LinkingState)
 		{
-		case ServerLinkingEnum::AuthenticationRequest:
+		case LinkingStateEnum::AuthenticationRequest:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
 				&& PacketService.CanSendPacket())
 			{
@@ -442,7 +442,7 @@ protected:
 				}
 			}
 			break;
-		case ServerLinkingEnum::AuthenticationReply:
+		case LinkingStateEnum::AuthenticationReply:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
 				&& PacketService.CanSendPacket())
 			{
@@ -459,7 +459,7 @@ protected:
 				}
 			}
 			break;
-		case ServerLinkingEnum::ClockSyncing:
+		case LinkingStateEnum::ClockSyncing:
 			if (ClockReplyPending && PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Linking::PORT);
@@ -500,7 +500,7 @@ protected:
 			}
 			Task::enableIfNot();
 			break;
-		case ServerLinkingEnum::SwitchingToLinked:
+		case LinkingStateEnum::SwitchingToLinked:
 			if (StateTransition.HasTimedOut(micros()))
 			{
 				if (StateTransition.HasAcknowledge())
@@ -514,7 +514,7 @@ protected:
 				else
 				{
 					// No Ack before time out.
-					LinkingState = ServerLinkingEnum::ClockSyncing;
+					LinkingState = LinkingStateEnum::ClockSyncing;
 					ClockReplyPending = false;
 					Task::enable();
 				}

@@ -28,7 +28,7 @@ private:
 	using Linking = LoLaLinkDefinition::Linking;
 	using Linked = LoLaLinkDefinition::Linked;
 
-	enum ServerAwaitingLinkEnum
+	enum PkeStateEnum
 	{
 		BroadcastingSession,
 		ValidatingSession,
@@ -51,7 +51,7 @@ protected:
 private:
 	LoLaCryptoPkeSession Session;
 
-	ServerAwaitingLinkEnum PkeState = ServerAwaitingLinkEnum::BroadcastingSession;
+	PkeStateEnum PkeState = PkeStateEnum::BroadcastingSession;
 
 public:
 	LoLaPkeLinkServer(Scheduler& scheduler,
@@ -79,37 +79,35 @@ protected:
 		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
 		{
 		case Unlinked::SessionRequest::SUB_HEADER:
-			if (payloadSize == Unlinked::SessionRequest::PAYLOAD_SIZE)
+			if (payloadSize == Unlinked::SessionRequest::PAYLOAD_SIZE
+				&& IsInSearchingLink())
 			{
-				if (IsInSearchingLink())
-				{
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Session request received."));
+				this->Owner();
+				Serial.println(F("Session request received."));
 #endif
-					Task::enable();
-					PkeState = ServerAwaitingLinkEnum::BroadcastingSession;
-					StartSessionCreationIfNot();
-				}
-				else
-				{
+				Task::enable();
+				PkeState = PkeStateEnum::BroadcastingSession;
+				StartSessionCreationIfNot();
+			}
+			else
+			{
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Session request ignored."));
+				this->Owner();
+				Serial.println(F("Session request ignored."));
 #endif
-				}
 			}
 			break;
 		case Unlinked::LinkingStartRequest::SUB_HEADER:
-			if (IsInSessionCreation()
-				&& PkeState == ServerAwaitingLinkEnum::BroadcastingSession
-				&& payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
+			if (payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
+				&& IsInSessionCreation()
+				&& PkeState == PkeStateEnum::BroadcastingSession
 				&& Session.SessionIdMatches(&payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
 			{
 				// Slow operation (~8 ms).
 				// The async alternative to inline decompressing of key would require a copy-buffer to hold the compressed key.
 				Session.DecompressPartnerPublicKeyFrom(&payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX]);
-				PkeState = ServerAwaitingLinkEnum::ValidatingSession;
+				PkeState = PkeStateEnum::ValidatingSession;
 				Task::enable();
 			}
 			break;
@@ -122,14 +120,14 @@ protected:
 protected:
 	virtual void ResetSessionCreation() final
 	{
-		PkeState = ServerAwaitingLinkEnum::BroadcastingSession;
+		PkeState = PkeStateEnum::BroadcastingSession;
 	}
 
 	virtual void OnServiceSessionCreation() final
 	{
 		switch (PkeState)
 		{
-		case ServerAwaitingLinkEnum::BroadcastingSession:
+		case PkeStateEnum::BroadcastingSession:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::REPLY_BASE_TIMEOUT_MICROS
 				&& PacketService.CanSendPacket())
 			{
@@ -155,14 +153,14 @@ protected:
 				Task::delay(1);
 			}
 			break;
-		case ServerAwaitingLinkEnum::ValidatingSession:
+		case PkeStateEnum::ValidatingSession:
 			if (Session.PublicKeyCollision())
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("Local and Partner public keys match, link is impossible."));
 #endif
-				PkeState = ServerAwaitingLinkEnum::BroadcastingSession;
+				PkeState = PkeStateEnum::BroadcastingSession;
 			}
 			else if (Session.SessionIsCached())
 			{
@@ -175,15 +173,15 @@ protected:
 			else
 			{
 				Session.ResetPke();
-				PkeState = ServerAwaitingLinkEnum::ComputingSecretKey;
+				PkeState = PkeStateEnum::ComputingSecretKey;
 			}
 			Task::enable();
 			break;
-		case ServerAwaitingLinkEnum::ComputingSecretKey:
+		case PkeStateEnum::ComputingSecretKey:
 			if (Session.CalculatePke())
 			{
 				// PKE calculation took a lot of time, let's go for another start request, now with cached secrets.
-				PkeState = ServerAwaitingLinkEnum::BroadcastingSession;
+				PkeState = PkeStateEnum::BroadcastingSession;
 			}
 			Task::enable();
 			break;
