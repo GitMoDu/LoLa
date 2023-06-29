@@ -12,13 +12,25 @@ class AbstractLoLaLinkClient : public AbstractLoLaLink<MaxPacketReceiveListeners
 private:
 	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
 
+	using Unlinked = LoLaLinkDefinition::Unlinked;
 	using Linking = LoLaLinkDefinition::Linking;
 	using Linked = LoLaLinkDefinition::Linked;
+
+	static constexpr uint32_t CLIENT_SLEEP_TIMEOUT_MILLIS = 30000;
+	static constexpr uint32_t CHANNEL_SEARCH_TRY_COUNT = 3;
 
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
 	static constexpr uint8_t CLOCK_TUNE_FILTER_RATIO = 110;
 
-	enum ClientLinkingEnum
+	enum WaitingStateEnum
+	{
+		Sleeping,
+		SearchingLink,
+		SessionCreation,
+		SwitchingToLinking
+	};
+
+	enum LinkingStateEnum
 	{
 		WaitingForAuthenticationRequest,
 		AuthenticationReply,
@@ -45,6 +57,7 @@ protected:
 	using BaseClass::CanRequestSend;
 	using BaseClass::GetElapsedSinceLastSent;
 	using BaseClass::GetStageElapsedMillis;
+	using BaseClass::ResetStageStartTime;
 
 protected:
 	ClientTimedStateTransition<
@@ -64,9 +77,17 @@ private:
 	uint32_t LastCLockSync = 0;
 	uint32_t LastCLockSent = 0;
 
-	ClientLinkingEnum SubState = ClientLinkingEnum::WaitingForAuthenticationRequest;
+	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
+
+	LinkingStateEnum LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
+
+	uint8_t SearchChannelTryCount = 0;
 
 	bool WaitingForClockReply = 0;
+
+protected:
+	virtual void OnServiceSessionCreation() {}
+	virtual void ResetSessionCreation() {}
 
 public:
 	AbstractLoLaLinkClient(Scheduler& scheduler,
@@ -81,64 +102,101 @@ public:
 	{}
 
 protected:
+	const bool IsInSessionCreation()
+	{
+		return WaitingState == WaitingStateEnum::SessionCreation;
+	}
+
+protected:
+	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
+	{
+		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+		{
+		case Unlinked::SearchReply::SUB_HEADER:
+			if (payloadSize == Unlinked::SearchReply::PAYLOAD_SIZE
+				&& WaitingState == WaitingStateEnum::SearchingLink)
+			{
+				WaitingState = WaitingStateEnum::SessionCreation;
+				Task::enable();
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Found a server!"));
+#endif
+				Task::enable();
+			}
+			break;
+		case Unlinked::LinkingTimedSwitchOver::SUB_HEADER:
+			if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
+				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
+			{
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Got LinkingTimedSwitchOver."));
+#endif
+				switch (WaitingState)
+				{
+				case WaitingStateEnum::SessionCreation:
+					WaitingState = WaitingStateEnum::SwitchingToLinking;
+					StateTransition.OnStart();
+					ResetSessionCreation();
+				case WaitingStateEnum::SwitchingToLinking:
+					StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+					Task::enable();
+					break;
+				default:
+					return;
+					break;
+				}
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
 	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
 		switch (payload[Linking::ServerChallengeRequest::SUB_HEADER_INDEX])
 		{
 		case Linking::ServerChallengeRequest::SUB_HEADER:
-			if (payloadSize == Linking::ServerChallengeRequest::PAYLOAD_SIZE)
+			if (payloadSize == Linking::ServerChallengeRequest::PAYLOAD_SIZE
+				&& LinkingState == LinkingStateEnum::WaitingForAuthenticationRequest)
 			{
-				switch (SubState)
-				{
-				case ClientLinkingEnum::WaitingForAuthenticationRequest:
-					Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
-					SubState = ClientLinkingEnum::AuthenticationReply;
-					Task::enable();
-					break;
-				case ClientLinkingEnum::AuthenticationReply:
-					break;
-				default:
-					break;
-				}
+				Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
+				LinkingState = LinkingStateEnum::AuthenticationReply;
+				Task::enable();
 			}
 #if defined(DEBUG_LOLA)
 			else
 			{
 				this->Owner();
-				Serial.println(F("ServerChallengeRequest rejected."));
+				Serial.println(F("Rejected ServerChallengeRequest."));
 			}
 #endif
 			break;
 		case Linking::ServerChallengeReply::SUB_HEADER:
-			if (payloadSize == Linking::ServerChallengeReply::PAYLOAD_SIZE)
+			if (payloadSize == Linking::ServerChallengeReply::PAYLOAD_SIZE
+				&& LinkingState == LinkingStateEnum::AuthenticationReply
+				&& Encoder->VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
 			{
-				switch (SubState)
-				{
-				case ClientLinkingEnum::AuthenticationReply:
-					if (Encoder->VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
-					{
 #if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.println(F("Link Access Control granted."));
+				this->Owner();
+				Serial.println(F("Link Access Control granted."));
 #endif
-						SubState = ClientLinkingEnum::ClockSyncing;
-						Task::enable();
-					}
-					break;
-				case ClientLinkingEnum::ClockSyncing:
+				LinkingState = LinkingStateEnum::ClockSyncing;
+				Task::enable();
+			}
+			else
+			{
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Unexpected Access Control response."));
+				this->Owner();
+				Serial.println(F("Rejected Access Control response."));
 #endif
-					break;
-				default:
-					break;
-				}
 			}
 			break;
 		case Linking::ClockSyncReply::SUB_HEADER:
 			if (payloadSize == Linking::ClockSyncReply::PAYLOAD_SIZE
-				&& SubState == ClientLinkingEnum::ClockSyncing)
+				&& LinkingState == LinkingStateEnum::ClockSyncing)
 			{
 				EstimateErrorReply.Seconds = payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX];
 				EstimateErrorReply.Seconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] << 8;
@@ -149,7 +207,31 @@ protected:
 				EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
 				EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
 
-				if (!EstimateErrorReply.Validate())
+				if (EstimateErrorReply.Validate())
+				{
+					// Adjust local clock to match estimation error.
+					SyncClock.ShiftSeconds(EstimateErrorReply.Seconds);
+					SyncClock.ShiftMicros(EstimateErrorReply.SubSeconds);
+
+					if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
+					{
+#if defined(DEBUG_LOLA)
+						this->Owner();
+						Serial.println(F("Clock Accepted, starting final step."));
+#endif
+						LinkingState = LinkingStateEnum::RequestingLinkStart;
+						StateTransition.OnStart();
+					}
+					else
+					{
+#if defined(DEBUG_LOLA)
+						this->Owner();
+						Serial.println(F("Clock Rejected, trying again."));
+#endif
+					}
+					Task::enable();
+				}
+				else
 				{
 #if defined(DEBUG_LOLA)
 					// Invalid estimate, sub-seconds should never match one second.
@@ -159,36 +241,15 @@ protected:
 					Serial.println(F("us. "));
 #endif
 				}
-				// Adjust local clock to match estimation error.
-				SyncClock.ShiftSeconds(EstimateErrorReply.Seconds);
-				SyncClock.ShiftMicros(EstimateErrorReply.SubSeconds);
-
-				if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
-				{
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Clock Accepted, starting final step."));
-#endif
-					SubState = ClientLinkingEnum::RequestingLinkStart;
-					StateTransition.OnStart();
-				}
-				else
-				{
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Clock Rejected, trying again."));
-#endif
-				}
-				Task::enable();
 			}
 			break;
 		case Linking::LinkTimedSwitchOver::SUB_HEADER:
 			if (payloadSize == Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)
 			{
-				switch (SubState)
+				switch (LinkingState)
 				{
-				case ClientLinkingEnum::RequestingLinkStart:
-					SubState = ClientLinkingEnum::SwitchingToLinked;
+				case LinkingStateEnum::RequestingLinkStart:
+					LinkingState = LinkingStateEnum::SwitchingToLinked;
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.print(F("StateTransition Client received, started with "));
@@ -196,7 +257,7 @@ protected:
 					Serial.println(F("us remaining."));
 #endif
 					break;
-				case ClientLinkingEnum::SwitchingToLinked:
+				case LinkingStateEnum::SwitchingToLinked:
 					break;
 				default:
 #if defined(DEBUG_LOLA)
@@ -274,6 +335,7 @@ protected:
 			}
 		}
 	}
+
 protected:
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
 	{
@@ -291,10 +353,12 @@ protected:
 		case LinkStageEnum::AwaitingLink:
 			SearchChannel = LastKnownBroadCastChannel;
 			SetHopperFixedChannel(SearchChannel);
+			SearchChannelTryCount = 0;
+			WaitingState = WaitingStateEnum::SearchingLink;
 			break;
 		case LinkStageEnum::Linking:
 			Encoder->GenerateLocalChallenge(&RandomSource);
-			SubState = ClientLinkingEnum::WaitingForAuthenticationRequest;
+			LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
 			break;
 		case LinkStageEnum::Linked:
 			LastKnownBroadCastChannel = SearchChannel;
@@ -302,6 +366,52 @@ protected:
 			WaitingForClockReply = false;
 			LastCLockSync = millis();
 			LastCLockSent = millis();
+			break;
+		default:
+			break;
+		}
+	}
+
+	virtual void OnServiceAwaitingLink() final
+	{
+		switch (WaitingState)
+		{
+		case WaitingStateEnum::Sleeping:
+			ResetStageStartTime();
+			Task::disable();
+			break;
+		case WaitingStateEnum::SearchingLink:
+			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
+			{
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("SearchingLink time out."));
+#endif
+				WaitingState = WaitingStateEnum::Sleeping;
+				Task::enable();
+			}
+			else
+			{
+				OnServiceSearchingLink();
+			}
+			break;
+		case WaitingStateEnum::SessionCreation:
+			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
+			{
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("SessionCreation timed out. Going back to search for link."));
+#endif
+				WaitingState = WaitingStateEnum::SearchingLink;
+				Task::enable();
+			}
+			else
+			{
+				OnServiceSessionCreation();
+			}
+			break;
+		case WaitingStateEnum::SwitchingToLinking:
+			OnServiceSwitchingToLinking();
 			break;
 		default:
 			break;
@@ -319,9 +429,9 @@ protected:
 			UpdateLinkStage(LinkStageEnum::AwaitingLink);
 		}
 
-		switch (SubState)
+		switch (LinkingState)
 		{
-		case ClientLinkingEnum::WaitingForAuthenticationRequest:
+		case LinkingStateEnum::WaitingForAuthenticationRequest:
 			if (GetStageElapsedMillis() > CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA)
@@ -336,7 +446,7 @@ protected:
 				Task::enableDelayed(1);
 			}
 			break;
-		case ClientLinkingEnum::AuthenticationReply:
+		case LinkingStateEnum::AuthenticationReply:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
 				&& PacketService.CanSendPacket())
 			{
@@ -362,7 +472,7 @@ protected:
 				Task::enableDelayed(1);
 			}
 			break;
-		case ClientLinkingEnum::ClockSyncing:
+		case LinkingStateEnum::ClockSyncing:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
 				&& PacketService.CanSendPacket())
 			{
@@ -401,7 +511,7 @@ protected:
 				Task::enableDelayed(1);
 			}
 			break;
-		case ClientLinkingEnum::RequestingLinkStart:
+		case LinkingStateEnum::RequestingLinkStart:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
 				&& PacketService.CanSendPacket())
 			{
@@ -425,7 +535,7 @@ protected:
 				Task::enableIfNot();
 			}
 			break;
-		case ClientLinkingEnum::SwitchingToLinked:
+		case LinkingStateEnum::SwitchingToLinked:
 			if (StateTransition.HasTimedOut(micros()))
 			{
 				if (StateTransition.HasAcknowledge())
@@ -516,6 +626,92 @@ protected:
 		}
 
 		return false;
+	}
+
+private:
+	void OnServiceSearchingLink()
+	{
+		switch (WaitingState)
+		{
+		case WaitingStateEnum::Sleeping:
+			Task::disable();
+			break;
+		case WaitingStateEnum::SearchingLink:
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
+			{
+				if (SearchChannelTryCount >= CHANNEL_SEARCH_TRY_COUNT)
+				{
+					// Switch channels after a few ms of failed attempt.
+					// Has no effect if Channel Hop is permanent.
+					SearchChannel++;
+					SetHopperFixedChannel(SearchChannel);
+					SearchChannelTryCount = 0;
+					Task::enable();
+				}
+				else if (PacketService.CanSendPacket())
+				{
+					OutPacket.SetPort(Unlinked::PORT);
+					OutPacket.Payload[Unlinked::SearchRequest::SUB_HEADER_INDEX] = Unlinked::SearchRequest::SUB_HEADER;
+
+					if (SendPacket(OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
+					{
+#if defined(DEBUG_LOLA)
+						this->Owner();
+						Serial.println(F("Sent Broadcast Search."));
+#endif
+						SearchChannelTryCount++;
+					}
+				}
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+	void OnServiceSwitchingToLinking()
+	{
+		if (StateTransition.HasTimedOut(micros()))
+		{
+			if (StateTransition.HasAcknowledge())
+			{
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("StateTransition success."));
+#endif
+				UpdateLinkStage(LinkStageEnum::Linking);
+			}
+			else
+			{
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("StateTransition timed out."));
+#endif
+			}
+		}
+		else if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
+		{
+			OutPacket.SetPort(Unlinked::PORT);
+			OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER;
+			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
+
+			if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
+			{
+				StateTransition.OnSent(micros());
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Sent StateTransition Ack."));
+#endif
+			}
+			else
+			{
+				Task::enableIfNot();
+			}
+		}
+		else
+		{
+			Task::enableIfNot();
+		}
 	}
 };
 #endif
