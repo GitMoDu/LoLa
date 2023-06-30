@@ -113,51 +113,60 @@ public:
 
 	virtual const bool Setup()
 	{
-		if (RandomSource.Setup() &&
-			ChannelHopper != nullptr &&
-			ChannelHopper->Setup(this, &SyncClock, GetHopDuration()) &&
-			GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) < LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS &&
-			(Duplex->GetRange() == IDuplex::DUPLEX_FULL ||
-				(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) < Duplex->GetRange())) &&
-			CalibrateSendDuration())
+		if (!RandomSource.Setup())
 		{
 #if defined(DEBUG_LOLA)
-			Serial.print(F("TRANSMIT_BASE_TIMEOUT: "));
-			Serial.println(LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS);
-
-			Serial.print(F("Duplex Range: "));
-			Serial.println(Duplex->GetRange());
-
-			Serial.print(F("Max Time-On-Air: "));
-			Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
-			Serial.println();
-#endif
-			return BaseClass::Setup();
-		}
-		else
-		{
-#if defined(DEBUG_LOLA)
-			if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
-			{
-				Serial.println(F("Estimated Time-On-Air is longer than the duplex slot duration."));
-			}
-			if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)
-			{
-				Serial.println(F("Estimated Time-On-Air is longer than transmit timeout."));
-			}
-
-			Serial.print(F("TRANSMIT_BASE_TIMEOUT: "));
-			Serial.println(LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS);
-
-			Serial.print(F("Duplex Range: "));
-			Serial.println(Duplex->GetRange());
-
-			Serial.print(F("Max Time-On-Air: "));
-			Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
-			Serial.println();
+			Serial.println(F("RandomSource setup failed."));
 #endif
 			return false;
 		}
+
+		if (ChannelHopper == nullptr ||
+			!ChannelHopper->Setup(this, &SyncClock, GetHopDuration()))
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("ChannelHopper setup failed."));
+#endif
+			return false;
+		}
+
+		if (!CalibrateSendDuration())
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("CalibrateSendDuration failed."));
+#endif
+			return false;
+		}
+
+		if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("Estimated Time-On-Air is longer than transmit timeout."));
+#endif
+			return false;
+		}
+
+		if (Duplex->GetRange() != IDuplex::DUPLEX_FULL && GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("Estimated Time-On-Air is longer than the duplex slot duration."));
+#endif
+			return false;
+		}
+
+#if defined(DEBUG_LOLA)
+		Serial.print(F("TRANSMIT_BASE_TIMEOUT: "));
+		Serial.println(LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS);
+
+		Serial.print(F("Duplex Range: "));
+		Serial.println(Duplex->GetRange());
+
+		Serial.print(F("Max Time-On-Air: "));
+		Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+		Serial.println();
+#endif
+
+		return BaseClass::Setup();
 	}
 
 	/// <summary>
@@ -403,23 +412,9 @@ private:
 		const uint32_t calibrationDuration = micros() - calibrationStart;
 
 #if defined(DEBUG_LOLA)
-		SetSendCalibration(shortDuration, longDuration);
-		Serial.println();
 		Serial.print(F("Calibration done. (max payload size"));
 		Serial.print(LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
 		Serial.println(')');
-		Serial.println(F("Short\tLong"));
-		Serial.print(shortDuration);
-		Serial.print('\t');
-		Serial.println(longDuration);
-		Serial.println();
-		Serial.println(F("Full estimation"));
-		Serial.println(F("Short\tLong"));
-		Serial.print(GetSendDuration(0));
-		Serial.print('\t');
-		Serial.println(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
-		Serial.println();
-		Serial.print(F("Calibration ("));
 		Serial.print(CALIBRATION_ROUNDS);
 		Serial.print(F(" rounds) took "));
 		Serial.print(calibrationDuration);
