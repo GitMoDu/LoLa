@@ -27,6 +27,6 @@ public:
 
 public:
 	virtual void SetPartner(IVirtualTransceiver* partner) {}
-	virtual void ReceivePacket(const uint8_t* data, const uint8_t size, const uint8_t channel) {}
+	virtual const bool ReceivePacket(const uint8_t* data, const uint8_t size, const uint8_t channel) {}
 };
 #endif

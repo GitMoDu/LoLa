@@ -42,6 +42,10 @@ private:
 		virtual void Clear()
 		{
 			Size = 0;
+			for (size_t i = 0; i < MaxPacketSize; i++)
+			{
+				Buffer[i] = 0;
+			}
 		}
 	};
 
@@ -82,17 +86,14 @@ public:
 		: IVirtualTransceiver()
 		, ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-	{
-	}
+	{}
 
 public:
 	virtual bool Callback() final
 	{
-		// Simulate transmit delay, from request to on-air end.
-		if (OutGoing.HasPending() && ((micros() - OutGoing.Started) > (GetTimeToAir(OutGoing.Size))))
+		// Simulate transmit delay, from request to on-air start.
+		if (OutGoing.HasPending() && ((micros() - OutGoing.Started) > GetTimeToAir(OutGoing.Size)))
 		{
-			// Tx duration has elapsed.
-			UpdateChannel(OutGoing.Channel);
 #if defined(ECO_CHANCE)
 			if (random(UINT8_MAX) < ECO_CHANCE)
 			{
@@ -114,20 +115,31 @@ public:
 				Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
 			}
 #endif
-			Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
+
+			UpdateChannel(OutGoing.Channel);
+			if (!Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel))
+			{
+#if defined(DEBUG_LOLA)
+				Serial.print(millis());
+				Serial.print('\t');
+				PrintName();
+				Serial.println(F("Rx Collision. Driver rejected."));
+#endif
+			}
+
 
 #if defined(PRINT_PACKETS)
 			PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
-			OutGoing.Clear();
 			if (Listener != nullptr)
 			{
 				Listener->OnTx();
 			}
+			OutGoing.Clear();
 		}
 
 		// Simulate delay from start event to received packet buffer.
-		if (Incoming.HasPending() && (micros() - Incoming.Started > GetDurationInAir(Incoming.Size)))
+		if (Incoming.HasPending() && ((micros() - Incoming.Started) > GetDurationInAir(Incoming.Size)))
 		{
 			// Rx duration has elapsed since the packet incoming start triggered.
 			if (Listener != nullptr)
@@ -223,6 +235,17 @@ public:
 			return false;
 		}
 
+		if (Incoming.HasPending())
+		{
+#if defined(DEBUG_LOLA)
+			Serial.print(millis());
+			Serial.print('\t');
+			PrintName();
+			Serial.println(F("Tx failed. Rx collision."));
+#endif
+			return false;
+		}
+
 		if (OutGoing.HasPending())
 		{
 #if defined(DEBUG_LOLA)
@@ -233,17 +256,17 @@ public:
 		}
 
 		// Copy packet to temporary output buffer.
-		// This will be distributed after TransmitDuration,
+		// This will be distributed after TimeToAir,
 		// simulating the transmit delay.
 		OutGoing.Size = packetSize;
+		OutGoing.Started = timestamp;
 		OutGoing.Channel = channel;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
 			OutGoing.Buffer[i] = data[i];
 		}
-		Task::enable();
 
-		OutGoing.Started = timestamp;
+		Task::enable();
 
 		return true;
 	}
@@ -279,7 +302,7 @@ public:
 		Partner = partner;
 	}
 
-	virtual void ReceivePacket(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
+	virtual const bool ReceivePacket(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		const uint32_t timestamp = micros();
 
@@ -295,7 +318,7 @@ public:
 			PrintName();
 			Serial.println(F("Virtual Rx Collision."));
 #endif
-			return;
+			return false;
 		}
 
 		if (CurrentChannel != channel)
@@ -309,11 +332,20 @@ public:
 			Serial.print(F(" Tx:"));
 			Serial.println(channel);
 #endif
-			return;
+			return false;
 		}
 
-		Incoming.Started = timestamp;
+		if (OutGoing.HasPending())
+		{
+#if defined(DEBUG_LOLA)
+			PrintName();
+			Serial.println(F("Rx failed. Was sending."));
+#endif
+			return false;
+		}
+
 		Incoming.Size = packetSize;
+		Incoming.Started = timestamp;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
 			Incoming.Buffer[i] = data[i];
@@ -330,6 +362,8 @@ public:
 		}
 #endif
 		Task::enable();
+
+		return true;
 	}
 
 private:
