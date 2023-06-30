@@ -75,6 +75,12 @@ public:
 		{
 			return true;
 		}
+#if defined(DEBUG_LOLA)
+		else
+		{
+			Serial.println(F("PacketService setup failed."));
+		}
+#endif
 
 		return false;
 	}
