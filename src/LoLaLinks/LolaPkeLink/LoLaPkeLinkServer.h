@@ -70,7 +70,18 @@ public:
 
 	virtual const bool Setup()
 	{
-		return Session.Setup() && BaseClass::Setup();
+		if (Session.Setup())
+		{
+			return BaseClass::Setup();
+		}
+#if defined(DEBUG_LOLA)
+		else
+		{
+			this->Owner();
+			Serial.println(F("PKE Session setup failed."));
+		}
+#endif
+		return false;
 	}
 
 protected:

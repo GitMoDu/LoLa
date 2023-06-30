@@ -110,7 +110,7 @@ private:
 		PCG::pcg32_random_r(&Rng);
 
 #if defined(DEBUG_LOLA)
-		Serial.println(F("Random Seeding complete."));
+		//Serial.println(F("Random Seeding complete."));
 		//if (idSize > 0)
 		//{
 		//	Serial.print(F("\tUnique Id ("));

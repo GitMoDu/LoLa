@@ -50,15 +50,6 @@ private:
 
 	bool SessionRequestReplyPending = false;
 
-protected:
-#if defined(DEBUG_LOLA)
-	virtual void Owner() final
-	{
-		Serial.print(millis());
-		Serial.print(F("\t[C] "));
-	}
-#endif
-
 public:
 	LoLaPkeLinkClient(Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
@@ -76,7 +67,18 @@ public:
 
 	virtual const bool Setup()
 	{
-		return Session.Setup() && BaseClass::Setup();
+		if (Session.Setup())
+		{
+			return BaseClass::Setup();
+		}
+#if defined(DEBUG_LOLA)
+		else
+		{
+			this->Owner();
+			Serial.println(F("PKE Session setup failed."));
+		}
+#endif
+		return false;
 	}
 
 protected:

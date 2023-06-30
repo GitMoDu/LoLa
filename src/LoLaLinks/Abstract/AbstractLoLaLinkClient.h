@@ -102,6 +102,15 @@ public:
 	{}
 
 protected:
+#if defined(DEBUG_LOLA)
+	virtual void Owner() final
+	{
+		Serial.print(micros());
+		Serial.print(F("\t[C] "));
+	}
+#endif
+
+protected:
 	const bool IsInSessionCreation()
 	{
 		return WaitingState == WaitingStateEnum::SessionCreation;

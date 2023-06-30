@@ -97,11 +97,17 @@ public:
 
 	virtual const bool Setup()
 	{
-		if (BaseClass::Setup()
-			&& RegisterPacketReceiverInternal(this, Linked::PORT))
+		if (RegisterPacketReceiverInternal(this, Linked::PORT))
 		{
-			return true;
+			return BaseClass::Setup();
 		}
+#if defined(DEBUG_LOLA)
+		else
+		{
+			this->Owner();
+			Serial.println(F("Register Link Port failed."));
+		}
+#endif
 
 		return false;
 	}

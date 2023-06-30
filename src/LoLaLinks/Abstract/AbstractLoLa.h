@@ -105,7 +105,31 @@ public:
 
 	virtual const bool Setup()
 	{
-		return Transceiver != nullptr && PacketService.Setup() && SyncClock.Setup();
+		if (Transceiver == nullptr)
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("Transceiver not found."));
+#endif
+			return false;
+		}
+
+		if (!SyncClock.Setup())
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("SyncClock setup failed."));
+#endif
+			return false;
+		}
+
+		if (!PacketService.Setup())
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("PacketService setup failed."));
+#endif
+			return false;
+		}
+
+		return true;
 	}
 
 public:

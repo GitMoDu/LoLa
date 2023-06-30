@@ -99,6 +99,20 @@ protected:
 		{
 			SendShortDurationMicros = shortDuration;
 			SendVariableDurationMicros = longDuration - shortDuration;
+
+#if defined(DEBUG_LOLA)
+			Serial.println(F("Short\tLong"));
+			Serial.print(shortDuration);
+			Serial.print('\t');
+			Serial.println(longDuration);
+			Serial.println();
+			Serial.println(F("Full estimation"));
+			Serial.println(F("Short\tLong"));
+			Serial.print(GetSendDuration(0));
+			Serial.print('\t');
+			Serial.println(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+			Serial.println();
+#endif
 			return true;
 		}
 
