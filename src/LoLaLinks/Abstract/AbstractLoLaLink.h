@@ -60,11 +60,13 @@ private:
 protected:
 	Timestamp LinkTimestamp{};
 
+	int32_t LinkSendDuration = 0;
+
 private:
 	ReportTracker ReportTracking;
 
-	uint32_t LastUnlinkedSent = 0;
 
+	uint32_t LastUnlinkedSent = 0;
 
 	uint32_t LinkStartSeconds = 0;
 
@@ -214,6 +216,11 @@ protected:
 		return micros() - LastUnlinkedSent;
 	}
 
+	void ResetLastUnlinkedSent()
+	{
+		LastUnlinkedSent = micros() - LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS;
+	}
+
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
 	{
 		BaseClass::UpdateLinkStage(linkStage);
@@ -221,6 +228,8 @@ protected:
 		switch (linkStage)
 		{
 		case LinkStageEnum::Disabled:
+			SyncClock.Stop();
+			Transceiver->Stop();
 			break;
 		case LinkStageEnum::Booting:
 			break;
@@ -273,7 +282,6 @@ protected:
 		switch (LinkStage)
 		{
 		case LinkStageEnum::Disabled:
-			SyncClock.Stop();
 			Task::disable();
 			break;
 		case LinkStageEnum::Booting:
@@ -292,7 +300,18 @@ protected:
 			OnServiceAwaitingLink();
 			break;
 		case LinkStageEnum::Linking:
-			OnServiceLinking();
+			if (GetStageElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
+			{
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("Linking timed out!"));
+#endif
+				UpdateLinkStage(LinkStageEnum::AwaitingLink);
+			}
+			else
+			{
+				OnServiceLinking();
+			}
 			break;
 		case LinkStageEnum::Linked:
 			if (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::LINK_STAGE_TIMEOUT)

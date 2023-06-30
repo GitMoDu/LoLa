@@ -43,11 +43,13 @@ protected:
 	using BaseClass::RandomSource;
 	using BaseClass::PacketService;
 	using BaseClass::LinkTimestamp;
+	using BaseClass::LinkSendDuration;
 
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
 	using BaseClass::GetSendDuration;
 	using BaseClass::ResetStageStartTime;
+	using BaseClass::ResetLastUnlinkedSent;
 	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 
 	using BaseClass::RequestSendPacket;
@@ -413,16 +415,6 @@ protected:
 
 	virtual void OnServiceLinking() final
 	{
-		if (GetStageElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
-		{
-#if defined(DEBUG_LOLA)
-			this->Owner();
-			Serial.println(F("Linking timed out!"));
-#endif
-			UpdateLinkStage(LinkStageEnum::AwaitingLink);
-			return;
-		}
-
 		switch (LinkingState)
 		{
 		case LinkingStateEnum::AuthenticationRequest:
