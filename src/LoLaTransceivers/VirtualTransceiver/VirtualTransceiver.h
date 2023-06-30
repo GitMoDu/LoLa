@@ -335,19 +335,22 @@ public:
 private:
 	void UpdateChannel(const uint8_t channel)
 	{
-		if (CurrentChannel != (channel % Config::ChannelCount))
+		const uint8_t newChannel = channel % Config::ChannelCount;
+
+		if (LogChannelHop)
 		{
-			CurrentChannel = channel % Config::ChannelCount;
-			if (LogChannelHop)
+			if (CurrentChannel != newChannel)
 			{
-				LogChannel();
+				LogChannel(newChannel);
 			}
 		}
+
+		CurrentChannel = newChannel;
 	}
 
-	void LogChannel()
+	void LogChannel(const uint8_t channel)
 	{
-		LogChannel(CurrentChannel, Config::ChannelCount, 1);
+		LogChannel(channel, Config::ChannelCount, 1);
 	}
 
 	void LogChannel(const uint8_t channel, const uint8_t channelCount, const uint8_t channelDivisor)
