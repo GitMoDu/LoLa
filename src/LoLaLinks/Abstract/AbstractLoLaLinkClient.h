@@ -125,7 +125,8 @@ protected:
 				&& WaitingState == WaitingStateEnum::SearchingLink)
 			{
 				WaitingState = WaitingStateEnum::SessionCreation;
-				Task::enable();
+				ResetSessionCreation();
+
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("Found a server!"));
@@ -141,7 +142,6 @@ protected:
 				{
 				case WaitingStateEnum::SessionCreation:
 					WaitingState = WaitingStateEnum::SwitchingToLinking;
-					ResetSessionCreation();
 				case WaitingStateEnum::SwitchingToLinking:
 					StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 					Task::enable();
