@@ -158,6 +158,7 @@ protected:
 				}
 				Task::enable();
 				SearchReplyPending = true;
+				ResetLastUnlinkedSent();
 			}
 			break;
 		case Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER:
@@ -166,13 +167,15 @@ protected:
 				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
 				StateTransition.OnReceived();
+				Task::enable();
+				ResetLastUnlinkedSent();
+
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("StateTransition Server got Ack: "));
 				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
 				Serial.println(F("us remaining."));
-#endif
-				Task::enable();
+#endif				
 			}
 			break;
 		default:
@@ -197,6 +200,7 @@ protected:
 				Encoder->SetPartnerChallenge(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
 				LinkingState = LinkingStateEnum::AuthenticationReply;
 				Task::enable();
+				ResetLastUnlinkedSent();
 			}
 			break;
 		case Linking::ClockSyncRequest::SUB_HEADER:
@@ -262,6 +266,7 @@ protected:
 #endif
 				ClockReplyPending = true;
 				Task::enable();
+				ResetLastUnlinkedSent();
 			}
 			break;
 		case Linking::StartLinkRequest::SUB_HEADER:
@@ -276,6 +281,7 @@ protected:
 				LinkingState = LinkingStateEnum::SwitchingToLinked;
 				StateTransition.OnStart(micros());
 				Task::enableIfNot();
+				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
 			else
@@ -509,6 +515,7 @@ protected:
 				}
 			}
 			else if (StateTransition.IsSendRequested(micros())
+				&& GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
 				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Linking::PORT);
@@ -603,7 +610,7 @@ private:
 #endif
 			break;
 		case WaitingStateEnum::SearchingLink:
-			if (SearchReplyPending)
+			if (SearchReplyPending && PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::SearchReply::SUB_HEADER_INDEX] = Unlinked::SearchReply::SUB_HEADER;

@@ -132,6 +132,7 @@ protected:
 				Serial.println(F("Found a server!"));
 #endif
 				Task::enable();
+				ResetLastUnlinkedSent();
 			}
 			break;
 		case Unlinked::LinkingTimedSwitchOver::SUB_HEADER:
@@ -145,6 +146,7 @@ protected:
 				case WaitingStateEnum::SwitchingToLinking:
 					StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 					Task::enable();
+					ResetLastUnlinkedSent();
 					break;
 				default:
 					return;
@@ -174,6 +176,7 @@ protected:
 				Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 				LinkingState = LinkingStateEnum::AuthenticationReply;
 				Task::enable();
+				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
 			else
@@ -194,6 +197,7 @@ protected:
 #endif
 				LinkingState = LinkingStateEnum::ClockSyncing;
 				Task::enable();
+				ResetLastUnlinkedSent();
 			}
 			else
 			{
@@ -238,7 +242,6 @@ protected:
 						Serial.println(F("Clock Rejected, trying again."));
 #endif
 					}
-					Task::enable();
 				}
 				else
 				{
@@ -250,6 +253,8 @@ protected:
 					Serial.println(F("us. "));
 #endif
 				}
+				Task::enable();
+				ResetLastUnlinkedSent();
 			}
 			break;
 		case Linking::LinkTimedSwitchOver::SUB_HEADER:
@@ -280,6 +285,7 @@ protected:
 				Serial.println(F("us remaining."));
 #endif
 				Task::enable();
+				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
 			else
