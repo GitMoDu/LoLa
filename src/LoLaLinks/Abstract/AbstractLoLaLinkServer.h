@@ -256,7 +256,7 @@ protected:
 				}
 
 				SyncClock.GetTimestamp(LinkTimestamp);
-				LinkTimestamp.ShiftSubSeconds(startTimestamp - micros());
+				LinkTimestamp.ShiftSubSeconds((int32_t)(startTimestamp - micros()));
 				EstimateErrorReply.CalculateError(LinkTimestamp, InEstimate);
 
 #if defined(DEBUG_LOLA)

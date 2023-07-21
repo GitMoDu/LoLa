@@ -322,25 +322,27 @@ protected:
 					{
 						// Due to error limit of LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS, operation doesn't need to be elevated to uint64_t.
 						ClockErrorFiltered += (((int32_t)EstimateErrorReply.SubSeconds - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
-
-						// Adjust client clock with filtered estimation error.
-						if (ClockErrorFiltered != 0)
-						{
-							SyncClock.ShiftMicros(ClockErrorFiltered);
-						}
-
-						LastCLockSync = millis();
 					}
 					else
 					{
-						// Error too big, discarding.
-#if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.print(F("Clock Tune rejected:"));
-						Serial.print((int32_t)EstimateErrorReply.SubSeconds);
-						Serial.println(F("us."));
-#endif
+						// Error too big, limiting correction.
+						if ((int32_t)EstimateErrorReply.SubSeconds >= 0)
+						{
+							ClockErrorFiltered += ((LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
+						}
+						else
+						{
+							ClockErrorFiltered += ((-(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
+						}
 					}
+
+					// Adjust client clock with filtered estimation error.
+					if (ClockErrorFiltered != 0)
+					{
+						SyncClock.ShiftMicros(ClockErrorFiltered);
+					}
+
+					LastCLockSync = millis();
 
 					WaitingForClockReply = false;
 				}
@@ -487,8 +489,10 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClockSyncRequest::SUB_HEADER_INDEX] = Linking::ClockSyncRequest::SUB_HEADER;
 
+				LinkSendDuration = (int32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
+
 				SyncClock.GetTimestamp(LinkTimestamp);
-				LinkTimestamp.ShiftSubSeconds((int32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE));
+				LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
 
 				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX] = LinkTimestamp.Seconds;
 				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 1] = LinkTimestamp.Seconds >> 8;
@@ -596,10 +600,10 @@ protected:
 		if (OutPacket.GetPort() == Linked::PORT &&
 			OutPacket.Payload[Linked::ClockTuneMicrosRequest::SUB_HEADER_INDEX] == Linked::ClockTuneMicrosRequest::SUB_HEADER)
 		{
-			const int32_t sendDuration = GetSendDuration(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE);
+			LinkSendDuration = GetSendDuration(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE);
 
 			SyncClock.GetTimestamp(LinkTimestamp);
-			LinkTimestamp.ShiftSubSeconds(sendDuration);
+			LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
 
 			const uint32_t rolling = LinkTimestamp.GetRollingMicros();
 
