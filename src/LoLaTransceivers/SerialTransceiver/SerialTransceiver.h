@@ -306,7 +306,14 @@ public:
 	/// <param name="channel"></param>
 	virtual void Rx(const uint8_t channel) final
 	{
-		//TODO: Clear TX/RX buffers.
+		// Notify forced TX end.
+		if (TxState != TxStateEnum::NoTx)
+		{
+			Serial.println("Rx killed Tx.");
+			Listener->OnTx();
+		}
+
+		TxState = TxStateEnum::NoTx;
 	}
 
 	/// <summary>
