@@ -34,7 +34,7 @@ template<const uint8_t CePin,
 class nRF24Transceiver : private Task, public virtual ILoLaTransceiver
 {
 private:
-	static constexpr uint32_t EVENT_TIMEOUT_MICROS = 2000;
+	static constexpr uint32_t EVENT_TIMEOUT_MICROS = 3000;
 
 	// 126 RF channels, 1 MHz steps.
 	static constexpr uint8_t ChannelCount = 126;
@@ -70,7 +70,7 @@ private:
 	uint8_t RssiHistory = 0;
 
 private:
-	volatile bool InterruptTimestamp = 0;
+	volatile uint32_t InterruptTimestamp = 0;
 	volatile bool DoubleEvent = false;
 	volatile bool InterruptPending = false;
 
@@ -322,6 +322,7 @@ public:
 			{
 				const int8_t packetSize = Radio.getDynamicPayloadSize();
 
+				Event.Timestamp -= GetRxDelay(packetSize);
 				if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
 				{
 					// Store 8 packet history of 1-bit RSSI. 
@@ -335,7 +336,7 @@ public:
 					Radio.read(InBuffer, packetSize);
 
 					// Rx Interrupt only occurs when packet has been fully received, so the timestamp must be compensated with RxDelay.
-					Listener->OnRx(InBuffer, Event.Timestamp - GetRxDelay(packetSize), packetSize, GetRxRssi());
+					Listener->OnRx(InBuffer, Event.Timestamp, packetSize, GetRxRssi());
 				}
 				else
 				{
