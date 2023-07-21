@@ -428,12 +428,12 @@ protected:
 				OutPacket.Payload[Linking::ServerChallengeRequest::SUB_HEADER_INDEX] = Linking::ServerChallengeRequest::SUB_HEADER;
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending ServerChallengeRequest."));
-#endif
 				if (SendPacket(OutPacket.Data, Linking::ServerChallengeRequest::PAYLOAD_SIZE))
 				{
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent ServerChallengeRequest."));
+#endif
 				}
 			}
 			break;
@@ -445,12 +445,12 @@ protected:
 				OutPacket.Payload[Linking::ServerChallengeReply::SUB_HEADER_INDEX] = Linking::ServerChallengeReply::SUB_HEADER;
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Sending ServerChallengeReply."));
-#endif
 				if (SendPacket(OutPacket.Data, Linking::ServerChallengeReply::PAYLOAD_SIZE))
 				{
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Sent ServerChallengeReply."));
+#endif
 				}
 			}
 			break;
