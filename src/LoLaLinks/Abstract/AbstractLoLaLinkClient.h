@@ -62,10 +62,7 @@ protected:
 	using BaseClass::ResetStageStartTime;
 
 protected:
-	ClientTimedStateTransition<
-		LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS,
-		LoLaLinkDefinition::LINKING_TRANSITION_RESEND_PERIOD_MICROS>
-		StateTransition;
+	ClientTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
 	TimestampError EstimateErrorReply{};
 
@@ -140,15 +137,10 @@ protected:
 			if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
 				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Got LinkingTimedSwitchOver."));
-#endif
 				switch (WaitingState)
 				{
 				case WaitingStateEnum::SessionCreation:
 					WaitingState = WaitingStateEnum::SwitchingToLinking;
-					StateTransition.OnStart();
 					ResetSessionCreation();
 				case WaitingStateEnum::SwitchingToLinking:
 					StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
@@ -158,6 +150,12 @@ protected:
 					return;
 					break;
 				}
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.print(F("Got LinkingTimedSwitchOver: "));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
+				Serial.println(F("us remaining."));
+#endif
 			}
 			break;
 		default:
@@ -230,8 +228,8 @@ protected:
 						this->Owner();
 						Serial.println(F("Clock Accepted, starting final step."));
 #endif
+						StateTransition.Clear();
 						LinkingState = LinkingStateEnum::RequestingLinkStart;
-						StateTransition.OnStart();
 					}
 					else
 					{
@@ -261,12 +259,6 @@ protected:
 				{
 				case LinkingStateEnum::RequestingLinkStart:
 					LinkingState = LinkingStateEnum::SwitchingToLinked;
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("StateTransition Client received, started with "));
-					Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
-					Serial.println(F("us remaining."));
-#endif
 					break;
 				case LinkingStateEnum::SwitchingToLinked:
 					break;
@@ -278,8 +270,15 @@ protected:
 					return;
 					break;
 				}
+
 				StateTransition.OnReceived(startTimestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.print(F("Got LinkTimedSwitchOver: "));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
+				Serial.println(F("us remaining."));
+#endif
 				Task::enable();
 			}
 #if defined(DEBUG_LOLA)
@@ -365,6 +364,7 @@ protected:
 			SearchChannel = LastKnownBroadCastChannel;
 			SetHopperFixedChannel(SearchChannel);
 			SearchChannelTryCount = 0;
+			StateTransition.Clear();
 			WaitingState = WaitingStateEnum::SearchingLink;
 			break;
 		case LinkStageEnum::Linking:
@@ -564,7 +564,7 @@ protected:
 
 				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
-					StateTransition.OnSent(micros());
+					StateTransition.OnSent();
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.println(F("Sent StateTransition Ack."));
@@ -699,7 +699,7 @@ private:
 
 			if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 			{
-				StateTransition.OnSent(micros());
+				StateTransition.OnSent();
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("Sent StateTransition Ack."));

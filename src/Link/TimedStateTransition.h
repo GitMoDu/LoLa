@@ -5,13 +5,11 @@
 
 #include <stdint.h>
 
-template<const uint32_t TransitionTimeout,
-	const uint32_t ResendPeriod>
+template<const uint32_t TransitionTimeout>
 class ServerTimedStateTransition
 {
 private:
 	uint32_t TransitionStart = 0;
-	uint32_t LastSent = 0;
 	bool TransitionAcknowledged = false;
 
 public:
@@ -19,15 +17,9 @@ public:
 	{}
 
 public:
-
 	void OnReceived()
 	{
 		TransitionAcknowledged = true;
-	}
-
-	void OnSent(const uint32_t timestamp)
-	{
-		LastSent = timestamp;
 	}
 
 public:
@@ -35,7 +27,6 @@ public:
 	{
 		TransitionAcknowledged = false;
 		TransitionStart = timestamp;
-		LastSent = timestamp - ResendPeriod;
 	}
 
 	void CopyDurationUntilTimeOutTo(const uint32_t timestamp, uint8_t* target)
@@ -50,7 +41,11 @@ public:
 
 	const bool IsSendRequested(const uint32_t timestamp)
 	{
-		return !HasAcknowledge() && (timestamp - LastSent) > ResendPeriod;
+		const uint32_t remaining = GetDurationUntilTimeOut(timestamp);
+
+		return remaining != 0
+			&& remaining < TransitionTimeout
+			&& !HasAcknowledge();
 	}
 
 	const uint32_t GetDurationUntilTimeOut(const uint32_t timestamp)
@@ -67,7 +62,7 @@ public:
 
 	const bool HasTimedOut(const uint32_t timestamp)
 	{
-		return timestamp - TransitionStart > TransitionTimeout;
+		return GetDurationUntilTimeOut(timestamp) == 0;
 	}
 
 	const bool HasAcknowledge()
@@ -76,7 +71,7 @@ public:
 	}
 };
 
-template<const uint32_t TransitionTimeout, const uint32_t ResendPeriod>
+template<const uint32_t TransitionTimeout>
 class ClientTimedStateTransition
 {
 private:
@@ -89,7 +84,6 @@ private:
 
 private:
 	uint32_t TransitionEnd = 0;
-	uint32_t LastSent = 0;
 
 	ClientTransitionStateEnum State = ClientTransitionStateEnum::WaitingForTransitionStart;
 
@@ -105,46 +99,64 @@ public:
 		remaining += (uint32_t)source[2] << 16;
 		remaining += (uint32_t)source[3] << 24;
 
-
-		State = ClientTransitionStateEnum::TransitionAcknowledging;
-		if (remaining < (TransitionTimeout * 2))
+		if ((remaining < TransitionTimeout)
+			|| (receiveTimestamp + remaining <= TransitionEnd))
 		{
+			State = ClientTransitionStateEnum::TransitionAcknowledging;
 			TransitionEnd = receiveTimestamp + remaining;
 		}
 		else
 		{
-			TransitionEnd = TransitionTimeout;
+			Serial.print(F("Rejected transition duration: "));
+			Serial.print(remaining);
+			Serial.println(F("us"));
 		}
-		LastSent = receiveTimestamp - ResendPeriod;
 	}
 
-	void OnStart()
+	void Clear()
 	{
 		State = ClientTransitionStateEnum::WaitingForTransitionStart;
 	}
 
-	void OnSent(const uint32_t timestamp)
+	void OnSent()
 	{
-		LastSent = timestamp;
 		State = ClientTransitionStateEnum::TransitionAcknowledged;
 	}
 
 public:
 	const bool IsSendRequested(const uint32_t timestamp)
 	{
-		return State == ClientTransitionStateEnum::TransitionAcknowledging && (timestamp - LastSent) > ResendPeriod;
+		const uint32_t remaining = GetDurationUntilTimeOut(timestamp);
+
+		return State == ClientTransitionStateEnum::TransitionAcknowledging
+			&& remaining != 0
+			&& remaining < TransitionTimeout;
 	}
 
 	const bool HasTimedOut(const uint32_t timestamp)
 	{
-		return ((int32_t)(timestamp - TransitionEnd)) >= 0;
+		return State != ClientTransitionStateEnum::WaitingForTransitionStart
+			&& (TransitionEnd - timestamp >= TransitionTimeout);
+	}
+
+	void Debug(const uint32_t timestamp)
+	{
+		Serial.print(F("State"));
+		Serial.print(State);
+		Serial.print(F(", TransitionEnd"));
+		Serial.print(TransitionEnd);
+		Serial.print(F(", timestamp"));
+		Serial.print(timestamp);
+		Serial.print(F(", delta"));
+		Serial.print((int32_t)(TransitionEnd - timestamp));
+		Serial.println();
 	}
 
 	const uint32_t GetDurationUntilTimeOut(const uint32_t timestamp)
 	{
-		if (((int32_t)(TransitionEnd - timestamp)) < 0)
+		if (TransitionEnd - timestamp >= TransitionTimeout)
 		{
-			return TransitionTimeout;
+			return 0;
 		}
 		else
 		{
@@ -154,7 +166,7 @@ public:
 
 	const bool HasAcknowledge()
 	{
-		return State != ClientTransitionStateEnum::WaitingForTransitionStart;
+		return State == ClientTransitionStateEnum::TransitionAcknowledged;
 	}
 };
 #endif

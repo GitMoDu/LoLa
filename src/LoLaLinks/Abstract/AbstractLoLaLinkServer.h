@@ -59,10 +59,7 @@ protected:
 	using BaseClass::GetStageElapsedMillis;
 
 protected:
-	ServerTimedStateTransition<
-		LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS,
-		LoLaLinkDefinition::LINKING_TRANSITION_RESEND_PERIOD_MICROS>
-		StateTransition;
+	ServerTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
 	Timestamp InEstimate{};
 	TimestampError EstimateErrorReply{};
@@ -172,7 +169,7 @@ protected:
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("StateTransition Server got Ack: "));
-				Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
 				Serial.println(F("us remaining."));
 #endif
 				Task::enable();
@@ -296,7 +293,7 @@ protected:
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("StateTransition Server got Ack: "));
-				Serial.print(StateTransition.GetDurationUntilTimeOut(micros()));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
 				Serial.println(F("us remaining."));
 #endif
 				Task::enable();
@@ -511,15 +508,24 @@ protected:
 					Task::enable();
 				}
 			}
-			else if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
+			else if (StateTransition.IsSendRequested(micros())
+				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOver::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOver::SUB_HEADER;
-				StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+
+				const uint32_t timestamp = micros();
+
+				StateTransition.CopyDurationUntilTimeOutTo(timestamp + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 
 				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
 				{
-					StateTransition.OnSent(micros());
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.print(F("Sent LinkTimedSwitchOver, "));
+					Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
+					Serial.println(F("us remaining."));
+#endif
 				}
 			}
 			else
@@ -651,15 +657,21 @@ private:
 			OutPacket.SetPort(Unlinked::PORT);
 			OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOver::SUB_HEADER;
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
-			StateTransition.CopyDurationUntilTimeOutTo(micros() + GetSendDuration(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 
+			const uint32_t timestamp = micros();
+			StateTransition.CopyDurationUntilTimeOutTo(timestamp + GetSendDuration(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 			if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
 			{
-				StateTransition.OnSent(micros());
 #if defined(DEBUG_LOLA)
 				this->Owner();
-				Serial.println(F("Sent LinkingTimedSwitchOver."));
+				Serial.print(F("Sent LinkingTimedSwitchOver, "));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
+				Serial.println(F("us remaining."));
 #endif
+			}
+			else
+			{
+				Task::enable();
 			}
 		}
 		else
