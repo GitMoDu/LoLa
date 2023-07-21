@@ -25,7 +25,7 @@ private:
 protected:
 	/// <summary>
 	/// Implicit addressing Rx key.
-	/// Extracted from seed and public keys: [Receiver|Sender]
+	/// Extracted from seed and public keys: [Sender|Receiver]
 	/// </summary>
 	uint8_t InputKey[LoLaLinkDefinition::ADDRESS_KEY_SIZE]{};
 
