@@ -132,7 +132,6 @@ public:
 	/// <summary>
 	/// </summary>
 	static constexpr int32_t LINKING_TRANSITION_PERIOD_MICROS = 30000;
-	static constexpr int32_t LINKING_TRANSITION_RESEND_PERIOD_MICROS = 6666;
 
 	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
@@ -177,7 +176,7 @@ public:
 	/// <summary>
 	/// How many microseconds is the client allowed to tune its clock on one tune request. 
 	/// </summary>
-	static constexpr uint32_t CLOCK_TUNE_RANGE_MICROS = 150;
+	static constexpr uint32_t CLOCK_TUNE_RANGE_MICROS = 300;
 
 	static constexpr uint32_t CLOCK_TUNE_PERIOD = 666;
 	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
