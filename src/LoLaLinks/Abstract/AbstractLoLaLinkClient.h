@@ -698,6 +698,9 @@ private:
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("StateTransition timed out."));
+				// No Ack before time out.
+				WaitingState = WaitingStateEnum::SearchingLink;
+				Task::enable();
 #endif
 			}
 		}

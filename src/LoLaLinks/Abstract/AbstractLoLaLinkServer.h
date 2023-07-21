@@ -148,6 +148,7 @@ protected:
 					Serial.println(F("Broadcast wake up!"));
 #endif
 					// Wake up!
+					ResetStageStartTime();
 					WaitingState = WaitingStateEnum::SearchingLink;
 					break;
 				case WaitingStateEnum::SearchingLink:
@@ -230,6 +231,7 @@ protected:
 #endif
 					break;
 				default:
+					return;
 					break;
 				}
 
@@ -683,7 +685,7 @@ private:
 		}
 		else
 		{
-			Task::enableIfNot();
+			Task::enable();
 		}
 	}
 };
