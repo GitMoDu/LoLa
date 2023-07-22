@@ -235,7 +235,7 @@ public:
 					Listener->OnTx();
 				}
 #if defined(DEBUG_LOLA)
-				Serial.print(millis());
+				Serial.print(micros());
 				Serial.print(F(": "));
 				Serial.println(F("Got Double Event!"));
 #endif
@@ -250,14 +250,25 @@ public:
 				{
 					if (!Event.TxOk && !Event.TxFail)
 					{
+						Event.TxOk = true;
+						Event.TxFail = false;
 #if defined(DEBUG_LOLA)
-						Serial.print(millis());
+						Serial.print(micros());
 						Serial.print(F(": "));
 						Serial.println(F("Force Tx Ok."));
 #endif
 						Event.TxOk = true;
 						Event.TxFail = false;
 					}
+				}
+				else if (!Event.RxReady && (Event.TxOk || Event.TxFail))
+				{
+					// Unexpected interrupt.
+#if defined(DEBUG_LOLA)
+					Serial.print(micros());
+					Serial.print(F(": "));
+					Serial.println(F("Unexpected Tx interrupt."));
+#endif
 				}
 
 				if (Event.Pending())
@@ -268,7 +279,7 @@ public:
 				else if ((micros() - InterruptTimestamp) > EVENT_TIMEOUT_MICROS)
 				{
 #if defined(DEBUG_LOLA)
-					Serial.print(millis());
+					Serial.print(micros());
 					Serial.print(F(": "));
 					Serial.println(F("Event Timeout."));
 #endif
@@ -298,15 +309,6 @@ public:
 			{
 				TxPending = false;
 				Listener->OnTx();
-			}
-			else
-			{
-				// Unexpected interrupt.
-#if defined(DEBUG_LOLA)
-				Serial.print(millis());
-				Serial.print(F(": "));
-				Serial.println(F("Unexpected Tx interrupt."));
-#endif
 			}
 		}
 
@@ -350,8 +352,8 @@ public:
 
 				Task::enable();
 				return true;
-			}
 		}
+	}
 
 		if (InterruptPending || TxPending || Event.Pending())
 		{
@@ -363,7 +365,7 @@ public:
 			Task::delay(1);
 			return false;
 		}
-	}
+}
 
 
 	/// <summary>

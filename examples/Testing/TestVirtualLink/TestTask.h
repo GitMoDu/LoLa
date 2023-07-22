@@ -135,7 +135,7 @@ public:
 public:
 	virtual void OnLinkStateUpdated(const bool hasLink)
 	{
-		Serial.print(millis());
+		Serial.print(micros());
 		if (hasLink)
 		{
 			Serial.println(F("\tLink Acquired."));

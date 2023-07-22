@@ -120,7 +120,7 @@ public:
 			if (!Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel))
 			{
 #if defined(DEBUG_LOLA)
-				Serial.print(millis());
+				Serial.print(micros());
 				Serial.print('\t');
 				PrintName();
 				Serial.println(F("Rx Collision. Driver rejected."));
@@ -157,7 +157,7 @@ public:
 					if (!Listener->OnRx(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
 					{
 #if defined(DEBUG_LOLA)
-						Serial.print(millis());
+						Serial.print(micros());;
 						Serial.print('\t');
 						PrintName();
 						Serial.println(F("Rx Collision. Packet Service rejected."));
@@ -238,7 +238,7 @@ public:
 		if (Incoming.HasPending())
 		{
 #if defined(DEBUG_LOLA)
-			Serial.print(millis());
+			Serial.print(micros());
 			Serial.print('\t');
 			PrintName();
 			Serial.println(F("Tx failed. Rx collision."));
@@ -313,7 +313,7 @@ public:
 				Listener->OnRxLost(timestamp);
 			}
 #if defined(DEBUG_LOLA)
-			Serial.print(millis());
+			Serial.print(micros());
 			Serial.print('\t');
 			PrintName();
 			Serial.println(F("Virtual Rx Collision."));
@@ -324,7 +324,7 @@ public:
 		if (CurrentChannel != channel)
 		{
 #if defined(DEBUG_LOLA)
-			Serial.print(millis());
+			Serial.print(micros());
 			Serial.print('\t');
 			PrintName();
 			Serial.print(F("Channel Miss: Rx:"));

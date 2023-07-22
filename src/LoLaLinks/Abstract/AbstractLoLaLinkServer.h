@@ -92,7 +92,7 @@ protected:
 #if defined(DEBUG_LOLA)
 	virtual void Owner() final
 	{
-		Serial.print(millis());
+		Serial.print(micros());
 		Serial.print(F("\t[S] "));
 	}
 #endif
