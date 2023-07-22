@@ -32,7 +32,6 @@
 #define TX_TEST_PIN TEST_PIN_2
 #endif
 
-#define _TASK_SCHEDULE_NC // Disable task catch-up.
 #define _TASK_OO_CALLBACKS
 
 #ifndef ARDUINO_ARCH_ESP32

@@ -61,10 +61,9 @@
 #define LINK_USE_CHANNEL_HOP true
 //#define LINK_USE_TIMER_AND_RTC
 
-#define _TASK_SCHEDULE_NC // Disable task catch-up.
 #define _TASK_OO_CALLBACKS
 
-#ifndef _TASK_SLEEP_ON_IDLE_RUN
+#ifdef _TASK_SLEEP_ON_IDLE_RUN
 #undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
 #endif
 
