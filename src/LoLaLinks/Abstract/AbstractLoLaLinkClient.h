@@ -134,6 +134,11 @@ protected:
 				Task::enable();
 				ResetLastUnlinkedSent();
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("SearchReply"));
+			}
+#endif
 			break;
 		case Unlinked::LinkingTimedSwitchOver::SUB_HEADER:
 			if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
@@ -159,6 +164,11 @@ protected:
 				Serial.println(F("us remaining."));
 #endif
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("LinkingTimedSwitchOver"));
+			}
+#endif
 			break;
 		default:
 			break;
@@ -181,8 +191,7 @@ protected:
 #if defined(DEBUG_LOLA)
 			else
 			{
-				this->Owner();
-				Serial.println(F("Rejected ServerChallengeRequest."));
+				this->Skipped(F("ServerChallengeRequest."));
 			}
 #endif
 			break;
@@ -199,13 +208,11 @@ protected:
 				Task::enable();
 				ResetLastUnlinkedSent();
 			}
-			else
-			{
 #if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Rejected Access Control response."));
-#endif
+			else {
+				this->Skipped(F("ServerChallengeReply"));
 			}
+#endif
 			break;
 		case Linking::ClockSyncReply::SUB_HEADER:
 			if (payloadSize == Linking::ClockSyncReply::PAYLOAD_SIZE
@@ -235,27 +242,32 @@ protected:
 						StateTransition.Clear();
 						LinkingState = LinkingStateEnum::RequestingLinkStart;
 					}
+#if defined(DEBUG_LOLA)
 					else
 					{
-#if defined(DEBUG_LOLA)
 						this->Owner();
 						Serial.println(F("Clock Rejected, trying again."));
-#endif
 					}
+#endif
 				}
+#if defined(DEBUG_LOLA)
 				else
 				{
-#if defined(DEBUG_LOLA)
 					// Invalid estimate, sub-seconds should never match one second.
 					this->Owner();
 					Serial.print(F("Clock Estimate Error Invalid. SubSeconds="));
 					Serial.print(EstimateErrorReply.SubSeconds);
 					Serial.println(F("us. "));
-#endif
 				}
+#endif
 				Task::enable();
 				ResetLastUnlinkedSent();
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("ClockSyncReply"));
+			}
+#endif
 			break;
 		case Linking::LinkTimedSwitchOver::SUB_HEADER:
 			if (payloadSize == Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)
@@ -288,10 +300,8 @@ protected:
 				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
-			else
-			{
-				this->Owner();
-				Serial.println(F("LinkSwitchOver rejected."));
+			else {
+				this->Skipped(F("LinkSwitchOver"));
 			}
 #endif
 			break;
@@ -346,6 +356,11 @@ protected:
 
 					WaitingForClockReply = false;
 				}
+#if defined(DEBUG_LOLA)
+				else {
+					this->Skipped(F("ClockTuneMicrosReply"));
+				}
+#endif
 				break;
 			default:
 				BaseClass::OnPacketReceived(startTimestamp, payload, payloadSize, port);

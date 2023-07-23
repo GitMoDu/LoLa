@@ -105,12 +105,14 @@ public:
 			State = ClientTransitionStateEnum::TransitionAcknowledging;
 			TransitionEnd = receiveTimestamp + remaining;
 		}
+#if defined(DEBUG_LOLA)
 		else
 		{
 			Serial.print(F("Rejected transition duration: "));
 			Serial.print(remaining);
 			Serial.println(F("us"));
 		}
+#endif
 	}
 
 	void Clear()
@@ -139,6 +141,7 @@ public:
 			&& (TransitionEnd - timestamp >= TransitionTimeout);
 	}
 
+#if defined(DEBUG_LOLA)
 	void Debug(const uint32_t timestamp)
 	{
 		Serial.print(F("State"));
@@ -151,6 +154,7 @@ public:
 		Serial.print((int32_t)(TransitionEnd - timestamp));
 		Serial.println();
 	}
+#endif
 
 	const uint32_t GetDurationUntilTimeOut(const uint32_t timestamp)
 	{

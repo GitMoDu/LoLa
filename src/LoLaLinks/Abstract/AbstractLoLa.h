@@ -84,6 +84,20 @@ protected:
 #if defined(DEBUG_LOLA)
 protected:
 	virtual void Owner() {}
+
+	size_t print(const __FlashStringHelper* ifsh) { return print(reinterpret_cast<const char*>(ifsh)); }
+
+	void Skipped(const __FlashStringHelper* ifsh)
+	{
+		return Skipped(reinterpret_cast<const char*>(ifsh));
+	}
+
+	void Skipped(const String& label)
+	{
+		this->Owner();
+		Serial.print(F("Rejected "));
+		Serial.println(label);
+	}
 #endif
 
 

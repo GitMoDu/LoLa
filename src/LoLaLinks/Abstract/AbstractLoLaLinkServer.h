@@ -161,6 +161,11 @@ protected:
 				SearchReplyPending = true;
 				ResetLastUnlinkedSent();
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("SearchRequest"));
+			}
+#endif
 			break;
 		case Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER:
 			if (payloadSize == Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE
@@ -178,6 +183,11 @@ protected:
 				Serial.println(F("us remaining."));
 #endif				
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("LinkingTimedSwitchOverAck"));
+			}
+#endif
 			break;
 		default:
 			break;
@@ -203,6 +213,11 @@ protected:
 				Task::enable();
 				ResetLastUnlinkedSent();
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("ClientChallengeReplyRequest"));
+			}
+#endif
 			break;
 		case Linking::ClockSyncRequest::SUB_HEADER:
 			if (payloadSize == Linking::ClockSyncRequest::PAYLOAD_SIZE)
@@ -270,6 +285,11 @@ protected:
 				Task::enable();
 				ResetLastUnlinkedSent();
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("ClockSyncRequest"));
+			}
+#endif
 			break;
 		case Linking::StartLinkRequest::SUB_HEADER:
 			if (payloadSize == Linking::StartLinkRequest::PAYLOAD_SIZE
@@ -286,10 +306,8 @@ protected:
 				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
-			else
-			{
-				this->Owner();
-				Serial.println(F("Link Start rejected."));
+			else {
+				this->Skipped(F("StartLinkRequest"));
 			}
 #endif
 			break;
@@ -306,6 +324,11 @@ protected:
 #endif
 				Task::enable();
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("LinkTimedSwitchOverAck"));
+			}
+#endif
 			break;
 		default:
 			break;
@@ -337,6 +360,11 @@ protected:
 					ClockReplyPending = true;
 					Task::enable();
 				}
+#if defined(DEBUG_LOLA)
+				else {
+					this->Skipped(F("ClockTuneMicrosRequest"));
+				}
+#endif
 				break;
 			default:
 				BaseClass::OnPacketReceived(startTimestamp, payload, payloadSize, port);

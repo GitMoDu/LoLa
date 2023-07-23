@@ -107,13 +107,16 @@ protected:
 					break;
 				default:
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("Rejected a server! (session broadcast). PkeState: "));
-					Serial.println(PkeState);
+					this->Skipped(F("SessionBroadcast"));
 #endif
 					break;
 				}
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("SessionBroadcast"));
+			}
+#endif
 			break;
 		default:
 			BaseClass::OnUnlinkedPacketReceived(startTimestamp, payload, payloadSize, counter);

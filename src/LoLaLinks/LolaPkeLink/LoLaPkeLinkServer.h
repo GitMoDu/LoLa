@@ -101,13 +101,11 @@ protected:
 				PkeState = PkeStateEnum::BroadcastingSession;
 				StartSessionCreationIfNot();
 			}
-			else
-			{
 #if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.println(F("Session request ignored."));
-#endif
+			else {
+				this->Skipped(F("SessionRequest"));
 			}
+#endif
 			break;
 		case Unlinked::LinkingStartRequest::SUB_HEADER:
 			if (payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
@@ -121,6 +119,11 @@ protected:
 				PkeState = PkeStateEnum::ValidatingSession;
 				Task::enable();
 			}
+#if defined(DEBUG_LOLA)
+			else {
+				this->Skipped(F("LinkingStartRequest"));
+			}
+#endif
 			break;
 		default:
 			BaseClass::OnUnlinkedPacketReceived(startTimestamp, payload, payloadSize, counter);
@@ -154,15 +157,8 @@ protected:
 					Serial.println(F("Sent PKE Session."));
 #endif
 				}
-				else
-				{
-					Task::enable();
-				}
 			}
-			else
-			{
-				Task::delay(1);
-			}
+			Task::enable();
 			break;
 		case PkeStateEnum::ValidatingSession:
 			if (Session.PublicKeyCollision())

@@ -167,10 +167,18 @@ public:
 						ReportTracking.RequestReportUpdate(false);
 					}
 				}
+#if defined(DEBUG_LOLA)
+				else {
+					this->Skipped(F("ReportUpdate"));
+				}
+#endif
 				break;
 			default:
 				// This is the top-most class to parse incoming packets as a consumer.
 				// So the base class call is not needed here.
+#if defined(DEBUG_LOLA)
+				this->Skipped(F("Unknown"));
+#endif
 				break;
 			}
 		}
