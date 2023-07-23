@@ -43,12 +43,12 @@
 
 
 // Medium Simulation error chances, out 255, for every call.
-//#define DROP_CHANCE 10
-//#define CORRUPT_CHANCE 10
+//#define DROP_CHANCE 100
+//#define CORRUPT_CHANCE 20
+//#define DOUBLE_SEND_CHANCE 10
 //#define ECO_CHANCE 5
-//#define DOUBLE_SEND_CHANCE 5
 
-#define SERVER_DROP_LINK_TEST 5
+//#define SERVER_DROP_LINK_TEST 5
 //#define CLIENT_DROP_LINK_TEST 5
 
 //#define PRINT_PACKETS
@@ -94,13 +94,13 @@ static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 
 // Test Virtual Packet Driver configurations.
 // <ChannelCount, TxBaseMicros, TxByteNanos, RxBaseMicros, RxByteNanos, HopMicros>
-using FastGHzRadio = IVirtualTransceiver::Configuration<125, 25, 100, 10, 50, 100>;
-using TypicalSubGHzRadio = IVirtualTransceiver::Configuration<25, 50, 250, 100, 250, 50>;
-using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 1000, 250, 1000, 250, 200>;
-using IdealRadio = IVirtualTransceiver::Configuration<1, 1, 1, 1, 1, 1>;
+using FastSingleChannel = IVirtualTransceiver::Configuration<1, 100, 50, 100, 50, 50>;
+using FastGHzRadio = IVirtualTransceiver::Configuration	<125, 200, 100, 100, 100, 100>;
+using TypicalSubGHzRadio = IVirtualTransceiver::Configuration<25, 500, 200, 100, 200, 50>;
+using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 1000, 400, 200, 400, 200>;
 
 // Used Virtual Driver Configuration.
-using TestRadioConfig = SlowSingleChannelRadio;
+using TestRadioConfig = TypicalSubGHzRadio;
 //
 
 // Shared Link configuration.
@@ -152,10 +152,10 @@ NoHopNoChannel ClientChannelHop;
 
 
 // Link Server and its required instances.
-VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerDriver(SchedulerBase);
+VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerTransceiver(SchedulerBase);
 HalfDuplex<DuplexPeriod, false> ServerDuplex;
 LoLaPkeLinkServer<> Server(SchedulerBase,
-	&ServerDriver,
+	&ServerTransceiver,
 	&EntropySource,
 	ServerClock,
 	ServerTimer,
@@ -166,10 +166,10 @@ LoLaPkeLinkServer<> Server(SchedulerBase,
 	Password);
 
 // Link Client and its required instances.
-VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientDriver(SchedulerBase);
+VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientTransceiver(SchedulerBase);
 HalfDuplex<DuplexPeriod, true> ClientDuplex;
 LoLaPkeLinkClient<> Client(SchedulerBase,
-	&ClientDriver,
+	&ClientTransceiver,
 	&EntropySource,
 	ClientClock,
 	ClientTimer,
@@ -209,8 +209,8 @@ void setup()
 #endif
 
 	// Setup Virtual Packet Drivers.
-	ServerDriver.SetPartner(&ClientDriver);
-	ClientDriver.SetPartner(&ServerDriver);
+	ServerTransceiver.SetPartner(&ClientTransceiver);
+	ClientTransceiver.SetPartner(&ServerTransceiver);
 
 	// Setup Test Task.
 	if (!Tester.Setup())
@@ -254,7 +254,7 @@ void setup()
 	if (Server.Start() &&
 		Client.Start())
 	{
-		Serial.print(millis());
+		Serial.print(micros());
 		Serial.println(F("\tLoLa Links have started."));
 	}
 	else

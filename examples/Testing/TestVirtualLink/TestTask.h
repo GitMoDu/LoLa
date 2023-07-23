@@ -66,7 +66,22 @@ public:
 		bool workDone = false;
 		uint32_t timestamp = millis();
 
-		// Heartbeat
+#if defined(SERVER_DROP_LINK_TEST) 
+		if (Server->HasLink() && Server->GetLinkDuration() > SERVER_DROP_LINK_TEST)
+		{
+			Server->Stop();
+			Server->Start();
+		}
+#endif
+
+#if defined(CLIENT_DROP_LINK_TEST) 
+		if (Client->HasLink() && Client->GetLinkDuration() > CLIENT_DROP_LINK_TEST)
+		{
+			Client->Stop();
+			Client->Start();
+		}
+#endif
+
 #if defined(PRINT_LINK_HEARBEAT)
 		if (timestamp - LastRan >= HearBeatPeriod * PRINT_LINK_HEARBEAT)
 		{
@@ -108,11 +123,11 @@ public:
 					Serial.println(F(" Failed!"));
 #endif
 				}
+				}
 			}
-		}
 
 		return workDone;
-	}
+		}
 private:
 	void PrintTag(const char tag)
 	{
@@ -227,5 +242,5 @@ public:
 		Serial.print(durationSecondsRemainder);
 		Serial.println();
 	}
-};
+	};
 #endif
