@@ -472,15 +472,8 @@ protected:
 					Serial.println(F("Sent ClientChallengeReplyRequest."));
 #endif
 				}
-				else
-				{
-					Task::enable();
-				}
 			}
-			else
-			{
-				Task::enableDelayed(1);
-			}
+			Task::enable();
 			break;
 		case LinkingStateEnum::ClockSyncing:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
@@ -513,15 +506,8 @@ protected:
 					Serial.println('s');
 #endif
 				}
-				else
-				{
-					Task::enable();
-				}
 			}
-			else
-			{
-				Task::enableDelayed(1);
-			}
+			Task::enable();
 			break;
 		case LinkingStateEnum::RequestingLinkStart:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
@@ -537,15 +523,8 @@ protected:
 					Serial.println(F("Sent RequestingLinkStart."));
 #endif
 				}
-				else
-				{
-					Task::enableIfNot();
-				}
 			}
-			else
-			{
-				Task::enableIfNot();
-			}
+			Task::enable();
 			break;
 		case LinkingStateEnum::SwitchingToLinked:
 			if (StateTransition.HasTimedOut(micros()))
@@ -567,7 +546,7 @@ protected:
 					UpdateLinkStage(LinkStageEnum::AwaitingLink);
 				}
 			}
-			else if (PacketService.CanSendPacket() && StateTransition.IsSendRequested(micros()))
+			else
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;
@@ -580,14 +559,7 @@ protected:
 					Serial.println(F("Sent StateTransition Ack."));
 #endif
 				}
-				else
-				{
-					Task::enableIfNot();
-				}
-			}
-			else
-			{
-				Task::enableIfNot();
+				Task::enable();
 			}
 			break;
 		default:
@@ -675,6 +647,7 @@ private:
 					}
 				}
 			}
+			Task::enable();
 			break;
 		default:
 			break;
@@ -700,7 +673,7 @@ private:
 				Serial.println(F("StateTransition timed out."));
 				// No Ack before time out.
 				WaitingState = WaitingStateEnum::SearchingLink;
-				Task::enable();
+
 #endif
 			}
 		}
@@ -718,15 +691,8 @@ private:
 				Serial.println(F("Sent StateTransition Ack."));
 #endif
 			}
-			else
-			{
-				Task::enableIfNot();
-			}
 		}
-		else
-		{
-			Task::enableIfNot();
-		}
+		Task::enable();
 	}
 };
 #endif

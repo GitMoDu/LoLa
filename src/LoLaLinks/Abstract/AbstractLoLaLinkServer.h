@@ -438,6 +438,7 @@ protected:
 #endif
 				}
 			}
+			Task::enable();
 			break;
 		case LinkingStateEnum::AuthenticationReply:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
@@ -455,6 +456,7 @@ protected:
 #endif
 				}
 			}
+			Task::enable();
 			break;
 		case LinkingStateEnum::ClockSyncing:
 			if (ClockReplyPending && PacketService.CanSendPacket())
@@ -495,7 +497,7 @@ protected:
 					ClockReplyPending = false;
 				}
 			}
-			Task::enableIfNot();
+			Task::enable();
 			break;
 		case LinkingStateEnum::SwitchingToLinked:
 			if (StateTransition.HasTimedOut(micros()))
@@ -513,7 +515,6 @@ protected:
 					// No Ack before time out.
 					LinkingState = LinkingStateEnum::ClockSyncing;
 					ClockReplyPending = false;
-					Task::enable();
 				}
 			}
 			else if (StateTransition.IsSendRequested(micros())
@@ -537,10 +538,7 @@ protected:
 #endif
 				}
 			}
-			else
-			{
-				Task::enableIfNot();
-			}
+			Task::enable();
 			break;
 		default:
 			break;
@@ -624,15 +622,8 @@ private:
 					Serial.println(F("Sent Search Reply."));
 #endif
 				}
-				else
-				{
-					Task::enable();
-				}
 			}
-			else
-			{
-				Task::delay(1);
-			}
+			Task::enable();
 			break;
 		default:
 			return;
@@ -656,7 +647,6 @@ private:
 			{
 				// No Ack before time out.
 				WaitingState = WaitingStateEnum::SearchingLink;
-				Task::enable();
 			}
 		}
 		else if (StateTransition.IsSendRequested(micros())
@@ -678,15 +668,8 @@ private:
 				Serial.println(F("us remaining."));
 #endif
 			}
-			else
-			{
-				Task::enable();
-			}
 		}
-		else
-		{
-			Task::enable();
-		}
+		Task::enable();
 	}
 };
 #endif
