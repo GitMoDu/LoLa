@@ -376,6 +376,7 @@ protected:
 			WaitingState = WaitingStateEnum::SearchingLink;
 			break;
 		case LinkStageEnum::Linking:
+			StateTransition.Clear();
 			Encoder->GenerateLocalChallenge(&RandomSource);
 			LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
 			break;
@@ -548,16 +549,19 @@ protected:
 			}
 			else
 			{
-				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;
-
-				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
+				if (PacketService.CanSendPacket() && StateTransition.IsSendRequested(micros()))
 				{
-					StateTransition.OnSent();
+					OutPacket.SetPort(Linking::PORT);
+					OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;
+
+					if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
+					{
+						StateTransition.OnSent();
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent StateTransition Ack."));
+						this->Owner();
+						Serial.println(F("Sent StateTransition Ack."));
 #endif
+					}
 				}
 				Task::enable();
 			}
