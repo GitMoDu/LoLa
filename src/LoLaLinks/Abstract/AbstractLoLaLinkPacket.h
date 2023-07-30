@@ -146,7 +146,7 @@ public:
 			return false;
 		}
 
-		if (Duplex->GetRange() != IDuplex::DUPLEX_FULL && GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
+		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL && GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
 		{
 #if defined(DEBUG_LOLA)
 			Serial.println(F("Estimated Time-On-Air is longer than the duplex slot duration."));
@@ -160,6 +160,9 @@ public:
 
 		Serial.print(F("Duplex Range: "));
 		Serial.println(Duplex->GetRange());
+
+		Serial.print(F("Duplex Period: "));
+		Serial.println(Duplex->GetPeriod());
 
 		Serial.print(F("Max Time-On-Air: "));
 		Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
@@ -200,12 +203,19 @@ public:
 	{
 		if (LinkStage == LinkStageEnum::Linked && PacketService.CanSendPacket())
 		{
-			SyncClock.GetTimestamp(HopTimestamp);
-			HopTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
+			if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
+			{
+				return true;
+			}
+			else
+			{
+				SyncClock.GetTimestamp(LinkTimestamp);
+				LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
-			const uint32_t startTimestamp = HopTimestamp.GetRollingMicros();
+				const uint32_t startTimestamp = LinkTimestamp.GetRollingMicros();
 
-			return Duplex->IsInRange(startTimestamp, startTimestamp + GetOnAirDuration(payloadSize));
+				return Duplex->IsInRange(startTimestamp, startTimestamp + GetOnAirDuration(payloadSize));
+			}
 		}
 		else
 		{

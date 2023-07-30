@@ -11,11 +11,10 @@
 class IDuplex
 {
 public:
-	static const uint32_t DUPLEX_FULL = 0;
+	static const uint16_t DUPLEX_FULL = 0;
 
 public:
 	/// <summary>
-	/// 
 	/// </summary>
 	/// <param name="startTimestamp"></param>
 	/// <param name="endTimestamp"></param>
@@ -24,13 +23,12 @@ public:
 
 	/// <summary>
 	/// </summary>
-	/// <returns>DUPLEX_FULL if full duplex; usable range in microseconds otherwise.</returns>
-	virtual const uint32_t GetRange() { return DUPLEX_FULL; }
+	/// <returns>Usable range in microseconds.</returns>
+	virtual const uint16_t GetRange() { return UINT16_MAX; }
 
 	/// <summary>
 	/// </summary>
-	/// <param name="timestamp"></param>
-	/// <returns>True when there is no duplex, helps to optimize linking.</returns>
-	//virtual const bool IsFullDuplex() { return false; }
+	/// <returns>DUPLEX_FULL if full duplex; Duplex period in microseconds otherwise.</returns>
+	virtual const uint16_t GetPeriod() { return DUPLEX_FULL; }
 };
 #endif

@@ -18,9 +18,14 @@ public:
 		return true;
 	}
 
-	virtual const uint32_t GetRange() final
+	virtual const uint16_t GetRange() final
 	{
-		return DUPLEX_FULL;
+		return UINT32_MAX;
+	}
+
+	virtual const uint16_t GetPeriod() final
+	{
+		return IDuplex::DUPLEX_FULL;
 	}
 };
 
@@ -29,10 +34,11 @@ public:
 /// Suitable for Point-to-Point applications.
 /// </summary>
 /// <typeparam name="DuplexPeriodMicros">[2;65535]</typeparam>
+/// <typeparam name="SwitchOverMicros">[2;65535]</typeparam>
 /// <typeparam name="IsOddSlot">First or Second half of duplex.</typeparam>
 /// <typeparam name="DeadZoneMicros"></typeparam>
 template<const uint16_t DuplexPeriodMicros,
-	const uint16_t SwitchOver,
+	const uint16_t SwitchOverMicros,
 	const bool IsOddSlot,
 	const uint16_t DeadZoneMicros = 0>
 class TemplateHalfDuplex : public IDuplex
@@ -44,28 +50,39 @@ public:
 public:
 	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) final
 	{
-		const uint_least16_t startRemainder = startTimestamp % DuplexPeriodMicros;
-		const uint_least16_t endRemainder = endTimestamp % DuplexPeriodMicros;
+#if defined(DEBUG_LOLA)
+		if ((endTimestamp - startTimestamp) >= DuplexPeriodMicros)
+		{
+			Serial.println(F("Invalid Duplex Range."));
+			return false;
+		}
+#endif
+
+		const uint_fast16_t startRemainder = startTimestamp % DuplexPeriodMicros;
+		const uint_fast16_t endRemainder = endTimestamp % DuplexPeriodMicros;
 
 		if (IsOddSlot)
 		{
-			return (startRemainder >= (SwitchOver + DeadZoneMicros)) &&
-				(startRemainder < (DuplexPeriodMicros - DeadZoneMicros)) &&
-				(endRemainder >= (SwitchOver + DeadZoneMicros)) &&
-				(endRemainder < (DuplexPeriodMicros - DeadZoneMicros));
+			return endRemainder > startRemainder
+				&& startRemainder >= (SwitchOverMicros + DeadZoneMicros)
+				&& endRemainder < (DuplexPeriodMicros - DeadZoneMicros);
 		}
 		else
 		{
-			return (startRemainder >= DeadZoneMicros) &&
-				(startRemainder < (SwitchOver - DeadZoneMicros)) &&
-				(endRemainder >= DeadZoneMicros) &&
-				(endRemainder < (SwitchOver - DeadZoneMicros));
+			return endRemainder > startRemainder
+				&& startRemainder >= DeadZoneMicros
+				&& endRemainder < (SwitchOverMicros - DeadZoneMicros);
 		}
 	}
 
-	virtual const uint32_t GetRange() final
+	virtual const uint16_t GetRange() final
 	{
-		return SwitchOver - (2 * DeadZoneMicros);
+		return SwitchOverMicros - (2 * DeadZoneMicros);
+	}
+
+	virtual const uint16_t GetPeriod() final
+	{
+		return DuplexPeriodMicros;
 	}
 };
 
@@ -175,8 +192,8 @@ public:
 	}
 
 private:
-	uint_least16_t Start = 0;
-	uint_least16_t End = DuplexPeriodMicros / Slots;
+	uint_fast16_t Start = 0;
+	uint_fast16_t End = DuplexPeriodMicros / Slots;
 
 	void UpdateTimings()
 	{
@@ -184,11 +201,14 @@ private:
 		End = ((uint32_t)(Slot + 1) * DuplexPeriodMicros) / Slots;
 	}
 
-	virtual const uint32_t GetRange() final
+	virtual const uint16_t GetRange() final
 	{
 		return DuplexPeriodMicros / Slots - (2 * DuplexPeriodMicros);
 	}
+
+	virtual const uint16_t GetPeriod() final
+	{
+		return DuplexPeriodMicros;
+	}
 };
-
-
 #endif
