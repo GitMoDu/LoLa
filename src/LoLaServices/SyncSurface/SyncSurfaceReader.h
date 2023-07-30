@@ -48,7 +48,7 @@ public:
 
 	virtual void OnDiscoveredPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) final
 	{
-		switch (HeaderDefinition::HEADER_INDEX)
+		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
 		case WriterUpdateBlockDefinition::HEADER:
 			if (payloadSize == WriterUpdateBlockDefinition::PAYLOAD_SIZE)

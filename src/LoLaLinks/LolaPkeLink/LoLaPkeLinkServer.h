@@ -189,7 +189,7 @@ protected:
 		if (PkeSessionRequested)
 		{
 			OutPacket.SetPort(Unlinked::PORT);
-			OutPacket.Payload[Unlinked::SessionAvailable::HEADER_INDEX] = Unlinked::SessionAvailable::HEADER;
+			OutPacket.SetHeader(Unlinked::SessionAvailable::HEADER);
 			for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 			{
 				OutPacket.Payload[Unlinked::SessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];

@@ -448,7 +448,7 @@ protected:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::ServerChallengeRequest::HEADER_INDEX] = Linking::ServerChallengeRequest::HEADER;
+				OutPacket.SetHeader(Linking::ServerChallengeRequest::HEADER);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
 				if (CanSendLinkingPacket(Linking::ServerChallengeRequest::PAYLOAD_SIZE))
@@ -468,7 +468,7 @@ protected:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::ServerChallengeReply::HEADER_INDEX] = Linking::ServerChallengeReply::HEADER;
+				OutPacket.SetHeader(Linking::ServerChallengeReply::HEADER);
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
 				if (CanSendLinkingPacket(Linking::ServerChallengeReply::PAYLOAD_SIZE))
@@ -488,7 +488,7 @@ protected:
 			if (ClockReplyPending && PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::ClockSyncReply::HEADER_INDEX] = Linking::ClockSyncReply::HEADER;
+				OutPacket.SetHeader(Linking::ClockSyncReply::HEADER);
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 0] = EstimateErrorReply.Seconds;
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] = EstimateErrorReply.Seconds >> 8;
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] = EstimateErrorReply.Seconds >> 16;
@@ -541,7 +541,7 @@ protected:
 				&& GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::LinkTimedSwitchOver::HEADER_INDEX] = Linking::LinkTimedSwitchOver::HEADER;
+				OutPacket.SetHeader(Linking::LinkTimedSwitchOver::HEADER);
 
 				if (CanSendLinkingPacket(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
 				{
@@ -572,7 +572,7 @@ protected:
 			if (CanRequestSend())
 			{
 				OutPacket.SetPort(Linked::PORT);
-				OutPacket.Payload[Linked::ClockTuneMicrosReply::HEADER_INDEX] = Linked::ClockTuneMicrosReply::HEADER;
+				OutPacket.SetHeader(Linked::ClockTuneMicrosReply::HEADER);
 				OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 0] = EstimateErrorReply.SubSeconds;
 				OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 1] = EstimateErrorReply.SubSeconds >> 8;
 				OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 2] = EstimateErrorReply.SubSeconds >> 16;
@@ -633,7 +633,7 @@ private:
 			if (SearchReplyPending)
 			{
 				OutPacket.SetPort(Unlinked::PORT);
-				OutPacket.Payload[Unlinked::SearchReply::HEADER_INDEX] = Unlinked::SearchReply::HEADER;
+				OutPacket.SetHeader(Unlinked::SearchReply::HEADER);
 
 				if (PacketService.CanSendPacket())
 				{
@@ -681,7 +681,7 @@ private:
 			&& GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 		{
 			OutPacket.SetPort(Unlinked::PORT);
-			OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::HEADER_INDEX] = Unlinked::LinkingTimedSwitchOver::HEADER;
+			OutPacket.SetHeader(Unlinked::LinkingTimedSwitchOver::HEADER);
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
 
 			if (CanSendLinkingPacket(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))

@@ -279,7 +279,7 @@ private:
 		if (CanRequestSend())
 		{
 			OutPacket.SetPort(Port);
-			OutPacket.Payload[HeaderDefinition::HEADER_INDEX] = DiscoveryDefinition::HEADER;
+			OutPacket.SetHeader(DiscoveryDefinition::HEADER);
 
 			if (partnerFound)
 			{

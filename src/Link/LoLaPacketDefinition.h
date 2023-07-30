@@ -141,5 +141,15 @@ public:
 	{
 		Data[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] = port;
 	}
+
+	const uint8_t GetHeader()
+	{
+		return Data[LoLaPacketDefinition::PAYLOAD_INDEX + HeaderDefinition::HEADER_INDEX - LoLaPacketDefinition::DATA_INDEX];
+	}
+
+	void SetHeader(const uint8_t header)
+	{
+		Data[LoLaPacketDefinition::PAYLOAD_INDEX + HeaderDefinition::HEADER_INDEX - LoLaPacketDefinition::DATA_INDEX] = header;
+	}
 };
 #endif

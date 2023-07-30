@@ -102,8 +102,7 @@ protected:
 	const bool RequestSendMetaPacket(const uint8_t header)
 	{
 		OutPacket.SetPort(Port);
-
-		OutPacket.Payload[HeaderDefinition::HEADER_INDEX] = header;
+		OutPacket.SetHeader(header);
 		OutPacket.Payload[SyncCommonDefinition::CRC_OFFSET] = GetLocalHash();
 
 		return RequestSendPacket(SyncCommonDefinition::PAYLOAD_SIZE);

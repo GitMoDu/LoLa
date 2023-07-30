@@ -203,8 +203,7 @@ private:
 	const bool RequestSendBlockPacket(const uint8_t index)
 	{
 		OutPacket.SetPort(Port);
-
-		OutPacket.Payload[WriterUpdateBlockDefinition::HEADER_INDEX] = WriterUpdateBlockDefinition::HEADER;
+		OutPacket.SetHeader(WriterUpdateBlockDefinition::HEADER);
 		OutPacket.Payload[WriterUpdateBlockDefinition::CRC_OFFSET] = GetLocalHash();
 		OutPacket.Payload[WriterUpdateBlockDefinition::INDEX_OFFSET] = index;
 

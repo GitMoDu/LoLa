@@ -151,7 +151,7 @@ protected:
 				&& CanSendLinkingPacket(Unlinked::SessionRequest::PAYLOAD_SIZE))
 			{
 				OutPacket.SetPort(Unlinked::PORT);
-				OutPacket.Payload[Unlinked::SessionRequest::HEADER_INDEX] = Unlinked::SessionRequest::HEADER;
+				OutPacket.SetHeader(Unlinked::SessionRequest::HEADER);
 				if (SendPacket(OutPacket.Data, Unlinked::SessionRequest::PAYLOAD_SIZE))
 				{
 #if defined(DEBUG_LOLA)
@@ -207,7 +207,7 @@ protected:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Unlinked::PORT);
-				OutPacket.Payload[Unlinked::LinkingStartRequest::HEADER_INDEX] = Unlinked::LinkingStartRequest::HEADER;
+				OutPacket.SetHeader(Unlinked::LinkingStartRequest::HEADER);
 				for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 				{
 					OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];
