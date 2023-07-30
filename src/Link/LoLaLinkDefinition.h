@@ -131,12 +131,12 @@ public:
 
 	/// <summary>
 	/// </summary>
-	static constexpr int32_t LINKING_TRANSITION_PERIOD_MICROS = 30000;
+	static constexpr int32_t LINKING_TRANSITION_PERIOD_MICROS = 40000;
 
 	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
-	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 200;
+	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 333;
 
 	/// <summary>
 	/// How long without an input message from partner before disconnect.
@@ -146,17 +146,18 @@ public:
 	/// <summary>
 	/// How long to wait before timing out a send.
 	/// </summary>
-	static constexpr uint32_t TRANSMIT_BASE_TIMEOUT_MICROS = 2000;
+	static constexpr uint32_t TRANSMIT_BASE_TIMEOUT_MICROS = 3100;
 
 	/// <summary>
-	/// How long, on average, to wait before re-sending a packet.
+	/// 
+	/// </summary>
+	static constexpr uint32_t PRE_LINK_DUPLEX_MICROS = 6000;
+
+
+	/// <summary>
+	/// How long to wait before re-sending an answered packet.
 	/// </summary>
 	static constexpr uint32_t RE_TRANSMIT_TIMEOUT_MICROS = 4000;
-
-	/// <summary>
-	/// How long to wait before timing out an ACK reply.
-	/// </summary>
-	static constexpr uint32_t REPLY_BASE_TIMEOUT_MICROS = 10000;
 
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.
@@ -182,16 +183,19 @@ public:
 	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
 
 private:
+	/// <summary>
+	/// ||SessionId|CompressedPublicKey||
+	/// </summary>
 	template<const uint8_t SubHeader>
 	struct PkeBroadcastDefinition : public TemplateSubHeaderDefinition<SubHeader, SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
 	{
-		/// <summary>
-		/// ||SessionId|PublicKey||
-		/// </summary>
 		static constexpr uint8_t PAYLOAD_SESSION_ID_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
 		static constexpr uint8_t PAYLOAD_PUBLIC_KEY_INDEX = PAYLOAD_SESSION_ID_INDEX + SESSION_ID_SIZE;
 	};
 
+	/// <summary>
+	/// ||SessionToken||
+	/// </summary>
 	template<const uint8_t SubHeader, const uint8_t ExtraSize>
 	struct LinkingSwitchOverDefinition : public TemplateSubHeaderDefinition<SubHeader, LINKING_TOKEN_SIZE + ExtraSize>
 	{
@@ -220,6 +224,7 @@ public:
 		static constexpr uint8_t PORT = UINT8_MAX;
 
 		/// <summary>
+		/// ||||
 		/// Broadcast to search for available partners.
 		/// TODO: Add support for search for specific Host Id or Device category.
 		/// </summary>
@@ -232,32 +237,21 @@ public:
 		using SearchReply = TemplateSubHeaderDefinition<SearchRequest::SUB_HEADER + 1, 0>;
 
 		/// <summary>
+		/// ||||
 		/// Request server to start a PKE session.
 		/// TODO: Add support for search for specific Device Id.
 		/// </summary>
 		using SessionRequest = TemplateSubHeaderDefinition<SearchReply::SUB_HEADER + 1, 0>;
 
 		/// <summary>
-		/// ||SessionId|ServerPublicKey||
+		/// ||SessionId|CompressedServerPublicKey||
 		/// </summary>
-		using SessionBroadcast = PkeBroadcastDefinition<SessionRequest::SUB_HEADER + 1>;
+		using SessionAvailable = PkeBroadcastDefinition<SessionRequest::SUB_HEADER + 1>;
 
 		/// <summary>
-		/// Request server to start a session.
-		/// TODO: Add support for search for specific Device Id.
+		/// ||SessionId|CompressedClientPublicKey||
 		/// </summary>
-		using SessionStartRequest = TemplateSubHeaderDefinition<SessionBroadcast::SUB_HEADER + 1, 0>;
-
-		/// <summary>
-		/// ||SessionId|ServerPublicKey||
-		/// </summary>
-		using SessionStartReply = TemplateSubHeaderDefinition<SessionStartRequest::SUB_HEADER + 1, 0>;
-		//
-
-		/// <summary>
-		/// ||SessionId|ClientPublicKey||
-		/// </summary>
-		using LinkingStartRequest = PkeBroadcastDefinition<SessionStartReply::SUB_HEADER + 1>;
+		using LinkingStartRequest = PkeBroadcastDefinition<SessionAvailable::SUB_HEADER + 1>;
 
 		/// <summary>
 		/// ||SessionToken|Remaining||

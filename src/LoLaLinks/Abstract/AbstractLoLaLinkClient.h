@@ -22,6 +22,9 @@ private:
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
 	static constexpr uint8_t CLOCK_TUNE_FILTER_RATIO = 110;
 
+	static constexpr uint32_t PRE_LINK_FIVE_SIXTHS_DUPLEX_MICROS = (LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS * 5) / 6;
+	static constexpr uint32_t PRE_LINK_TWO_THIRDS_DUPLEX_MICROS = (LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS * 2) / 3;
+
 	enum WaitingStateEnum
 	{
 		Sleeping,
@@ -42,6 +45,7 @@ private:
 
 protected:
 	using BaseClass::OutPacket;
+	using BaseClass::Duplex;
 	using BaseClass::Encoder;
 	using BaseClass::SyncClock;
 	using BaseClass::RandomSource;
@@ -52,7 +56,7 @@ protected:
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
 	using BaseClass::GetSendDuration;
-	using BaseClass::ResetLastUnlinkedSent;
+	using BaseClass::GetOnAirDuration;
 	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 
 	using BaseClass::RequestSendPacket;
@@ -75,6 +79,8 @@ private:
 	int32_t ClockErrorFiltered = 0;
 	uint32_t LastCLockSync = 0;
 	uint32_t LastCLockSent = 0;
+
+	uint32_t PreLinkLastNonReply = 0;
 
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
@@ -126,13 +132,12 @@ protected:
 			{
 				WaitingState = WaitingStateEnum::SessionCreation;
 				ResetSessionCreation();
+				Task::enable();
 
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("Found a server!"));
 #endif
-				Task::enable();
-				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -151,12 +156,12 @@ protected:
 				case WaitingStateEnum::SwitchingToLinking:
 					StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 					Task::enable();
-					ResetLastUnlinkedSent();
 					break;
 				default:
 					return;
 					break;
 				}
+				OnLinkSyncReceived(startTimestamp);
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("Got LinkingTimedSwitchOver: "));
@@ -186,7 +191,7 @@ protected:
 				Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 				LinkingState = LinkingStateEnum::AuthenticationReply;
 				Task::enable();
-				ResetLastUnlinkedSent();
+				OnLinkSyncReceived(startTimestamp);
 			}
 #if defined(DEBUG_LOLA)
 			else
@@ -206,7 +211,7 @@ protected:
 #endif
 				LinkingState = LinkingStateEnum::ClockSyncing;
 				Task::enable();
-				ResetLastUnlinkedSent();
+				OnLinkSyncReceived(startTimestamp);
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -261,7 +266,6 @@ protected:
 				}
 #endif
 				Task::enable();
-				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -289,6 +293,8 @@ protected:
 				}
 
 				StateTransition.OnReceived(startTimestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+				OnLinkSyncReceived(startTimestamp);
+				Task::enable();
 
 #if defined(DEBUG_LOLA)
 				this->Owner();
@@ -296,8 +302,6 @@ protected:
 				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
 				Serial.println(F("us remaining."));
 #endif
-				Task::enable();
-				ResetLastUnlinkedSent();
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -412,7 +416,6 @@ protected:
 		switch (WaitingState)
 		{
 		case WaitingStateEnum::Sleeping:
-			ResetStageStartTime();
 			Task::disable();
 			break;
 		case WaitingStateEnum::SearchingLink:
@@ -474,7 +477,7 @@ protected:
 			break;
 		case LinkingStateEnum::AuthenticationReply:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
-				&& PacketService.CanSendPacket())
+				&& CanSendLinkingPacket(Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE))
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClientChallengeReplyRequest::SUB_HEADER_INDEX] = Linking::ClientChallengeReplyRequest::SUB_HEADER;
@@ -492,8 +495,7 @@ protected:
 			Task::enable();
 			break;
 		case LinkingStateEnum::ClockSyncing:
-			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
-				&& PacketService.CanSendPacket())
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::ClockSyncRequest::SUB_HEADER_INDEX] = Linking::ClockSyncRequest::SUB_HEADER;
@@ -513,31 +515,36 @@ protected:
 				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] = LinkTimestamp.SubSeconds >> 16;
 				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] = LinkTimestamp.SubSeconds >> 24;
 
-				if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
+				if (CanSendLinkingPacket(Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
+					if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
+					{
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("Sent ClockSync "));
-					Serial.print(LinkTimestamp.Seconds);
-					Serial.println('s');
+						this->Owner();
+						Serial.print(F("Sent ClockSync "));
+						Serial.print(LinkTimestamp.Seconds);
+						Serial.println('s');
 #endif
+					}
 				}
 			}
 			Task::enable();
 			break;
 		case LinkingStateEnum::RequestingLinkStart:
-			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
-				&& PacketService.CanSendPacket())
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.Payload[Linking::StartLinkRequest::SUB_HEADER_INDEX] = Linking::StartLinkRequest::SUB_HEADER;
 
-				if (SendPacket(OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
+				if (CanSendLinkingPacket(Linking::StartLinkRequest::PAYLOAD_SIZE))
 				{
+					if (SendPacket(OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
+					{
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent RequestingLinkStart."));
+						this->Owner();
+						Serial.println(F("Sent RequestingLinkStart."));
 #endif
+					}
 				}
 			}
 			Task::enable();
@@ -564,19 +571,19 @@ protected:
 			}
 			else
 			{
-				if (PacketService.CanSendPacket() && StateTransition.IsSendRequested(micros()))
+				if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
 				{
 					OutPacket.SetPort(Linking::PORT);
 					OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;
 
 					if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 					{
-						StateTransition.OnSent();
 #if defined(DEBUG_LOLA)
 						this->Owner();
 						Serial.println(F("Sent StateTransition Ack."));
 #endif
 					}
+					StateTransition.OnSent();
 				}
 				Task::enable();
 			}
@@ -662,8 +669,8 @@ private:
 						this->Owner();
 						Serial.println(F("Sent Broadcast Search."));
 #endif
-						SearchChannelTryCount++;
 					}
+					SearchChannelTryCount++;
 				}
 			}
 			Task::enable();
@@ -704,14 +711,55 @@ private:
 
 			if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 			{
-				StateTransition.OnSent();
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.println(F("Sent StateTransition Ack."));
 #endif
 			}
+			StateTransition.OnSent();
 		}
 		Task::enable();
 	}
+
+protected:
+	void OnLinkSyncReceived(const uint32_t receiveTimestamp)
+	{
+		PreLinkLastNonReply = receiveTimestamp;
+	}
+
+	/// <summary>
+	/// Pre-link half-duplex.
+	/// Client follows last Server duplexed receive timestamp.
+	/// 1/6 Slot for Tx, in the middle the of half-duplex slot.
+	/// </summary>
+	/// <param name="payloadSize"></param>
+	/// <returns>True when packet can be sent.</returns>
+	const bool CanSendLinkingPacket(const uint8_t payloadSize)
+	{
+		if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
+		{
+			return true;
+		}
+		else
+		{
+			const uint32_t startTimestamp = (micros() - PreLinkLastNonReply) + GetSendDuration(payloadSize);
+			const uint32_t endTimestamp = startTimestamp + GetOnAirDuration(payloadSize);
+
+			const uint_fast16_t startRemainder = startTimestamp % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
+			const uint_fast16_t endRemainder = endTimestamp % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
+
+			if (endRemainder > startRemainder
+				&& startRemainder >= PRE_LINK_TWO_THIRDS_DUPLEX_MICROS
+				&& endRemainder < PRE_LINK_FIVE_SIXTHS_DUPLEX_MICROS)
+			{
+				return PacketService.CanSendPacket();
+			}
+			else
+			{
+				return false;
+			}
+		}
+	}
+
 };
 #endif

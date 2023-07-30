@@ -72,13 +72,15 @@ protected:
 	// Collision avoidance time slotting.
 	IDuplex* Duplex;
 
+	// Sync clock helper.
+	Timestamp LinkTimestamp{};
+
 private:
 	/// <summary>
 	/// Channel Hopper calls back when it is time to update the RX channel, if it's not up to date.
 	/// </summary>
 	IChannelHop* ChannelHopper;
 
-	Timestamp HopTimestamp;
 
 	uint32_t StageStartTime = 0;
 
@@ -100,7 +102,7 @@ public:
 		, FastHasher()
 		, Duplex(duplex)
 		, ChannelHopper(hop)
-		, HopTimestamp()
+		, LinkTimestamp()
 		, IsLinkHopper(hop->IsHopper())
 	{}
 
@@ -256,17 +258,12 @@ public:
 protected:
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
 	{
-		if (LinkStage == LinkStageEnum::Linked &&
-			linkStage != LinkStageEnum::Linked)
-		{
-			ChannelHopper->OnLinkStopped();
-		}
-
 		if (linkStage != LinkStage)
 		{
 			switch (LinkStage)
 			{
 			case LinkStageEnum::Linked:
+				ChannelHopper->OnLinkStopped();
 				PostLinkState(false);
 				break;
 			default:

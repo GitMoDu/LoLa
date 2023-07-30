@@ -28,6 +28,7 @@ private:
 	enum PkeStateEnum
 	{
 		RequestingSession,
+		DecompressingPartnerKey,
 		ValidatingSession,
 		ComputingSecretKey,
 		SessionCached
@@ -40,8 +41,14 @@ protected:
 
 	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 	using BaseClass::IsInSessionCreation;
+	using BaseClass::OnLinkSyncReceived;
+	using BaseClass::CanSendLinkingPacket;
 
 	using BaseClass::SendPacket;
+
+private:
+	uint8_t PublicCompressedKey[LoLaCryptoDefinition::COMPRESSED_KEY_SIZE]{};
+	uint8_t PartnerCompressedKey[LoLaCryptoDefinition::COMPRESSED_KEY_SIZE]{};
 
 private:
 	LoLaCryptoPkeSession Session;
@@ -69,6 +76,8 @@ public:
 	{
 		if (Session.Setup())
 		{
+			Session.CompressPublicKeyTo(PublicCompressedKey);
+
 			return BaseClass::Setup();
 		}
 #if defined(DEBUG_LOLA)
@@ -86,35 +95,37 @@ protected:
 	{
 		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
 		{
-		case Unlinked::SessionBroadcast::SUB_HEADER:
-			if (payloadSize == Unlinked::SessionBroadcast::PAYLOAD_SIZE
+		case Unlinked::SessionAvailable::SUB_HEADER:
+			if (payloadSize == Unlinked::SessionAvailable::PAYLOAD_SIZE
 				&& IsInSessionCreation())
 			{
 				switch (PkeState)
 				{
-				case PkeStateEnum::RequestingSession:
-					PkeState = PkeStateEnum::ValidatingSession;
-					Session.SetSessionId(&payload[Unlinked::SessionBroadcast::PAYLOAD_SESSION_ID_INDEX]);
+				case PkeStateEnum::RequestingSession:;
+					PkeState = PkeStateEnum::DecompressingPartnerKey;
+					Session.SetSessionId(&payload[Unlinked::SessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 
-					// Slow operation (~8 ms)... but this call is already async and don't need to store the partners compressed public key.
-					Session.DecompressPartnerPublicKeyFrom(&payload[Unlinked::SessionBroadcast::PAYLOAD_PUBLIC_KEY_INDEX]);
+					for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
+					{
+						PartnerCompressedKey[i] = payload[Unlinked::SessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i];
+					}
 					Task::enable();
-
 #if defined(DEBUG_LOLA)
 					this->Owner();
-					Serial.println(F("Found a server! (session broadcast)"));
+					Serial.println(F("Found a PKE Session."));
 #endif
+					OnLinkSyncReceived(startTimestamp);
 					break;
 				default:
 #if defined(DEBUG_LOLA)
-					this->Skipped(F("SessionBroadcast"));
+					this->Skipped(F("SessionAvailable"));
 #endif
 					break;
 				}
 			}
 #if defined(DEBUG_LOLA)
 			else {
-				this->Skipped(F("SessionBroadcast"));
+				this->Skipped(F("SessionAvailable"));
 			}
 #endif
 			break;
@@ -135,8 +146,9 @@ protected:
 		switch (PkeState)
 		{
 		case PkeStateEnum::RequestingSession:
+			// Wait longer because reply is big.
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
-				&& PacketService.CanSendPacket())
+				&& CanSendLinkingPacket(Unlinked::SessionRequest::PAYLOAD_SIZE))
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::SessionRequest::SUB_HEADER_INDEX] = Unlinked::SessionRequest::SUB_HEADER;
@@ -147,11 +159,12 @@ protected:
 					Serial.println(F("Sent Session Start Request."));
 #endif
 				}
-				else
-				{
-					Task::enable();
-				}
 			}
+			Task::enable();
+			break;
+		case PkeStateEnum::DecompressingPartnerKey:
+			PkeState = PkeStateEnum::ValidatingSession;
+			Session.DecompressPartnerPublicKeyFrom(PartnerCompressedKey);
 			Task::enable();
 			break;
 		case PkeStateEnum::ValidatingSession:
@@ -191,20 +204,25 @@ protected:
 			Task::enable();
 			break;
 		case PkeStateEnum::SessionCached:
-			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
-				&& PacketService.CanSendPacket())
+			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.Payload[Unlinked::LinkingStartRequest::SUB_HEADER_INDEX] = Unlinked::LinkingStartRequest::SUB_HEADER;
-				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
-				Session.CompressPublicKeyTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX]);
-
-				if (SendPacket(OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
+				for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 				{
+					OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];
+				}
+				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
+
+				if (CanSendLinkingPacket(Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
+				{
+					if (SendPacket(OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
+					{
 #if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent Linking Start Request."));
+						this->Owner();
+						Serial.println(F("Sent Linking Start Request."));
 #endif
+					}
 				}
 			}
 			Task::enable();

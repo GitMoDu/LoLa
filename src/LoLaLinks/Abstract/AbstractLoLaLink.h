@@ -30,8 +30,8 @@ private:
 protected:
 	using BaseClass::Transceiver;
 	using BaseClass::OutPacket;
-	using BaseClass::Duplex;
 	using BaseClass::LinkStage;
+	using BaseClass::LinkTimestamp;
 	using BaseClass::LastValidReceivedCounter;
 	using BaseClass::SendCounter;
 	using BaseClass::SyncClock;
@@ -56,10 +56,7 @@ private:
 	/// </summary>
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
-
 protected:
-	Timestamp LinkTimestamp{};
-
 	int32_t LinkSendDuration = 0;
 
 private:
@@ -224,11 +221,7 @@ protected:
 		return micros() - LastUnlinkedSent;
 	}
 
-	void ResetLastUnlinkedSent()
-	{
-		LastUnlinkedSent = micros() - LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS;
-	}
-
+protected:
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
 	{
 		BaseClass::UpdateLinkStage(linkStage);
