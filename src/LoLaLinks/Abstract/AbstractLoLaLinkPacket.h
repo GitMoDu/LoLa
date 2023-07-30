@@ -214,9 +214,7 @@ public:
 				SyncClock.GetTimestamp(LinkTimestamp);
 				LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
-				const uint32_t startTimestamp = LinkTimestamp.GetRollingMicros();
-
-				return Duplex->IsInRange(startTimestamp, startTimestamp + GetOnAirDuration(payloadSize));
+				return Duplex->IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
 			}
 		}
 		else

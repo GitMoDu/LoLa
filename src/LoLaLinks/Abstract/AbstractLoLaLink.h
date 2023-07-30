@@ -7,7 +7,6 @@
 #include "..\..\Link\ReportTracker.h"
 #include "..\..\Link\TimedStateTransition.h"
 
-
 /// <summary>
 /// 
 /// </summary>

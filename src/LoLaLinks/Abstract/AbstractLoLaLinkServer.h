@@ -18,9 +18,6 @@ private:
 
 	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 30000;
 
-	static constexpr uint32_t PRE_LINK_SIXTH_DUPLEX_MICROS = LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS / 6;
-	static constexpr uint32_t PRE_LINK_THIRD_DUPLEX_MICROS = LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS / 3;
-
 	enum WaitingStateEnum
 	{
 		Sleeping,
@@ -61,6 +58,11 @@ protected:
 	using BaseClass::GetElapsedSinceLastSent;
 	using BaseClass::GetStageElapsedMillis;
 
+private:
+	const uint16_t PreLinkDuplexPeriod;
+	const uint16_t PreLinkDuplexOneSixth;
+	const uint16_t PreLinkDuplexOneThird;
+
 protected:
 	ServerTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
@@ -90,7 +92,11 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
-	{}
+		, PreLinkDuplexPeriod(duplex->GetPeriod()* LoLaLinkDefinition::PRE_LINK_DUPLEX_FACTOR)
+		, PreLinkDuplexOneSixth(PreLinkDuplexPeriod / 6)
+		, PreLinkDuplexOneThird(PreLinkDuplexPeriod / 3)
+	{
+	}
 
 protected:
 #if defined(DEBUG_LOLA)
@@ -712,7 +718,7 @@ protected:
 	/// <returns>True when packet can be sent.</returns>
 	const bool CanSendLinkingPacket(const uint8_t payloadSize)
 	{
-		if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
+		if (PreLinkDuplexPeriod == IDuplex::DUPLEX_FULL)
 		{
 			return true;
 		}
@@ -723,12 +729,12 @@ protected:
 
 			const uint32_t startTimestamp = LinkTimestamp.GetRollingMicros();
 
-			const uint_fast16_t startRemainder = startTimestamp % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
-			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
+			const uint_fast16_t startRemainder = startTimestamp % PreLinkDuplexPeriod;
+			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
 
 			if (endRemainder >= startRemainder
-				&& startRemainder >= PRE_LINK_SIXTH_DUPLEX_MICROS
-				&& endRemainder < PRE_LINK_THIRD_DUPLEX_MICROS)
+				&& startRemainder >= PreLinkDuplexOneSixth
+				&& endRemainder < PreLinkDuplexOneThird)
 			{
 				return PacketService.CanSendPacket();
 			}

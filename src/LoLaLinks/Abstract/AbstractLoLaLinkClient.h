@@ -22,9 +22,6 @@ private:
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
 	static constexpr uint8_t CLOCK_TUNE_FILTER_RATIO = 110;
 
-	static constexpr uint32_t PRE_LINK_FIVE_SIXTHS_DUPLEX_MICROS = (LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS * 5) / 6;
-	static constexpr uint32_t PRE_LINK_TWO_THIRDS_DUPLEX_MICROS = (LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS * 2) / 3;
-
 	enum WaitingStateEnum
 	{
 		Sleeping,
@@ -65,11 +62,15 @@ protected:
 	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::ResetStageStartTime;
 
+private:
+	const uint16_t PreLinkDuplexPeriod;
+	const uint16_t PreLinkDuplexFiveSixths;
+	const uint16_t PreLinkDuplexTwoThirds;
+
 protected:
 	ClientTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
 	TimestampError EstimateErrorReply{};
-
 
 protected:
 	uint8_t SearchChannel = 0;
@@ -104,6 +105,9 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
+		, PreLinkDuplexPeriod(duplex->GetPeriod()* LoLaLinkDefinition::PRE_LINK_DUPLEX_FACTOR)
+		, PreLinkDuplexFiveSixths(((uint32_t)PreLinkDuplexPeriod * 5) / 6)
+		, PreLinkDuplexTwoThirds(((uint32_t)PreLinkDuplexPeriod * 2) / 3)
 	{}
 
 protected:
@@ -736,7 +740,7 @@ protected:
 	/// <returns>True when packet can be sent.</returns>
 	const bool CanSendLinkingPacket(const uint8_t payloadSize)
 	{
-		if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
+		if (PreLinkDuplexPeriod == IDuplex::DUPLEX_FULL)
 		{
 			return true;
 		}
@@ -744,12 +748,12 @@ protected:
 		{
 			const uint32_t startTimestamp = (micros() - PreLinkLastNonReply) + GetSendDuration(payloadSize);
 
-			const uint_fast16_t startRemainder = startTimestamp % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
-			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
+			const uint_fast16_t startRemainder = startTimestamp % PreLinkDuplexPeriod;
+			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
 
 			if (endRemainder >= startRemainder
-				&& startRemainder >= PRE_LINK_TWO_THIRDS_DUPLEX_MICROS
-				&& endRemainder < PRE_LINK_FIVE_SIXTHS_DUPLEX_MICROS)
+				&& startRemainder >= PreLinkDuplexTwoThirds
+				&& endRemainder < PreLinkDuplexFiveSixths)
 			{
 				return PacketService.CanSendPacket();
 			}
