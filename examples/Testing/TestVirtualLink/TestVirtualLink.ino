@@ -43,7 +43,7 @@
 
 
 // Medium Simulation error chances, out 255, for every call.
-//#define DROP_CHANCE 100
+//#define DROP_CHANCE 70
 //#define CORRUPT_CHANCE 20
 //#define DOUBLE_SEND_CHANCE 10
 //#define ECO_CHANCE 5
@@ -103,6 +103,7 @@ using TestRadioConfig = SlowSingleChannel;
 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 4000;
+static const uint16_t DuplexDeadZone = 100;
 static const uint32_t ChannelHopPeriod = 20000;
 
 // Use best available sources.
@@ -150,7 +151,7 @@ NoHopNoChannel ClientChannelHop;
 
 // Link Server and its required instances.
 VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerTransceiver(SchedulerBase);
-HalfDuplex<DuplexPeriod, false> ServerDuplex;
+HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 LoLaPkeLinkServer<> Server(SchedulerBase,
 	&ServerTransceiver,
 	&EntropySource,
@@ -164,7 +165,7 @@ LoLaPkeLinkServer<> Server(SchedulerBase,
 
 // Link Client and its required instances.
 VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientTransceiver(SchedulerBase);
-HalfDuplex<DuplexPeriod, true> ClientDuplex;
+HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&ClientTransceiver,
 	&EntropySource,

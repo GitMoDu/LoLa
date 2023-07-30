@@ -51,7 +51,7 @@ protected:
 		PrintName();
 		Serial.println(F("Test Discovery Failed."));
 #endif
-		Task::disable(); 
+		Task::disable();
 	}
 
 	/// <summary>
