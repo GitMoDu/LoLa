@@ -9,10 +9,10 @@
 /// Discovery sub header definition.
 /// User classes should extend sub-headers starting from 0, up to UINT8_MAX-1.
 /// </summary>
-class DiscoveryDefinition : public TemplateSubHeaderDefinition<UINT8_MAX, 1 + 4>
+class DiscoveryDefinition : public TemplateHeaderDefinition<UINT8_MAX, 1 + 4>
 {
 public:
-	static const uint8_t PAYLOAD_ACK_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+	static const uint8_t PAYLOAD_ACK_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 	static const uint8_t PAYLOAD_ID_INDEX = PAYLOAD_ACK_INDEX + 1;
 };
 
@@ -142,7 +142,7 @@ public:
 			return;
 		}
 
-		if (payload[SubHeaderDefinition::SUB_HEADER_INDEX] == DiscoveryDefinition::SUB_HEADER)
+		if (payload[HeaderDefinition::HEADER_INDEX] == DiscoveryDefinition::HEADER)
 		{
 			if (payloadSize == DiscoveryDefinition::PAYLOAD_SIZE
 				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX] == (uint8_t)(ServiceId)
@@ -279,7 +279,7 @@ private:
 		if (CanRequestSend())
 		{
 			OutPacket.SetPort(Port);
-			OutPacket.Payload[SubHeaderDefinition::SUB_HEADER_INDEX] = DiscoveryDefinition::SUB_HEADER;
+			OutPacket.Payload[HeaderDefinition::HEADER_INDEX] = DiscoveryDefinition::HEADER;
 
 			if (partnerFound)
 			{

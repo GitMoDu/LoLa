@@ -103,7 +103,7 @@ protected:
 		PrintName();
 		Serial.print(F("Test Discovery OnLinkedPacketReceived ("));
 		Serial.print(F("0x"));
-		Serial.print(payload[SubHeaderDefinition::SUB_HEADER_INDEX]);
+		Serial.print(payload[HeaderDefinition::HEADER_INDEX]);
 		Serial.println(F(")."));
 #endif
 	}

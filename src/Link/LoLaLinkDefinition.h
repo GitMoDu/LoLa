@@ -186,32 +186,32 @@ private:
 	/// <summary>
 	/// ||SessionId|CompressedPublicKey||
 	/// </summary>
-	template<const uint8_t SubHeader>
-	struct PkeBroadcastDefinition : public TemplateSubHeaderDefinition<SubHeader, SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
+	template<const uint8_t Header>
+	struct PkeBroadcastDefinition : public TemplateHeaderDefinition<Header, SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
 	{
-		static constexpr uint8_t PAYLOAD_SESSION_ID_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+		static constexpr uint8_t PAYLOAD_SESSION_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		static constexpr uint8_t PAYLOAD_PUBLIC_KEY_INDEX = PAYLOAD_SESSION_ID_INDEX + SESSION_ID_SIZE;
 	};
 
 	/// <summary>
 	/// ||SessionToken||
 	/// </summary>
-	template<const uint8_t SubHeader, const uint8_t ExtraSize>
-	struct LinkingSwitchOverDefinition : public TemplateSubHeaderDefinition<SubHeader, LINKING_TOKEN_SIZE + ExtraSize>
+	template<const uint8_t Header, const uint8_t ExtraSize>
+	struct LinkingSwitchOverDefinition : public TemplateHeaderDefinition<Header, LINKING_TOKEN_SIZE + ExtraSize>
 	{
-		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 	};
 
 
-	template<const uint8_t SubHeader, const uint8_t ExtraSize = 0>
-	struct ClockTimestampDefinition : public TemplateSubHeaderDefinition<SubHeader, (TIME_SIZE * 2) + ExtraSize>
+	template<const uint8_t Header, const uint8_t ExtraSize = 0>
+	struct ClockTimestampDefinition : public TemplateHeaderDefinition<Header, (TIME_SIZE * 2) + ExtraSize>
 	{
-		static constexpr uint8_t PAYLOAD_SECONDS_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+		static constexpr uint8_t PAYLOAD_SECONDS_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		static constexpr uint8_t PAYLOAD_SUB_SECONDS_INDEX = PAYLOAD_SECONDS_INDEX + TIME_SIZE;
 	};
 
-	template<const uint8_t SubHeader, const uint8_t ExtraSize = 0>
-	struct LinkSwitchOverDefinition : public TemplateSubHeaderDefinition<SubHeader, LINKING_TOKEN_SIZE + ExtraSize>
+	template<const uint8_t Header, const uint8_t ExtraSize = 0>
+	struct LinkSwitchOverDefinition : public TemplateHeaderDefinition<Header, LINKING_TOKEN_SIZE + ExtraSize>
 	{};
 
 public:
@@ -228,37 +228,37 @@ public:
 		/// Broadcast to search for available partners.
 		/// TODO: Add support for search for specific Host Id or Device category.
 		/// </summary>
-		using SearchRequest = TemplateSubHeaderDefinition<0, 0>;
+		using SearchRequest = TemplateHeaderDefinition<0, 0>;
 
 		/// <summary>
 		/// Quick reply to let partner know where we're here.
 		/// Used in channel searching before starting a session.
 		/// </summary>
-		using SearchReply = TemplateSubHeaderDefinition<SearchRequest::SUB_HEADER + 1, 0>;
+		using SearchReply = TemplateHeaderDefinition<SearchRequest::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||||
 		/// Request server to start a PKE session.
 		/// TODO: Add support for search for specific Device Id.
 		/// </summary>
-		using SessionRequest = TemplateSubHeaderDefinition<SearchReply::SUB_HEADER + 1, 0>;
+		using SessionRequest = TemplateHeaderDefinition<SearchReply::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||SessionId|CompressedServerPublicKey||
 		/// </summary>
-		using SessionAvailable = PkeBroadcastDefinition<SessionRequest::SUB_HEADER + 1>;
+		using SessionAvailable = PkeBroadcastDefinition<SessionRequest::HEADER + 1>;
 
 		/// <summary>
 		/// ||SessionId|CompressedClientPublicKey||
 		/// </summary>
-		using LinkingStartRequest = PkeBroadcastDefinition<SessionAvailable::SUB_HEADER + 1>;
+		using LinkingStartRequest = PkeBroadcastDefinition<SessionAvailable::HEADER + 1>;
 
 		/// <summary>
 		/// ||SessionToken|Remaining||
 		/// </summary>
-		struct LinkingTimedSwitchOver : public LinkingSwitchOverDefinition<LinkingStartRequest::SUB_HEADER + 1, TIME_SIZE>
+		struct LinkingTimedSwitchOver : public LinkingSwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>
 		{
-			using BaseClass = LinkingSwitchOverDefinition<LinkingStartRequest::SUB_HEADER + 1, TIME_SIZE>;
+			using BaseClass = LinkingSwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>;
 
 			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_SESSION_TOKEN_INDEX + LINKING_TOKEN_SIZE;
 		};
@@ -266,7 +266,7 @@ public:
 		/// <summary>
 		/// ||SessionToken||
 		/// </summary>
-		using LinkingTimedSwitchOverAck = LinkingSwitchOverDefinition<LinkingTimedSwitchOver::SUB_HEADER + 1, 0>;
+		using LinkingTimedSwitchOverAck = LinkingSwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, 0>;
 	};
 
 	struct Linking
@@ -276,27 +276,27 @@ public:
 		/// <summary>
 		/// ||ChallengeCode||
 		/// </summary>
-		//using LinkChallenge = TemplateSubHeaderDefinition<0, CHALLENGE_REQUEST_SIZE>;
-		struct ServerChallengeRequest : public TemplateSubHeaderDefinition<0, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
+		//using LinkChallenge = TemplateHeaderDefinition<0, CHALLENGE_REQUEST_SIZE>;
+		struct ServerChallengeRequest : public TemplateHeaderDefinition<0, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 
 		/// <summary>
 		/// ||SignedCode|ChallengeCode||
 		/// </summary>
-		struct ClientChallengeReplyRequest : public TemplateSubHeaderDefinition<ServerChallengeRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
+		struct ClientChallengeReplyRequest : public TemplateHeaderDefinition<ServerChallengeRequest::HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE;
 		};
 
 		/// <summary>
 		/// ||SignedCode||
 		/// </summary>
-		struct ServerChallengeReply : public TemplateSubHeaderDefinition<ClientChallengeReplyRequest::SUB_HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE>
+		struct ServerChallengeReply : public TemplateHeaderDefinition<ClientChallengeReplyRequest::HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 
 		/// <summary>
@@ -304,16 +304,16 @@ public:
 		/// Seconds in full UTC seconds.
 		/// Sub-seconds in microseconds [-999999; +999999]
 		/// </summary>
-		using ClockSyncRequest = ClockTimestampDefinition<ServerChallengeReply::SUB_HEADER + 1>;
+		using ClockSyncRequest = ClockTimestampDefinition<ServerChallengeReply::HEADER + 1>;
 
 		/// <summary>
 		/// ||Seconds|SubSecondsError|Accepted||
 		/// Sub-seconds in microseconds [-999999; +999999]
 		/// Accepted true if non-zero.
 		/// </summary>
-		struct ClockSyncReply : public ClockTimestampDefinition<ClockSyncRequest::SUB_HEADER + 1, 1>
+		struct ClockSyncReply : public ClockTimestampDefinition<ClockSyncRequest::HEADER + 1, 1>
 		{
-			using BaseClass = ClockTimestampDefinition<ClockSyncRequest::SUB_HEADER + 1, 1>;
+			using BaseClass = ClockTimestampDefinition<ClockSyncRequest::HEADER + 1, 1>;
 
 			static constexpr uint8_t PAYLOAD_ACCEPTED_INDEX = BaseClass::PAYLOAD_SUB_SECONDS_INDEX + TIME_SIZE;
 		};
@@ -321,20 +321,20 @@ public:
 		/// <summary>
 		/// 
 		/// </summary>
-		using StartLinkRequest = TemplateSubHeaderDefinition<ClockSyncReply::SUB_HEADER + 1, 0>;
+		using StartLinkRequest = TemplateHeaderDefinition<ClockSyncReply::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||Remaining||
 		/// </summary>
-		struct LinkTimedSwitchOver : public LinkSwitchOverDefinition<StartLinkRequest::SUB_HEADER + 1, TIME_SIZE>
+		struct LinkTimedSwitchOver : public LinkSwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_TIME_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_TIME_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 
 		/// <summary>
 		/// ||||
 		/// </summary>
-		using LinkTimedSwitchOverAck = LinkSwitchOverDefinition<LinkTimedSwitchOver::SUB_HEADER + 1>;
+		using LinkTimedSwitchOverAck = LinkSwitchOverDefinition<LinkTimedSwitchOver::HEADER + 1>;
 	};
 
 	struct Linked
@@ -347,7 +347,7 @@ public:
 		/// <summary>
 		/// ||Average RSSI|ReceiveCounter|REQUEST_REPLY||
 		/// </summary>
-		struct ReportUpdate : public TemplateSubHeaderDefinition<0, 3>
+		struct ReportUpdate : public TemplateHeaderDefinition<0, 3>
 		{
 			static constexpr uint8_t PAYLOAD_RSSI_INDEX = SUB_PAYLOAD_INDEX;
 			static constexpr uint8_t PAYLOAD_RECEIVE_COUNTER_INDEX = PAYLOAD_RSSI_INDEX + 1;
@@ -357,17 +357,17 @@ public:
 		/// <summary>
 		/// ||Rolling Time (us)||
 		/// </summary>
-		struct ClockTuneMicrosRequest : public TemplateSubHeaderDefinition<ReportUpdate::SUB_HEADER + 1, TIME_SIZE>
+		struct ClockTuneMicrosRequest : public TemplateHeaderDefinition<ReportUpdate::HEADER + 1, TIME_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_ROLLING_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_ROLLING_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 
 		/// <summary>
 		/// ||Rolling Time error (us)||
 		/// </summary>
-		struct ClockTuneMicrosReply : public TemplateSubHeaderDefinition<ClockTuneMicrosRequest::SUB_HEADER + 1, TIME_SIZE>
+		struct ClockTuneMicrosReply : public TemplateHeaderDefinition<ClockTuneMicrosRequest::HEADER + 1, TIME_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_ERROR_INDEX = SubHeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_ERROR_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
 	};
 

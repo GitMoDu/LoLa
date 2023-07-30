@@ -100,9 +100,9 @@ public:
 protected:
 	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
-		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
-		case Unlinked::SessionRequest::SUB_HEADER:
+		case Unlinked::SessionRequest::HEADER:
 			if (payloadSize == Unlinked::SessionRequest::PAYLOAD_SIZE)
 			{
 				if (IsInSearchingLink())
@@ -141,7 +141,7 @@ protected:
 			}
 #endif
 			break;
-		case Unlinked::LinkingStartRequest::SUB_HEADER:
+		case Unlinked::LinkingStartRequest::HEADER:
 			if (payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
 				&& Session.SessionIdMatches(&payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
 			{
@@ -189,7 +189,7 @@ protected:
 		if (PkeSessionRequested)
 		{
 			OutPacket.SetPort(Unlinked::PORT);
-			OutPacket.Payload[Unlinked::SessionAvailable::SUB_HEADER_INDEX] = Unlinked::SessionAvailable::SUB_HEADER;
+			OutPacket.Payload[Unlinked::SessionAvailable::HEADER_INDEX] = Unlinked::SessionAvailable::HEADER;
 			for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 			{
 				OutPacket.Payload[Unlinked::SessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];

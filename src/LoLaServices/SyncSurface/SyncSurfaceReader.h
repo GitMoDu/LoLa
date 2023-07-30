@@ -48,23 +48,23 @@ public:
 
 	virtual void OnDiscoveredPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) final
 	{
-		switch (SubHeaderDefinition::SUB_HEADER_INDEX)
+		switch (HeaderDefinition::HEADER_INDEX)
 		{
-		case WriterUpdateBlockSubDefinition::SUB_HEADER:
-			if (payloadSize == WriterUpdateBlockSubDefinition::PAYLOAD_SIZE)
+		case WriterUpdateBlockDefinition::HEADER:
+			if (payloadSize == WriterUpdateBlockDefinition::PAYLOAD_SIZE)
 			{
 				LastUpdateReceived = millis();
-				SetRemoteHash(payload[WriterCheckHashSubDefinition::CRC_OFFSET]);
+				SetRemoteHash(payload[WriterCheckHashDefinition::CRC_OFFSET]);
 				OnBlockPacketReceived(payload);
 				InvalidateLocalHash();
 				Task::enable();
 			}
 			break;
-		case WriterCheckHashSubDefinition::SUB_HEADER:
-			if (payloadSize == WriterCheckHashSubDefinition::PAYLOAD_SIZE)
+		case WriterCheckHashDefinition::HEADER:
+			if (payloadSize == WriterCheckHashDefinition::PAYLOAD_SIZE)
 			{
 				LastUpdateReceived = millis();
-				SetRemoteHash(payload[WriterCheckHashSubDefinition::CRC_OFFSET]);
+				SetRemoteHash(payload[WriterCheckHashDefinition::CRC_OFFSET]);
 				InvalidateLocalHash();
 				UpdateRequested = true;
 				Task::enable();
@@ -82,7 +82,7 @@ protected:
 		{
 			if (HashesMatch())
 			{
-				if (RequestSendMetaPacket(ReaderValidateHashSubDefinition::SUB_HEADER))
+				if (RequestSendMetaPacket(ReaderValidateHashDefinition::HEADER))
 				{
 					UpdateRequested = false;
 					UpdateSyncState(true);
@@ -95,7 +95,7 @@ protected:
 			}
 			else
 			{
-				if (RequestSendMetaPacket(ReaderInvalidateSubDefinition::SUB_HEADER))
+				if (RequestSendMetaPacket(ReaderInvalidateDefinition::HEADER))
 				{
 					UpdateRequested = false;
 					Task::enableIfNot();
@@ -120,7 +120,7 @@ protected:
 		else if (HashesMatch() || !TrackedSurface.HasAnyBlockPending())
 		{
 			if (GetElapsedSinceLastSent() > RESEND_PERIOD_MILLIS &&
-				RequestSendMetaPacket(ReaderValidateHashSubDefinition::SUB_HEADER))
+				RequestSendMetaPacket(ReaderValidateHashDefinition::HEADER))
 			{
 				UpdateSyncState(true);
 				Task::enableIfNot();
@@ -133,7 +133,7 @@ protected:
 		else if (millis() - LastUpdateReceived > RECEIVE_FAILED_PERIOD)
 		{
 			if (GetElapsedSinceLastSent() > RESEND_PERIOD_MILLIS &&
-				RequestSendMetaPacket(ReaderInvalidateSubDefinition::SUB_HEADER))
+				RequestSendMetaPacket(ReaderInvalidateDefinition::HEADER))
 			{
 				Task::enableIfNot();
 			}
@@ -162,12 +162,12 @@ protected:
 private:
 	void OnBlockPacketReceived(const uint8_t* payload)
 	{
-		const uint8_t index = payload[WriterUpdateBlockSubDefinition::INDEX_OFFSET];
+		const uint8_t index = payload[WriterUpdateBlockDefinition::INDEX_OFFSET];
 		const uint8_t indexOffset = index * ITrackedSurface::BytesPerBlock;
 
 		for (uint_least8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
 		{
-			SurfaceData[indexOffset + i] = payload[WriterUpdateBlockSubDefinition::BLOCKS_OFFSET + i];
+			SurfaceData[indexOffset + i] = payload[WriterUpdateBlockDefinition::BLOCKS_OFFSET + i];
 		}
 
 		TrackedSurface.ClearBlockPending(index);

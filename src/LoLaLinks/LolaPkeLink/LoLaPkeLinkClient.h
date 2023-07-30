@@ -93,9 +93,9 @@ public:
 protected:
 	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
-		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
-		case Unlinked::SessionAvailable::SUB_HEADER:
+		case Unlinked::SessionAvailable::HEADER:
 			if (payloadSize == Unlinked::SessionAvailable::PAYLOAD_SIZE
 				&& IsInSessionCreation())
 			{
@@ -151,7 +151,7 @@ protected:
 				&& CanSendLinkingPacket(Unlinked::SessionRequest::PAYLOAD_SIZE))
 			{
 				OutPacket.SetPort(Unlinked::PORT);
-				OutPacket.Payload[Unlinked::SessionRequest::SUB_HEADER_INDEX] = Unlinked::SessionRequest::SUB_HEADER;
+				OutPacket.Payload[Unlinked::SessionRequest::HEADER_INDEX] = Unlinked::SessionRequest::HEADER;
 				if (SendPacket(OutPacket.Data, Unlinked::SessionRequest::PAYLOAD_SIZE))
 				{
 #if defined(DEBUG_LOLA)
@@ -207,7 +207,7 @@ protected:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Unlinked::PORT);
-				OutPacket.Payload[Unlinked::LinkingStartRequest::SUB_HEADER_INDEX] = Unlinked::LinkingStartRequest::SUB_HEADER;
+				OutPacket.Payload[Unlinked::LinkingStartRequest::HEADER_INDEX] = Unlinked::LinkingStartRequest::HEADER;
 				for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 				{
 					OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];

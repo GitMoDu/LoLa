@@ -89,20 +89,20 @@ struct TemplateDefinition
 	static constexpr uint8_t DATA_SIZE = LoLaPacketDefinition::GetDataSize(PACKET_SIZE);
 };
 
-struct SubHeaderDefinition
+struct HeaderDefinition
 {
-	static const uint8_t SUB_HEADER_INDEX = 0;
+	static const uint8_t HEADER_INDEX = 0;
 	static const uint8_t SUB_PAYLOAD_INDEX = 1;
 };
 
 /// <summary>
-/// Wraps Payload as |SubHeader|SubPayload...|
+/// Wraps Payload as |Header|SubPayload...|
 /// </summary>
-template<const uint8_t SubHeader,
+template<const uint8_t Header,
 	const uint8_t SubPayloadSize>
-struct TemplateSubHeaderDefinition : public SubHeaderDefinition
+struct TemplateHeaderDefinition : public HeaderDefinition
 {
-	static const uint8_t SUB_HEADER = SubHeader;
+	static const uint8_t HEADER = Header;
 
 	static const uint8_t SUB_PAYLOAD_SIZE = SubPayloadSize;
 

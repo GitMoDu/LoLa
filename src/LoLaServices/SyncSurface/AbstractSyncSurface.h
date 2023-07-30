@@ -99,14 +99,14 @@ public:
 	//	}
 
 protected:
-	const bool RequestSendMetaPacket(const uint8_t subHeader)
+	const bool RequestSendMetaPacket(const uint8_t header)
 	{
 		OutPacket.SetPort(Port);
 
-		OutPacket.Payload[SubHeaderDefinition::SUB_HEADER_INDEX] = subHeader;
-		OutPacket.Payload[SyncCommonSubDefinition::CRC_OFFSET] = GetLocalHash();
+		OutPacket.Payload[HeaderDefinition::HEADER_INDEX] = header;
+		OutPacket.Payload[SyncCommonDefinition::CRC_OFFSET] = GetLocalHash();
 
-		return RequestSendPacket(SyncCommonSubDefinition::PAYLOAD_SIZE);
+		return RequestSendPacket(SyncCommonDefinition::PAYLOAD_SIZE);
 	}
 
 	const uint8_t GetLocalHash()

@@ -118,7 +118,7 @@ protected:
 			case WriterStateEnum::Validating:
 				// State is transitioned to Throttling on packet receive.
 				if (GetElapsedSinceLastSent() > SYNC_CONFIRM_RESEND_PERIOD_MILLIS &&
-					RequestSendMetaPacket(WriterCheckHashSubDefinition::SUB_HEADER))
+					RequestSendMetaPacket(WriterCheckHashDefinition::HEADER))
 				{
 					Task::enableIfNot();
 				}
@@ -156,21 +156,21 @@ protected:
 
 	virtual void OnDiscoveredPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) final
 	{
-		switch (payload[WriterUpdateBlockSubDefinition::SUB_HEADER_INDEX])
+		switch (payload[WriterUpdateBlockDefinition::HEADER_INDEX])
 		{
-		case ReaderInvalidateSubDefinition::SUB_HEADER:
-			if (payloadSize == ReaderInvalidateSubDefinition::PAYLOAD_SIZE)
+		case ReaderInvalidateDefinition::HEADER:
+			if (payloadSize == ReaderInvalidateDefinition::PAYLOAD_SIZE)
 			{
-				SetRemoteHash(payload[WriterCheckHashSubDefinition::CRC_OFFSET]);
+				SetRemoteHash(payload[WriterCheckHashDefinition::CRC_OFFSET]);
 				InvalidateLocalHash();
 				TrackedSurface.SetAllBlocksPending();
 				Task::enableIfNot();
 			}
 			break;
-		case ReaderValidateHashSubDefinition::SUB_HEADER:
-			if (payloadSize == ReaderValidateHashSubDefinition::PAYLOAD_SIZE)
+		case ReaderValidateHashDefinition::HEADER:
+			if (payloadSize == ReaderValidateHashDefinition::PAYLOAD_SIZE)
 			{
-				SetRemoteHash(payload[WriterCheckHashSubDefinition::CRC_OFFSET]);
+				SetRemoteHash(payload[WriterCheckHashDefinition::CRC_OFFSET]);
 				if (WriterState == WriterStateEnum::Validating)
 				{
 					WriterState = WriterStateEnum::Throttling;
@@ -204,11 +204,11 @@ private:
 	{
 		OutPacket.SetPort(Port);
 
-		OutPacket.Payload[WriterUpdateBlockSubDefinition::SUB_HEADER_INDEX] = WriterUpdateBlockSubDefinition::SUB_HEADER;
-		OutPacket.Payload[WriterUpdateBlockSubDefinition::CRC_OFFSET] = GetLocalHash();
-		OutPacket.Payload[WriterUpdateBlockSubDefinition::INDEX_OFFSET] = index;
+		OutPacket.Payload[WriterUpdateBlockDefinition::HEADER_INDEX] = WriterUpdateBlockDefinition::HEADER;
+		OutPacket.Payload[WriterUpdateBlockDefinition::CRC_OFFSET] = GetLocalHash();
+		OutPacket.Payload[WriterUpdateBlockDefinition::INDEX_OFFSET] = index;
 
-		return RequestSendPacket(WriterUpdateBlockSubDefinition::PAYLOAD_SIZE);
+		return RequestSendPacket(WriterUpdateBlockDefinition::PAYLOAD_SIZE);
 	}
 
 	void OnUpdating()

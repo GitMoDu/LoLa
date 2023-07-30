@@ -138,9 +138,9 @@ public:
 	{
 		if (port == Linked::PORT)
 		{
-			switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+			switch (payload[HeaderDefinition::HEADER_INDEX])
 			{
-			case Linked::ReportUpdate::SUB_HEADER:
+			case Linked::ReportUpdate::HEADER:
 				if (payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
 				{
 					// Keep track of partner's RSSI, for output gain management.
@@ -416,7 +416,7 @@ private:
 			if (CanRequestSend())
 			{
 				OutPacket.SetPort(Linked::PORT);
-				OutPacket.Payload[Linked::ReportUpdate::SUB_HEADER_INDEX] = Linked::ReportUpdate::SUB_HEADER;
+				OutPacket.Payload[Linked::ReportUpdate::HEADER_INDEX] = Linked::ReportUpdate::HEADER;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = LastReceivedRssi;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] = LastValidReceivedCounter;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = ReportTracking.IsBackReportNeeded(timestamp, GetElapsedSinceLastValidReceived());

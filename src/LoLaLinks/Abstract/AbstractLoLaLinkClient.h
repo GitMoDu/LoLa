@@ -124,9 +124,9 @@ protected:
 protected:
 	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
 	{
-		switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
-		case Unlinked::SearchReply::SUB_HEADER:
+		case Unlinked::SearchReply::HEADER:
 			if (payloadSize == Unlinked::SearchReply::PAYLOAD_SIZE
 				&& WaitingState == WaitingStateEnum::SearchingLink)
 			{
@@ -145,7 +145,7 @@ protected:
 			}
 #endif
 			break;
-		case Unlinked::LinkingTimedSwitchOver::SUB_HEADER:
+		case Unlinked::LinkingTimedSwitchOver::HEADER:
 			if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
 				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
@@ -182,9 +182,9 @@ protected:
 
 	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
-		switch (payload[Linking::ServerChallengeRequest::SUB_HEADER_INDEX])
+		switch (payload[Linking::ServerChallengeRequest::HEADER_INDEX])
 		{
-		case Linking::ServerChallengeRequest::SUB_HEADER:
+		case Linking::ServerChallengeRequest::HEADER:
 			if (payloadSize == Linking::ServerChallengeRequest::PAYLOAD_SIZE
 				&& LinkingState == LinkingStateEnum::WaitingForAuthenticationRequest)
 			{
@@ -200,7 +200,7 @@ protected:
 			}
 #endif
 			break;
-		case Linking::ServerChallengeReply::SUB_HEADER:
+		case Linking::ServerChallengeReply::HEADER:
 			if (payloadSize == Linking::ServerChallengeReply::PAYLOAD_SIZE
 				&& LinkingState == LinkingStateEnum::AuthenticationReply
 				&& Encoder->VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
@@ -219,7 +219,7 @@ protected:
 			}
 #endif
 			break;
-		case Linking::ClockSyncReply::SUB_HEADER:
+		case Linking::ClockSyncReply::HEADER:
 			if (payloadSize == Linking::ClockSyncReply::PAYLOAD_SIZE
 				&& LinkingState == LinkingStateEnum::ClockSyncing)
 			{
@@ -273,7 +273,7 @@ protected:
 			}
 #endif
 			break;
-		case Linking::LinkTimedSwitchOver::SUB_HEADER:
+		case Linking::LinkTimedSwitchOver::HEADER:
 			if (payloadSize == Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)
 			{
 				switch (LinkingState)
@@ -318,9 +318,9 @@ protected:
 	{
 		if (port == Linked::PORT)
 		{
-			switch (payload[SubHeaderDefinition::SUB_HEADER_INDEX])
+			switch (payload[HeaderDefinition::HEADER_INDEX])
 			{
-			case Linked::ClockTuneMicrosReply::SUB_HEADER:
+			case Linked::ClockTuneMicrosReply::HEADER:
 				if (payloadSize == Linked::ClockTuneMicrosReply::PAYLOAD_SIZE
 					&& WaitingForClockReply)
 				{
@@ -480,7 +480,7 @@ protected:
 				&& CanSendLinkingPacket(Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE))
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::ClientChallengeReplyRequest::SUB_HEADER_INDEX] = Linking::ClientChallengeReplyRequest::SUB_HEADER;
+				OutPacket.Payload[Linking::ClientChallengeReplyRequest::HEADER_INDEX] = Linking::ClientChallengeReplyRequest::HEADER;
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
 
@@ -498,7 +498,7 @@ protected:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::ClockSyncRequest::SUB_HEADER_INDEX] = Linking::ClockSyncRequest::SUB_HEADER;
+				OutPacket.Payload[Linking::ClockSyncRequest::HEADER_INDEX] = Linking::ClockSyncRequest::HEADER;
 
 				LinkSendDuration = (int32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
 
@@ -534,7 +534,7 @@ protected:
 			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
 			{
 				OutPacket.SetPort(Linking::PORT);
-				OutPacket.Payload[Linking::StartLinkRequest::SUB_HEADER_INDEX] = Linking::StartLinkRequest::SUB_HEADER;
+				OutPacket.Payload[Linking::StartLinkRequest::HEADER_INDEX] = Linking::StartLinkRequest::HEADER;
 
 				if (CanSendLinkingPacket(Linking::StartLinkRequest::PAYLOAD_SIZE))
 				{
@@ -574,7 +574,7 @@ protected:
 				if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
 				{
 					OutPacket.SetPort(Linking::PORT);
-					OutPacket.Payload[Linking::LinkTimedSwitchOverAck::SUB_HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::SUB_HEADER;
+					OutPacket.Payload[Linking::LinkTimedSwitchOverAck::HEADER_INDEX] = Linking::LinkTimedSwitchOverAck::HEADER;
 
 					if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 					{
@@ -596,7 +596,7 @@ protected:
 	virtual void OnPreSend()
 	{
 		if (OutPacket.GetPort() == Linked::PORT &&
-			OutPacket.Payload[Linked::ClockTuneMicrosRequest::SUB_HEADER_INDEX] == Linked::ClockTuneMicrosRequest::SUB_HEADER)
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::HEADER_INDEX] == Linked::ClockTuneMicrosRequest::HEADER)
 		{
 			LinkSendDuration = GetSendDuration(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE);
 
@@ -626,7 +626,7 @@ protected:
 		else if (millis() - LastCLockSync > LoLaLinkDefinition::CLOCK_TUNE_PERIOD && CanRequestSend())
 		{
 			OutPacket.SetPort(Linked::PORT);
-			OutPacket.Payload[Linked::ClockTuneMicrosRequest::SUB_HEADER_INDEX] = Linked::ClockTuneMicrosRequest::SUB_HEADER;
+			OutPacket.Payload[Linked::ClockTuneMicrosRequest::HEADER_INDEX] = Linked::ClockTuneMicrosRequest::HEADER;
 			if (RequestSendPacket(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE))
 			{
 				WaitingForClockReply = true;
@@ -661,7 +661,7 @@ private:
 				else if (PacketService.CanSendPacket())
 				{
 					OutPacket.SetPort(Unlinked::PORT);
-					OutPacket.Payload[Unlinked::SearchRequest::SUB_HEADER_INDEX] = Unlinked::SearchRequest::SUB_HEADER;
+					OutPacket.Payload[Unlinked::SearchRequest::HEADER_INDEX] = Unlinked::SearchRequest::HEADER;
 
 					if (SendPacket(OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
@@ -706,7 +706,7 @@ private:
 		else if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
 		{
 			OutPacket.SetPort(Unlinked::PORT);
-			OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER_INDEX] = Unlinked::LinkingTimedSwitchOverAck::SUB_HEADER;
+			OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::HEADER_INDEX] = Unlinked::LinkingTimedSwitchOverAck::HEADER;
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
 
 			if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
