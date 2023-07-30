@@ -14,7 +14,7 @@
 /// Provides a double-buffered simulated PHY, for LoLaLinks.
 /// Can send and transmit to IVirtualTransceiver partner.
 /// </summary>
-/// <typeparam name="Config">IVirtualTransceiver::Configuration: Simulated PHY characteristics.</typeparam>
+/// <typeparam name="Config">IVirtualTransceiver::ConfigurationStruct: Simulated PHY characteristics.</typeparam>
 /// <typeparam name="OnwerName">Indentifier for debug logging.</typeparam>
 /// <typeparam name="LogChannelHop">Enables current channel logging, when DEBUG_LOLA is defined.</typeparam>
 template<typename Config,
@@ -139,7 +139,7 @@ public:
 		}
 
 		// Simulate delay from start event to received packet buffer.
-		if (Incoming.HasPending() && ((micros() - Incoming.Started) > GetDurationInAir(Incoming.Size)))
+		if (Incoming.HasPending() && ((micros() - Incoming.Started) >= GetDurationInAir(Incoming.Size)))
 		{
 			// Rx duration has elapsed since the packet incoming start triggered.
 			if (Listener != nullptr)
@@ -175,7 +175,7 @@ public:
 		{
 			Task::disable();
 
-			return false;
+			return true;
 		}
 	}
 
@@ -233,15 +233,6 @@ public:
 			return false;
 		}
 
-		if (Incoming.HasPending())
-		{
-#if defined(DEBUG_LOLA)
-			PrintName();
-			Serial.println(F("Tx failed. Rx collision."));
-#endif
-			return false;
-		}
-
 		if (OutGoing.HasPending())
 		{
 #if defined(DEBUG_LOLA)
@@ -250,6 +241,17 @@ public:
 #endif
 			return false;
 		}
+
+		if (Incoming.HasPending() && ((micros() - Incoming.Started) < GetDurationInAir(Incoming.Size)))
+			//if (Incoming.HasPending())
+		{
+#if defined(DEBUG_LOLA)
+			PrintName();
+			Serial.println(F("Tx failed. Rx collision."));
+#endif
+			return false;
+		}
+
 
 		// Copy packet to temporary output buffer.
 		// This will be distributed after TimeToAir,
@@ -274,12 +276,12 @@ public:
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		return Config::TxBase + ((Config::TxByteNanos * packetSize) / 1000);
+		return Config::TxBaseMicros + ((Config::TxByteNanos * packetSize) / 1000);
 	}
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
-		return Config::RxBase + ((Config::RxByteNanos * packetSize) / 1000);
+		return Config::AirBaseMicros + ((Config::AirByteNanos * packetSize) / 1000);
 	}
 
 	virtual const uint16_t GetTimeToHop() final
@@ -302,6 +304,18 @@ public:
 	{
 		const uint32_t timestamp = micros();
 
+		if (CurrentChannel != channel)
+		{
+#if defined(DEBUG_LOLA)
+			PrintName();
+			Serial.print(F("Channel Miss: Rx:"));
+			Serial.print(CurrentChannel);
+			Serial.print(F(" Tx:"));
+			Serial.println(channel);
+#endif
+			return false;
+		}
+
 		if (Incoming.HasPending())
 		{
 			if (Listener != nullptr)
@@ -315,23 +329,11 @@ public:
 			return false;
 		}
 
-		if (CurrentChannel != channel)
-		{
-#if defined(DEBUG_LOLA)
-			PrintName();
-			Serial.print(F("Channel Miss: Rx:"));
-			Serial.print(CurrentChannel);
-			Serial.print(F(" Tx:"));
-			Serial.println(channel);
-#endif
-			return false;
-		}
-
 		if (OutGoing.HasPending())
 		{
 #if defined(DEBUG_LOLA)
 			PrintName();
-			Serial.println(F("Rx failed. Was sending."));
+			Serial.println(F("Rx failed. Tx was pending."));
 #endif
 			return false;
 		}

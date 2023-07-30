@@ -92,16 +92,14 @@ static const uint8_t ClientPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 
 static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x9E,0x78,0xBA,0x67,0xEA,0x57,0xA9,0xBD,0x4E,0x1A,0x35,0xFB,0xD3,0xA7,0x19,0x29,0x55,0xB9,0xA1,0x3A };
 //
 
-// Test Virtual Packet Driver configurations.
-// <ChannelCount, TxBaseMicros, TxByteNanos, RxBaseMicros, RxByteNanos, HopMicros>
-using FastSingleChannel = IVirtualTransceiver::Configuration<1, 100, 50, 100, 50, 50>;
-using FastGHzRadio = IVirtualTransceiver::Configuration	<125, 200, 100, 100, 100, 100>;
-using TypicalSubGHzRadio = IVirtualTransceiver::Configuration<25, 500, 200, 100, 200, 50>;
-using SlowSingleChannelRadio = IVirtualTransceiver::Configuration<1, 1000, 400, 200, 400, 200>;
+// Virtual Transceiver configurations.
+// <ChannelCount, TxBaseMicros, TxByteNanos, AirBaseMicros, AirByteNanos, HopMicros>
+using SlowSingleChannel = IVirtualTransceiver::Configuration<1, 100, 200, 500, 4000, 50>;
+using FastSingleChannel = IVirtualTransceiver::Configuration<1, 20, 50, 100, 1000, 50>;
+using FastMultiChannel = IVirtualTransceiver::Configuration<20, 20, 50, 50, 1000, 50>;
 
 // Used Virtual Driver Configuration.
-using TestRadioConfig = TypicalSubGHzRadio;
-//
+using TestRadioConfig = SlowSingleChannel;
 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 4000;
@@ -115,7 +113,6 @@ Esp8266EntropySource EntropySource;
 #else 
 ArduinoEntropySource EntropySource;
 #endif
-
 
 
 #if !defined(LINK_USE_TIMER_AND_RTC)

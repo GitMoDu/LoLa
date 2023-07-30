@@ -10,18 +10,18 @@ class IVirtualTransceiver
 {
 public:
 	template<const uint8_t channelCount,
-		const uint32_t txBase,
+		const uint32_t txBaseMicros,
 		const uint32_t txByteNanos,
-		const uint32_t rxBase,
-		const uint32_t rxByteNanos,
+		const uint32_t airBaseMicros,
+		const uint32_t airByteNanos,
 		const uint32_t hopMicros>
 	struct Configuration
 	{
 		static constexpr uint8_t ChannelCount = channelCount;
-		static constexpr uint32_t TxBase = txBase;
+		static constexpr uint32_t TxBaseMicros = txBaseMicros;
 		static constexpr uint32_t TxByteNanos = txByteNanos;
-		static constexpr uint32_t RxBase = rxBase;
-		static constexpr uint32_t RxByteNanos = rxByteNanos;
+		static constexpr uint32_t AirBaseMicros = airBaseMicros;
+		static constexpr uint32_t AirByteNanos = airByteNanos;
 		static constexpr uint32_t HopMicros = hopMicros;
 	};
 
