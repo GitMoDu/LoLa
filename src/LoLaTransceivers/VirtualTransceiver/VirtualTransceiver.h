@@ -31,7 +31,7 @@ private:
 	struct IoPacketStruct
 	{
 		uint8_t Buffer[MaxPacketSize]{};
-		uint32_t Started = 0;
+		uint32_t StartTimestamp = 0;
 		uint8_t Size = 0;
 
 		const bool HasPending()
@@ -53,6 +53,13 @@ private:
 	struct OutPacketStruct : public IoPacketStruct<MaxPacketSize>
 	{
 		uint8_t Channel = 0;
+		bool AirStarted = false;
+		virtual void Clear()
+		{
+			IoPacketStruct<MaxPacketSize>::Clear();
+			Channel = 0;
+			AirStarted = false;
+		}
 	};
 
 private:
@@ -95,51 +102,62 @@ public:
 	virtual bool Callback() final
 	{
 		// Simulate transmit delay, from request to on-air start.
-		if (OutGoing.HasPending() && ((micros() - OutGoing.Started) > GetTimeToAir(OutGoing.Size)))
+		if (OutGoing.HasPending() && ((micros() - OutGoing.StartTimestamp) > GetTimeToAir(OutGoing.Size)))
 		{
-#if defined(ECO_CHANCE)
-			if (random(UINT8_MAX) < ECO_CHANCE)
+			if (!OutGoing.AirStarted)
 			{
+				if ((micros() - OutGoing.StartTimestamp) > GetTimeToAir(OutGoing.Size))
+				{
+					OutGoing.AirStarted = true;
+
+#if defined(ECO_CHANCE)
+					if (random(UINT8_MAX) < ECO_CHANCE)
+					{
 #if defined(DEBUG_LOLA)
-				PrintName();
-				Serial.println(F("Echo attack!"));
+						PrintName();
+						Serial.println(F("Echo attack!"));
 #endif
-				ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
-			}
+						ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
+					}
 #endif
 
 #if defined(DOUBLE_SEND_CHANCE)
-			if (random(UINT8_MAX) < DOUBLE_SEND_CHANCE)
-			{
+					if (random(UINT8_MAX) < DOUBLE_SEND_CHANCE)
+					{
 #if defined(DEBUG_LOLA)
-				PrintName();
-				Serial.println(F("Double send attack!"));
+						PrintName();
+						Serial.println(F("Double send attack!"));
 #endif
-				Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
-			}
+						Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
+					}
 #endif
 
-			UpdateChannel(OutGoing.Channel);
-			if (!Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel))
-			{
+					UpdateChannel(OutGoing.Channel);
+					if (!Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel))
+					{
 #if defined(DEBUG_LOLA)
-				PrintName();
-				Serial.println(F("Tx Collision. Driver rejected."));
+						PrintName();
+						Serial.println(F("Tx Collision. Driver rejected."));
 #endif
-			}
+					}
 
 #if defined(PRINT_PACKETS)
-			PrintPacket(OutGoing.Buffer, OutGoing.Size);
+					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
-			if (Listener != nullptr)
-			{
-				Listener->OnTx();
+					if (Listener != nullptr)
+					{
+						Listener->OnTx();
+					}
+				}
 			}
-			OutGoing.Clear();
+			else if ((micros() - OutGoing.StartTimestamp) > GetDurationInAir(OutGoing.Size))
+			{
+				OutGoing.Clear();
+			}
 		}
 
 		// Simulate delay from start event to received packet buffer.
-		if (Incoming.HasPending() && ((micros() - Incoming.Started) >= GetDurationInAir(Incoming.Size)))
+		if (Incoming.HasPending() && ((micros() - Incoming.StartTimestamp) >= GetDurationInAir(Incoming.Size)))
 		{
 			// Rx duration has elapsed since the packet incoming start triggered.
 			if (Listener != nullptr)
@@ -154,7 +172,7 @@ public:
 				}
 				else
 #endif
-					if (!Listener->OnRx(Incoming.Buffer, Incoming.Started, Incoming.Size, UINT8_MAX / 2))
+					if (!Listener->OnRx(Incoming.Buffer, Incoming.StartTimestamp, Incoming.Size, UINT8_MAX / 2))
 					{
 #if defined(DEBUG_LOLA)
 						PrintName();
@@ -242,7 +260,7 @@ public:
 			return false;
 		}
 
-		if (Incoming.HasPending() && ((micros() - Incoming.Started) < GetDurationInAir(Incoming.Size)))
+		if (Incoming.HasPending() && ((micros() - Incoming.StartTimestamp) < GetDurationInAir(Incoming.Size)))
 			//if (Incoming.HasPending())
 		{
 #if defined(DEBUG_LOLA)
@@ -257,7 +275,7 @@ public:
 		// This will be distributed after TimeToAir,
 		// simulating the transmit delay.
 		OutGoing.Size = packetSize;
-		OutGoing.Started = timestamp;
+		OutGoing.StartTimestamp = timestamp;
 		OutGoing.Channel = channel;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
@@ -339,7 +357,7 @@ public:
 		}
 
 		Incoming.Size = packetSize;
-		Incoming.Started = timestamp;
+		Incoming.StartTimestamp = timestamp;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
 			Incoming.Buffer[i] = data[i];
