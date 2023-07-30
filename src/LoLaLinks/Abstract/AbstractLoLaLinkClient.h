@@ -743,12 +743,11 @@ protected:
 		else
 		{
 			const uint32_t startTimestamp = (micros() - PreLinkLastNonReply) + GetSendDuration(payloadSize);
-			const uint32_t endTimestamp = startTimestamp + GetOnAirDuration(payloadSize);
 
 			const uint_fast16_t startRemainder = startTimestamp % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
-			const uint_fast16_t endRemainder = endTimestamp % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
+			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % LoLaLinkDefinition::PRE_LINK_DUPLEX_MICROS;
 
-			if (endRemainder > startRemainder
+			if (endRemainder >= startRemainder
 				&& startRemainder >= PRE_LINK_TWO_THIRDS_DUPLEX_MICROS
 				&& endRemainder < PRE_LINK_FIVE_SIXTHS_DUPLEX_MICROS)
 			{

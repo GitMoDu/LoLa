@@ -13,7 +13,7 @@
 class FullDuplex : public virtual IDuplex
 {
 public:
-	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) final
+	virtual const bool IsInRange(const uint32_t startTimestamp, const uint16_t duration) final
 	{
 		return true;
 	}
@@ -48,10 +48,10 @@ public:
 	{}
 
 public:
-	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) final
+	virtual const bool IsInRange(const uint32_t startTimestamp, const uint16_t duration) final
 	{
 #if defined(DEBUG_LOLA)
-		if ((endTimestamp - startTimestamp) >= DuplexPeriodMicros)
+		if (duration >= DuplexPeriodMicros)
 		{
 			Serial.println(F("Invalid Duplex Range."));
 			return false;
@@ -59,17 +59,17 @@ public:
 #endif
 
 		const uint_fast16_t startRemainder = startTimestamp % DuplexPeriodMicros;
-		const uint_fast16_t endRemainder = endTimestamp % DuplexPeriodMicros;
+		const uint_fast16_t endRemainder = (startTimestamp + duration) % DuplexPeriodMicros;
 
 		if (IsOddSlot)
 		{
-			return endRemainder > startRemainder
+			return endRemainder >= startRemainder
 				&& startRemainder >= (SwitchOverMicros + DeadZoneMicros)
 				&& endRemainder < (DuplexPeriodMicros - DeadZoneMicros);
 		}
 		else
 		{
-			return endRemainder > startRemainder
+			return endRemainder >= startRemainder
 				&& startRemainder >= DeadZoneMicros
 				&& endRemainder < (SwitchOverMicros - DeadZoneMicros);
 		}
@@ -126,8 +126,7 @@ class HalfDuplexAsymmetric : public TemplateHalfDuplex<
 
 /// <summary>
 /// Time Division Duplex.
-/// Each division is a "Slot", WiFi 6 style.
-/// Slots are dynamic and evenly distributed.
+/// Each division is a "Slot", dynamic and evenly distributed.
 /// Suitable for WAN applications.
 /// </summary>
 /// <typeparam name="DuplexPeriodMicros"></typeparam>
@@ -175,15 +174,14 @@ public:
 	}
 
 public:
-	virtual const bool IsInRange(const uint32_t startTimestamp, const uint32_t endTimestamp) final
+	virtual const bool IsInRange(const uint32_t startTimestamp, uint16_t duration) final
 	{
-		const uint_least16_t startRemainder = startTimestamp % DuplexPeriodMicros;
-		const uint_least16_t endRemainder = endTimestamp % DuplexPeriodMicros;
+		const uint_fast16_t startRemainder = startTimestamp % DuplexPeriodMicros;
+		const uint_fast16_t endRemainder = (startTimestamp + duration) % DuplexPeriodMicros;
 
-		return (startRemainder >= (Start + DeadZoneMicros)) &&
-			(startRemainder < (End - DeadZoneMicros)) &&
-			(endRemainder >= (Start + DeadZoneMicros)) &&
-			(endRemainder < (End - DeadZoneMicros));
+		return endRemainder >= startRemainder
+			&& startRemainder >= (Start + DeadZoneMicros)
+			&& endRemainder < (End - DeadZoneMicros);
 	}
 
 	virtual const bool IsFullDuplex() final

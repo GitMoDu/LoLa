@@ -139,19 +139,19 @@ const bool TestHopperTypes()
 
 const bool TestDuplexes()
 {
-	if (!TestDuplex<true, 0, 0, DUPLEX_PERIOD_MICROS, 0>(&DuplexFull)) { return false; }
-	if (!TestDuplex<true, 0, 0, (DUPLEX_PERIOD_MICROS), 100>(&DuplexFull)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, true, 0, DUPLEX_PERIOD_MICROS, 0>(&DuplexFull)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, true, 0, DUPLEX_PERIOD_MICROS, 100>(&DuplexFull)) { return false; }
 
-	if (!TestDuplex<false, 0, DUPLEX_PERIOD_MICROS / 2, DUPLEX_PERIOD_MICROS, 0>(&DuplexSymmetricalA)) { return false; }
-	if (!TestDuplex<false, 0, (DUPLEX_PERIOD_MICROS / 2), DUPLEX_PERIOD_MICROS, 200>(&DuplexSymmetricalA)) { return false; }
-	if (!TestDuplex<false, DUPLEX_PERIOD_MICROS / 2, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 0>(&DuplexSymmetricalB)) { return false; }
-	if (!TestDuplex<false, (DUPLEX_PERIOD_MICROS / 2), DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 1333>(&DuplexSymmetricalB)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, DUPLEX_PERIOD_MICROS / 2, 0>(&DuplexSymmetricalA)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, (DUPLEX_PERIOD_MICROS / 2), 200>(&DuplexSymmetricalA)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, DUPLEX_PERIOD_MICROS / 2, DUPLEX_PERIOD_MICROS, 0>(&DuplexSymmetricalB)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, (DUPLEX_PERIOD_MICROS / 2), DUPLEX_PERIOD_MICROS, 1333>(&DuplexSymmetricalB)) { return false; }
 
 
-	if (!TestDuplex<false, 0, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, 0>(&DuplexAssymmetricalA)) { return false; }
-	if (!TestDuplex<false, 0, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, 100>(&DuplexAssymmetricalA)) { return false; }
-	if (!TestDuplex<false, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 0>(&DuplexAssymmetricalB)) { return false; }
-	if (!TestDuplex<false, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 100>(&DuplexAssymmetricalB)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, 0>(&DuplexAssymmetricalA)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, 100>(&DuplexAssymmetricalA)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, 0>(&DuplexAssymmetricalB)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, ((uint32_t)(UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO) * DUPLEX_PERIOD_MICROS) / UINT8_MAX, DUPLEX_PERIOD_MICROS, 100>(&DuplexAssymmetricalB)) { return false; }
 
 	if (!DuplexSlottedA.SetTotalSlots(3)
 		|| !DuplexSlottedB.SetTotalSlots(3)
@@ -169,12 +169,12 @@ const bool TestDuplexes()
 		return false;
 	}
 
-	if (!TestDuplex<false, 0, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 0 >(&DuplexSlottedA)) { return false; }
-	if (!TestDuplex<false, 0, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS, 2555>(&DuplexSlottedA)) { return false; }
-	if (!TestDuplex<false, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 0>(&DuplexSlottedB)) { return false; }
-	if (!TestDuplex<false, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 450>(&DuplexSlottedB)) { return false; }
-	if (!TestDuplex<false, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 0>(&DuplexSlottedC)) { return false; }
-	if (!TestDuplex<false, (((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS, 4202>(&DuplexSlottedC)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, 0 >(&DuplexSlottedA)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), 2555>(&DuplexSlottedA)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, 0>(&DuplexSlottedB)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, 450>(&DuplexSlottedB)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 0>(&DuplexSlottedC)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, (((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS, 4202>(&DuplexSlottedC)) { return false; }
 
 	return true;
 }
