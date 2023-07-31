@@ -64,8 +64,8 @@ protected:
 
 private:
 	const uint16_t PreLinkDuplexPeriod;
-	const uint16_t PreLinkDuplexFiveSixths;
-	const uint16_t PreLinkDuplexTwoThirds;
+	const uint16_t PreLinkDuplexShift;
+	const uint16_t PreLinkDuplexOneQuarter;
 
 protected:
 	ClientTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
@@ -105,9 +105,9 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
-		, PreLinkDuplexPeriod(duplex->GetPeriod()* LoLaLinkDefinition::PRE_LINK_DUPLEX_FACTOR)
-		, PreLinkDuplexFiveSixths(((uint32_t)PreLinkDuplexPeriod * 5) / 6)
-		, PreLinkDuplexTwoThirds(((uint32_t)PreLinkDuplexPeriod * 2) / 3)
+		, PreLinkDuplexPeriod(duplex->GetPeriod() * 2)
+		, PreLinkDuplexShift(duplex->GetPeriod())
+		, PreLinkDuplexOneQuarter(duplex->GetPeriod() / 2)
 	{}
 
 protected:
@@ -734,7 +734,7 @@ protected:
 	/// <summary>
 	/// Pre-link half-duplex.
 	/// Client follows last Server duplexed receive timestamp.
-	/// 1/6 Slot for Tx, in the middle the of half-duplex slot.
+	/// 1/4 Slot for 2x Duplex duration.
 	/// </summary>
 	/// <param name="payloadSize"></param>
 	/// <returns>True when packet can be sent.</returns>
@@ -746,14 +746,13 @@ protected:
 		}
 		else
 		{
-			const uint32_t startTimestamp = (micros() - PreLinkLastNonReply) + GetSendDuration(payloadSize);
+			const uint32_t startTimestamp = micros() - PreLinkLastNonReply + GetSendDuration(payloadSize) - PreLinkDuplexShift;
 
 			const uint_fast16_t startRemainder = startTimestamp % PreLinkDuplexPeriod;
 			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
 
 			if (endRemainder >= startRemainder
-				&& startRemainder >= PreLinkDuplexTwoThirds
-				&& endRemainder < PreLinkDuplexFiveSixths)
+				&& endRemainder < PreLinkDuplexOneQuarter)
 			{
 				return PacketService.CanSendPacket();
 			}

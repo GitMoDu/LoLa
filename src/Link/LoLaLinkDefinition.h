@@ -149,14 +149,6 @@ public:
 	static constexpr uint32_t TRANSMIT_BASE_TIMEOUT_MICROS = 5000;
 
 	/// <summary>
-	/// Pre-Link collision avoidance follows the protocol duplex times a scale.
-	/// Protocol duplex is expected to be tuned for sync'd clock,
-	/// so Pre-Link duplex is more broad.
-	/// </summary>
-	static constexpr uint8_t PRE_LINK_DUPLEX_FACTOR = 3;
-
-
-	/// <summary>
 	/// How long to wait before re-sending an answered packet.
 	/// </summary>
 	static constexpr uint32_t RE_TRANSMIT_TIMEOUT_MICROS = 4000;

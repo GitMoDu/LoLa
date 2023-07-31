@@ -60,8 +60,7 @@ protected:
 
 private:
 	const uint16_t PreLinkDuplexPeriod;
-	const uint16_t PreLinkDuplexOneSixth;
-	const uint16_t PreLinkDuplexOneThird;
+	const uint16_t PreLinkDuplexOneQuarter;
 
 protected:
 	ServerTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
@@ -92,9 +91,8 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
-		, PreLinkDuplexPeriod(duplex->GetPeriod()* LoLaLinkDefinition::PRE_LINK_DUPLEX_FACTOR)
-		, PreLinkDuplexOneSixth(PreLinkDuplexPeriod / 6)
-		, PreLinkDuplexOneThird(PreLinkDuplexPeriod / 3)
+		, PreLinkDuplexPeriod(duplex->GetPeriod() * 2)
+		, PreLinkDuplexOneQuarter(duplex->GetPeriod() / 2)
 	{
 	}
 
@@ -712,7 +710,7 @@ protected:
 	/// <summary>
 	/// Pre-link half-duplex.
 	/// Server follows accurate but random SyncClock.
-	/// 1/6 Slot for Tx, in the middle the of half-duplex slot.
+	/// 1/4 Slot for 2x Duplex duration.
 	/// </summary>
 	/// <param name="payloadSize"></param>
 	/// <returns>True when packet can be sent.</returns>
@@ -733,8 +731,7 @@ protected:
 			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
 
 			if (endRemainder >= startRemainder
-				&& startRemainder >= PreLinkDuplexOneSixth
-				&& endRemainder < PreLinkDuplexOneThird)
+				&& endRemainder < PreLinkDuplexOneQuarter)
 			{
 				return PacketService.CanSendPacket();
 			}
