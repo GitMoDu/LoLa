@@ -114,6 +114,8 @@ protected:
 					PkeSessionRequested = true;
 					if (PkeState == PkeStateEnum::SessionCached)
 					{
+						Session.ResetPke();
+						PkeState == NoPke;
 						StartSearching();
 #if defined(DEBUG_LOLA)
 						this->Owner();
@@ -124,6 +126,7 @@ protected:
 #if defined(DEBUG_LOLA)
 				else
 				{
+
 					this->Skipped(F("SessionRequest1"));
 					return;
 				}
@@ -145,19 +148,31 @@ protected:
 			if (payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
 				&& Session.SessionIdMatches(&payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
 			{
-				switch (PkeState)
+				if (IsInSearchingLink())
 				{
-				case PkeStateEnum::NoPke:
-				case PkeStateEnum::SessionCached:
-					break;
-				default:
+					StartSessionCreationIfNot();
+				}
+				else if (IsInSessionCreation())
+				{
+					switch (PkeState)
+					{
+					case PkeStateEnum::NoPke:
+					case PkeStateEnum::SessionCached:
+						break;
+					default:
 #if defined(DEBUG_LOLA)
-					this->Skipped(F("LinkingStartRequest1"));
+						this->Skipped(F("LinkingStartRequest1"));
+#endif
+						return;
+					}
+				}
+				else
+				{
+#if defined(DEBUG_LOLA)
+					this->Skipped(F("LinkingStartRequest2"));
 #endif
 					return;
 				}
-
-				StartSessionCreationIfNot();
 
 				for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 				{
@@ -165,10 +180,11 @@ protected:
 				}
 				PkeState = PkeStateEnum::DecompressingPartnerKey;
 				Task::enable();
+
 			}
 #if defined(DEBUG_LOLA)
 			else {
-				this->Skipped(F("LinkingStartRequest2"));
+				this->Skipped(F("LinkingStartRequest3"));
 			}
 #endif
 			break;
@@ -182,6 +198,7 @@ protected:
 	virtual void ResetSessionCreation() final
 	{
 		PkeState = PkeStateEnum::NoPke;
+		Session.ResetPke();
 	}
 
 	virtual void OnServiceSearchingLink()
@@ -213,15 +230,6 @@ protected:
 
 	virtual void OnServiceSessionCreation() final
 	{
-		if (PkeSessionRequested)
-		{
-#if defined(DEBUG_LOLA)
-			this->Owner();
-			Serial.println(F("Session request caught off timeline."));
-#endif
-			PkeSessionRequested = false;
-		}
-
 		switch (PkeState)
 		{
 		case PkeStateEnum::NoPke:

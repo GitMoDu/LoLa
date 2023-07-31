@@ -31,12 +31,12 @@ private:
 	PkeEnum PkeState = PkeEnum::CalculatingSecret;
 
 private:
-	uint8_t PartnerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] {};
+	uint8_t PartnerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE]{};
 
 	/// <summary>
 	/// Shared secret key.
 	/// </summary>
-	uint8_t SecretKey[LoLaCryptoDefinition::CYPHER_KEY_SIZE] {};
+	uint8_t SecretKey[LoLaCryptoDefinition::CYPHER_KEY_SIZE]{};
 
 private:
 	const uint8_t* LocalPublicKey = nullptr;
