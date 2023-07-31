@@ -380,21 +380,15 @@ protected:
 			this->Owner();
 			Serial.println(F("@Link Event: ReceiveRejectedMAC"));
 			break;
-		case PacketEventEnum::SendAckFailed:
-			this->Owner();
-			Serial.println(F("@Link Event: SendAck: Failed"));
-			break;
 		case PacketEventEnum::SendCollisionFailed:
 			this->Owner();
 			Serial.println(F("@Link Event: SendCollision: Failed"));
 			break;
 		case PacketEventEnum::ReceiveLossDetected:
 			this->Owner();
-			Serial.println(F("Link detected and recovered from lost packets."));
+			Serial.println(F("@Link Even: Detected lost packet(s)."));
 			break;
 		case PacketEventEnum::Sent:
-			break;
-		case PacketEventEnum::SentAck:
 			break;
 		default:
 			break;

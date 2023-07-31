@@ -7,8 +7,6 @@ enum PacketEventEnum
 {
 	Received,
 	Sent,
-	SentAck,
-	SendAckFailed,
 	SendCollisionFailed,
 	ReceiveRejectedDriver,
 	ReceiveRejectedDropped,
