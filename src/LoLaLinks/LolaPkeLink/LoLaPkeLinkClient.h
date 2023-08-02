@@ -180,7 +180,7 @@ protected:
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
-				Serial.println(F("Session token is cached, trying LinkingStartRequest."));
+				Serial.println(F("Session token is cached, Linking."));
 #endif
 				PkeState = PkeStateEnum::SessionCached;
 			}
