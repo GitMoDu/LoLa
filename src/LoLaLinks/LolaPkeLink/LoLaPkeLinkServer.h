@@ -108,39 +108,46 @@ protected:
 				if (IsInSearchingLink())
 				{
 					PkeSessionRequested = true;
+					Task::enable();
+#if defined(DEBUG_LOLA)
+					this->Owner();
+					Serial.println(F("Session request received."));
+#endif
 				}
 				else if (IsInSessionCreation())
 				{
-					PkeSessionRequested = true;
 					if (PkeState == PkeStateEnum::SessionCached)
 					{
 						Session.ResetPke();
-						PkeState == NoPke;
+						PkeState = NoPke;
 						StartSearching();
+						PkeSessionRequested = true;
+						Task::enable();
 #if defined(DEBUG_LOLA)
 						this->Owner();
 						Serial.println(F("Session request overrode state back to search."));
 #endif
 					}
+#if defined(DEBUG_LOLA)
+					else
+					{
+						this->Skipped(F("SessionRequest1"));
+						return;
+					}
+#endif
 				}
 #if defined(DEBUG_LOLA)
 				else
 				{
 
-					this->Skipped(F("SessionRequest1"));
+					this->Skipped(F("SessionRequest2"));
 					return;
 				}
 #endif
-#if defined(DEBUG_LOLA)
-				this->Owner();
-				Serial.print(F("Session request received. PKE State: "));
-				Serial.println(PkeState);
-#endif
-				Task::enable();
 			}
 #if defined(DEBUG_LOLA)
 			else {
-				this->Skipped(F("SessionRequest2"));
+				this->Skipped(F("SessionRequest3"));
 			}
 #endif
 			break;
@@ -151,6 +158,7 @@ protected:
 				if (IsInSearchingLink())
 				{
 					StartSessionCreationIfNot();
+					Task::enable();
 				}
 				else if (IsInSessionCreation())
 				{
@@ -158,6 +166,7 @@ protected:
 					{
 					case PkeStateEnum::NoPke:
 					case PkeStateEnum::SessionCached:
+						Task::enable();
 						break;
 					default:
 #if defined(DEBUG_LOLA)
@@ -179,8 +188,6 @@ protected:
 					PartnerCompressedKey[i] = payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i];
 				}
 				PkeState = PkeStateEnum::DecompressingPartnerKey;
-				Task::enable();
-
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -215,6 +222,7 @@ protected:
 
 			if (CanSendLinkingPacket(Unlinked::SessionAvailable::PAYLOAD_SIZE))
 			{
+				PkeSessionRequested = false;
 				if (SendPacket(OutPacket.Data, Unlinked::SessionAvailable::PAYLOAD_SIZE))
 				{
 #if defined(DEBUG_LOLA)
@@ -222,7 +230,6 @@ protected:
 					Serial.println(F("Sent PKE Session."));
 #endif
 				}
-				PkeSessionRequested = false;
 			}
 		}
 		Task::enable();
