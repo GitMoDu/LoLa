@@ -58,6 +58,8 @@ private:
 protected:
 	int32_t LinkSendDuration = 0;
 
+	uint8_t SyncSequence = 0;
+
 private:
 	ReportTracker ReportTracking;
 

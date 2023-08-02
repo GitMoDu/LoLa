@@ -188,25 +188,22 @@ private:
 	};
 
 	/// <summary>
-	/// ||SessionToken||
+	/// ||RequestId|SessionToken||
 	/// </summary>
 	template<const uint8_t Header, const uint8_t ExtraSize>
-	struct LinkingSwitchOverDefinition : public TemplateHeaderDefinition<Header, LINKING_TOKEN_SIZE + ExtraSize>
+	struct SwitchOverDefinition : public TemplateHeaderDefinition<Header, 1 + LINKING_TOKEN_SIZE + ExtraSize>
 	{
-		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+		static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
 	};
 
-
 	template<const uint8_t Header, const uint8_t ExtraSize = 0>
-	struct ClockTimestampDefinition : public TemplateHeaderDefinition<Header, (TIME_SIZE * 2) + ExtraSize>
+	struct ClockSyncDefinition : public TemplateHeaderDefinition<Header, 1 + (TIME_SIZE * 2) + ExtraSize>
 	{
-		static constexpr uint8_t PAYLOAD_SECONDS_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+		static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+		static constexpr uint8_t PAYLOAD_SECONDS_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
 		static constexpr uint8_t PAYLOAD_SUB_SECONDS_INDEX = PAYLOAD_SECONDS_INDEX + TIME_SIZE;
 	};
-
-	template<const uint8_t Header, const uint8_t ExtraSize = 0>
-	struct LinkSwitchOverDefinition : public TemplateHeaderDefinition<Header, LINKING_TOKEN_SIZE + ExtraSize>
-	{};
 
 public:
 	/// <summary>
@@ -248,19 +245,19 @@ public:
 		using LinkingStartRequest = PkeBroadcastDefinition<SessionAvailable::HEADER + 1>;
 
 		/// <summary>
-		/// ||SessionToken|Remaining||
+		/// ||RequestId|SessionToken|Remaining||
 		/// </summary>
-		struct LinkingTimedSwitchOver : public LinkingSwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>
+		struct LinkingTimedSwitchOver : public SwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>
 		{
-			using BaseClass = LinkingSwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>;
+			using BaseClass = SwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>;
 
 			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_SESSION_TOKEN_INDEX + LINKING_TOKEN_SIZE;
 		};
 
 		/// <summary>
-		/// ||SessionToken||
+		/// ||RequestId|SessionToken||
 		/// </summary>
-		using LinkingTimedSwitchOverAck = LinkingSwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, 0>;
+		using LinkingTimedSwitchOverAck = SwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, 0>;
 	};
 
 	struct Linking
@@ -294,20 +291,20 @@ public:
 		};
 
 		/// <summary>
-		/// ||Seconds|SubSeconds|||
+		/// ||RequestId|Seconds|SubSeconds|||
 		/// Seconds in full UTC seconds.
 		/// Sub-seconds in microseconds [-999999; +999999]
 		/// </summary>
-		using ClockSyncRequest = ClockTimestampDefinition<ServerChallengeReply::HEADER + 1>;
+		using ClockSyncRequest = ClockSyncDefinition<ServerChallengeReply::HEADER + 1>;
 
 		/// <summary>
-		/// ||Seconds|SubSecondsError|Accepted||
+		/// ||RequestId|Seconds|SubSecondsError|Accepted||
 		/// Sub-seconds in microseconds [-999999; +999999]
 		/// Accepted true if non-zero.
 		/// </summary>
-		struct ClockSyncReply : public ClockTimestampDefinition<ClockSyncRequest::HEADER + 1, 1>
+		struct ClockSyncReply : public ClockSyncDefinition<ClockSyncRequest::HEADER + 1, 1>
 		{
-			using BaseClass = ClockTimestampDefinition<ClockSyncRequest::HEADER + 1, 1>;
+			using BaseClass = ClockSyncDefinition<ClockSyncRequest::HEADER + 1, 1>;
 
 			static constexpr uint8_t PAYLOAD_ACCEPTED_INDEX = BaseClass::PAYLOAD_SUB_SECONDS_INDEX + TIME_SIZE;
 		};
@@ -318,17 +315,19 @@ public:
 		using StartLinkRequest = TemplateHeaderDefinition<ClockSyncReply::HEADER + 1, 0>;
 
 		/// <summary>
-		/// ||Remaining||
+		/// ||RequestId|SessionToken|Remaining||
 		/// </summary>
-		struct LinkTimedSwitchOver : public LinkSwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>
+		struct LinkTimedSwitchOver : public SwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_TIME_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+			using BaseClass = SwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>;
+
+			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_SESSION_TOKEN_INDEX + LINKING_TOKEN_SIZE;
 		};
 
 		/// <summary>
-		/// ||||
+		/// ||RequestId|SessionToken||
 		/// </summary>
-		using LinkTimedSwitchOverAck = LinkSwitchOverDefinition<LinkTimedSwitchOver::HEADER + 1>;
+		using LinkTimedSwitchOverAck = SwitchOverDefinition<LinkTimedSwitchOver::HEADER + 1, 0>;
 	};
 
 	struct Linked

@@ -53,6 +53,7 @@ protected:
 	using BaseClass::ResetStageStartTime;
 	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 
+	using BaseClass::SyncSequence;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
 	using BaseClass::GetElapsedSinceLastSent;
@@ -184,6 +185,15 @@ protected:
 				&& WaitingState == WaitingStateEnum::SwitchingToLinking
 				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
+				if (SyncSequence != payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX])
+				{
+#if defined(DEBUG_LOLA)
+					this->Skipped(F("LinkingTimedSwitchOverAck Bad SyncSequence."));
+#endif
+					return;
+				}
+
+
 				StateTransition.OnReceived();
 				Task::enable();
 
@@ -260,14 +270,15 @@ protected:
 					break;
 				}
 
+				SyncSequence = payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX];
 				InEstimate.Seconds = payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX];
-				InEstimate.Seconds += (uint_least16_t)payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 1] << 8;
-				InEstimate.Seconds += (uint32_t)payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 2] << 16;
-				InEstimate.Seconds += (uint32_t)payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 3] << 24;
+				InEstimate.Seconds += payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 1] << 8;
+				InEstimate.Seconds += payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 2] << 16;
+				InEstimate.Seconds += payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 3] << 24;
 				InEstimate.SubSeconds = payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX];
-				InEstimate.SubSeconds += (uint_least16_t)payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 1] << 8;
-				InEstimate.SubSeconds += (uint32_t)payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
-				InEstimate.SubSeconds += (uint32_t)payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
+				InEstimate.SubSeconds += payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 1] << 8;
+				InEstimate.SubSeconds += payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
+				InEstimate.SubSeconds += payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
 
 				if (!InEstimate.Validate())
 				{
@@ -313,6 +324,14 @@ protected:
 			if (payloadSize == Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE
 				&& LinkingState == LinkingStateEnum::SwitchingToLinked)
 			{
+				if (SyncSequence != payload[Linking::LinkTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX])
+				{
+#if defined(DEBUG_LOLA)
+					this->Skipped(F("LinkTimedSwitchOverAck Bad SyncSequence."));
+#endif
+					return;
+				}
+
 				StateTransition.OnReceived();
 #if defined(DEBUG_LOLA)
 				this->Owner();
@@ -491,8 +510,12 @@ protected:
 		case LinkingStateEnum::ClockSyncing:
 			if (ClockReplyPending && PacketService.CanSendPacket())
 			{
+				// Only send a time reply once.
+				ClockReplyPending = false;
+
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::ClockSyncReply::HEADER);
+				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 0] = EstimateErrorReply.Seconds;
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] = EstimateErrorReply.Seconds >> 8;
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] = EstimateErrorReply.Seconds >> 16;
@@ -518,8 +541,6 @@ protected:
 					Serial.println(F("Sent Clock Reply with Error."));
 #endif
 				}
-				// Only send a time reply once.
-				ClockReplyPending = false;
 			}
 			Task::enable();
 			break;
@@ -549,6 +570,9 @@ protected:
 
 				if (CanSendLinkingPacket(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
 				{
+					SyncSequence++;
+					OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
+
 					const uint32_t timestamp = micros();
 					StateTransition.CopyDurationUntilTimeOutTo(timestamp + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 					if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
@@ -690,6 +714,9 @@ private:
 
 			if (CanSendLinkingPacket(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
 			{
+				SyncSequence++;
+				OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
+
 				const uint32_t timestamp = micros();
 				StateTransition.CopyDurationUntilTimeOutTo(timestamp + GetSendDuration(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE), &OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))

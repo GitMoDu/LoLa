@@ -56,6 +56,7 @@ protected:
 	using BaseClass::GetOnAirDuration;
 	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 
+	using BaseClass::SyncSequence;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
 	using BaseClass::GetElapsedSinceLastSent;
@@ -159,6 +160,7 @@ protected:
 					WaitingState = WaitingStateEnum::SwitchingToLinking;
 				case WaitingStateEnum::SwitchingToLinking:
 					StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+					SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 					Task::enable();
 					break;
 				default:
@@ -227,6 +229,14 @@ protected:
 			if (payloadSize == Linking::ClockSyncReply::PAYLOAD_SIZE
 				&& LinkingState == LinkingStateEnum::ClockSyncing)
 			{
+				if (SyncSequence != payload[Linking::ClockSyncReply::PAYLOAD_REQUEST_ID_INDEX])
+				{
+#if defined(DEBUG_LOLA)
+					this->Skipped(F("ClockSyncReply Bad SyncSequence."));
+#endif
+					return;
+				}
+
 				EstimateErrorReply.Seconds = payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX];
 				EstimateErrorReply.Seconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] << 8;
 				EstimateErrorReply.Seconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] << 16;
@@ -298,6 +308,7 @@ protected:
 
 				StateTransition.OnReceived(startTimestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				OnLinkSyncReceived(startTimestamp);
+				SyncSequence = payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
 
 #if defined(DEBUG_LOLA)
@@ -521,6 +532,8 @@ protected:
 
 				if (CanSendLinkingPacket(Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
+					SyncSequence++;
+					OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 					if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
 					{
 #if defined(DEBUG_LOLA)
@@ -573,24 +586,21 @@ protected:
 					UpdateLinkStage(LinkStageEnum::AwaitingLink);
 				}
 			}
-			else
+			else if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
 			{
-				if (StateTransition.IsSendRequested(micros()) && PacketService.CanSendPacket())
+				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetHeader(Linking::LinkTimedSwitchOverAck::HEADER);
+				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
+				if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
-					OutPacket.SetPort(Linking::PORT);
-					OutPacket.SetHeader(Linking::LinkTimedSwitchOverAck::HEADER);
-
-					if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
-					{
 #if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.println(F("Sent StateTransition Ack."));
+					this->Owner();
+					Serial.println(F("Sent StateTransition Ack."));
 #endif
-					}
-					StateTransition.OnSent();
 				}
-				Task::enable();
+				StateTransition.OnSent();
 			}
+			Task::enable();
 			break;
 		default:
 			break;
@@ -711,8 +721,8 @@ private:
 		{
 			OutPacket.SetPort(Unlinked::PORT);
 			OutPacket.SetHeader(Unlinked::LinkingTimedSwitchOverAck::HEADER);
+			OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
-
 			if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 			{
 #if defined(DEBUG_LOLA)
