@@ -103,7 +103,7 @@ public:
 		, Duplex(duplex)
 		, ChannelHopper(hop)
 		, LinkTimestamp()
-		, IsLinkHopper(hop->IsHopper())
+		, IsLinkHopper(hop->GetHopPeriod() == IChannelHop::NOT_A_HOPPER)
 	{}
 
 #if defined(DEBUG_LOLA)

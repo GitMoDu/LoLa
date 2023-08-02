@@ -19,6 +19,11 @@ public:
 	{
 		return true;
 	}
+
+	virtual const uint32_t GetHopPeriod() final
+	{
+		return IChannelHop::NOT_A_HOPPER;
+	}
 };
 
 
@@ -40,6 +45,11 @@ public:
 	virtual const uint8_t GetFixedChannel() final
 	{
 		return PermanentChannel;
+	}
+
+	virtual const uint32_t GetHopPeriod() final
+	{
+		return IChannelHop::NOT_A_HOPPER;
 	}
 
 	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock, const uint32_t forwardLookMicros) final
@@ -81,6 +91,11 @@ public:
 	{
 		return true;
 	}
+
+	virtual const uint32_t GetHopPeriod() final
+	{
+		return IChannelHop::NOT_A_HOPPER;
+	}
 };
 
 /// <summary>
@@ -114,6 +129,11 @@ public:
 	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock, const uint32_t forwardLookMicros) final
 	{
 		return true;
+	}
+
+	virtual const uint32_t GetHopPeriod() final
+	{
+		return IChannelHop::NOT_A_HOPPER;
 	}
 };
 #endif

@@ -9,6 +9,9 @@
 class IChannelHop
 {
 public:
+	static const uint16_t NOT_A_HOPPER = 0;
+
+public:
 	class IHopListener
 	{
 	public:
@@ -35,7 +38,7 @@ public:
 
 	/// Hopper Interfaces
 public:
-	virtual const bool IsHopper() { return false; }
+	virtual const uint32_t GetHopPeriod() { return NOT_A_HOPPER; }
 
 	virtual const uint32_t GetHopIndex(const uint32_t timestamp) { return 0; }
 

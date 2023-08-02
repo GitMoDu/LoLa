@@ -18,7 +18,7 @@ private:
 	{
 		Disabled,
 		StartHop,
-		SpinLock,
+		SpinLock
 	};
 
 	static constexpr uint32_t MARGIN_MILLIS = 1;
@@ -92,9 +92,9 @@ public:
 	////
 
 	// Hopper Interfaces //
-	virtual const bool IsHopper() final
+	virtual const uint32_t GetHopPeriod() final
 	{
-		return true;
+		return HopPeriodMicros;
 	}
 
 	virtual const uint32_t GetHopIndex(const uint32_t timestamp) final
