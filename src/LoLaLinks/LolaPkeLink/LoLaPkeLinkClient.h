@@ -43,6 +43,7 @@ protected:
 	using BaseClass::IsInSessionCreation;
 	using BaseClass::OnLinkSyncReceived;
 	using BaseClass::CanSendLinkingPacket;
+	using BaseClass::ResetLastUnlinkedSent;
 
 	using BaseClass::SendPacket;
 
@@ -104,6 +105,7 @@ protected:
 				case PkeStateEnum::RequestingSession:;
 					PkeState = PkeStateEnum::DecompressingPartnerKey;
 					Session.SetSessionId(&payload[Unlinked::SessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
+					ResetLastUnlinkedSent();
 
 					for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 					{
@@ -139,6 +141,8 @@ protected:
 	virtual void ResetSessionCreation() final
 	{
 		PkeState = PkeStateEnum::RequestingSession;
+		ResetLastUnlinkedSent();
+		Task::enable();
 	}
 
 	virtual void OnServiceSessionCreation() final

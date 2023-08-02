@@ -217,9 +217,49 @@ protected:
 		OnEvent(PacketEventEnum::ReceiveLossDetected);
 	}
 
+	void ResetLastUnlinkedSent()
+	{
+		LastUnlinkedSent -= LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS;
+	}
+
 	const uint32_t GetElapsedMicrosSinceLastUnlinkedSent()
 	{
 		return micros() - LastUnlinkedSent;
+	}
+
+	struct LoLaLinkConfig
+	{
+		uint32_t Protocol; // User provided value?
+
+		uint16_t DuplexPeriod;
+		uint32_t HopPeriod;
+		uint8_t ChannelCount;
+
+
+		const bool IsFullDuplex()
+		{
+			return DuplexPeriod = IDuplex::DUPLEX_FULL;
+		}
+
+		const bool IsHopper()
+		{
+			return HopPeriod = IChannelHop::DUPLEX_FULL;
+		}
+	};
+
+	static const uint32_t GetLinkSignature(const uint32_t duplexPeriod)
+	{
+		uint32_t signature = 0;
+
+		//if (duplexPeriod != IDuplex::DUPLEX_FULL)
+		//{
+		//	signature += << 1;
+		//}
+
+
+
+
+		return signature;
 	}
 
 protected:

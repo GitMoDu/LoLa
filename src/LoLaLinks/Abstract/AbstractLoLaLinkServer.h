@@ -51,6 +51,7 @@ protected:
 	using BaseClass::GetSendDuration;
 	using BaseClass::GetOnAirDuration;
 	using BaseClass::ResetStageStartTime;
+	using BaseClass::ResetLastUnlinkedSent;
 	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 
 	using BaseClass::SyncSequence;
@@ -113,6 +114,7 @@ protected:
 	{
 		WaitingState = WaitingStateEnum::SwitchingToLinking;
 		StateTransition.OnStart(micros());
+		ResetLastUnlinkedSent();
 		Task::enable();
 	}
 
@@ -313,6 +315,7 @@ protected:
 #endif
 				LinkingState = LinkingStateEnum::SwitchingToLinked;
 				StateTransition.OnStart(micros());
+				ResetLastUnlinkedSent();
 				Task::enableIfNot();
 			}
 #if defined(DEBUG_LOLA)

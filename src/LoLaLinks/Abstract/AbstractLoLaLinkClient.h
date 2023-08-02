@@ -54,6 +54,7 @@ protected:
 	using BaseClass::SetHopperFixedChannel;
 	using BaseClass::GetSendDuration;
 	using BaseClass::GetOnAirDuration;
+	using BaseClass::ResetLastUnlinkedSent;
 	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 
 	using BaseClass::SyncSequence;
@@ -261,6 +262,7 @@ protected:
 #endif
 						StateTransition.Clear();
 						LinkingState = LinkingStateEnum::RequestingLinkStart;
+						ResetLastUnlinkedSent();
 					}
 #if defined(DEBUG_LOLA)
 					else
@@ -408,6 +410,7 @@ protected:
 			SetHopperFixedChannel(SearchChannel);
 			SearchChannelTryCount = 0;
 			StateTransition.Clear();
+			ResetLastUnlinkedSent();
 			WaitingState = WaitingStateEnum::SearchingLink;
 			break;
 		case LinkStageEnum::Linking:
