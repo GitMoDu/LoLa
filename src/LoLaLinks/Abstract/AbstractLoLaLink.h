@@ -243,7 +243,7 @@ protected:
 
 		const bool IsHopper()
 		{
-			return HopPeriod = IChannelHop::DUPLEX_FULL;
+			return HopPeriod = IChannelHop::NOT_A_HOPPER;
 		}
 	};
 
