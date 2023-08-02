@@ -65,8 +65,8 @@ protected:
 
 private:
 	const uint16_t PreLinkDuplexPeriod;
-	const uint16_t PreLinkDuplexShift;
-	const uint16_t PreLinkDuplexOneQuarter;
+	const uint16_t PreLinkDuplexStart;
+	const uint16_t PreLinkDuplexEnd;
 
 protected:
 	ClientTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
@@ -82,7 +82,7 @@ private:
 	uint32_t LastCLockSync = 0;
 	uint32_t LastCLockSent = 0;
 
-	uint32_t PreLinkLastNonReply = 0;
+	uint32_t PreLinkLastSync = 0;
 
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
@@ -106,9 +106,9 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
-		, PreLinkDuplexPeriod(duplex->GetPeriod() * 2)
-		, PreLinkDuplexShift(duplex->GetPeriod())
-		, PreLinkDuplexOneQuarter(duplex->GetPeriod() / 2)
+		, PreLinkDuplexPeriod(duplex->GetPeriod())
+		, PreLinkDuplexStart(duplex->GetPeriod())
+		, PreLinkDuplexEnd(PreLinkDuplexStart + (duplex->GetPeriod() / 2))
 	{}
 
 protected:
@@ -738,7 +738,7 @@ private:
 protected:
 	void OnLinkSyncReceived(const uint32_t receiveTimestamp)
 	{
-		PreLinkLastNonReply = receiveTimestamp;
+		PreLinkLastSync = receiveTimestamp;
 	}
 
 	/// <summary>
@@ -756,13 +756,14 @@ protected:
 		}
 		else
 		{
-			const uint32_t startTimestamp = micros() - PreLinkLastNonReply + GetSendDuration(payloadSize) - PreLinkDuplexShift;
+			const uint32_t startTimestamp = (micros() - PreLinkLastSync) + GetSendDuration(payloadSize);
 
-			const uint_fast16_t startRemainder = startTimestamp % PreLinkDuplexPeriod;
-			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
+			const uint_fast16_t startRemainder = startTimestamp % (PreLinkDuplexPeriod * 2);
+			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod * 2);
 
 			if (endRemainder >= startRemainder
-				&& endRemainder < PreLinkDuplexOneQuarter)
+				&& startRemainder > PreLinkDuplexStart
+				&& endRemainder < PreLinkDuplexEnd)
 			{
 				return PacketService.CanSendPacket();
 			}
@@ -772,6 +773,5 @@ protected:
 			}
 		}
 	}
-
 };
 #endif
