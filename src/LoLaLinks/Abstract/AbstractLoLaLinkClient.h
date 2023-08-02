@@ -20,7 +20,7 @@ private:
 	static constexpr uint32_t CHANNEL_SEARCH_TRY_COUNT = 3;
 
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 100;
-	static constexpr uint8_t CLOCK_TUNE_FILTER_RATIO = 130;
+	static constexpr uint8_t CLOCK_TUNE_FILTER_RATIO = 160;
 
 	enum WaitingStateEnum
 	{
