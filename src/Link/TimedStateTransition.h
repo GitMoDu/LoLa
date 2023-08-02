@@ -95,12 +95,12 @@ public:
 	void OnReceived(const uint32_t receiveTimestamp, const uint8_t* source)
 	{
 		uint32_t remaining = source[0];
-		remaining += (uint16_t)source[1] << 8;
-		remaining += (uint32_t)source[2] << 16;
-		remaining += (uint32_t)source[3] << 24;
+		remaining += source[1] << 8;
+		remaining += source[2] << 16;
+		remaining += source[3] << 24;
 
 		if ((remaining < TransitionTimeout)
-			|| (receiveTimestamp + remaining <= TransitionEnd))
+			|| (receiveTimestamp + remaining >= TransitionEnd))
 		{
 			State = ClientTransitionStateEnum::TransitionAcknowledging;
 			TransitionEnd = receiveTimestamp + remaining;
@@ -128,11 +128,7 @@ public:
 public:
 	const bool IsSendRequested(const uint32_t timestamp)
 	{
-		const uint32_t remaining = GetDurationUntilTimeOut(timestamp);
-
-		return State == ClientTransitionStateEnum::TransitionAcknowledging
-			&& remaining != 0
-			&& remaining < TransitionTimeout;
+		return State == ClientTransitionStateEnum::TransitionAcknowledging;
 	}
 
 	const bool HasTimedOut(const uint32_t timestamp)
@@ -170,7 +166,7 @@ public:
 
 	const bool HasAcknowledge()
 	{
-		return State == ClientTransitionStateEnum::TransitionAcknowledged;
+		return State == ClientTransitionStateEnum::TransitionAcknowledged || State == ClientTransitionStateEnum::TransitionAcknowledging;
 	}
 };
 #endif

@@ -159,14 +159,15 @@ protected:
 				case WaitingStateEnum::SessionCreation:
 					WaitingState = WaitingStateEnum::SwitchingToLinking;
 				case WaitingStateEnum::SwitchingToLinking:
-					StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
-					SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
-					Task::enable();
 					break;
 				default:
 					return;
 					break;
 				}
+				StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+				SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
+				Task::enable();
+
 				OnLinkSyncReceived(startTimestamp);
 #if defined(DEBUG_LOLA)
 				this->Owner();

@@ -111,8 +111,8 @@ protected:
 protected:
 	void StartSwitchToLinking()
 	{
-		StateTransition.OnStart(micros());
 		WaitingState = WaitingStateEnum::SwitchingToLinking;
+		StateTransition.OnStart(micros());
 		Task::enable();
 	}
 
