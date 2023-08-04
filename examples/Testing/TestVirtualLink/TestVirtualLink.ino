@@ -100,17 +100,17 @@ static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 // Virtual Transceiver configurations.
 // <ChannelCount, TxBaseMicros, TxByteNanos, AirBaseMicros, AirByteNanos, HopMicros>
 using SlowSingleChannel = IVirtualTransceiver::Configuration<1, 100, 1000, 200, 20000, 100>;
-using FastSingleChannel = IVirtualTransceiver::Configuration<1, 20, 500, 50, 1000, 40>;
+using FastSingleChannel = IVirtualTransceiver::Configuration<1, 20, 500, 50, 1000, 20>;
 using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 100, 1000, 200, 20000, 100>;
-using FastMultiChannel = IVirtualTransceiver::Configuration<50, 20, 500, 50, 1000, 40>;
+using FastMultiChannel = IVirtualTransceiver::Configuration<50, 20, 500, 50, 1000, 20>;
 
 // Used Virtual Driver Configuration.
 using TestRadioConfig = SlowSingleChannel;
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 2000;
-static const uint16_t DuplexDeadZone = TestRadioConfig::HopMicros * 2;
-static const uint32_t ChannelHopPeriod = DuplexPeriod / 2;
+static const uint16_t DuplexPeriod = 4000;
+static const uint16_t DuplexDeadZone = max(150, TestRadioConfig::HopMicros * 2);
+static const uint32_t ChannelHopPeriod = DuplexPeriod;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)

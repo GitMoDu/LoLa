@@ -27,6 +27,38 @@ class VirtualTransceiver
 	, public virtual ILoLaTransceiver
 {
 private:
+	struct HopRequestStruct
+	{
+		uint32_t StartTimestamp = 0;
+		uint8_t Channel = 0;
+		bool UpdatePending = false;
+
+		const bool HasPending()
+		{
+			return UpdatePending;
+		}
+
+		void Request(const uint8_t currentChannel, const uint8_t newChannel)
+		{
+			StartTimestamp = micros();
+			if (currentChannel != newChannel)
+			{
+				Channel = newChannel;
+				UpdatePending = true;
+			}
+			else
+			{
+				Clear();
+			}
+
+		}
+
+		void Clear()
+		{
+			UpdatePending = false;
+		}
+	};
+
 	template<const uint8_t MaxPacketSize>
 	struct IoPacketStruct
 	{
@@ -73,6 +105,8 @@ private:
 	IoPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> Incoming{};
 	OutPacketStruct<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> OutGoing{};
 
+	HopRequestStruct HopRequest{};
+
 	uint8_t CurrentChannel = 0;
 
 	bool DriverEnabled = false;
@@ -102,7 +136,7 @@ public:
 	virtual bool Callback() final
 	{
 		// Simulate transmit delay, from request to on-air start.
-		if (OutGoing.HasPending() && ((micros() - OutGoing.StartTimestamp) > GetTimeToAir(OutGoing.Size)))
+		if (OutGoing.HasPending() && ((micros() - OutGoing.StartTimestamp) >= GetTimeToAir(OutGoing.Size)))
 		{
 			if (!OutGoing.AirStarted)
 			{
@@ -144,6 +178,9 @@ public:
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
+					// Optional auto-set to RX on TX channel.
+					//HopRequest.Request(CurrentChannel, CurrentChannel);
+
 					if (Listener != nullptr)
 					{
 						Listener->OnTx();
@@ -189,6 +226,17 @@ public:
 
 			return true;
 		}
+		else if (HopRequest.HasPending())
+		{
+			if ((micros() - HopRequest.StartTimestamp) >= Config::HopMicros)
+			{
+				UpdateChannel(HopRequest.Channel);
+				HopRequest.Clear();
+			}
+			Task::enable();
+
+			return true;
+		}
 		else
 		{
 			Task::disable();
@@ -209,6 +257,7 @@ public:
 	{
 		Incoming.Clear();
 		OutGoing.Clear();
+		HopRequest.Clear();
 
 		CurrentChannel = 0;
 		DriverEnabled = true;
@@ -261,7 +310,6 @@ public:
 		}
 
 		if (Incoming.HasPending() && ((micros() - Incoming.StartTimestamp) < GetDurationInAir(Incoming.Size)))
-			//if (Incoming.HasPending())
 		{
 #if defined(DEBUG_LOLA)
 			PrintName();
@@ -269,7 +317,6 @@ public:
 #endif
 			return false;
 		}
-
 
 		// Copy packet to temporary output buffer.
 		// This will be distributed after TimeToAir,
@@ -289,7 +336,8 @@ public:
 
 	virtual void Rx(const uint8_t channel) final
 	{
-		UpdateChannel(channel);
+		HopRequest.Request(CurrentChannel, channel);
+		Task::enable();
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
@@ -352,6 +400,15 @@ public:
 #if defined(DEBUG_LOLA)
 			PrintName();
 			Serial.println(F("Rx failed. Tx was pending."));
+#endif
+			return false;
+		}
+
+		if (HopRequest.HasPending() && ((timestamp - HopRequest.StartTimestamp) < Config::HopMicros))
+		{
+#if defined(DEBUG_LOLA)
+			PrintName();
+			Serial.println(F("Rx failed. Rx was hopping."));
 #endif
 			return false;
 		}
