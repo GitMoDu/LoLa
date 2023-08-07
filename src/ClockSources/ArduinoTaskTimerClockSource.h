@@ -106,7 +106,7 @@ public:
 	/// IClockSource override.
 	/// </summary>
 	/// <returns></returns>
-	virtual const bool StartClock(const int16_t ppm) final
+	virtual const bool StartClock(IClockSource::IClockListener* tickListener, const int16_t ppm) final
 	{
 		Task::enable();
 
