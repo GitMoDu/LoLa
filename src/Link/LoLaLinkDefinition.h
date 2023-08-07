@@ -151,7 +151,7 @@ public:
 	/// <summary>
 	/// How long to wait before re-sending an answered packet.
 	/// </summary>
-	static constexpr uint32_t RE_TRANSMIT_TIMEOUT_MICROS = 4000;
+	static constexpr uint16_t FULL_DUPLEX_RESEND_MICROS = 2000;
 
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.

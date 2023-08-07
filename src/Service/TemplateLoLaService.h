@@ -31,7 +31,7 @@ protected:
 private:
 	uint32_t SendRequestTimeout = 0;
 	uint32_t RequestStart = 0;
-	uint32_t LastRequestSent = 0;
+	uint32_t LastSent = 0;
 
 	uint8_t RequestPayloadSize = 0;
 	bool RequestPending = 0;
@@ -92,20 +92,22 @@ public:
 				// Transmit packet.
 				if (LoLaLink->SendPacket(OutPacket.Data, RequestPayloadSize))
 				{
+					LastSent = micros();
 					RequestPending = false;
-					LastRequestSent = millis();
+					Task::enable();
 				}
 				else
 				{
-					// Unable to transmit, try again until timeout.
+					// Unable to transmit, wait for 1ms and try again.
+					Task::enableDelayed(1);
 				}
-				Task::enable();
 			}
 			else if (millis() - RequestStart > SendRequestTimeout)
 			{
 				// Send timed out.
 				RequestPending = false;
-				OnSendRequestFail();
+				Task::enable();
+				OnSendRequestTimeout();
 			}
 			else
 			{
@@ -122,14 +124,14 @@ public:
 	}
 
 protected:
-	const uint32_t GetElapsedSinceLastSent()
+	const bool PacketThrottle()
 	{
-		return millis() - LastRequestSent;
+		return micros() - LastSent > LoLaLink->GetPacketThrottlePeriod();
 	}
 
-	void ResetLastSent()
+	void ResetPacketThrottle()
 	{
-		LastRequestSent = millis() - SendRequestTimeout;
+		LastSent = micros() - SendRequestTimeout;
 	}
 
 	void RequestSendCancel()

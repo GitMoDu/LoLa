@@ -39,11 +39,11 @@ protected:
 	using BaseClass::OutPacket;
 	using BaseClass::PacketService;
 
-	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
 	using BaseClass::IsInSessionCreation;
 	using BaseClass::OnLinkSyncReceived;
-	using BaseClass::CanSendLinkingPacket;
-	using BaseClass::ResetLastUnlinkedSent;
+	using BaseClass::UnlinkedCanSendPacket;
+	using BaseClass::UnlinkedPacketThrottle;
+	using BaseClass::ResetUnlinkedPacketThrottle;
 
 	using BaseClass::SendPacket;
 
@@ -105,7 +105,7 @@ protected:
 				case PkeStateEnum::RequestingSession:;
 					PkeState = PkeStateEnum::DecompressingPartnerKey;
 					Session.SetSessionId(&payload[Unlinked::SessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
-					ResetLastUnlinkedSent();
+					ResetUnlinkedPacketThrottle();
 
 					for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 					{
@@ -141,7 +141,7 @@ protected:
 	virtual void ResetSessionCreation() final
 	{
 		PkeState = PkeStateEnum::RequestingSession;
-		ResetLastUnlinkedSent();
+		ResetUnlinkedPacketThrottle();
 		Task::enable();
 	}
 
@@ -151,8 +151,8 @@ protected:
 		{
 		case PkeStateEnum::RequestingSession:
 			// Wait longer because reply is big.
-			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS
-				&& CanSendLinkingPacket(Unlinked::SessionRequest::PAYLOAD_SIZE))
+			if (UnlinkedPacketThrottle()
+				&& UnlinkedCanSendPacket(Unlinked::SessionRequest::PAYLOAD_SIZE))
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.SetHeader(Unlinked::SessionRequest::HEADER);
@@ -208,7 +208,7 @@ protected:
 			Task::enable();
 			break;
 		case PkeStateEnum::SessionCached:
-			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
+			if (UnlinkedPacketThrottle())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.SetHeader(Unlinked::LinkingStartRequest::HEADER);
@@ -218,7 +218,7 @@ protected:
 				}
 				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
 
-				if (CanSendLinkingPacket(Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
+				if (UnlinkedCanSendPacket(Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
 				{
 					if (SendPacket(OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
 					{

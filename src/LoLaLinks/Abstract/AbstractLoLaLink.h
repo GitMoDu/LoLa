@@ -41,6 +41,7 @@ protected:
 
 	using BaseClass::RegisterPacketReceiverInternal;
 	using BaseClass::GetSendDuration;
+	using BaseClass::GetPacketThrottlePeriod;
 	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::ResetLastValidReceived;
@@ -217,14 +218,14 @@ protected:
 		OnEvent(PacketEventEnum::ReceiveLossDetected);
 	}
 
-	void ResetLastUnlinkedSent()
+	void ResetUnlinkedPacketThrottle()
 	{
-		LastUnlinkedSent -= LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS;
+		LastUnlinkedSent -= GetPacketThrottlePeriod() * 2;
 	}
 
-	const uint32_t GetElapsedMicrosSinceLastUnlinkedSent()
+	const bool UnlinkedPacketThrottle()
 	{
-		return micros() - LastUnlinkedSent;
+		return micros() - LastUnlinkedSent >= GetPacketThrottlePeriod() * 2;
 	}
 
 	struct LoLaLinkConfig

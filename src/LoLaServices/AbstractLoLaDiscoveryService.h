@@ -33,7 +33,6 @@ private:
 	using BaseClass = TemplateLoLaService<MaxSendPayloadSize>;
 
 	static const uint32_t RetryPeriod = 2;
-	static const uint32_t ResendPeriod = 10;
 	static const uint32_t NoDiscoveryTimeOut = 1000;
 
 	enum DiscoveryStateEnum
@@ -51,9 +50,9 @@ protected:
 	using BaseClass::RequestSendCancel;
 	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
-	using BaseClass::ResetLastSent;
+	using BaseClass::ResetPacketThrottle;
+	using BaseClass::PacketThrottle;
 	using BaseClass::OutPacket;
-	using BaseClass::GetElapsedSinceLastSent;
 
 protected:
 	/// <summary>
@@ -156,7 +155,7 @@ public:
 				case DiscoveryStateEnum::Discovering:
 					DiscoveryState = DiscoveryStateEnum::Acknowledging;
 					Acknowledged |= payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0;
-					ResetLastSent();
+					ResetPacketThrottle();
 					break;
 				case DiscoveryStateEnum::Acknowledging:
 					if (Acknowledged && payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0)
@@ -170,7 +169,7 @@ public:
 					{
 						Acknowledged |= payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0;
 					}
-					ResetLastSent();
+					ResetPacketThrottle();
 					break;
 				case DiscoveryStateEnum::Running:
 					DiscoveryState = DiscoveryStateEnum::RunningAck;
@@ -203,7 +202,7 @@ protected:
 				// After NoDiscoveryTimeOut ms have elapsed, we give up.
 				OnDiscoveryFailed();
 			}
-			else if (GetElapsedSinceLastSent() > ResendPeriod)
+			else if (PacketThrottle())
 			{
 				if (!RequestSendDiscovery(false))
 				{
@@ -221,7 +220,7 @@ protected:
 				// After NoDiscoveryTimeOut ms have elapsed, we give up.
 				OnDiscoveryFailed();
 			}
-			else if (GetElapsedSinceLastSent() > ResendPeriod)
+			else if (PacketThrottle())
 			{
 				if (!RequestSendDiscovery(true))
 				{
@@ -234,7 +233,7 @@ protected:
 			}
 			break;
 		case DiscoveryStateEnum::RunningAck:
-			if (GetElapsedSinceLastSent() > ResendPeriod)
+			if (PacketThrottle())
 			{
 				if (RequestSendDiscovery(true))
 				{

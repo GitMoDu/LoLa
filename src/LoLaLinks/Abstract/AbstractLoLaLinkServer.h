@@ -51,13 +51,12 @@ protected:
 	using BaseClass::GetSendDuration;
 	using BaseClass::GetOnAirDuration;
 	using BaseClass::ResetStageStartTime;
-	using BaseClass::ResetLastUnlinkedSent;
-	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
+	using BaseClass::ResetUnlinkedPacketThrottle;
+	using BaseClass::UnlinkedPacketThrottle;
 
 	using BaseClass::SyncSequence;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
-	using BaseClass::GetElapsedSinceLastSent;
 	using BaseClass::GetStageElapsedMillis;
 
 private:
@@ -114,7 +113,7 @@ protected:
 	{
 		WaitingState = WaitingStateEnum::SwitchingToLinking;
 		StateTransition.OnStart(micros());
-		ResetLastUnlinkedSent();
+		ResetUnlinkedPacketThrottle();
 		Task::enable();
 	}
 
@@ -315,7 +314,7 @@ protected:
 #endif
 				LinkingState = LinkingStateEnum::SwitchingToLinked;
 				StateTransition.OnStart(micros());
-				ResetLastUnlinkedSent();
+				ResetUnlinkedPacketThrottle();
 				Task::enableIfNot();
 			}
 #if defined(DEBUG_LOLA)
@@ -472,13 +471,13 @@ protected:
 		switch (LinkingState)
 		{
 		case LinkingStateEnum::AuthenticationRequest:
-			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
+			if (UnlinkedPacketThrottle())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::ServerChallengeRequest::HEADER);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
-				if (CanSendLinkingPacket(Linking::ServerChallengeRequest::PAYLOAD_SIZE))
+				if (UnlinkedCanSendPacket(Linking::ServerChallengeRequest::PAYLOAD_SIZE))
 				{
 					if (SendPacket(OutPacket.Data, Linking::ServerChallengeRequest::PAYLOAD_SIZE))
 					{
@@ -492,13 +491,13 @@ protected:
 			Task::enable();
 			break;
 		case LinkingStateEnum::AuthenticationReply:
-			if (GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
+			if (UnlinkedPacketThrottle())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::ServerChallengeReply::HEADER);
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
-				if (CanSendLinkingPacket(Linking::ServerChallengeReply::PAYLOAD_SIZE))
+				if (UnlinkedCanSendPacket(Linking::ServerChallengeReply::PAYLOAD_SIZE))
 				{
 					if (SendPacket(OutPacket.Data, Linking::ServerChallengeReply::PAYLOAD_SIZE))
 					{
@@ -567,12 +566,12 @@ protected:
 				}
 			}
 			else if (StateTransition.IsSendRequested(micros())
-				&& GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
+				&& UnlinkedPacketThrottle())
 			{
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::LinkTimedSwitchOver::HEADER);
 
-				if (CanSendLinkingPacket(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
+				if (UnlinkedCanSendPacket(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
 				{
 					SyncSequence++;
 					OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
@@ -710,13 +709,13 @@ private:
 			}
 		}
 		else if (StateTransition.IsSendRequested(micros())
-			&& GetElapsedMicrosSinceLastUnlinkedSent() > LoLaLinkDefinition::RE_TRANSMIT_TIMEOUT_MICROS)
+			&& UnlinkedPacketThrottle())
 		{
 			OutPacket.SetPort(Unlinked::PORT);
 			OutPacket.SetHeader(Unlinked::LinkingTimedSwitchOver::HEADER);
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
 
-			if (CanSendLinkingPacket(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
+			if (UnlinkedCanSendPacket(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
 			{
 				SyncSequence++;
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
@@ -745,7 +744,7 @@ protected:
 	/// </summary>
 	/// <param name="payloadSize"></param>
 	/// <returns>True when packet can be sent.</returns>
-	const bool CanSendLinkingPacket(const uint8_t payloadSize)
+	const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
 	{
 		if (PreLinkDuplexPeriod == IDuplex::DUPLEX_FULL)
 		{

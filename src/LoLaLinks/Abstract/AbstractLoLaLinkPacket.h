@@ -200,6 +200,18 @@ public:
 	/// ILoLaLink overrides.
 	/// </summary>
 public:
+	virtual const uint32_t GetPacketThrottlePeriod() final
+	{
+		if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
+		{
+			return LoLaLinkDefinition::FULL_DUPLEX_RESEND_MICROS;
+		}
+		else
+		{
+			return Duplex->GetPeriod() / 2;
+		}
+	}
+
 	virtual const bool RegisterPacketReceiver(ILinkPacketListener* listener, const uint8_t port) final
 	{
 		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
@@ -335,7 +347,6 @@ protected:
 
 		return 0;
 	}
-
 
 protected:
 	const uint32_t GetStageElapsedMillis()

@@ -57,9 +57,10 @@ public:
 
 	/// <summary>
 	/// Can a Link time packet be sent now?
+	/// Even on true result, SendPacket() might still fail afterwards.
 	/// </summary>
 	/// <param name="payloadSize"></param>
-	/// <returns></returns>
+	/// <returns>True if a Link time packet be sent now.</returns>
 	virtual const bool CanSendPacket(const uint8_t payloadSize) { return false; }
 
 	/// <summary>
@@ -68,6 +69,13 @@ public:
 	/// <param name="payloadSize"></param>
 	/// <returns>True on successfull transmission.</returns>
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) { return false; }
+
+
+	/// <summary>
+	/// How long should a Link Service wait before re-sending a possibly unreplied packet.
+	/// </summary>
+	/// <returns>Throttle period in microseconds.</returns>
+	virtual const uint32_t GetPacketThrottlePeriod() { return 0; }
 
 	/// <summary>
 	/// Register link status listener.

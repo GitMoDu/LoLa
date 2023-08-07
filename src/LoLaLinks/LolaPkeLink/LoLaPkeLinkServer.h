@@ -47,8 +47,8 @@ protected:
 	using BaseClass::StartSearching;
 	using BaseClass::IsInSearchingLink;
 	using BaseClass::StartSessionCreationIfNot;
-	using BaseClass::GetElapsedMicrosSinceLastUnlinkedSent;
-	using BaseClass::CanSendLinkingPacket;
+	using BaseClass::UnlinkedCanSendPacket;
+	using BaseClass::UnlinkedPacketThrottle;
 
 	using BaseClass::SendPacket;
 
@@ -220,7 +220,7 @@ protected:
 			}
 			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::SessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 
-			if (CanSendLinkingPacket(Unlinked::SessionAvailable::PAYLOAD_SIZE))
+			if (UnlinkedCanSendPacket(Unlinked::SessionAvailable::PAYLOAD_SIZE))
 			{
 				PkeSessionRequested = false;
 				if (SendPacket(OutPacket.Data, Unlinked::SessionAvailable::PAYLOAD_SIZE))

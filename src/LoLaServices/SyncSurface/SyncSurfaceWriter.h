@@ -35,7 +35,8 @@ protected:
 	using BaseClass::InvalidateLocalHash;
 	using BaseClass::InvalidateRemoteHash;
 	using BaseClass::ForceUpdateLocalHash;
-	using BaseClass::ResetLastSent;
+	using BaseClass::ResetPacketThrottle;
+	using BaseClass::PacketThrottle;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::UpdateSyncState;
 	using BaseClass::RequestSendMetaPacket;

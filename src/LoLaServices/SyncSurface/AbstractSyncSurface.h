@@ -24,7 +24,8 @@ protected:
 
 protected:
 	using BaseClass::RequestSendPacket;
-	using BaseClass::ResetLastSent;
+	using BaseClass::ResetPacketThrottle;
+	using BaseClass::PacketThrottle;
 
 	static const uint32_t FAST_CHECK_PERIOD_MILLIS = 1;
 
@@ -171,7 +172,7 @@ protected:
 		if (Synced != newState)
 		{
 			StateStartTime = millis();
-			ResetLastSent();
+			ResetPacketThrottle();
 
 			if (newState)
 			{
