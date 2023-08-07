@@ -81,7 +81,7 @@ public:
 	virtual void Rx(const uint8_t channel) { }
 
 	/// <summary>
-	/// How long does the driver estimate transmiting will take from Tx request to start In-Air.
+	/// How long transmiting will take from Tx request to start In-Air.
 	/// This includes memory copies and SPI transactions and pre-ambles,
 	///	 but does not include medium delay (ex: lightspeed) or internal transceiver processing. 
 	/// In microseconds.
@@ -91,7 +91,7 @@ public:
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) { return 0; }
 
 	/// <summary>
-	/// How long does the driver estimate transmiting will take from start to end of In-Air.
+	/// How long transmitting will take from start to end of In-Air.
 	/// In microseconds.
 	/// </summary>
 	/// <param name="packetSize"></param>
@@ -99,7 +99,7 @@ public:
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) { return 0; }
 
 	/// <summary>
-	/// How until a hop request takes effect.
+	/// How until a channel hop request takes effect.
 	/// In microseconds.
 	/// </summary>
 	/// <returns></returns>

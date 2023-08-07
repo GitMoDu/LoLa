@@ -127,21 +127,21 @@ public:
 	/// Link switch over will tolerate +-0.5% error (us) at the start.
 	/// During link time, clock will be continously tuned for higher accuracy.
 	/// </summary>
-	static constexpr int32_t LINKING_CLOCK_TOLERANCE = 50;
+	static constexpr int8_t LINKING_CLOCK_TOLERANCE = 50;
 
 	/// <summary>
 	/// </summary>
-	static constexpr int32_t LINKING_TRANSITION_PERIOD_MICROS = 40000;
+	static constexpr uint16_t LINKING_TRANSITION_PERIOD_MICROS = 33333;
 
 	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
-	static constexpr uint32_t LINKING_STAGE_TIMEOUT = 333;
+	static constexpr uint16_t LINKING_STAGE_TIMEOUT = 200;
 
 	/// <summary>
 	/// How long without an input message from partner before disconnect.
 	/// </summary>
-	static constexpr uint32_t LINK_STAGE_TIMEOUT = 1500;
+	static constexpr uint16_t LINK_STAGE_TIMEOUT = 1500;
 
 	/// <summary>
 	/// How long to wait before timing out a send.
@@ -156,12 +156,12 @@ public:
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.
 	/// </summary>
-	static constexpr uint32_t REPORT_UPDATE_PERIOD = 250;
+	static constexpr uint16_t REPORT_UPDATE_PERIOD = 250;
 
 	/// <summary>
 	/// If no other service is getting messages, how long to trigger a report back.
 	/// </summary>
-	static constexpr uint32_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 150;
+	static constexpr uint8_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 150;
 
 	/// <summary>
 	/// Report (average) send back off period.

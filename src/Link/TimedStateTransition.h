@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-template<const uint32_t TransitionTimeout>
+template<const uint16_t TransitionTimeout>
 class ServerTimedStateTransition
 {
 private:
@@ -41,14 +41,14 @@ public:
 
 	const bool IsSendRequested(const uint32_t timestamp)
 	{
-		const uint32_t remaining = GetDurationUntilTimeOut(timestamp);
+		const uint_fast16_t remaining = GetDurationUntilTimeOut(timestamp);
 
 		return remaining != 0
 			&& remaining < TransitionTimeout
 			&& !HasAcknowledge();
 	}
 
-	const uint32_t GetDurationUntilTimeOut(const uint32_t timestamp)
+	const uint_fast16_t GetDurationUntilTimeOut(const uint32_t timestamp)
 	{
 		if (timestamp - TransitionStart >= TransitionTimeout)
 		{
@@ -71,7 +71,7 @@ public:
 	}
 };
 
-template<const uint32_t TransitionTimeout>
+template<const uint16_t TransitionTimeout>
 class ClientTimedStateTransition
 {
 private:
@@ -137,6 +137,11 @@ public:
 			&& (TransitionEnd - timestamp >= TransitionTimeout);
 	}
 
+	const bool HasAcknowledge()
+	{
+		return State == ClientTransitionStateEnum::TransitionAcknowledged || State == ClientTransitionStateEnum::TransitionAcknowledging;
+	}
+
 #if defined(DEBUG_LOLA)
 	void Debug(const uint32_t timestamp)
 	{
@@ -152,6 +157,7 @@ public:
 	}
 #endif
 
+#if defined(DEBUG_LOLA)
 	const uint32_t GetDurationUntilTimeOut(const uint32_t timestamp)
 	{
 		if (TransitionEnd - timestamp >= TransitionTimeout)
@@ -163,10 +169,6 @@ public:
 			return TransitionEnd - timestamp;
 		}
 	}
-
-	const bool HasAcknowledge()
-	{
-		return State == ClientTransitionStateEnum::TransitionAcknowledged || State == ClientTransitionStateEnum::TransitionAcknowledging;
-	}
+#endif
 };
 #endif
