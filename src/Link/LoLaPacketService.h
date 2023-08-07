@@ -18,8 +18,6 @@
 ///		Content abstract.
 ///		Buffers input packets, so transceiver is free to receive more while the service processes it.
 /// </summary>
-/// <param name="MaxPacketSize">The maximum raw packet size.</param>
-template<const uint8_t MaxPacketSize>
 class LoLaPacketService : private Task, public virtual ILoLaTransceiverListener
 {
 private:
@@ -95,7 +93,7 @@ public:
 			ServiceListener->OnSendComplete(SendResultEnum::Success);
 			break;
 		case StateEnum::Sending:
-			if (micros() - SendOutTimestamp > LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)
+			if (millis() - SendOutTimestamp > LoLaLinkDefinition::TRANSCEIVER_TX_TIMEOUT_PERIOD)
 			{
 				// Send timeout.
 				State = StateEnum::Done;
@@ -124,7 +122,7 @@ public:
 
 		if (PendingReceiveSize > 0)
 		{
-			if (PendingReceiveSize > MaxPacketSize)
+			if (PendingReceiveSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 			{
 				ServiceListener->OnDropped(ReceiveTimestamp, PendingReceiveSize);
 			}
@@ -182,7 +180,7 @@ public:
 	{
 		if (Transceiver->Tx(RawOutPacket, size, channel))
 		{
-			SendOutTimestamp = micros();
+			SendOutTimestamp = millis();
 			State = StateEnum::Sending;
 			Task::enable();
 
@@ -242,7 +240,7 @@ public:
 			PendingReceiveRssi = rssi;
 
 			// Only copy buffer if packet fits, but let task notify listener that a packet was dropped.
-			if (packetSize <= MaxPacketSize)
+			if (packetSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 			{
 				for (uint_fast8_t i = 0; i < packetSize; i++)
 				{

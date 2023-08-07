@@ -52,8 +52,8 @@ protected:
 	ILinkListener* LinkListeners[MaxLinkListeners]{};
 	uint8_t LinkListenersCount = 0;
 
-	// Packet service instance, templated to max packet size and reference low latency timeouts.
-	LoLaPacketService<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> PacketService;
+	// Packet service instance;
+	LoLaPacketService PacketService;
 
 	// The outgoing content is encrypted and MAC'd here before being sent to the Transceiver for transmission.
 	uint8_t RawOutPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
@@ -85,7 +85,6 @@ protected:
 protected:
 	virtual void Owner() {}
 
-	size_t print(const __FlashStringHelper* ifsh) { return print(reinterpret_cast<const char*>(ifsh)); }
 
 	void Skipped(const __FlashStringHelper* ifsh)
 	{

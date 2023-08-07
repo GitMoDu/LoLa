@@ -93,12 +93,6 @@ public:
 		// Nothing to do, service callback won't run.
 	}
 
-	//protected:
-	//	virtual void OnSendComplete(const SendResultEnum result, const uint8_t header)
-	//	{
-	//
-	//	}
-
 protected:
 	const bool RequestSendMetaPacket(const uint8_t header)
 	{

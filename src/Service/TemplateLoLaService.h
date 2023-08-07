@@ -47,7 +47,7 @@ protected:
 	/// The requested packet to send has failed.
 	/// To be overriden by user class.
 	/// </summary>
-	virtual void OnSendRequestFail() { }
+	virtual void OnSendRequestTimeout() { }
 
 	/// <summary>
 	/// The user class can ride this task's callback, when no sending is being performed.

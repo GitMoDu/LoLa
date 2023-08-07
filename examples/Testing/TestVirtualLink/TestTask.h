@@ -139,7 +139,7 @@ private:
 	}
 
 public:
-	virtual void OnSendRequestFail() final
+	virtual void OnSendRequestTimeout() final
 	{
 #if defined(DEBUG_LOLA)
 		PrintTag('S');

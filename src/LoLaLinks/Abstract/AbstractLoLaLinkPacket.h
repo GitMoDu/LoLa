@@ -72,16 +72,15 @@ protected:
 	// Collision avoidance time slotting.
 	IDuplex* Duplex;
 
-	// Sync clock helper.
-	Timestamp LinkTimestamp{};
-
-private:
 	/// <summary>
 	/// Channel Hopper calls back when it is time to update the RX channel, if it's not up to date.
 	/// </summary>
 	IChannelHop* ChannelHopper;
 
+	// Sync clock helper.
+	Timestamp LinkTimestamp{};
 
+private:
 	uint32_t StageStartTime = 0;
 
 	const bool IsLinkHopper;
@@ -140,7 +139,7 @@ public:
 			return false;
 		}
 
-		if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS)
+		if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) / 1000 >= LoLaLinkDefinition::TRANSCEIVER_TX_TIMEOUT_PERIOD)
 		{
 #if defined(DEBUG_LOLA)
 			Serial.println(F("Estimated Time-On-Air is longer than transmit timeout."));
@@ -165,8 +164,8 @@ public:
 		}
 
 #if defined(DEBUG_LOLA)
-		Serial.print(F("TRANSMIT_BASE_TIMEOUT: "));
-		Serial.println(LoLaLinkDefinition::TRANSMIT_BASE_TIMEOUT_MICROS);
+		Serial.print(F("TRANSCEIVER_TX_TIMEOUT_PERIOD: "));
+		Serial.println(LoLaLinkDefinition::TRANSCEIVER_TX_TIMEOUT_PERIOD);
 
 		Serial.print(F("Duplex Range: "));
 		Serial.println(Duplex->GetRange());

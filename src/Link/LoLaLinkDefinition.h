@@ -146,7 +146,7 @@ public:
 	/// <summary>
 	/// How long to wait before timing out a send.
 	/// </summary>
-	static constexpr uint32_t TRANSMIT_BASE_TIMEOUT_MICROS = 5000;
+	static constexpr uint8_t TRANSCEIVER_TX_TIMEOUT_PERIOD = 5;
 
 	/// <summary>
 	/// How long to wait before re-sending an answered packet.

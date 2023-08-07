@@ -254,7 +254,7 @@ protected:
 		}
 	}
 
-	virtual void OnSendRequestFail() final
+	virtual void OnSendRequestTimeout() final
 	{
 		switch (DiscoveryState)
 		{

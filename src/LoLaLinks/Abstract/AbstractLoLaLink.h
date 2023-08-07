@@ -228,41 +228,6 @@ protected:
 		return micros() - LastUnlinkedSent >= GetPacketThrottlePeriod() * 2;
 	}
 
-	struct LoLaLinkConfig
-	{
-		uint32_t Protocol; // User provided value?
-
-		uint16_t DuplexPeriod;
-		uint32_t HopPeriod;
-		uint8_t ChannelCount;
-
-
-		const bool IsFullDuplex()
-		{
-			return DuplexPeriod = IDuplex::DUPLEX_FULL;
-		}
-
-		const bool IsHopper()
-		{
-			return HopPeriod = IChannelHop::NOT_A_HOPPER;
-		}
-	};
-
-	static const uint32_t GetLinkSignature(const uint32_t duplexPeriod)
-	{
-		uint32_t signature = 0;
-
-		//if (duplexPeriod != IDuplex::DUPLEX_FULL)
-		//{
-		//	signature += << 1;
-		//}
-
-
-
-
-		return signature;
-	}
-
 protected:
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
 	{
