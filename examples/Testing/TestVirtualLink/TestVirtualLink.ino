@@ -14,7 +14,7 @@
 
 #if defined(ARDUINO_ARCH_ESP32)
 // ESP32 Serial with low bitrate stalls the scheduler loop.
-#define SERIAL_BAUD_RATE 921600
+#define SERIAL_BAUD_RATE 1000000
 #else
 #define SERIAL_BAUD_RATE 115200
 #endif
@@ -67,6 +67,8 @@
 //#define LINK_USE_TIMER_AND_RTC
 
 #define _TASK_OO_CALLBACKS
+#define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
+
 
 #ifdef _TASK_SLEEP_ON_IDLE_RUN
 #undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
@@ -100,17 +102,17 @@ static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 // Virtual Transceiver configurations.
 // <ChannelCount, TxBaseMicros, TxByteNanos, AirBaseMicros, AirByteNanos, HopMicros>
 using SlowSingleChannel = IVirtualTransceiver::Configuration<1, 100, 1000, 200, 20000, 100>;
-using FastSingleChannel = IVirtualTransceiver::Configuration<1, 20, 500, 50, 1000, 20>;
+using FastSingleChannel = IVirtualTransceiver::Configuration<1, 20, 500, 20, 2000, 20>;
 using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 100, 1000, 200, 20000, 100>;
-using FastMultiChannel = IVirtualTransceiver::Configuration<50, 20, 500, 50, 1000, 20>;
+using FastMultiChannel = IVirtualTransceiver::Configuration<160, 20, 500, 20, 2000, 20>;
 
 // Used Virtual Driver Configuration.
 using TestRadioConfig = SlowSingleChannel;
 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 4000;
-static const uint16_t DuplexDeadZone = max(150, TestRadioConfig::HopMicros * 2);
-static const uint32_t ChannelHopPeriod = DuplexPeriod;
+static const uint16_t DuplexDeadZone = TestRadioConfig::HopMicros * 2;
+static const uint32_t ChannelHopPeriod = DuplexPeriod * 4;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
@@ -150,10 +152,9 @@ ITimerSource* ClientTimer = &ClientTimerSource;
 TimedChannelHopper<ChannelHopPeriod> ServerChannelHop(SchedulerBase);
 TimedChannelHopper<ChannelHopPeriod> ClientChannelHop(SchedulerBase);
 #else
-NoHopNoChannel ServerChannelHop;
-NoHopNoChannel ClientChannelHop;
+NoHopNoChannel ServerChannelHop{};
+NoHopNoChannel ClientChannelHop{};
 #endif
-
 
 // Link Server and its required instances.
 VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerTransceiver(SchedulerBase);
