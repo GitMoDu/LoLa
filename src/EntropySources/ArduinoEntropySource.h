@@ -20,7 +20,14 @@ public:
 
 	virtual const uint32_t GetNoise() final
 	{
-		return (((uint32_t)random(INT32_MAX)) ^ random(INT32_MAX)) + ExtraNoise;
+		return (((uint32_t)random(INT32_MAX)) ^ random(INT32_MAX)) + ~ExtraNoise;
+	}
+
+	virtual const uint8_t* GetUniqueId(uint8_t& idSize) final
+	{
+		idSize = sizeof(uint8_t);
+
+		return &ExtraNoise;
 	}
 
 	//static int RNG(uint8_t* dest, unsigned size) {
