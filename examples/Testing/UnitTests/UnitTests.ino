@@ -1,21 +1,25 @@
 #define SERIAL_BAUD_RATE 115200
 
+#define LOLA_UNIT_TESTING
 
 #define _TASK_OO_CALLBACKS
 #define _TASK_SLEEP_ON_IDLE_RUN
 
-#define LOLA_UNIT_TESTING
 #include <TaskScheduler.h>
 
 #include <ILoLaInclude.h>
 #include <Arduino.h>
 #include "Tests.h"
 
-Scheduler SchedulerBase;
 
-static constexpr uint32_t CHANNEL_HOP_PERIOD_MICROS = 50000;
-static constexpr uint32_t DUPLEX_PERIOD_MICROS = 10000;
+// Process scheduler.
+Scheduler SchedulerBase;
+//
+
+static constexpr uint32_t CHANNEL_HOP_PERIOD_MICROS = 10000;
+static constexpr uint32_t DUPLEX_PERIOD_MICROS = 5000;
 static constexpr uint32_t DUPLEX_ASSYMETRIC_RATIO = 10;
+
 
 NoHopNoChannel ChannelNoHop;
 FixedChannelNoHop<1> ChannelFixedNoHop;
@@ -104,30 +108,30 @@ const bool PerformUnitTests()
 
 void loop()
 {
-	//SchedulerBase.execute();
+	SchedulerBase.execute();
 }
 
 const bool TestHopperTypes()
 {
-	if (ChannelNoHop.IsHopper() == true)
+	if (ChannelNoHop.GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
 	{
 		Serial.println(F("NoHopNoChannel claims to be a hopper."));
 		return false;
 	}
 
-	if (ChannelFixedNoHop.IsHopper() == true)
+	if (ChannelFixedNoHop.GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
 	{
 		Serial.println(F("FixedChannelNoHop claims to be a hopper."));
 		return false;
 	}
 
-	if (ChannelDynamicNoHop.IsHopper() == true)
+	if (ChannelDynamicNoHop.GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
 	{
 		Serial.println(F("NoHopDynamicChannel claims to be a hopper."));
 		return false;
 	}
 
-	if (ChannelHop.IsHopper() == false)
+	if (ChannelHop.GetHopPeriod() == IChannelHop::NOT_A_HOPPER)
 	{
 		Serial.println(F("TimedChannelHopper claims to not be a hopper."));
 		return false;
@@ -135,7 +139,6 @@ const bool TestHopperTypes()
 
 	return true;
 }
-
 
 const bool TestDuplexes()
 {
@@ -170,11 +173,11 @@ const bool TestDuplexes()
 	}
 
 	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, 0 >(&DuplexSlottedA)) { return false; }
-	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), 2555>(&DuplexSlottedA)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, 0, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS / 10>(&DuplexSlottedA)) { return false; }
 	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, ((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, 0>(&DuplexSlottedB)) { return false; }
-	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, 450>(&DuplexSlottedB)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, (((uint32_t)1 * DUPLEX_PERIOD_MICROS) / 3), ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS / 5>(&DuplexSlottedB)) { return false; }
 	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, ((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3, DUPLEX_PERIOD_MICROS, 0>(&DuplexSlottedC)) { return false; }
-	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, (((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS, 4202>(&DuplexSlottedC)) { return false; }
+	if (!TestDuplex<DUPLEX_PERIOD_MICROS, false, (((uint32_t)2 * DUPLEX_PERIOD_MICROS) / 3), DUPLEX_PERIOD_MICROS, DUPLEX_PERIOD_MICROS / 4>(&DuplexSlottedC)) { return false; }
 
 	return true;
 }

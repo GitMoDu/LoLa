@@ -30,6 +30,12 @@ const bool TestTimedChannelHopper()
 template<uint32_t Period, bool IsFullDuplex, uint32_t StartIn, uint32_t EndIn, uint16_t Duration>
 const bool TestDuplex(IDuplex* duplex)
 {
+	if (duplex == nullptr)
+	{
+		Serial.println(F("Duplex is null."));
+		return false;
+	}
+
 	const uint16_t period = duplex->GetPeriod();
 
 	if (IsFullDuplex)
@@ -118,6 +124,4 @@ const bool TestDuplex(IDuplex* duplex)
 
 	return true;
 }
-
 #endif
-
