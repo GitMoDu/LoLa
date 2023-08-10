@@ -29,12 +29,19 @@ private:
 		return HopPeriodMicros / 1000;
 	}
 
+	static constexpr bool PeriodOverZero()
+	{
+		return HopPeriodMillis() > 0;
+	}
+
 #ifdef LOLA_UNIT_TESTING
 public:
 #endif
 	static constexpr uint32_t GetDelayPeriod()
 	{
-		return ((HopPeriodMillis() * (100 - CLOCK_MARGIN_PERCENTAGE)) / 100);
+		// Constexpr workaround for conditional.
+		return (PeriodOverZero() * (HopPeriodMillis() - 1))
+			+ (!PeriodOverZero() * HopPeriodMillis());
 	}
 
 private:
@@ -46,9 +53,6 @@ private:
 
 	uint32_t LastHopIndex = 0;
 	uint32_t HopIndex = 0;
-
-
-	uint32_t ForwardLookMicros = 0;
 
 	HopperStateEnum HopperState = HopperStateEnum::Disabled;
 
@@ -65,9 +69,8 @@ public:
 #endif
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock, const uint32_t forwardLookMicros) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) final
 	{
-		ForwardLookMicros = forwardLookMicros;
 		Listener = listener;
 		SyncClock = syncClock;
 
@@ -92,7 +95,7 @@ public:
 	////
 
 	// Hopper Interfaces //
-	virtual const uint32_t GetHopPeriod() final
+	virtual constexpr uint32_t GetHopPeriod() final
 	{
 		return HopPeriodMicros;
 	}
@@ -124,8 +127,6 @@ public:
 	virtual bool Callback() final
 	{
 		SyncClock->GetTimestamp(CheckTimestamp);
-		CheckTimestamp.ShiftSubSeconds(ForwardLookMicros);
-
 		HopIndex = GetHopIndex(CheckTimestamp.GetRollingMicros());
 
 		switch (HopperState)

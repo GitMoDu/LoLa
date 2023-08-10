@@ -131,11 +131,6 @@ protected:
 		return Transceiver->GetDurationInAir(LoLaPacketDefinition::GetTotalSize(payloadSize));
 	}
 
-	const uint16_t GetHopDuration()
-	{
-		return Transceiver->GetTimeToHop();
-	}
-
 protected:
 	/// <summary>
 	/// Mock internal "SendPacket", 

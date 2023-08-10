@@ -56,7 +56,6 @@ protected:
 	using BaseClass::PostLinkState;
 	using BaseClass::GetSendDuration;
 	using BaseClass::GetOnAirDuration;
-	using BaseClass::GetHopDuration;
 
 protected:
 	/// <summary>
@@ -123,7 +122,7 @@ public:
 		}
 
 		if (ChannelHopper == nullptr ||
-			!ChannelHopper->Setup(this, &SyncClock, GetHopDuration()))
+			!ChannelHopper->Setup(this, &SyncClock))
 		{
 #if defined(DEBUG_LOLA)
 			Serial.println(F("ChannelHopper setup failed."));

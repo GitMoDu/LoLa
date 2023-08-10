@@ -197,8 +197,8 @@ const bool TestHopperSleepPeriod()
 	if (!TestTimedChannelHopper<40000, 39>()) { return false; }
 	if (!TestTimedChannelHopper<45000, 44>()) { return false; }
 	if (!TestTimedChannelHopper<50000, 49>()) { return false; }
-	if (!TestTimedChannelHopper<75000, 73>()) { return false; }
-	if (!TestTimedChannelHopper<100000, 98>()) { return false; }
+	if (!TestTimedChannelHopper<75000, 74>()) { return false; }
+	if (!TestTimedChannelHopper<100000, 99>()) { return false; }
 
 	return true;
 }

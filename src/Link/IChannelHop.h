@@ -19,7 +19,7 @@ public:
 	};
 
 public:
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock, const uint32_t forwardLookMicros) { return false; }
+	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) { return false; }
 
 	/// General Channel Interfaces
 public:
