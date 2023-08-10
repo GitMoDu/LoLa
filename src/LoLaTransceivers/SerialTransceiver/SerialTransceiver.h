@@ -132,7 +132,7 @@ public:
 				break;
 			case TxStateEnum::TxStart:
 				// Wait for Tx buffer to be completely free.
-				if (((micros() - TxStartTimestamp) > GetTimeToAir(TxSize)) &&
+				if (((micros() - TxStartTimestamp) > TransmitDelayMicros) &&
 					(IO->availableForWrite() >= (TxBufferSize - 1)))
 				{
 					TxEndTimestamp = micros();
@@ -141,7 +141,7 @@ public:
 				break;
 			case TxStateEnum::TxEnd:
 				// TxSeparationPauseMicros at the end, to clearly separate packets.
-				if (micros() - TxStartTimestamp > (GetTimeToAir(TxSize) + GetDurationInAir(TxSize)))
+				if (micros() - TxStartTimestamp > (TransmitDelayMicros + GetDurationInAir(TxSize)))
 				{
 					Listener->OnTx();
 					TxState = TxStateEnum::NoTx;
