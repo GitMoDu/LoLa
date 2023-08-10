@@ -54,6 +54,7 @@ private:
 	const uint16_t TX_DELAY_RANGE = NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
 	const uint16_t RX_DELAY_MIN = NRF_TIMINGS[DataRate].RxDelayMin;
 	const uint16_t RX_DELAY_RANGE = NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
+	const uint16_t RX_HOP_DURATION = TX_DELAY_MIN;
 
 private:
 	RF24 Radio;
@@ -431,11 +432,6 @@ public:
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
 		return GetRxDelay(packetSize);
-	}
-
-	virtual const uint16_t GetTimeToHop() final
-	{
-		return TX_DELAY_MIN;
 	}
 
 private:

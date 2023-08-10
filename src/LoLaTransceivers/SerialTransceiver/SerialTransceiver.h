@@ -56,7 +56,7 @@ private:
 	};
 
 private:
-	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE] {};
+	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
@@ -331,11 +331,6 @@ public:
 	{
 		// +1 packet size for Size byte.
 		return (uint32_t)DurationShort + (((uint32_t)DurationRange * (packetSize + 1)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
-	}
-
-	virtual const uint16_t GetTimeToHop() final
-	{
-		return 1;
 	}
 
 private:

@@ -350,11 +350,6 @@ public:
 		return Config::AirBaseMicros + ((Config::AirByteNanos * packetSize) / 1000);
 	}
 
-	virtual const uint16_t GetTimeToHop() final
-	{
-		return Config::HopMicros;
-	}
-
 	virtual const bool TxAvailable() final
 	{
 		return DriverEnabled && !OutGoing.HasPending() && !Incoming.HasPending();

@@ -97,12 +97,5 @@ public:
 	/// <param name="packetSize"></param>
 	/// <returns></returns>
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) { return 0; }
-
-	/// <summary>
-	/// How until a channel hop request takes effect.
-	/// In microseconds.
-	/// </summary>
-	/// <returns></returns>
-	virtual const uint16_t GetTimeToHop() { return 0; }
 };
 #endif

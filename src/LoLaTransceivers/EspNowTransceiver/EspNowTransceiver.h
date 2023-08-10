@@ -104,11 +104,6 @@ public:
 		return 0;
 	}
 
-	virtual const uint16_t GetTimeToHop() final
-	{
-		return 0;
-	}
-
 private:
 	/// </summary>
 	/// Converts the LoLa abstract channel into a real channel index for the radio.
