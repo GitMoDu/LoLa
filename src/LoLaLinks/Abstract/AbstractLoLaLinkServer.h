@@ -103,7 +103,7 @@ protected:
 #if defined(DEBUG_LOLA)
 	virtual void Owner() final
 	{
-		Serial.print(micros());
+		Serial.print(millis());
 		Serial.print(F("\t[S] "));
 	}
 #endif
@@ -613,12 +613,6 @@ protected:
 				{
 					// Only send a time reply once.
 					ClockReplyPending = false;
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.print(F("Sent Clock Tune Error:"));
-					Serial.print((int32_t)EstimateErrorReply.SubSeconds);
-					Serial.println(F("us."));
-#endif
 				}
 			}
 

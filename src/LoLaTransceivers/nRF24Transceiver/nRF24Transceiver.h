@@ -236,7 +236,7 @@ public:
 					Listener->OnTx();
 				}
 #if defined(DEBUG_LOLA)
-				Serial.print(micros());
+				Serial.print(millis());
 				Serial.print(F(": "));
 				Serial.println(F("Got Double Event!"));
 #endif
@@ -254,7 +254,7 @@ public:
 						Event.TxOk = true;
 						Event.TxFail = false;
 #if defined(DEBUG_LOLA)
-						Serial.print(micros());
+						Serial.print(millis());
 						Serial.print(F(": "));
 						Serial.println(F("Force Tx Ok."));
 #endif
@@ -280,7 +280,7 @@ public:
 				else if ((micros() - InterruptTimestamp) > EVENT_TIMEOUT_MICROS)
 				{
 #if defined(DEBUG_LOLA)
-					Serial.print(micros());
+					Serial.print(millis());
 					Serial.print(F(": "));
 					Serial.println(F("Event Timeout."));
 #endif

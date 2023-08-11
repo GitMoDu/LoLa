@@ -115,7 +115,7 @@ private:
 	void PrintName()
 	{
 #ifdef DEBUG_LOLA
-		Serial.print(micros());
+		Serial.print(millis());
 
 		Serial.print('\t');
 		Serial.print('[');
