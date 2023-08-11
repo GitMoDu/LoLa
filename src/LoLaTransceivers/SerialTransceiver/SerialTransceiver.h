@@ -25,22 +25,6 @@ template<typename SerialType,
 class SerialTransceiver : private Task, public virtual ILoLaTransceiver
 {
 private:
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32)
-	static constexpr uint32_t TransmitDelayMicros = 3;
-#else
-	static constexpr uint32_t TransmitDelayMicros = 6;
-#endif
-	static constexpr uint32_t TxSeparationPauseMicros = 100;
-
-	static constexpr uint32_t ReferenceLong = 1645000;
-	static constexpr uint32_t ReferenceShort = 45000;
-	static constexpr uint8_t ReferenceBaudrate = 200;
-
-	static constexpr uint16_t DurationShort = (uint16_t)((ReferenceShort * ReferenceBaudrate) / BaudRate);
-	static constexpr uint16_t DurationLong = (uint16_t)((ReferenceLong * ReferenceBaudrate) / BaudRate);
-	static constexpr uint16_t DurationRange = DurationLong - DurationShort;
-
-private:
 	enum TxStateEnum
 	{
 		NoTx,
@@ -56,21 +40,35 @@ private:
 	};
 
 private:
-	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
+	static constexpr uint32_t ReferenceLong = 33075;
+	static constexpr uint32_t ReferenceShort = 6100;
+	static constexpr uint16_t ReferenceBaudrate = 9600;
+	static constexpr uint16_t MinBaudrate = 80000;
+
+	static constexpr uint16_t DurationShort = (uint16_t)((ReferenceShort * ReferenceBaudrate) / BaudRate);
+	static constexpr uint16_t DurationLong = (uint16_t)((ReferenceLong * ReferenceBaudrate) / BaudRate);
+	static constexpr uint16_t DurationRange = DurationLong - DurationShort;
+
+	static constexpr uint32_t ByteDuration = (DurationLong / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+	static constexpr uint16_t BitDuration = (DurationLong / ((uint16_t)LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE * 8));
+	static constexpr uint16_t TxHoldDuration = 10 + (BitDuration * 2);
+
+	static constexpr uint32_t LineDuration = BitDuration;
+
+private:
+	SerialType* IO;
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
-	SerialType* IO;
+	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
-private:
 	volatile uint32_t RxStartTimestamp = 0;
+	uint32_t RxEndTimestamp = 0;
 	uint32_t TxStartTimestamp = 0;
-	uint32_t TxEndTimestamp = 0;
 
 	volatile RxStateEnum RxState = RxStateEnum::NoRx;
 	TxStateEnum TxState = TxStateEnum::NoTx;
 
-	uint8_t RxIndex = 0;
 	uint8_t RxSize = 0;
 	uint8_t TxSize = 0;
 
@@ -105,20 +103,19 @@ public:
 	/// </summary>
 	void OnSeriaInterrupt()
 	{
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, HIGH);
-		digitalWrite(RX_TEST_PIN, LOW);
-#endif
-
 		// Only one interrupt expected for each packet.
 		DisableInterrupt();
 
 		if (RxState == RxStateEnum::NoRx)
 		{
+#ifdef RX_TEST_PIN
+			digitalWrite(RX_TEST_PIN, HIGH);
+#endif
 			RxStartTimestamp = micros();
 			RxState = RxStateEnum::RxStart;
-			Task::enable();
 		}
+
+		Task::enable();
 	}
 
 public:
@@ -131,19 +128,22 @@ public:
 			case TxStateEnum::NoTx:
 				break;
 			case TxStateEnum::TxStart:
-				// Wait for Tx buffer to be completely free.
-				if (((micros() - TxStartTimestamp) > TransmitDelayMicros) &&
-					(IO->availableForWrite() >= (TxBufferSize - 1)))
+				// Wait for Tx buffer to be free after the minimum duration.
+				if ((micros() - TxStartTimestamp > LineDuration + ByteDuration)
+					&& (IO->availableForWrite() >= (TxBufferSize - 1)))
 				{
-					TxEndTimestamp = micros();
 					TxState = TxStateEnum::TxEnd;
 				}
 				break;
 			case TxStateEnum::TxEnd:
-				// TxSeparationPauseMicros at the end, to clearly separate packets.
-				if (micros() - TxStartTimestamp > (TransmitDelayMicros + GetDurationInAir(TxSize)))
+				// Added pause at the end, to clearly separate packets.
+				if (micros() - TxStartTimestamp > LineDuration + GetDurationInAir(TxSize) + TxHoldDuration)
 				{
+#ifdef TX_TEST_PIN
+					digitalWrite(TX_TEST_PIN, LOW);
+#endif
 					Listener->OnTx();
+
 					TxState = TxStateEnum::NoTx;
 				}
 				break;
@@ -156,47 +156,42 @@ public:
 			case RxStateEnum::NoRx:
 				break;
 			case RxStateEnum::RxStart:
-				if (micros() - RxStartTimestamp > GetDurationInAir(1))
+				// Wait for at least the base transmit and 1 byte period.
+				if (micros() - RxStartTimestamp > LineDuration + ByteDuration)
 				{
-					if (IO->available())
-					{
-						// First byte is the packet size.
-						RxSize = IO->read();
-						if (RxSize >= LoLaPacketDefinition::MIN_PACKET_SIZE
-							&& RxSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-						{
-							RxIndex = 0;
-							RxState = RxStateEnum::RxEnd;
-						}
-						else
-						{
-							ClearRx();
-						}
-					}
-					else
-					{
-						// Interrupt fired but no data was found on serial buffer after the wait period.
-						ClearRx();
-					}
+					RxSize = 0;
+					RxEndTimestamp = micros();
+					RxState = RxStateEnum::RxEnd;
 				}
 				break;
 			case RxStateEnum::RxEnd:
-				// Wait for Rx buffer to be have RxSize.
-				while (IO->available() > 0 && RxIndex < RxSize)
+				if (IO->available())
 				{
-					InBuffer[RxIndex] = IO->read();
-					RxIndex++;
+					while (IO->available())
+					{
+						InBuffer[RxSize] = IO->read();
+						RxSize++;
+						if (RxSize >= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+						{
+							OnRxDone(true); // Packet full, don't wait more.
+						}
+					}
+					RxEndTimestamp = micros();
 				}
-
-				if (RxIndex >= RxSize)
+				else if (micros() - RxEndTimestamp > ByteDuration)
 				{
-					Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
-					ClearRx();
+					if (RxSize >= LoLaPacketDefinition::MIN_PACKET_SIZE && RxSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+					{
+						OnRxDone(true);
+					}
+					else
+					{
+						OnRxDone(false); // Invalid size packet, discard.
+					}
 				}
-				else if (micros() - RxStartTimestamp > DurationLong)
+				else if (micros() - RxStartTimestamp > DurationLong + ByteDuration)
 				{
-					Listener->OnRxLost(RxStartTimestamp);
-					ClearRx();
+					OnRxDone(false); // Packet timeout, discard.
 				}
 				break;
 			default:
@@ -226,7 +221,8 @@ public:
 	{
 		if (IO != nullptr
 			&& Listener != nullptr
-			&& OnRxInterrupt != nullptr)
+			&& OnRxInterrupt != nullptr
+			&& BaudRate >= MinBaudrate)
 		{
 			pinMode(RxInterruptPin, INPUT_PULLUP);
 
@@ -236,11 +232,11 @@ public:
 
 
 			TxState = TxStateEnum::NoTx;
-			DriverEnabled = true;
-
 			ClearRx();
-
+			DriverEnabled = true;
 			Task::enable();
+
+
 
 			return true;
 		}
@@ -272,23 +268,20 @@ public:
 
 	/// <summary>
 	/// Packet copy to serial buffer, and start transmission.
-	/// The first byte is the packet size, excluding the size byte.
 	/// </summary>
 	/// <param name="data"></param>
 	/// <param name="length"></param>
 	/// <returns></returns>
-	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
+	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		if (TxAvailable())
 		{
 #ifdef TX_TEST_PIN
 			digitalWrite(TX_TEST_PIN, HIGH);
-			digitalWrite(TX_TEST_PIN, LOW);
 #endif
-			TxStartTimestamp = micros();
-			if (IO->write(&packetSize, 1) == 1
-				&& IO->write(data, packetSize) == packetSize)
+			if (IO->write(data, packetSize) == packetSize)
 			{
+				TxStartTimestamp = micros();
 				TxSize = packetSize;
 				TxState = TxStateEnum::TxStart;
 				Task::enable();
@@ -306,14 +299,7 @@ public:
 	/// <param name="channel"></param>
 	virtual void Rx(const uint8_t channel) final
 	{
-		// Notify forced TX end.
-		if (TxState != TxStateEnum::NoTx)
-		{
-			Serial.println("Rx killed Tx.");
-			Listener->OnTx();
-		}
-
-		TxState = TxStateEnum::NoTx;
+		Task::enableIfNot();
 	}
 
 	/// <summary>
@@ -324,13 +310,21 @@ public:
 	/// <returns>The expected transmission duration in microseconds.</returns>
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		return TransmitDelayMicros;
+		return LineDuration;
 	}
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
-		// +1 packet size for Size byte.
-		return (uint32_t)DurationShort + (((uint32_t)DurationRange * (packetSize + 1)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+		if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
+		{
+			return (uint32_t)DurationShort
+				+ (((uint32_t)DurationRange * (packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE))
+					/ (LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE - LoLaPacketDefinition::MIN_PACKET_SIZE));
+		}
+		else
+		{
+			return DurationShort;
+		}
 	}
 
 private:
@@ -347,19 +341,27 @@ private:
 
 	void ClearRx()
 	{
-		// Clear input buffer and size.
-		RxSize = 0;
+		// Clear input buffer.
 		while (IO->available())
 		{
 			IO->read();
 		}
-
-		RxState = RxStateEnum::RxStart;
 		// Force pending interrupts and enable for next.
+		RxState = RxStateEnum::RxStart;
 		EnableInterrupt();
 
 		RxState = RxStateEnum::NoRx;
 		Task::enable();
+	}
+
+	void OnRxDone(const bool rxGood)
+	{
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, LOW);
+#endif
+		Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
+
+		ClearRx();
 	}
 };
 #endif
