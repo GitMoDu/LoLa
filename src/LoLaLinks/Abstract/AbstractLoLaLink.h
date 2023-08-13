@@ -340,6 +340,7 @@ protected:
 			else if (CheckForReportUpdate())
 			{
 				// Report takes priority over clock, as it refers to counters and RSSI.
+				CheckForClockSyncUpdate();
 				Task::enableIfNot();
 			}
 			else if (CheckForClockSyncUpdate())
