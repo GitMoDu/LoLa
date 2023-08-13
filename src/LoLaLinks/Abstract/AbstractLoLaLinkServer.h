@@ -44,7 +44,6 @@ protected:
 	using BaseClass::RandomSource;
 	using BaseClass::PacketService;
 	using BaseClass::LinkTimestamp;
-	using BaseClass::LinkSendDuration;
 
 	using BaseClass::SendPacket;
 	using BaseClass::SetHopperFixedChannel;
@@ -54,10 +53,10 @@ protected:
 	using BaseClass::ResetUnlinkedPacketThrottle;
 	using BaseClass::UnlinkedPacketThrottle;
 
-	using BaseClass::SyncSequence;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
 	using BaseClass::GetStageElapsedMillis;
+	using BaseClass::GetPreLinkDuplexPeriod;
 
 private:
 	const uint16_t PreLinkDuplexPeriod;
@@ -74,6 +73,8 @@ private:
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
 	LinkingStateEnum LinkingState = LinkingStateEnum::AuthenticationRequest;
+
+	uint8_t SyncSequence = 0;
 
 	bool SearchReplyPending = false;
 	bool ClockReplyPending = false;
@@ -93,9 +94,9 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
-		, PreLinkDuplexPeriod(duplex->GetPeriod())
+		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
 		, PreLinkDuplexStart(0)
-		, PreLinkDuplexEnd(PreLinkDuplexStart + (duplex->GetPeriod() / 2))
+		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))
 	{
 	}
 
@@ -765,6 +766,12 @@ protected:
 				return false;
 			}
 		}
+	}
+
+private:
+	static const uint16_t GetPreLinkDuplexEnd(IDuplex* duplex, ILoLaTransceiver* transceiver)
+	{
+		return GetPreLinkDuplexPeriod(duplex, transceiver) / 2;
 	}
 };
 #endif

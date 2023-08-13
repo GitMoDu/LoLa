@@ -59,11 +59,8 @@ private:
 protected:
 	int32_t LinkSendDuration = 0;
 
-	uint8_t SyncSequence = 0;
-
 private:
 	ReportTracker ReportTracking;
-
 
 	uint32_t LastUnlinkedSent = 0;
 
@@ -226,6 +223,20 @@ protected:
 	const bool UnlinkedPacketThrottle()
 	{
 		return micros() - LastUnlinkedSent >= GetPacketThrottlePeriod() * 2;
+	}
+
+	static const uint16_t GetPreLinkDuplexPeriod(IDuplex* duplex, ILoLaTransceiver* transceiver)
+	{
+		if (duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
+		{
+			return (transceiver->GetTimeToAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+				+ transceiver->GetDurationInAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+				+ LoLaLinkDefinition::FULL_DUPLEX_RESEND_WAIT_MICROS) * 2;
+		}
+		else
+		{
+			return duplex->GetPeriod() * 2;
+		}
 	}
 
 protected:

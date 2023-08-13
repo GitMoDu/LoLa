@@ -184,11 +184,6 @@ public:
 			&& endRemainder < (End - DeadZoneMicros);
 	}
 
-	virtual const bool IsFullDuplex() final
-	{
-		return false;
-	}
-
 private:
 	uint_fast16_t Start = 0;
 	uint_fast16_t End = DuplexPeriodMicros / Slots;

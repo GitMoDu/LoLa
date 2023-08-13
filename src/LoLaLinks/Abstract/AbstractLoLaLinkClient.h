@@ -57,11 +57,11 @@ protected:
 	using BaseClass::ResetUnlinkedPacketThrottle;
 	using BaseClass::UnlinkedPacketThrottle;
 
-	using BaseClass::SyncSequence;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::CanRequestSend;
 	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::ResetStageStartTime;
+	using BaseClass::GetPreLinkDuplexPeriod;
 
 private:
 	const uint16_t PreLinkDuplexPeriod;
@@ -88,6 +88,8 @@ private:
 
 	LinkingStateEnum LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
 
+	uint8_t SyncSequence = 0;
+
 	uint8_t SearchChannelTryCount = 0;
 
 	bool WaitingForClockReply = 0;
@@ -106,9 +108,9 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
-		, PreLinkDuplexPeriod(duplex->GetPeriod())
-		, PreLinkDuplexStart(duplex->GetPeriod())
-		, PreLinkDuplexEnd(PreLinkDuplexStart + (duplex->GetPeriod() / 2))
+		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
+		, PreLinkDuplexStart(GetPreLinkDuplexStart(duplex, transceiver))
+		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))
 	{}
 
 protected:
@@ -763,28 +765,32 @@ protected:
 	/// <returns>True when packet can be sent.</returns>
 	const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
 	{
-		if (PreLinkDuplexPeriod == IDuplex::DUPLEX_FULL)
+		const uint32_t startTimestamp = (micros() - PreLinkLastSync) + GetSendDuration(payloadSize);
+
+		const uint_fast16_t startRemainder = startTimestamp % (PreLinkDuplexPeriod);
+		const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod);
+
+		if (endRemainder >= startRemainder
+			&& startRemainder > PreLinkDuplexStart
+			&& endRemainder < PreLinkDuplexEnd)
 		{
-			return true;
+			return PacketService.CanSendPacket();
 		}
 		else
 		{
-			const uint32_t startTimestamp = (micros() - PreLinkLastSync) + GetSendDuration(payloadSize);
-
-			const uint_fast16_t startRemainder = startTimestamp % (PreLinkDuplexPeriod * 2);
-			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod * 2);
-
-			if (endRemainder >= startRemainder
-				&& startRemainder > PreLinkDuplexStart
-				&& endRemainder < PreLinkDuplexEnd)
-			{
-				return PacketService.CanSendPacket();
-			}
-			else
-			{
-				return false;
-			}
+			return false;
 		}
+	}
+
+private:
+	static const uint16_t GetPreLinkDuplexStart(IDuplex* duplex, ILoLaTransceiver* transceiver)
+	{
+		return GetPreLinkDuplexPeriod(duplex, transceiver) / 2;
+	}
+
+	static const uint16_t GetPreLinkDuplexEnd(IDuplex* duplex, ILoLaTransceiver* transceiver)
+	{
+		return GetPreLinkDuplexStart(duplex, transceiver) + (GetPreLinkDuplexPeriod(duplex, transceiver) / 2);
 	}
 };
 #endif

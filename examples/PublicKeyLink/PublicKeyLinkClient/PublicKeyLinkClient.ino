@@ -121,7 +121,11 @@ TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
 NoHopNoChannel ChannelHop;
 #endif
 
-HalfDuplex<DuplexPeriod, true, DuplexDeadZone> Duplex;
+#if defined(USE_SERIAL_TRANSCEIVER)
+FullDuplex Duplex{};
+#else
+HalfDuplex<DuplexPeriod, false, DuplexDeadZone> Duplex{};
+#endif
 
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&TransceiverDriver,

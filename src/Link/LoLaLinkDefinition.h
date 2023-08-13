@@ -149,9 +149,9 @@ public:
 	static constexpr uint8_t TRANSCEIVER_TX_TIMEOUT_PERIOD = 5;
 
 	/// <summary>
-	/// How long to wait before re-sending an answered packet.
+	/// Extra wait on full duplex to avoid self-collision.
 	/// </summary>
-	static constexpr uint16_t FULL_DUPLEX_RESEND_MICROS = 2000;
+	static constexpr uint16_t FULL_DUPLEX_RESEND_WAIT_MICROS = 100;
 
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.
