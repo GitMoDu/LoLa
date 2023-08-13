@@ -51,7 +51,7 @@ private:
 
 	static constexpr uint32_t ByteDuration = (DurationLong / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 	static constexpr uint16_t BitDuration = (DurationLong / ((uint16_t)LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE * 8));
-	static constexpr uint16_t TxHoldDuration = 10 + (BitDuration * 2);
+	static constexpr uint16_t TxHoldDuration = 1 + ByteDuration + BitDuration;
 
 	static constexpr uint32_t LineDuration = BitDuration;
 
@@ -82,12 +82,12 @@ public:
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, IO(io)
 	{
-#ifdef RX_TEST_PIN
+#if defined(RX_TEST_PIN)
 		digitalWrite(RX_TEST_PIN, LOW);
 		pinMode(RX_TEST_PIN, OUTPUT);
 #endif
 
-#ifdef TX_TEST_PIN
+#if defined(TX_TEST_PIN)
 		digitalWrite(TX_TEST_PIN, LOW);
 		pinMode(TX_TEST_PIN, OUTPUT);
 #endif
@@ -108,7 +108,7 @@ public:
 
 		if (RxState == RxStateEnum::NoRx)
 		{
-#ifdef RX_TEST_PIN
+#if defined(RX_TEST_PIN)
 			digitalWrite(RX_TEST_PIN, HIGH);
 #endif
 			RxStartTimestamp = micros();
@@ -117,6 +117,25 @@ public:
 
 		Task::enable();
 	}
+
+#if defined(DEBUG_LOLA)
+	void Debug()
+	{
+		Serial.print(BaudRate);
+		Serial.println(F(" bps Estimation"));
+		Serial.print(F("\tShort Estimation:\t"));
+		Serial.println(GetDurationInAir(LoLaPacketDefinition::MIN_PACKET_SIZE));
+		Serial.print(F("\tLong Estimation:\t"));
+		Serial.println(GetDurationInAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE));
+
+
+		Serial.print(F("\tByteDuration:\t"));
+		Serial.println(ByteDuration);
+		Serial.print(F("\tBitDuration:\t"));
+		Serial.print(BitDuration);
+		Serial.println();
+	}
+#endif
 
 public:
 	virtual bool Callback() final
@@ -139,7 +158,7 @@ public:
 				// Added pause at the end, to clearly separate packets.
 				if (micros() - TxStartTimestamp > LineDuration + GetDurationInAir(TxSize) + TxHoldDuration)
 				{
-#ifdef TX_TEST_PIN
+#if defined(TX_TEST_PIN)
 					digitalWrite(TX_TEST_PIN, LOW);
 #endif
 					Listener->OnTx();
@@ -276,13 +295,14 @@ public:
 	/// Packet copy to serial buffer, and start transmission.
 	/// </summary>
 	/// <param name="data"></param>
-	/// <param name="length"></param>
+	/// <param name="packetSize"></param>
+	/// <param name="channel"></param>
 	/// <returns></returns>
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		if (TxAvailable())
 		{
-#ifdef TX_TEST_PIN
+#if defined(TX_TEST_PIN)
 			digitalWrite(TX_TEST_PIN, HIGH);
 #endif
 			if (IO->write(data, packetSize) == packetSize)
@@ -363,7 +383,7 @@ private:
 
 	void OnRxDone(const bool rxGood)
 	{
-#ifdef RX_TEST_PIN
+#if defined(RX_TEST_PIN)
 		digitalWrite(RX_TEST_PIN, LOW);
 #endif
 		if (rxGood)
