@@ -41,6 +41,7 @@ private:
 	static constexpr uint8_t CALIBRATION_ROUNDS = 10;
 
 protected:
+	using BaseClass::Transceiver;
 	using BaseClass::LinkStage;
 	using BaseClass::SyncClock;
 	using BaseClass::PacketService;
@@ -202,7 +203,9 @@ public:
 	{
 		if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
 		{
-			return LoLaLinkDefinition::FULL_DUPLEX_RESEND_MICROS;
+			return Transceiver->GetTimeToAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+				+ Transceiver->GetDurationInAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+				+ LoLaLinkDefinition::FULL_DUPLEX_RESEND_WAIT_MICROS;
 		}
 		else
 		{
