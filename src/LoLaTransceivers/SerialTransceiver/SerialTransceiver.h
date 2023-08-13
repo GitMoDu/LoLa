@@ -171,9 +171,15 @@ public:
 					{
 						InBuffer[RxSize] = IO->read();
 						RxSize++;
-						if (RxSize >= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+
+						// Packet full, don't wait more.
+						if (RxSize == LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 						{
-							OnRxDone(true); // Packet full, don't wait more.
+							OnRxDone(true);
+						}
+						else if (RxSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+						{
+							OnRxDone(false);
 						}
 					}
 					RxEndTimestamp = micros();
@@ -348,6 +354,7 @@ private:
 		}
 		// Force pending interrupts and enable for next.
 		RxState = RxStateEnum::RxStart;
+		RxSize = 0;
 		EnableInterrupt();
 
 		RxState = RxStateEnum::NoRx;
@@ -359,7 +366,14 @@ private:
 #ifdef RX_TEST_PIN
 		digitalWrite(RX_TEST_PIN, LOW);
 #endif
-		Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
+		if (rxGood)
+		{
+			Listener->OnRx(InBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
+		}
+		else
+		{
+			Listener->OnRxLost(RxStartTimestamp);
+		}
 
 		ClearRx();
 	}
