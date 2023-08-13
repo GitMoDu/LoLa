@@ -67,9 +67,6 @@
 //#define LINK_USE_TIMER_AND_RTC
 
 #define _TASK_OO_CALLBACKS
-#define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
-
-
 #ifdef _TASK_SLEEP_ON_IDLE_RUN
 #undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
 #endif

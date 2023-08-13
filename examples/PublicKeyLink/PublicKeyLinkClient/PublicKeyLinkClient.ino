@@ -34,9 +34,11 @@
 
 
 #define _TASK_OO_CALLBACKS
+
 #ifndef ARDUINO_ARCH_ESP32
 #define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
 #endif
+
 #include <TaskScheduler.h>
 
 #include <ILoLaInclude.h>
@@ -46,7 +48,7 @@
 #if defined(USE_SERIAL_TRANSCEIVER)
 #define SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN 10
 #define SERIAL_TRANSCEIVER_INSTANCE			Serial2
-#define SERIAL_TRANSCEIVER_BAUDRATE			921600
+#define SERIAL_TRANSCEIVER_BAUDRATE			115200
 #elif defined(USE_NRF21_TRANSCEIVER)
 #define NRF21_TRANSCEIVER_PIN_CE			3
 #define NRF21_TRANSCEIVER_PIN_CS			7
@@ -90,8 +92,8 @@ static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 5000;
-static const uint32_t ChannelHopPeriod = 20000;
-static const uint32_t DuplexDeadZone = 50;
+static const uint16_t DuplexDeadZone = 100;
+static const uint32_t ChannelHopPeriod = DuplexPeriod * 4;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
@@ -115,7 +117,7 @@ Stm32RtcClockSource ClockSource(SchedulerBase);
 #endif
 #endif
 
-#if defined(LINK_USE_CHANNEL_HOP)
+#if defined(LINK_USE_CHANNEL_HOP) && !defined(USE_SERIAL_TRANSCEIVER)
 TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
 #else
 NoHopNoChannel ChannelHop;
