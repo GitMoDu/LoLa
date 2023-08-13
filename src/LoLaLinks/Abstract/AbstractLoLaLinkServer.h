@@ -741,30 +741,23 @@ protected:
 	/// <returns>True when packet can be sent.</returns>
 	const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
 	{
-		if (PreLinkDuplexPeriod == IDuplex::DUPLEX_FULL)
+		SyncClock.GetTimestamp(LinkTimestamp);
+		LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
+
+		const uint32_t startTimestamp = LinkTimestamp.GetRollingMicros();
+
+		const uint_fast16_t startRemainder = startTimestamp % (PreLinkDuplexPeriod);
+		const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod);
+
+		if (endRemainder >= startRemainder
+			&& startRemainder > PreLinkDuplexStart
+			&& endRemainder < PreLinkDuplexEnd)
 		{
-			return true;
+			return PacketService.CanSendPacket();
 		}
 		else
 		{
-			SyncClock.GetTimestamp(LinkTimestamp);
-			LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
-
-			const uint32_t startTimestamp = LinkTimestamp.GetRollingMicros();
-
-			const uint_fast16_t startRemainder = startTimestamp % (PreLinkDuplexPeriod * 2);
-			const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod * 2);
-
-			if (endRemainder >= startRemainder
-				&& startRemainder > PreLinkDuplexStart
-				&& endRemainder < PreLinkDuplexEnd)
-			{
-				return PacketService.CanSendPacket();
-			}
-			else
-			{
-				return false;
-			}
+			return false;
 		}
 	}
 
