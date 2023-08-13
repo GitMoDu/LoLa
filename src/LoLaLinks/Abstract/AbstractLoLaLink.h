@@ -380,9 +380,9 @@ protected:
 			this->Owner();
 			Serial.println(F("@Link Event: ReceiveRejected: Counter"));
 			break;
-		case PacketEventEnum::ReceiveRejectedDriver:
+		case PacketEventEnum::ReceiveRejectedTransceiver:
 			this->Owner();
-			Serial.println(F("@Link Event: ReceiveRejected: Driver"));
+			Serial.println(F("@Link Event: ReceiveRejected: Transceiver"));
 			break;
 		case PacketEventEnum::ReceiveRejectedDropped:
 			this->Owner();

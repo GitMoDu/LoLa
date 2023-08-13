@@ -89,7 +89,7 @@ public:
 	// IPacketServiceListener
 	virtual void OnLost(const uint32_t startTimestamp) final
 	{
-		OnEvent(PacketEventEnum::ReceiveRejectedDriver);
+		OnEvent(PacketEventEnum::ReceiveRejectedTransceiver);
 	}
 
 	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final

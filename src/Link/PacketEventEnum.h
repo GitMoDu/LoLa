@@ -8,7 +8,7 @@ enum PacketEventEnum
 	Received,
 	Sent,
 	SendCollisionFailed,
-	ReceiveRejectedDriver,
+	ReceiveRejectedTransceiver,
 	ReceiveRejectedDropped,
 	ReceiveRejectedInvalid,
 	ReceiveRejectedOutOfSlot,
