@@ -38,7 +38,7 @@ class AbstractLoLaLinkPacket
 private:
 	using BaseClass = AbstractLoLaReceiver<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
 
-	static constexpr uint8_t CALIBRATION_ROUNDS = 10;
+	static constexpr uint_least16_t CALIBRATION_ROUNDS = F_CPU / 2000000L;
 
 protected:
 	using BaseClass::Transceiver;
@@ -370,7 +370,7 @@ private:
 	/// </summary>
 	const bool CalibrateSendDuration()
 	{
-		uint32_t calibrationStart = micros();
+		const uint32_t calibrationStart = micros();
 
 		// Measure short (baseline) packet first.
 		uint32_t start = 0;
@@ -378,13 +378,13 @@ private:
 		uint32_t longDuration = 0;
 
 		OutPacket.SetPort(123);
-		for (uint_least8_t i = 0; i < LoLaPacketDefinition::MAX_PAYLOAD_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PAYLOAD_SIZE; i++)
 		{
 			OutPacket.Payload[i] = i + 1;
 		}
 
 		start = micros();
-		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
 			if (!BaseClass::MockSendPacket(OutPacket.Data, 0))
 			{
@@ -395,10 +395,13 @@ private:
 				return false;
 			}
 		}
-		shortDuration = ((micros() - start) / CALIBRATION_ROUNDS);
+		shortDuration = micros();
+		shortDuration -= start;
+		shortDuration /= CALIBRATION_ROUNDS;
+
 
 		start = micros();
-		for (uint_fast8_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
 			if (!BaseClass::MockSendPacket(OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
 			{
@@ -409,30 +412,23 @@ private:
 				return false;
 			}
 		}
+		longDuration = micros();
+		longDuration -= start;
+		longDuration /= CALIBRATION_ROUNDS;
 
-		longDuration = (micros() - start) / CALIBRATION_ROUNDS;
-
-		//const uint32_t scaleDuration = longDuration - shortDuration;
-
-		//// +1 to mitigate low bias by integer rounding.
-		//const uint32_t byteDurationMicros = (scaleDuration / (LoLaPacketDefinition::MAX_PAYLOAD_SIZE - LoLaPacketDefinition::PAYLOAD_INDEX)) + 1;
-
-		//// Remove the base bytes from the base duration,
-		//// as well as the remainder from (now) high-biased byte duration.
-		//const uint32_t baseDurationMicros = shortDuration
-		//	- (byteDurationMicros * LoLaPacketDefinition::PAYLOAD_INDEX)
-		//	- (scaleDuration % (LoLaPacketDefinition::MAX_PAYLOAD_SIZE - LoLaPacketDefinition::PAYLOAD_INDEX));
+		if (longDuration <= shortDuration)
+		{
+			longDuration = shortDuration + 1;
+		}
 
 		const uint32_t calibrationDuration = micros() - calibrationStart;
 
 #if defined(DEBUG_LOLA)
-		Serial.print(F("Calibration done. (max payload size"));
-		Serial.print(LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
-		Serial.println(')');
+		Serial.print(F("Calibration done. ("));
 		Serial.print(CALIBRATION_ROUNDS);
-		Serial.print(F(" rounds) took "));
+		Serial.print(F(" rounds took "));
 		Serial.print(calibrationDuration);
-		Serial.println(F(" us"));
+		Serial.println(F(" us)"));
 		Serial.println();
 #endif
 
