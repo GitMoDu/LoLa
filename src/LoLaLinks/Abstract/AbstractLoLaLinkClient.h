@@ -19,8 +19,11 @@ private:
 	static constexpr uint32_t CLIENT_SLEEP_TIMEOUT_MILLIS = 30000;
 	static constexpr uint32_t CHANNEL_SEARCH_TRY_COUNT = 3;
 
-	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 100;
-	static constexpr uint8_t CLOCK_TUNE_FILTER_RATIO = 160;
+	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
+
+	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
+	static constexpr uint8_t CLOCK_FILTER_RATIO = 90;
+	static constexpr uint8_t CLOCK_TUNE_RATIO = 50;
 
 	enum WaitingStateEnum
 	{
@@ -78,9 +81,10 @@ protected:
 	uint8_t LastKnownBroadCastChannel = INT8_MAX + 1;
 
 private:
-	int32_t ClockErrorFiltered = 0;
-	uint32_t LastCLockSync = 0;
-	uint32_t LastCLockSent = 0;
+	int32_t TuneErrorFiltered = 0;
+	int32_t AdjustErrorFiltered = 0;
+	uint32_t LastClockSync = 0;
+	uint32_t LastClockSent = 0;
 
 	uint32_t PreLinkLastSync = 0;
 
@@ -203,8 +207,7 @@ protected:
 				OnLinkSyncReceived(startTimestamp);
 			}
 #if defined(DEBUG_LOLA)
-			else
-			{
+			else {
 				this->Skipped(F("ServerChallengeRequest."));
 			}
 #endif
@@ -266,16 +269,14 @@ protected:
 						ResetUnlinkedPacketThrottle();
 					}
 #if defined(DEBUG_LOLA)
-					else
-					{
+					else {
 						this->Owner();
 						Serial.println(F("Clock Rejected, trying again."));
 					}
 #endif
 				}
 #if defined(DEBUG_LOLA)
-				else
-				{
+				else {
 					// Invalid estimate, sub-seconds should never match one second.
 					this->Owner();
 					Serial.print(F("Clock Estimate Error Invalid. SubSeconds="));
@@ -350,34 +351,30 @@ protected:
 					EstimateErrorReply.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 2] << 16;
 					EstimateErrorReply.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 3] << 24;
 
-					if (((int32_t)EstimateErrorReply.SubSeconds >= 0 && (int32_t)EstimateErrorReply.SubSeconds < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
-						|| ((int32_t)EstimateErrorReply.SubSeconds < 0 && (int32_t)EstimateErrorReply.SubSeconds > -(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
+					if ((EstimateErrorReply.SubSeconds >= 0 && EstimateErrorReply.SubSeconds < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+						|| (EstimateErrorReply.SubSeconds < 0 && EstimateErrorReply.SubSeconds > -(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
 					{
 						// Due to error limit of LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS, operation doesn't need to be elevated to uint64_t.
-						ClockErrorFiltered += (((int32_t)EstimateErrorReply.SubSeconds - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
-					}
-					else
-					{
-						// Error too big, limiting correction.
-						if ((int32_t)EstimateErrorReply.SubSeconds >= 0)
-						{
-							ClockErrorFiltered += ((LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
-						}
-						else
-						{
-							ClockErrorFiltered += ((-(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS - ClockErrorFiltered) * CLOCK_TUNE_FILTER_RATIO) / UINT8_MAX;
-						}
-					}
+						AdjustErrorFiltered += (((EstimateErrorReply.SubSeconds * 1000) - AdjustErrorFiltered) * CLOCK_FILTER_RATIO) / UINT8_MAX;
+						TuneErrorFiltered += (((EstimateErrorReply.SubSeconds * 1000) - TuneErrorFiltered) * CLOCK_TUNE_RATIO) / UINT8_MAX;
 
-					// Adjust client clock with filtered estimation error.
-					if (ClockErrorFiltered != 0)
-					{
-						SyncClock.ShiftMicros(ClockErrorFiltered);
+						// Adjust client clock with filtered estimation error.
+						SyncClock.ShiftMicros(AdjustErrorFiltered / 1000);
+
+						// Adjust tune and consume adjustment from filter value.
+						SyncClock.ShiftTuneMicros(TuneErrorFiltered / 1000);
+						TuneErrorFiltered -= (TuneErrorFiltered / 1000) * 1000;
+
+						// Stop waiting for a clock reply and timestamp clock sync.
+						WaitingForClockReply = false;
+						LastClockSync = millis();
 					}
-
-					LastCLockSync = millis();
-
-					WaitingForClockReply = false;
+#if defined(DEBUG_LOLA)
+					else {
+						this->Owner();
+						Serial.println(F("Clock Sync error too big, discarding."));
+					}
+#endif
 				}
 #if defined(DEBUG_LOLA)
 				else {
@@ -421,10 +418,11 @@ protected:
 			break;
 		case LinkStageEnum::Linked:
 			LastKnownBroadCastChannel = SearchChannel;
-			ClockErrorFiltered = 0;
+			TuneErrorFiltered = 0;
+			AdjustErrorFiltered = 0;
 			WaitingForClockReply = false;
-			LastCLockSync = millis();
-			LastCLockSent = millis();
+			LastClockSync = millis();
+			LastClockSent = millis();
 			break;
 		default:
 			break;
@@ -522,7 +520,7 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::ClockSyncRequest::HEADER);
 
-				LinkSendDuration = (int32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
+				LinkSendDuration = GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
 
 				SyncClock.GetTimestamp(LinkTimestamp);
 				LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
@@ -641,21 +639,22 @@ protected:
 	{
 		if (WaitingForClockReply)
 		{
-			if (millis() - LastCLockSent > LoLaLinkDefinition::CLOCK_TUNE_RETRY_PERIOD)
+			if (millis() - LastClockSent > CLOCK_TUNE_RETRY_PERIOD)
 			{
 				WaitingForClockReply = false;
+
 				// Wait for reply before trying again.
 				return true;
 			}
 		}
-		else if (millis() - LastCLockSync > LoLaLinkDefinition::CLOCK_TUNE_PERIOD && CanRequestSend())
+		else if (millis() - LastClockSync > LoLaLinkDefinition::CLOCK_TUNE_PERIOD && CanRequestSend())
 		{
 			OutPacket.SetPort(Linked::PORT);
 			OutPacket.SetHeader(Linked::ClockTuneMicrosRequest::HEADER);
 			if (RequestSendPacket(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE))
 			{
 				WaitingForClockReply = true;
-				LastCLockSent = millis();
+				LastClockSent = millis();
 			}
 			return true;
 		}
@@ -687,7 +686,6 @@ private:
 				{
 					OutPacket.SetPort(Unlinked::PORT);
 					OutPacket.SetHeader(Unlinked::SearchRequest::HEADER);
-
 					if (SendPacket(OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
 #if defined(DEBUG_LOLA)
@@ -767,8 +765,8 @@ protected:
 	{
 		const uint32_t startTimestamp = (micros() - PreLinkLastSync) + GetSendDuration(payloadSize);
 
-		const uint_fast16_t startRemainder = startTimestamp % (PreLinkDuplexPeriod);
-		const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod);
+		const uint_fast16_t startRemainder = startTimestamp % PreLinkDuplexPeriod;
+		const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
 
 		if (endRemainder >= startRemainder
 			&& startRemainder > PreLinkDuplexStart
@@ -792,5 +790,26 @@ private:
 	{
 		return GetPreLinkDuplexStart(duplex, transceiver) + (GetPreLinkDuplexPeriod(duplex, transceiver) / 2);
 	}
+
+#if defined(DEBUG_LOLA)
+	void DebugClockError()
+	{
+		return;
+		Serial.print(F("Clock"));
+		Serial.print(F("\tError: "));
+		Serial.print((int32_t)1000 * EstimateErrorReply.SubSeconds);
+		Serial.println(F("ns."));
+		Serial.print(F("\tFiltered: "));
+		Serial.print(AdjustErrorFiltered);
+		Serial.println(F("ns."));
+		Serial.print(F("\tAdjust: "));
+		Serial.print((int32_t)1000 * (AdjustErrorFiltered / 1000));
+		Serial.println(F("ns."));
+		Serial.print(F("\tTune: "));
+		Serial.print(TuneErrorFiltered);
+		Serial.println(F("ns."));
+		Serial.println();
+	}
+#endif
 };
 #endif
