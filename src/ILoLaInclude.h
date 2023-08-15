@@ -13,7 +13,7 @@
 //TODO: Refactor as individual driver includes
 /// Available Packet Drivers
 #include "LoLaTransceivers\VirtualTransceiver\VirtualTransceiver.h"
-#include "LoLaTransceivers\SerialTransceiver\SerialTransceiver.h"
+#include "LoLaTransceivers\UartTransceiver\UartTransceiver.h"
 #include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
 #include "LoLaTransceivers\Si446xTransceiver\Si446xTransceiver.h"
 #include "LoLaTransceivers\EspNowTransceiver\EspNowTransceiver.h"
