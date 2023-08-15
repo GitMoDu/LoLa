@@ -34,13 +34,11 @@
 
 
 #define _TASK_OO_CALLBACKS
-
 #ifndef ARDUINO_ARCH_ESP32
 #define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
 #endif
 
 #include <TaskScheduler.h>
-
 #include <ILoLaInclude.h>
 
 // Transceiver Definitions.
@@ -53,7 +51,11 @@
 #define NRF21_TRANSCEIVER_PIN_CE			3
 #define NRF21_TRANSCEIVER_PIN_CS			7
 #define NRF21_TRANSCEIVER_RX_INTERRUPT_PIN	1
-#define NRF21_TRANSCEIVER_DATA_RATE			RF24_1MBPS
+#define NRF21_TRANSCEIVER_DATA_RATE			RF24_250KBPS
+#elif defined(USE_SI446X_TRANSCEIVER)
+#define SI446X_TRANSCEIVER_PIN_CS			0
+#define SI446X_TRANSCEIVER_PIN_SDN			12
+#define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	11
 #endif
 #else
 #if defined(USE_SERIAL_TRANSCEIVER)
@@ -65,6 +67,10 @@
 #define NRF21_TRANSCEIVER_PIN_CS			10
 #define NRF21_TRANSCEIVER_RX_INTERRUPT_PIN	2
 #define NRF21_TRANSCEIVER_DATA_RATE			RF24_250KBPS
+#elif defined(USE_SI446X_TRANSCEIVER)
+#define SI446X_TRANSCEIVER_PIN_CS			10
+#define SI446X_TRANSCEIVER_PIN_SDN			9
+#define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	2
 #endif
 #endif
 //
@@ -75,7 +81,7 @@ Scheduler SchedulerBase;
 
 // Transceiver Driver.
 #if defined(USE_SERIAL_TRANSCEIVER)
-SerialTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
+UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF21_TRANSCEIVER)
 nRF24Transceiver<NRF21_TRANSCEIVER_PIN_CE, NRF21_TRANSCEIVER_PIN_CS, NRF21_TRANSCEIVER_RX_INTERRUPT_PIN, NRF21_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase);
 #endif
