@@ -144,11 +144,6 @@ public:
 	static constexpr uint16_t LINK_STAGE_TIMEOUT = 1500;
 
 	/// <summary>
-	/// How long to wait before timing out a send.
-	/// </summary>
-	static constexpr uint8_t TRANSCEIVER_TX_TIMEOUT_PERIOD = 5;
-
-	/// <summary>
 	/// Extra wait on full duplex to avoid self-collision.
 	/// </summary>
 	static constexpr uint16_t FULL_DUPLEX_RESEND_WAIT_MICROS = 100;
@@ -174,7 +169,6 @@ public:
 	static constexpr int16_t CLOCK_TUNE_RANGE_MICROS = 250;
 
 	static constexpr uint32_t CLOCK_TUNE_PERIOD = 666;
-	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
 
 private:
 	/// <summary>

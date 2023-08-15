@@ -31,7 +31,8 @@ private:
 		SendingError
 	};
 
-	static constexpr uint32_t SEND_CHECK_PERIOD_MILLIS = 1;
+	static constexpr uint8_t SEND_CHECK_PERIOD_MILLIS = 1;
+	static constexpr uint8_t SEND_TIMEOUT_TOLERANCE_MILLIS = 1;
 
 private:
 	IPacketServiceListener* ServiceListener;
@@ -40,6 +41,7 @@ private:
 	uint8_t* RawOutPacket = nullptr;
 
 	uint32_t SendOutTimestamp = 0;
+	uint8_t SendOutSize = 0;
 
 	volatile uint32_t ReceiveTimestamp = 0;
 	volatile uint8_t PendingReceiveSize = 0;
@@ -93,7 +95,10 @@ public:
 			ServiceListener->OnSendComplete(SendResultEnum::Success);
 			break;
 		case StateEnum::Sending:
-			if (millis() - SendOutTimestamp > LoLaLinkDefinition::TRANSCEIVER_TX_TIMEOUT_PERIOD)
+			if (millis() - SendOutTimestamp >
+				(SEND_TIMEOUT_TOLERANCE_MILLIS
+					+ ((Transceiver->GetTimeToAir(SendOutSize)
+						+ Transceiver->GetDurationInAir(SendOutSize)) / ONE_MILLI_MICROS)))
 			{
 				// Send timeout.
 				State = StateEnum::Done;
@@ -181,6 +186,7 @@ public:
 		if (Transceiver->Tx(RawOutPacket, size, channel))
 		{
 			SendOutTimestamp = millis();
+			SendOutSize = size;
 			State = StateEnum::Sending;
 			Task::enable();
 

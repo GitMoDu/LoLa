@@ -139,14 +139,6 @@ public:
 			return false;
 		}
 
-		if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) / 1000 >= LoLaLinkDefinition::TRANSCEIVER_TX_TIMEOUT_PERIOD)
-		{
-#if defined(DEBUG_LOLA)
-			Serial.println(F("Estimated Time-On-Air is longer than transmit timeout."));
-#endif
-			return false;
-		}
-
 		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL && GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
 		{
 #if defined(DEBUG_LOLA)
@@ -164,9 +156,6 @@ public:
 		}
 
 #if defined(DEBUG_LOLA)
-		Serial.print(F("TRANSCEIVER_TX_TIMEOUT_PERIOD: "));
-		Serial.println(LoLaLinkDefinition::TRANSCEIVER_TX_TIMEOUT_PERIOD);
-
 		Serial.print(F("Duplex Range: "));
 		Serial.println(Duplex->GetRange());
 
