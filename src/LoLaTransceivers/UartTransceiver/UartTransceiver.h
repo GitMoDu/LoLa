@@ -14,12 +14,11 @@
 /// UART/Serial LoLa Transceiver.
 /// Packet start detection and timestamping relies on interrupt pin.
 /// Packets are framed using Consistent Overhead Byte Stuffing (COBS).
-/// Consistent Overhead Byte Stuffing is an encoding that removes all 0 bytes from arbitrary binary data.
 /// The encoded data consists only of bytes with values from 0x01 to 0xFF.
-/// The 0x00 byte can be used to unambiguously indicate packet boundaries.
-/// For messages smaller than 254 bytes, the overhead is constant.
-/// The decoder is designed to detect malformed input data and report an error upon detection.
-/// https://github.com/jacquesf/COBS-Consistent-Overhead-Byte-Stuffing
+/// The 0x00 byte is be used to indicate packet end.
+/// Constant overhead.
+/// Detects malformed input data.
+/// https://github.com/charlesnicholson/nanocobs
 /// </summary>
 /// <typeparam name="SerialType">Type definition of HardwareSerial.</typeparam>
 /// <typeparam name="BaudRate">At least MIN_BAUD_RATE.</typeparam>
