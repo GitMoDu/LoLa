@@ -29,6 +29,8 @@ private:
 	volatile uint32_t CountsOneSecond = 0;
 	volatile uint32_t Seconds = 0;
 
+	int16_t TuneMicros = 0;
+
 private:
 	/// <summary>
 	/// 32 bit, us clock source.
@@ -131,6 +133,21 @@ public:
 
 		// Add local and parameter offset.
 		timestamp.ShiftSubSeconds(OffsetMicros);
+	}
+
+	void ShiftTuneMicros(const int16_t offsetMicros)
+	{
+		TuneMicros += offsetMicros;
+		if (TuneMicros > LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		{
+			TuneMicros = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+		}
+		else if (TuneMicros < -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		{
+			TuneMicros = -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+		}
+
+		ClockSource->TuneClock(TuneMicros);
 	}
 
 	void ShiftMicros(const int32_t offsetMicros)

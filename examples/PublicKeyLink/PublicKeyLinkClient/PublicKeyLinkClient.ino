@@ -105,7 +105,7 @@ ArduinoEntropySource EntropySource;
 #endif
 
 #if !defined(LINK_USE_TIMER_AND_RTC)
-ArduinoTaskTimerClockSource<> TimerClockSource(SchedulerBase);
+ArduinoTaskTimerClockSource TimerClockSource(SchedulerBase);
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
 Stm32TimerSource TimerSource(1, 'A');

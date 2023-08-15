@@ -14,24 +14,24 @@
 
 /// <summary>
 /// Arduino micros() mixed timer and clock source.
-/// Uses task callback to ensure micros() overflows are tracked.
-/// Not tuneable.
+/// Uses task callback to apply tune and ensure micros() overflows are tracked.
 /// </summary>
-template<const uint32_t TimerOffset = 0>
 class ArduinoTaskTimerClockSource : private Task, public virtual IClockSource, public virtual ITimerSource
 {
 private:
-	static constexpr uint32_t CHECK_PERIOD = ONE_SECOND_MICROS;
-
-private:
-	uint32_t Overflows = 0;
 	uint32_t LastMicros = 0;
+	uint32_t LastSmear = 0;
+
+	uint32_t Overflows = 0;
+	uint32_t TuneOffset = 0;
+
+	int16_t TuneMicros = 0;
 
 public:
 	ArduinoTaskTimerClockSource(Scheduler& scheduler)
 		: IClockSource()
 		, ITimerSource()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, Task(0, TASK_FOREVER, &scheduler, false)
 	{}
 
 public:
@@ -41,26 +41,22 @@ public:
 	/// <returns></returns>
 	bool Callback() final
 	{
-		// Immediatelly check on resume.
-		CheckOverflows();
+		const uint32_t smearDelay = CheckSmearAdaptive();
+		const uint32_t overflowDelay = CheckOverflows();
 
-		// How long until next overflow?
-		const uint32_t nextOverflowPeriod = UINT32_MAX - micros();
-
-		if (nextOverflowPeriod > (CHECK_PERIOD * 2))
+		uint32_t waitDelay = smearDelay;
+		if (overflowDelay < smearDelay)
 		{
-			// >2xLONG_CHECK_PERIOD to next overflow, sleep until we're 1xLONG_CHECK_PERIOD away.
-			Task::delay((nextOverflowPeriod - (CHECK_PERIOD * 2)) / ONE_MILLI_MICROS);
+			waitDelay = overflowDelay;
 		}
-		else if (nextOverflowPeriod > CHECK_PERIOD)
+
+		if (waitDelay > 0)
 		{
-			// >LONG_CHECK_PERIOD to next overflow, sleep until we're half-way there.
-			Task::delay((nextOverflowPeriod - CHECK_PERIOD) / ONE_MILLI_MICROS);
+			Task::delay(waitDelay);
 		}
 		else
 		{
-			// Near overflow, check every second.
-			Task::delay(CHECK_PERIOD);
+			Task::enable();
 		}
 
 		return true;
@@ -73,7 +69,7 @@ public:
 	/// <returns></returns>
 	virtual const uint32_t GetCounter() final
 	{
-		return micros() + TimerOffset;
+		return micros() + TuneOffset;
 	}
 
 	/// <summary>
@@ -108,7 +104,15 @@ public:
 	/// <returns></returns>
 	virtual const bool StartClock(IClockSource::IClockListener* tickListener, const int16_t ppm) final
 	{
-		Task::enable();
+		TuneMicros = ppm;
+
+		if (!Task::isEnabled())
+		{
+			LastMicros = micros();
+			LastSmear = LastMicros;
+
+			Task::enable();
+		}
 
 		return true;
 	}
@@ -143,28 +147,140 @@ public:
 
 	/// <summary>
 	/// IClockSource override.
-	/// Arduino Clock Source is not tuneable.
+	/// Arduino Clock Source is tuneable up to +-CLOCK_TUNE_RANGE_MICROS.
 	/// </summary>
 	/// <param name="ppm"></param>
 	virtual void TuneClock(const int16_t ppm) final
 	{
-		Task::enable();
+		if (Task::isEnabled())
+		{
+			if (ppm != TuneMicros)
+			{
+				TuneMicros = ppm;
+
+				Task::enable();
+			}
+			else
+			{
+				Task::enableIfNot();
+			}
+		}
 	}
 
 private:
-	void CheckOverflows()
+	const uint32_t CheckOverflows()
 	{
 		const uint32_t timestamp = micros();
 
+		const uint32_t nextOverflowPeriod = UINT32_MAX - timestamp;
+
+		// Check micros() for rollover and compensate in overflows.
 		if (timestamp < LastMicros)
 		{
 			Overflows++;
-#if defined(DEBUG_LOLA)
-			Serial.println(F("\tMicros overflow detected."));
-#endif
-		}
+			LastMicros = timestamp;
 
-		LastMicros = timestamp;
+#if defined(DEBUG_LOLA)
+			Serial.println(F("\tmicros() overflow detected."));
+#endif
+			return 0;
+		}
+		else if (nextOverflowPeriod < ONE_SECOND_MICROS)
+		{
+			if (nextOverflowPeriod > ONE_MILLI_MICROS)
+			{
+				// Sleep until we're one milisecond away from overflow.
+				return (nextOverflowPeriod - ONE_MILLI_MICROS) / ONE_MILLI_MICROS;
+			}
+			else
+			{
+				// Rollover is imminent.
+				return 0;
+			}
+		}
+		else
+		{
+			// Sleep until we're one second away from overflow.
+			return ((nextOverflowPeriod - ONE_SECOND_MICROS) / ONE_MILLI_MICROS);
+		}
+	}
+
+	const uint32_t GetAdaptiveSmearPeriod()
+	{
+		if (TuneMicros >= LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		{
+			return ONE_SECOND_MILLIS / LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+		}
+		else if (TuneMicros <= -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		{
+			return ONE_SECOND_MILLIS / LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+		}
+		else if (TuneMicros > 0)
+		{
+			return ONE_SECOND_MILLIS / TuneMicros;
+		}
+		else if (TuneMicros < 0)
+		{
+			return ONE_SECOND_MILLIS / -TuneMicros;
+		}
+		else
+		{
+			return ONE_SECOND_MILLIS;
+		}
+	}
+
+	/// <summary>
+	/// Dynamic division up CLOCK_TUNE_RANGE_MICROS smears per second.
+	/// </summary>
+	/// <returns></returns>
+	const uint32_t CheckSmearAdaptive()
+	{
+		if (TuneMicros != 0)
+		{
+			const uint32_t timestamp = millis();
+			const uint32_t smearPeriod = GetAdaptiveSmearPeriod();
+
+			if (timestamp - LastSmear >= smearPeriod)
+			{
+				LastSmear = timestamp;
+
+				// Tune up/down, check TuneOffset for rollover
+				//  and compensate in overflows.
+				const uint32_t preTune = TuneOffset;
+				if (TuneMicros > 0)
+				{
+					TuneOffset++;
+
+					if (TuneOffset < preTune)
+					{
+						Overflows++;
+					}
+				}
+				else if (TuneMicros < 0)
+				{
+					TuneOffset--;
+
+					if (TuneOffset > preTune)
+					{
+						Overflows--;
+					}
+				}
+
+				return smearPeriod;
+			}
+			else if (timestamp - LastSmear < smearPeriod)
+			{
+				return smearPeriod - (timestamp - LastSmear);
+			}
+			else
+			{
+				return 0;
+			}
+		}
+		else
+		{
+			return UINT32_MAX;
+		}
 	}
 };
 #endif

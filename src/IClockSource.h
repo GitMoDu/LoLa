@@ -16,7 +16,7 @@ public:
 	/// <summary>
 	/// Adjust clock source to speed up/slow down as requested.
 	/// </summary>
-	/// <param name="ppm">Absolute tune value, in us/s.</param>
+	/// <param name="ppm">Absolute tune value, in us/s (ppm).</param>
 	virtual void TuneClock(const int16_t ppm) {}
 
 	/// <summary>

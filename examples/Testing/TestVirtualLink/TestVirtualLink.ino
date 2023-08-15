@@ -122,11 +122,12 @@ ArduinoEntropySource EntropySource;
 
 
 #if !defined(LINK_USE_TIMER_AND_RTC)
-ArduinoTaskTimerClockSource<> SharedTimerClockSource(SchedulerBase);
-IClockSource* ServerClock = &SharedTimerClockSource;
-ITimerSource* ServerTimer = &SharedTimerClockSource;
-IClockSource* ClientClock = &SharedTimerClockSource;
-ITimerSource* ClientTimer = &SharedTimerClockSource;
+ArduinoTaskTimerClockSource ServerTimerClockSource(SchedulerBase);
+ArduinoTaskTimerClockSource ClientTimerClockSource(SchedulerBase);
+IClockSource* ServerClock = &ServerTimerClockSource;
+ITimerSource* ServerTimer = &ServerTimerClockSource;
+IClockSource* ClientClock = &ClientTimerClockSource;
+ITimerSource* ClientTimer = &ClientTimerClockSource;
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
 Stm32TimerSource ServerTimerSource(1, 'A');
