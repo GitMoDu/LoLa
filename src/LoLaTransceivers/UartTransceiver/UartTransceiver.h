@@ -12,10 +12,18 @@
 
 /// <summary>
 /// UART/Serial LoLa Transceiver.
+/// Packet start detection and timestamping relies on interrupt pin.
+/// Packets are framed using Consistent Overhead Byte Stuffing (COBS).
+/// Consistent Overhead Byte Stuffing is an encoding that removes all 0 bytes from arbitrary binary data.
+/// The encoded data consists only of bytes with values from 0x01 to 0xFF.
+/// The 0x00 byte can be used to unambiguously indicate packet boundaries.
+/// For messages smaller than 254 bytes, the overhead is constant.
+/// The decoder is designed to detect malformed input data and report an error upon detection.
+/// https://github.com/jacquesf/COBS-Consistent-Overhead-Byte-Stuffing
 /// </summary>
-/// <typeparam name="SerialType"></typeparam>
+/// <typeparam name="SerialType">Type definition of HardwareSerial.</typeparam>
 /// <typeparam name="BaudRate">At least MIN_BAUD_RATE.</typeparam>
-/// <typeparam name="RxInterruptPin"></typeparam>
+/// <typeparam name="RxInterruptPin">The pin tied to UART Rx, for packet start detection and timestamping.</typeparam>
 /// <typeparam name="RxBufferSize">UART hardware buffer size.</typeparam>
 /// <typeparam name="TxBufferSize">UART hardware buffer size.</typeparam>
 template<typename SerialType,
@@ -538,25 +546,19 @@ private:
 			EncodeRangeDuration = 1;
 		}
 
-
 		const uint32_t calibrationEnd = micros();
 
 #if defined(DEBUG_LOLA)
 		Serial.print(F("UART @ "));
 		Serial.print(BaudRate);
 		Serial.println(F(" bps"));
-		Serial.print(F("Calibration took "));
+		Serial.print(F("\tCalibration took "));
 		Serial.print(calibrationEnd - calibrationStart);
 		Serial.println(F(" us"));
-		Serial.print(F("\tShort InAir:\t"));
-		Serial.println(GetDurationInAir(LoLaPacketDefinition::MIN_PACKET_SIZE));
-		Serial.print(F("\tLong InAir:\t"));
-		Serial.println(GetDurationInAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE));
-
-		Serial.print(F("UART Encode short: "));
+		Serial.print(F("\tEncode short: "));
 		Serial.print(EncodeBaseDuration);
 		Serial.println(F("us"));
-		Serial.print(F("UART Encode long: "));
+		Serial.print(F("\tEncode long: "));
 		Serial.print(EncodeBaseDuration + EncodeRangeDuration);
 		Serial.println(F("us"));
 #endif
