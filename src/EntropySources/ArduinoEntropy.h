@@ -1,20 +1,19 @@
-// ArduinoEntropySource.H
+// ArduinoEntropy.H
+#ifndef _ARDUINO_ENTROPY_h
+#define _ARDUINO_ENTROPY_h
 
-#ifndef _ARDUINO_ENTROPY_SOURCE_h
-#define _ARDUINO_ENTROPY_SOURCE_h
-
-#include <IEntropySource.h>
+#include <IEntropy.h>
 
 /// <summary>
 /// Low quality entropy, but it gets the job done anyways.
 /// </summary>
-class ArduinoEntropySource : public virtual IEntropySource
+class ArduinoEntropy : public virtual IEntropy
 {
 private:
 	const uint8_t ExtraNoise;
 
 public:
-	ArduinoEntropySource(const uint8_t extraNoise = 0) : IEntropySource()
+	ArduinoEntropy(const uint8_t extraNoise = 0) : IEntropy()
 		, ExtraNoise(extraNoise)
 	{}
 

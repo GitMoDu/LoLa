@@ -5,7 +5,7 @@
 
 #include "..\Link\LoLaLinkDefinition.h"
 
-#include <IEntropySource.h>
+#include <IEntropy.h>
 #include "LoLaCryptoDefinition.h"
 #include "LoLaCryptoPrimitives.h"
 #include "LoLaRandom.h"

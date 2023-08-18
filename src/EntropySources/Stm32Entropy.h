@@ -1,12 +1,12 @@
-﻿// Stm32EntropySource.H
+﻿// Stm32Entropy.h
 
-#ifndef _STM32_ENTROPY_SOURCE_h
-#define _STM32_ENTROPY_SOURCE_h
+#ifndef _STM32_ENTROPY_h
+#define _STM32_ENTROPY_h
 
-#include <IEntropySource.h>
+#include <IEntropy.h>
 #include <Arduino.h>
 
-class Stm32EntropySource : public virtual IEntropySource
+class Stm32Entropy : public virtual IEntropy
 {
 private:
 	//For STM32, unique ID is read straight from the IC.
@@ -16,7 +16,7 @@ private:
 	static constexpr uint8_t NOISE_CAPTURE_STEPS = sizeof(uint32_t) * 8;
 
 public:
-	Stm32EntropySource() : IEntropySource()
+	Stm32Entropy() : IEntropy()
 	{}
 
 	virtual const uint8_t* GetUniqueId(uint8_t& idSize) final

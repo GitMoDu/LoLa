@@ -61,15 +61,15 @@ private:
 public:
 	LoLaPkeLinkClient(Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
-		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
+		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop,
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, &Session, transceiver, entropySource, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, &Session, transceiver, entropy, clockSource, timerSource, duplex, hop)
 		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
 	{}
 

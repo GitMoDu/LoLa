@@ -88,12 +88,12 @@ public:
 	AbstractLoLaLinkServer(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
+		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, entropySource, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, encoder, transceiver, entropy, clockSource, timerSource, duplex, hop)
 		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
 		, PreLinkDuplexStart(0)
 		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))

@@ -4,6 +4,7 @@
 #define _LOLA_RANDOM_h
 
 #include "LoLaCryptoDefinition.h"
+#include <IEntropy.h>
 #include "PCG.h"
 
 
@@ -14,13 +15,13 @@
 class LoLaRandom
 {
 private:
-	IEntropySource* EntropySource; // Entropy source for CSPRNG.
+	IEntropy* EntropySource; // Entropy source for CSPRNG.
 	
 	PCG::pcg32_random_t Rng;
 
 public:
-	LoLaRandom(IEntropySource* entropySource)
-		: EntropySource(entropySource)
+	LoLaRandom(IEntropy* entropy)
+		: EntropySource(entropy)
 		, Rng()
 	{
 	}

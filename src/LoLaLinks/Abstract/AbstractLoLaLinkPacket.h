@@ -89,15 +89,15 @@ public:
 	AbstractLoLaLinkPacket(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IEntropySource* entropySource,
 		IClockSource* clockSource,
 		ITimerSource* timerSource,
+		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: IChannelHop::IHopListener()
 		, BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
 		, ExpandedKey()
-		, RandomSource(entropySource)
+		, RandomSource(entropy)
 		, FastHasher()
 		, Duplex(duplex)
 		, ChannelHopper(hop)

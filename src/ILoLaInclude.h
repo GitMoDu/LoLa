@@ -27,19 +27,19 @@
 
 /// Entropy Sources
 #if defined(ARDUINO)
-#include "EntropySources\ArduinoEntropySource.h"
+#include "EntropySources\ArduinoEntropy.h"
 #endif
 #if defined(ARDUINO_ARCH_AVR)
-#include "EntropySources\AvrEntropySource.h"
+#include "EntropySources\AvrEntropy.h"
 #endif
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-#include "EntropySources\Stm32EntropySource.h"
+#include "EntropySources\Stm32Entropy.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP8266)
-#include "EntropySources\Esp8266EntropySource.h"
+#include "EntropySources\Esp8266Entropy.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP32)
-//#include "EntropySources\Esp32EntropySource.h"
+//TODO: #include "EntropySources\Esp32Entropy.h"
 #endif 
 ///
 

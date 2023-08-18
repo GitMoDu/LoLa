@@ -1,13 +1,13 @@
-﻿// Esp8266EntropySource.H
+﻿// Esp8266Entropy.h
 
-#ifndef _ESP8266_ENTROPY_SOURCE_h
-#define _ESP8266_ENTROPY_SOURCE_h
+#ifndef _ESP8266_ENTROPY_h
+#define _ESP8266_ENTROPY_h
 
-#include <IEntropySource.h>
+#include <IEntropy.h>
 #include <wl_definitions.h>
 #include <esp8266_peri.h>
 
-class Esp8266EntropySource : public virtual IEntropySource
+class Esp8266Entropy : public virtual IEntropy
 {
 private:
 	static constexpr uint8_t MAC_LENGTH = WL_MAC_ADDR_LENGTH;
@@ -15,7 +15,7 @@ private:
 	uint8_t PseudoMac[MAC_LENGTH];
 
 public:
-	Esp8266EntropySource() : IEntropySource(), PseudoMac()
+	Esp8266Entropy() : IEntropy(), PseudoMac()
 	{
 		FillPseudoMac();
 	}

@@ -113,11 +113,11 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod * 4;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32EntropySource EntropySource;
+Stm32Entropy EntropySource{};
 #elif defined(ARDUINO_ARCH_ESP8266)
-Esp8266EntropySource EntropySource;
+Esp8266Entropy EntropySource{};
 #else 
-ArduinoEntropySource EntropySource;
+ArduinoEntropy EntropySource{};
 #endif
 
 

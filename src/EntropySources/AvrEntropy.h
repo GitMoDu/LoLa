@@ -1,19 +1,19 @@
-// AvrEntropySource.H
+// AvrEntropy.h
 
-#ifndef _AVR_ENTROPY_SOURCE_h
-#define _AVR_ENTROPY_SOURCE_h
+#ifndef _AVR_ENTROPY_h
+#define _AVR_ENTROPY_h
 
-#include <IEntropySource.h>
+#include <IEntropy.h>
 #include <Arduino.h>
 
 /// <summary>
 /// AVRs don't have a unique serial id, so a Device Signature is the second best option.
 /// The signture should be different for each deployed device.
 /// </summary>
-class AvrEntropySource : public virtual IEntropySource
+class AvrEntropy : public virtual IEntropy
 {
 public:
-	AvrEntropySource() : IEntropySource()
+	AvrEntropy() : IEntropy()
 	{}
 
 	virtual const uint8_t* GetUniqueId(uint8_t& idSize) final
