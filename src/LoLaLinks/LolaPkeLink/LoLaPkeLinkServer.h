@@ -119,7 +119,7 @@ protected:
 					if (PkeState == PkeStateEnum::SessionCached)
 					{
 						Session.ResetPke();
-						PkeState = NoPke;
+						PkeState = PkeStateEnum::NoPke;
 						StartSearching();
 						PkeSessionRequested = true;
 						Task::enable();
