@@ -147,7 +147,7 @@ public:
 			return false;
 		}
 
-		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL && Duplex->GetPeriod() >= INT32_MAX)
+		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL && Duplex->GetPeriod() > LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS)
 		{
 #if defined(DEBUG_LOLA)
 			Serial.println(F("Duplex Period is too long for LoLa Link."));

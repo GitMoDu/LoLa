@@ -144,6 +144,11 @@ public:
 	static constexpr uint16_t LINK_STAGE_TIMEOUT = 1500;
 
 	/// <summary>
+	/// Duplex periods over this value are too long for LoLa to work effectively.
+	/// </summary>
+	static constexpr uint16_t DUPLEX_PERIOD_MAX_MICROS = 15000;
+
+	/// <summary>
 	/// Extra wait on full duplex to avoid self-collision.
 	/// </summary>
 	static constexpr uint16_t FULL_DUPLEX_RESEND_WAIT_MICROS = 100;
