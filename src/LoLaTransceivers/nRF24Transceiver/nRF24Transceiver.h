@@ -229,6 +229,7 @@ public:
 			{
 				DoubleEvent = false;
 				InterruptPending = false;
+				Radio.whatHappened(Event.TxOk, Event.TxFail, Event.RxReady);
 				Event.Clear();
 				if (TxPending)
 				{
@@ -257,17 +258,15 @@ public:
 #if defined(DEBUG_LOLA)
 						Serial.print(millis());
 						Serial.print(F(": "));
-						Serial.println(F("Force Tx Ok."));
+						Serial.println(F("Tx Collision, Rx lost."));
 #endif
-						Event.TxOk = true;
-						Event.TxFail = false;
 					}
 				}
 				else if (!Event.RxReady && (Event.TxOk || Event.TxFail))
 				{
 					// Unexpected interrupt.
 #if defined(DEBUG_LOLA)
-					Serial.print(micros());
+					Serial.print(millis());
 					Serial.print(F(": "));
 					Serial.println(F("Unexpected Tx interrupt."));
 #endif
@@ -290,8 +289,13 @@ public:
 					Radio.flush_tx();
 					Radio.startListening();
 					Event.Clear();
-					TxPending = false;
 					InterruptPending = false;
+					if (TxPending)
+					{
+						TxPending = false;
+						Radio.flush_tx();
+						Listener->OnTx();
+					}
 				}
 			}
 		}
