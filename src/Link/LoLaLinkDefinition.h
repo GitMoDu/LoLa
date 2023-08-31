@@ -191,6 +191,10 @@ private:
 		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
 	};
 
+	/// <summary>
+	/// Abstract struct.
+	/// ||RequestId|Seconds|SubSeconds|||
+	/// </summary>
 	template<const uint8_t Header, const uint8_t ExtraSize = 0>
 	struct ClockSyncDefinition : public TemplateHeaderDefinition<Header, 1 + (TIME_SIZE * 2) + ExtraSize>
 	{
@@ -200,9 +204,6 @@ private:
 	};
 
 public:
-	/// <summary>
-	/// Abstract struct just to expose generic size and payload indexes of time messages.
-	/// </summary>
 	struct Unlinked
 	{
 	public:
