@@ -18,7 +18,7 @@ public:
 	/// </summary>
 	/// <param name="startTimestamp"></param>
 	/// <param name="duration"></param>
-	/// <returns>True when the duplex is in transmission range, for the given start end duration.</returns>
+	/// <returns>True when the duplex is in transmission range, for the given start and duration.</returns>
 	virtual const bool IsInRange(const uint32_t startTimestamp, const uint16_t duration) { return false; }
 
 	/// <summary>
