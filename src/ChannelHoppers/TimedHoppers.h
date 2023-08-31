@@ -95,7 +95,7 @@ public:
 	////
 
 	// Hopper Interfaces //
-	virtual constexpr uint32_t GetHopPeriod() final
+	virtual const uint32_t GetHopPeriod() final
 	{
 		return HopPeriodMicros;
 	}
