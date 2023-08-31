@@ -65,7 +65,7 @@ private:
 	static constexpr uint16_t DurationLong = (uint32_t)((REFERENCE_LONG * REFERENCE_BAUD_RATE) / BaudRate);
 	static constexpr uint16_t DurationRange = DurationLong - DurationShort;
 
-	static constexpr uint32_t ByteDuration = (DurationLong / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+	static constexpr uint16_t ByteDuration = (DurationLong / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 	static constexpr uint16_t BitDuration = (DurationLong / ((uint16_t)LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE * 8));
 
 private:
@@ -160,7 +160,7 @@ public:
 					RxSize = 0;
 					RxState = RxStateEnum::RxEnd;
 				}
-				else if (micros() - RxStartTimestamp > LineDuration + ByteDuration + RxWaitDuration)
+				else if (micros() - RxStartTimestamp > ((uint32_t)LineDuration + ByteDuration + RxWaitDuration))
 				{
 					// Too much time elapsed before at least one byte is available, discard.
 					OnRxDone(false);
@@ -198,7 +198,7 @@ public:
 				}
 
 				if (RxState == RxStateEnum::RxEnd
-					&& micros() - RxStartTimestamp > LineDuration + DurationLong + RxWaitDuration)
+					&& micros() - RxStartTimestamp > ((uint32_t)LineDuration + DurationLong + RxWaitDuration))
 				{
 					// Too much time elapsed before packet EoF found, discard.
 					OnRxDone(false);
