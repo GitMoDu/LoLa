@@ -1,4 +1,4 @@
-// EspNowTransceiverr.h
+// EspNowTransceiver.h
 // For use with ESP-NOW (tm) compatible devices such as ESP8266 and ESP32.
 
 #ifndef _ESP_NOW_TRANSCEIVER_h
@@ -14,7 +14,8 @@
 /// TODO: Read RSSI with callback https://github.com/TenoTrash/ESP32_ESPNOW_RSSI/blob/main/Modulo_Receptor_OLED_SPI_RSSI.ino
 /// TODO: Check how many channels in ESP-NOW mode https://github.com/espressif/esp-idf/issues/9592
 /// </summary>
-class EspNowTransceiverr : private Task, public virtual ILoLaTransceiver
+class EspNowTransceiver final
+	: private Task, public virtual ILoLaTransceiver
 {
 private:
 	static const uint8_t ChannelCount = 13;
@@ -23,7 +24,7 @@ private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
 public:
-	EspNowTransceiverr(Scheduler& scheduler)
+	EspNowTransceiver(Scheduler& scheduler)
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{

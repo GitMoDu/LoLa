@@ -21,7 +21,7 @@ template<typename Config,
 	const char OnwerName,
 	const bool LogChannelHop = false,
 	const uint8_t PinTestTx = 0>
-class VirtualTransceiver
+class VirtualTransceiver final
 	: private Task
 	, public virtual IVirtualTransceiver
 	, public virtual ILoLaTransceiver

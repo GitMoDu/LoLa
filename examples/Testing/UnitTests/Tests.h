@@ -27,6 +27,17 @@ const bool TestTimedChannelHopper()
 	return true;
 }
 
+
+/// <summary>
+/// 
+/// </summary>
+/// <typeparam name="Period"></typeparam>
+/// <typeparam name="IsFullDuplex"></typeparam>
+/// <typeparam name="StartIn"></typeparam>
+/// <typeparam name="EndIn"></typeparam>
+/// <typeparam name="Duration"></typeparam>
+/// <param name="duplex"></param>
+/// <returns>True if test successful.</returns>
 template<uint32_t Period, bool IsFullDuplex, uint32_t StartIn, uint32_t EndIn, uint16_t Duration>
 const bool TestDuplex(IDuplex* duplex)
 {

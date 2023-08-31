@@ -103,7 +103,6 @@ class HalfDuplex : public TemplateHalfDuplex<
 	DeadZoneMicros>
 {};
 
-
 /// <summary>
 /// Static asymmetric dual slot duplex.
 /// Suitable for one-side-biased applications,

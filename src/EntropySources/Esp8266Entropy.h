@@ -7,7 +7,7 @@
 #include <wl_definitions.h>
 #include <esp8266_peri.h>
 
-class Esp8266Entropy : public virtual IEntropy
+class Esp8266Entropy final : public virtual IEntropy
 {
 private:
 	static constexpr uint8_t MAC_LENGTH = WL_MAC_ADDR_LENGTH;

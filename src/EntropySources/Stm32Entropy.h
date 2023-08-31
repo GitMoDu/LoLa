@@ -6,7 +6,7 @@
 #include <IEntropy.h>
 #include <Arduino.h>
 
-class Stm32Entropy : public virtual IEntropy
+class Stm32Entropy final : public virtual IEntropy
 {
 private:
 	//For STM32, unique ID is read straight from the IC.

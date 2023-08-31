@@ -31,7 +31,7 @@ static constexpr uint32_t TIMER_CLOCK_TEST_SECONDS = 5;
 static constexpr uint32_t TIMER_CLOCK_TEST_MAX_ERROR = 10;
 
 
-ArduinoEntropySource ArduinoEntropy(123);
+ArduinoEntropy ArduinoEntropySource(123);
 ArduinoTaskTimerClockSource<> ArduinoTimerClock(SchedulerBase);
 
 
@@ -101,7 +101,7 @@ void setup()
 void TestEntropy()
 {
 
-	if (TestEntropySource(ArduinoEntropy))
+	if (TestEntropySource(ArduinoEntropySource))
 	{
 		Serial.println(F("ArduinoEntropySource Pass."));
 	}

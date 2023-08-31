@@ -30,7 +30,8 @@ template<typename SerialType,
 	const uint8_t RxInterruptPin,
 	const size_t RxBufferSize = 64,
 	const size_t TxBufferSize = 64>
-class UartTransceiver : private Task, public virtual ILoLaTransceiver
+class UartTransceiver final
+	: private Task, public virtual ILoLaTransceiver
 {
 private:
 	enum TxStateEnum

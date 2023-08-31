@@ -7,7 +7,7 @@
 
 #include <ILoLaInclude.h>
 
-const bool TestEntropySource(IEntropySource& entropySource)
+const bool TestEntropySource(IEntropy& entropySource)
 {
 	Serial.print(F("\tFixed value:"));
 	uint8_t idSize = 0;

@@ -31,7 +31,8 @@ template<const uint8_t CePin,
 	const uint8_t CsPin,
 	const uint8_t InterruptPin,
 	const rf24_datarate_e DataRate = RF24_250KBPS>
-class nRF24Transceiver : private Task, public virtual ILoLaTransceiver
+class nRF24Transceiver final
+	: private Task, public virtual ILoLaTransceiver
 {
 private:
 	static constexpr uint32_t EVENT_TIMEOUT_MICROS = 3000;
@@ -353,8 +354,8 @@ public:
 
 				Task::enable();
 				return true;
+			}
 		}
-	}
 
 		if (InterruptPending || TxPending || Event.Pending())
 		{
@@ -366,7 +367,7 @@ public:
 			Task::delay(1);
 			return false;
 		}
-}
+	}
 
 
 	/// <summary>

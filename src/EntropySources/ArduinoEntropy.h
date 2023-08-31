@@ -3,11 +3,12 @@
 #define _ARDUINO_ENTROPY_h
 
 #include <IEntropy.h>
+#include <Arduino.h>
 
 /// <summary>
 /// Low quality entropy, but it gets the job done anyways.
 /// </summary>
-class ArduinoEntropy : public virtual IEntropy
+class ArduinoEntropy final : public virtual IEntropy
 {
 private:
 	const uint8_t ExtraNoise;
