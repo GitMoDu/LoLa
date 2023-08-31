@@ -225,6 +225,7 @@ public:
 				}
 				break;
 			case TxStateEnum::TxEnd:
+				IO->clearWriteError();
 				TxEndTimestamp = micros();
 				Listener->OnTx();
 				TxState = TxStateEnum::NoTx;
