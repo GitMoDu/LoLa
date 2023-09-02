@@ -367,7 +367,9 @@ protected:
 #if defined(DEBUG_LOLA)
 					else {
 						this->Owner();
-						Serial.println(F("Clock Sync error too big, discarding."));
+						Serial.print(F("Clock Sync error too big: "));
+						Serial.print(EstimateErrorReply.SubSeconds);
+						Serial.println(F(" us."));
 					}
 #endif
 				}
@@ -529,12 +531,6 @@ protected:
 					OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 					if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
 					{
-#if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.print(F("Sent ClockSync "));
-						Serial.print(LinkTimestamp.Seconds);
-						Serial.println('s');
-#endif
 					}
 				}
 			}

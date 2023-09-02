@@ -1,4 +1,5 @@
 // Timestamp.h
+
 #ifndef _TIMESTAMP_h
 #define _TIMESTAMP_h
 
@@ -13,6 +14,10 @@ static constexpr uint32_t ONE_SECOND_MILLIS = 1000;
 static constexpr uint32_t ONE_MILLI_MICROS = 1000;
 
 
+/// <summary>
+/// Timestamp with seconds [0;UINT32_MAX]
+/// and subseconds [0;1000000].
+/// </summary>
 struct Timestamp
 {
 private:
@@ -33,7 +38,7 @@ public:
 	uint32_t SubSeconds = 0;
 
 	/// <summary>
-	/// Validate timestamp, SubSeconds should never exceed one second.
+	/// Validate timestamp, SubSeconds should never exceed or match one second.
 	/// </summary>
 	/// <returns>True if valid.</returns>
 	const bool Validate()
@@ -88,12 +93,46 @@ public:
 	{
 		return (Seconds * ONE_SECOND_MICROS) + SubSeconds;
 	}
+
+#if defined(DEBUG_LOLA)
+	void print()
+	{
+		Serial.print(Seconds);
+		Serial.print('.');
+		if (SubSeconds < 100000) Serial.print(0);
+		if (SubSeconds < 10000) Serial.print(0);
+		if (SubSeconds < 1000) Serial.print(0);
+		if (SubSeconds < 100) Serial.print(0);
+		if (SubSeconds < 10) Serial.print(0);
+		Serial.print(SubSeconds);
+	}
+#endif
 };
 
 struct TimestampError
 {
 	int32_t Seconds;
 	int32_t SubSeconds;
+
+#if defined(DEBUG_LOLA)
+	void print()
+	{
+		Serial.print(Seconds);
+		Serial.print('.');
+		if (SubSeconds < 0)
+		{
+			Serial.print('-');
+		}
+		if (abs(SubSeconds) < 100000) Serial.print(0);
+		if (abs(SubSeconds) < 10000) Serial.print(0);
+		if (abs(SubSeconds) < 1000) Serial.print(0);
+		if (abs(SubSeconds) < 100) Serial.print(0);
+		if (abs(SubSeconds) < 10) Serial.print(0);
+		Serial.print(abs(SubSeconds));
+		Serial.print('\t');
+		Serial.print(ErrorMicros());
+	}
+#endif
 
 	/// <summary>
 	/// Invalidate estimate error, sub-seconds should never exceed one second.

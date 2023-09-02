@@ -534,7 +534,9 @@ protected:
 				{
 #if defined(DEBUG_LOLA)
 					this->Owner();
-					Serial.println(F("Sent Clock Reply with Error."));
+					Serial.print(F("EstimateError: "));
+					EstimateErrorReply.print();
+					Serial.println();
 #endif
 				}
 			}
