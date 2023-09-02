@@ -50,6 +50,36 @@ protected:
 	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::GetElapsedSinceLastValidReceived;
 
+
+protected:
+	static const uint32_t ArrayToUInt32(const uint8_t* source)
+	{
+		uint32_t value = source[0];
+		value += (uint32_t)source[1] << 8;
+		value += (uint32_t)source[2] << 16;
+		value += (uint32_t)source[3] << 24;
+
+		return value;
+	}
+
+	static void UInt32ToArray(const uint32_t value, uint8_t* target)
+	{
+		target[0] = value;
+		target[1] = value >> 8;
+		target[2] = value >> 16;
+		target[3] = value >> 24;
+	}
+
+	static void Int32ToArray(const int32_t value, uint8_t* target)
+	{
+		UInt32ToArray(value, target);
+	}
+
+	static const int32_t ArrayToInt32(const uint8_t* source)
+	{
+		return (int32_t)ArrayToUInt32(source);
+	}
+
 private:
 	/// <summary>
 	/// Slow value, let the main services hog the CPU during Link time.

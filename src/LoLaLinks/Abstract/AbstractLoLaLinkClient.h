@@ -66,6 +66,11 @@ protected:
 	using BaseClass::ResetStageStartTime;
 	using BaseClass::GetPreLinkDuplexPeriod;
 
+	using BaseClass::UInt32ToArray;
+	using BaseClass::ArrayToUInt32;
+	using BaseClass::Int32ToArray;
+	using BaseClass::ArrayToInt32;
+
 private:
 	const uint16_t PreLinkDuplexPeriod;
 	const uint16_t PreLinkDuplexStart;
@@ -243,14 +248,8 @@ protected:
 					return;
 				}
 
-				EstimateErrorReply.Seconds = payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX];
-				EstimateErrorReply.Seconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] << 8;
-				EstimateErrorReply.Seconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] << 16;
-				EstimateErrorReply.Seconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 3] << 24;
-				EstimateErrorReply.SubSeconds = payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX];
-				EstimateErrorReply.SubSeconds += (uint_least16_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 1] << 8;
-				EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
-				EstimateErrorReply.SubSeconds += (uint32_t)payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
+				EstimateErrorReply.Seconds = ArrayToInt32(&payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX]);
+				EstimateErrorReply.SubSeconds = ArrayToInt32(&payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX]);
 
 				if (EstimateErrorReply.Validate())
 				{
@@ -345,11 +344,7 @@ protected:
 					&& WaitingForClockReply)
 				{
 					// Re-use linking-time estimate holder.
-					EstimateErrorReply.Seconds = 0;
-					EstimateErrorReply.SubSeconds = payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX];
-					EstimateErrorReply.SubSeconds += (uint_least16_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 1] << 8;
-					EstimateErrorReply.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 2] << 16;
-					EstimateErrorReply.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 3] << 24;
+					EstimateErrorReply.SubSeconds = ArrayToInt32(&payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX]);
 
 					if ((EstimateErrorReply.SubSeconds >= 0 && EstimateErrorReply.SubSeconds < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
 						|| (EstimateErrorReply.SubSeconds < 0 && EstimateErrorReply.SubSeconds > -(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
@@ -525,15 +520,8 @@ protected:
 				SyncClock.GetTimestamp(LinkTimestamp);
 				LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
 
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX] = LinkTimestamp.Seconds;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 1] = LinkTimestamp.Seconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 2] = LinkTimestamp.Seconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 3] = LinkTimestamp.Seconds >> 24;
-
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX] = LinkTimestamp.SubSeconds;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 1] = LinkTimestamp.SubSeconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] = LinkTimestamp.SubSeconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] = LinkTimestamp.SubSeconds >> 24;
+				UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
+				UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
 
 				if (UnlinkedCanSendPacket(Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
@@ -626,12 +614,7 @@ protected:
 			SyncClock.GetTimestamp(LinkTimestamp);
 			LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
 
-			const uint32_t rolling = LinkTimestamp.GetRollingMicros();
-
-			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX] = rolling;
-			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 1] = rolling >> 8;
-			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 2] = rolling >> 16;
-			OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 3] = rolling >> 24;
+			UInt32ToArray(LinkTimestamp.GetRollingMicros(), &OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
 		}
 	}
 

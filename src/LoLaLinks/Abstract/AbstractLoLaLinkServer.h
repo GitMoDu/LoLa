@@ -58,6 +58,11 @@ protected:
 	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::GetPreLinkDuplexPeriod;
 
+	using BaseClass::UInt32ToArray;
+	using BaseClass::ArrayToUInt32;
+	using BaseClass::Int32ToArray;
+	using BaseClass::ArrayToInt32;
+
 private:
 	const uint16_t PreLinkDuplexPeriod;
 	const uint16_t PreLinkDuplexStart;
@@ -274,14 +279,8 @@ protected:
 				}
 
 				SyncSequence = payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX];
-				InEstimate.Seconds = payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX];
-				InEstimate.Seconds += payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 1] << 8;
-				InEstimate.Seconds += payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 2] << 16;
-				InEstimate.Seconds += payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX + 3] << 24;
-				InEstimate.SubSeconds = payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX];
-				InEstimate.SubSeconds += payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 1] << 8;
-				InEstimate.SubSeconds += payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 2] << 16;
-				InEstimate.SubSeconds += payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX + 3] << 24;
+				InEstimate.Seconds = ArrayToUInt32(&payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
+				InEstimate.SubSeconds = ArrayToUInt32(&payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
 
 				if (!InEstimate.Validate())
 				{
@@ -367,10 +366,8 @@ protected:
 					&& !ClockReplyPending)
 				{
 					// Re-use linking-time clock sync holders.
-					InEstimate.SubSeconds = payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX];
-					InEstimate.SubSeconds += (uint_least16_t)payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 1] << 8;
-					InEstimate.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 2] << 16;
-					InEstimate.SubSeconds += (uint32_t)payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX + 3] << 24;
+					InEstimate.Seconds = 0;
+					InEstimate.SubSeconds = ArrayToUInt32(&payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
 
 					SyncClock.GetTimestamp(LinkTimestamp);
 					LinkTimestamp.ShiftSubSeconds(startTimestamp - micros());
@@ -520,14 +517,9 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::ClockSyncReply::HEADER);
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 0] = EstimateErrorReply.Seconds;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 1] = EstimateErrorReply.Seconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 2] = EstimateErrorReply.Seconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX + 3] = EstimateErrorReply.Seconds >> 24;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 0] = EstimateErrorReply.SubSeconds;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 1] = EstimateErrorReply.SubSeconds >> 8;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 2] = EstimateErrorReply.SubSeconds >> 16;
-				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX + 3] = EstimateErrorReply.SubSeconds >> 24;
+
+				Int32ToArray(EstimateErrorReply.Seconds, &OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX]);
+				Int32ToArray(EstimateErrorReply.SubSeconds, &OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX]);
 
 				if (InEstimateWithinTolerance())
 				{
@@ -605,10 +597,7 @@ protected:
 			{
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.SetHeader(Linked::ClockTuneMicrosReply::HEADER);
-				OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 0] = EstimateErrorReply.SubSeconds;
-				OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 1] = EstimateErrorReply.SubSeconds >> 8;
-				OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 2] = EstimateErrorReply.SubSeconds >> 16;
-				OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX + 3] = EstimateErrorReply.SubSeconds >> 24;
+				Int32ToArray(EstimateErrorReply.SubSeconds, &OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX]);
 
 				if (RequestSendPacket(Linked::ClockTuneMicrosReply::PAYLOAD_SIZE))
 				{
