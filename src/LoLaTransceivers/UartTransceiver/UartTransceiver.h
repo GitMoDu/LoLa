@@ -12,7 +12,7 @@
 
 /// <summary>
 /// UART/Serial LoLa Transceiver.
-/// Packet start detection and timestamping relies on interrupt pin.
+/// Packet start detection and timestamping relies on interrupt tapping of the Rx pin.
 /// Packets are framed using Consistent Overhead Byte Stuffing (COBS).
 /// The encoded data consists only of bytes with values from 0x01 to 0xFF.
 /// The 0x00 byte is be used to indicate packet end.
