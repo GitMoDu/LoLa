@@ -7,7 +7,7 @@
 #include <TaskSchedulerDeclarations.h>
 
 #include "..\Link\IChannelHop.h"
-#include "..\Clock\SynchronizedClock.h"
+#include "..\Clock\LinkClock.h"
 #include "..\Clock\Timestamp.h"
 
 template<const uint32_t HopPeriodMicros>
@@ -49,7 +49,7 @@ private:
 private:
 	IChannelHop::IHopListener* Listener = nullptr;
 
-	SynchronizedClock* SyncClock = nullptr;
+	LinkClock* Clock = nullptr;
 
 	Timestamp CheckTimestamp{};
 
@@ -71,12 +71,12 @@ public:
 #endif
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
 	{
 		Listener = listener;
-		SyncClock = syncClock;
+		Clock = clock;
 
-		return SyncClock != nullptr && Listener != nullptr && HopPeriodMicros > 1;
+		return Clock != nullptr && Listener != nullptr && HopPeriodMicros > 1;
 	}
 
 	// General Channel Interfaces //
@@ -128,7 +128,7 @@ public:
 
 	virtual bool Callback() final
 	{
-		SyncClock->GetTimestamp(CheckTimestamp);
+		Clock->GetTimestamp(CheckTimestamp);
 		HopIndex = GetHopIndex(CheckTimestamp.GetRollingMicros());
 
 		switch (HopperState)

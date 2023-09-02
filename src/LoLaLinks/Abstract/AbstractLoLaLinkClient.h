@@ -22,8 +22,8 @@ private:
 	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
 
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
-	static constexpr uint8_t CLOCK_FILTER_RATIO = 90;
-	static constexpr uint8_t CLOCK_TUNE_RATIO = 50;
+	static constexpr uint8_t CLOCK_FILTER_RATIO = 130;
+	static constexpr uint8_t CLOCK_TUNE_RATIO = 3;
 
 	enum WaitingStateEnum
 	{
@@ -111,12 +111,11 @@ public:
 	AbstractLoLaLinkClient(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IClockSource* clockSource,
-		ITimerSource* timerSource,
 		IEntropy* entropy,
+		ICycles* cycles,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, entropy, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, encoder, transceiver, entropy, cycles, duplex, hop)
 		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
 		, PreLinkDuplexStart(GetPreLinkDuplexStart(duplex, transceiver))
 		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))
@@ -255,7 +254,7 @@ protected:
 				{
 					// Adjust local clock to match estimation error.
 					SyncClock.ShiftSeconds(EstimateErrorReply.Seconds);
-					SyncClock.ShiftMicros(EstimateErrorReply.SubSeconds);
+					SyncClock.ShiftSubSeconds(EstimateErrorReply.SubSeconds);
 
 					if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
 					{
@@ -354,10 +353,10 @@ protected:
 						TuneErrorFiltered += (((EstimateErrorReply.SubSeconds * 1000) - TuneErrorFiltered) * CLOCK_TUNE_RATIO) / UINT8_MAX;
 
 						// Adjust client clock with filtered estimation error.
-						SyncClock.ShiftMicros(AdjustErrorFiltered / 1000);
+						SyncClock.ShiftSubSeconds(AdjustErrorFiltered / 1000);
 
 						// Adjust tune and consume adjustment from filter value.
-						SyncClock.ShiftTuneMicros(TuneErrorFiltered / 1000);
+						SyncClock.ShiftTune(TuneErrorFiltered / 1000);
 						TuneErrorFiltered -= (TuneErrorFiltered / 1000) * 1000;
 
 						// Stop waiting for a clock reply and timestamp clock sync.

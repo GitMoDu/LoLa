@@ -11,7 +11,7 @@
 
 #include "..\..\Link\LoLaPacketService.h"
 
-#include "..\..\Clock\SynchronizedClock.h"
+#include "..\..\Clock\LinkClock.h"
 
 #include "..\..\Link\ILoLaLink.h"
 #include "..\..\Link\LoLaPacketDefinition.h"
@@ -73,7 +73,7 @@ protected:
 
 protected:
 	// Duplex, Channel Hop and Cryptography depend on a synchronized clock between Server and Client.
-	SynchronizedClock SyncClock;
+	LinkClock SyncClock;
 
 	// Current Link Stage for packet handling.
 	volatile LinkStageEnum LinkStage = LinkStageEnum::Disabled;
@@ -104,8 +104,7 @@ public:
 	AbstractLoLa(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IClockSource* clockSource,
-		ITimerSource* timerSource)
+		ICycles* cycles)
 		: ILoLaLink()
 		, IPacketServiceListener()
 		, BaseClass(scheduler, this)
@@ -113,7 +112,7 @@ public:
 		, PacketService(scheduler, this, transceiver, RawInPacket, RawOutPacket)
 		, Transceiver(transceiver)
 		, Encoder(encoder)
-		, SyncClock(clockSource, timerSource)
+		, SyncClock(scheduler, cycles)
 	{}
 
 	virtual const bool Setup()

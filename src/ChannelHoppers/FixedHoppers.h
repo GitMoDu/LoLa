@@ -15,7 +15,7 @@ public:
 	{}
 
 public:
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
 	{
 		return true;
 	}
@@ -52,7 +52,7 @@ public:
 		return IChannelHop::NOT_A_HOPPER;
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
 	{
 		return true;
 	}
@@ -87,7 +87,7 @@ public:
 		FixedChannel = channel;
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
 	{
 		return true;
 	}
@@ -126,7 +126,7 @@ public:
 		FixedChannel = channel;
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
 	{
 		return true;
 	}

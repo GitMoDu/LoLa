@@ -114,12 +114,11 @@ public:
 	AbstractLoLaLink(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IClockSource* clockSource,
-		ITimerSource* timerSource,
 		IEntropy* entropy,
+		ICycles* cycles,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, entropy, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, encoder, transceiver, entropy, cycles, duplex, hop)
 		, ReportTracking()
 	{}
 
@@ -334,7 +333,7 @@ protected:
 			Task::disable();
 			break;
 		case LinkStageEnum::Booting:
-			SyncClock.Start();
+			SyncClock.Start(0);
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 			if (Transceiver->Start())
 			{

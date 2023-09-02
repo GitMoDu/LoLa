@@ -120,30 +120,18 @@ Esp8266Entropy EntropySource{};
 ArduinoEntropy EntropySource{};
 #endif
 
-
 #if !defined(LINK_USE_TIMER_AND_RTC)
-ArduinoTaskTimerClockSource ServerTimerClockSource(SchedulerBase);
-ArduinoTaskTimerClockSource ClientTimerClockSource(SchedulerBase);
-IClockSource* ServerClock = &ServerTimerClockSource;
-ITimerSource* ServerTimer = &ServerTimerClockSource;
-IClockSource* ClientClock = &ClientTimerClockSource;
-ITimerSource* ClientTimer = &ClientTimerClockSource;
+ArduinoCycles<UINT32_MAX - 10000000> ServerCyclesSource{};
+ArduinoCycles<0> ClientCyclesSource{};
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32TimerSource ServerTimerSource(1, 'A');
-Stm32RtcClockSource ServerClockSource(SchedulerBase);
-
-Stm32RtcClockSource ClientClockSource(SchedulerBase);
-Stm32TimerSource ClientTimerSource(2, 'A');
-//#elif defined(ARDUINO_ARCH_ESP8266)
+Stm32TimerCycles<1, 'A'> ServerCyclesSource{};
+Stm32TimerCycles<2, 'A'> ClientCyclesSource{};
+#elif defined(ARDUINO_ARCH_ESP8266)
+#error No CyclesSource found.
 #else 
-#error No RTC/Timer sources found.
+#error No CyclesSource found.
 #endif
-IClockSource* ServerClock = &ServerClockSource;
-ITimerSource* ServerTimer = &ServerTimerSource;
-
-IClockSource* ClientClock = &ClientClockSource;
-ITimerSource* ClientTimer = &ClientTimerSource;
 #endif
 
 #if defined(LINK_USE_CHANNEL_HOP)
@@ -160,8 +148,7 @@ HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 LoLaPkeLinkServer<> Server(SchedulerBase,
 	&ServerTransceiver,
 	&EntropySource,
-	ServerClock,
-	ServerTimer,
+	&ServerCyclesSource,
 	&ServerDuplex,
 	&ServerChannelHop,
 	ServerPublicKey,
@@ -174,8 +161,7 @@ HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&ClientTransceiver,
 	&EntropySource,
-	ClientClock,
-	ClientTimer,
+	&ClientCyclesSource,
 	&ClientDuplex,
 	&ClientChannelHop,
 	ClientPublicKey,

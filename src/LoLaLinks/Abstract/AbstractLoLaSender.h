@@ -45,9 +45,8 @@ public:
 	AbstractLoLaSender(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IClockSource* clockSource,
-		ITimerSource* timerSource)
-		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource)
+		ICycles* cycles)
+		: BaseClass(scheduler, encoder, transceiver, cycles)
 	{}
 
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
