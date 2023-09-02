@@ -34,8 +34,10 @@ private:
 		return HopPeriodMillis() > 0;
 	}
 
-#ifdef LOLA_UNIT_TESTING
+#if defined(LOLA_UNIT_TESTING)
 public:
+#else
+private:
 #endif
 	static constexpr uint32_t GetDelayPeriod()
 	{
