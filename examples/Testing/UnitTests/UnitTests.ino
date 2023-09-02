@@ -1,5 +1,6 @@
 #define SERIAL_BAUD_RATE 115200
 
+#define DEBUG_LOLA
 #define LOLA_UNIT_TESTING
 
 #define _TASK_OO_CALLBACKS
@@ -10,6 +11,9 @@
 #include <ILoLaInclude.h>
 #include <Arduino.h>
 #include "Tests.h"
+#include "TestTask.h"
+#include "TimestampTest.h"
+#include "Mock.h"
 
 
 // Process scheduler.
@@ -101,6 +105,16 @@ const bool PerformUnitTests()
 	{
 		allTestsOk = false;
 		Serial.println(F("TestDuplexes Fail."));
+	}
+
+	if (TimestampTest::RunTests())
+	{
+		Serial.println(F("TestTimestamp Pass."));
+	}
+	else
+	{
+		allTestsOk = false;
+		Serial.println(F("TestTimestamp Fail."));
 	}
 
 	return allTestsOk;
