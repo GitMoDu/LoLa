@@ -3,16 +3,7 @@
 #ifndef _TIMESTAMP_h
 #define _TIMESTAMP_h
 
-#include <stdint.h>
-#include <ITimerSource.h>
-
-
-
-static constexpr uint32_t ONE_SECOND_MICROS = 1000000;
-static constexpr uint32_t ONE_SECOND_MILLIS = 1000;
-
-static constexpr uint32_t ONE_MILLI_MICROS = 1000;
-
+#include "Clock\Time.h"
 
 /// <summary>
 /// Timestamp with seconds [0;UINT32_MAX]
@@ -20,20 +11,6 @@ static constexpr uint32_t ONE_MILLI_MICROS = 1000;
 /// </summary>
 struct Timestamp
 {
-private:
-	/// <summary>
-	/// UINT32_MAX/1000000 us	= 4294.967295 s
-	/// UINT32_MAX/1000000		= 4294
-	/// </summary>
-	static constexpr uint32_t SECONDS_ROLLOVER = UINT32_MAX / ONE_SECOND_MICROS;
-
-	/// <summary>
-	/// UINT32_MAX/1000000 us	= 4294.967295 s
-	/// UINT32_MAX%1000000		= 967295
-	/// </summary>
-	static constexpr uint32_t SUB_SECONDS_ROLLOVER = UINT32_MAX % ONE_SECOND_MICROS;
-
-public:
 	uint32_t Seconds = 0;
 	uint32_t SubSeconds = 0;
 
