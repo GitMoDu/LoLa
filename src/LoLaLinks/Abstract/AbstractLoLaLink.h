@@ -436,7 +436,7 @@ protected:
 			break;
 		case PacketEventEnum::ReceiveLossDetected:
 			this->Owner();
-			Serial.println(F("@Link Even: Detected lost packet(s)."));
+			Serial.println(F("@Link Event: Detected lost packet(s)."));
 			break;
 		case PacketEventEnum::Sent:
 			break;
