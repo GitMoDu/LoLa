@@ -159,9 +159,9 @@ VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerTransc
 HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 LoLaPkeLinkServer<> Server(SchedulerBase,
 	&ServerTransceiver,
-	&EntropySource,
 	ServerClock,
 	ServerTimer,
+	&EntropySource,
 	&ServerDuplex,
 	&ServerChannelHop,
 	ServerPublicKey,
@@ -173,9 +173,9 @@ VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> 
 HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&ClientTransceiver,
-	&EntropySource,
 	ClientClock,
 	ClientTimer,
+	&EntropySource,
 	&ClientDuplex,
 	&ClientChannelHop,
 	ClientPublicKey,

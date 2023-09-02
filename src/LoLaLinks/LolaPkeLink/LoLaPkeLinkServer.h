@@ -75,7 +75,7 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, &Session, transceiver, entropy, clockSource, timerSource, duplex, hop)
+		: BaseClass(scheduler, &Session, transceiver, clockSource, timerSource, entropy, duplex, hop)
 		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
 	{}
 
