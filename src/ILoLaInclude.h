@@ -67,7 +67,6 @@
 /// Available Link Modules
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkServer.h"
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkClient.h"
-//#include "LoLaLinkLight\LoLaLinkLight.h"
 
 /// Available Link Based Services
 #if defined(LOLA_DEBUG)
