@@ -67,14 +67,14 @@ private:
 public:
 	LoLaPkeLinkServer(Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
-		IEntropy* entropy,
 		ICycles* cycles,
+		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop,
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, &Session, transceiver, entropy, cycles, duplex, hop)
+		: BaseClass(scheduler, &Session, transceiver, cycles, entropy, duplex, hop)
 		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
 	{}
 

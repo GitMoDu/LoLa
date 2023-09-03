@@ -97,7 +97,7 @@ public:
 		ICycles* cycles,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, entropy, cycles, duplex, hop)
+		: BaseClass(scheduler, encoder, transceiver, cycles, entropy, duplex, hop)
 		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
 		, PreLinkDuplexStart(0)
 		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))

@@ -89,8 +89,8 @@ public:
 	AbstractLoLaLinkPacket(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IEntropy* entropy,
 		ICycles* cycles,
+		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: IChannelHop::IHopListener()
