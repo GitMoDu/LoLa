@@ -93,8 +93,8 @@ public:
 	AbstractLoLaLinkServer(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IEntropy* entropy,
 		ICycles* cycles,
+		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, encoder, transceiver, cycles, entropy, duplex, hop)
