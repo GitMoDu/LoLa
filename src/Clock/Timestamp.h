@@ -23,6 +23,11 @@ struct Timestamp
 		return SubSeconds < ONE_SECOND_MICROS;
 	}
 
+	void ShiftSeconds(const int32_t offsetSeconds)
+	{
+		Seconds += offsetSeconds;
+	}
+
 	/// Shift SubSeconds by micros and consolidate timestamp.
 	void ShiftSubSeconds(const int32_t offsetMicros)
 	{

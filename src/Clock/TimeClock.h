@@ -68,7 +68,7 @@ public:
 		// This enableds the full range of UINT32_MAX us.
 		timestamp.Seconds = 0;
 		timestamp.SubSeconds += GetElapsedDuration(cyclestamp);
-		timestamp.ConsolidateSubSeconds();
+		timestamp.ConsolidateOverflow();
 
 		// Shift cycle clock overflows.
 		timestamp.ShiftSeconds(overflows * OverflowWrapSeconds);
