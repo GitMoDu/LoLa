@@ -98,7 +98,7 @@ public:
 		Seconds += offsetSeconds;
 	}
 
-	void GetTimestamp(Timestamp& timestamp)
+	void GetTimestampMonotonic(Timestamp& timestamp)
 	{
 		// Get the latest clock seconds and timer counter.
 		timestamp.SubSeconds = TimerSource->GetCounter();
@@ -126,6 +126,12 @@ public:
 			timestamp.SubSeconds += overflows * MICROS_OVERFLOW_WRAP_REMAINDER;
 			timestamp.ConsolidateSubSeconds();
 		}
+	}
+
+	void GetTimestamp(Timestamp& timestamp)
+	{
+		// Get the latest monotonic timestamp.
+		GetTimestampMonotonic(timestamp);
 
 		// Add local and parameter offset.
 		timestamp.ShiftSubSeconds(OffsetMicros);

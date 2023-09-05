@@ -142,7 +142,7 @@ public:
 
 	virtual const uint32_t GetLinkDuration() final
 	{
-		SyncClock.GetTimestamp(LinkTimestamp);
+		SyncClock.GetTimestampMonotonic(LinkTimestamp);
 
 		return LinkTimestamp.Seconds - LinkStartSeconds;
 	}
@@ -290,7 +290,7 @@ protected:
 		case LinkStageEnum::Linking:
 			break;
 		case LinkStageEnum::Linked:
-			SyncClock.GetTimestamp(LinkTimestamp);
+			SyncClock.GetTimestampMonotonic(LinkTimestamp);
 			LinkStartSeconds = LinkTimestamp.Seconds;
 			ResetLastValidReceived();
 			ReportTracking.RequestReportUpdate(true);
