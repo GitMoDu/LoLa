@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include "Tests.h"
+#include <Clock\Timestamp.h>
 
 class TimestampTest
 {
@@ -160,7 +161,7 @@ private:
 	static const bool TestSubSeconds()
 	{
 		Serial.print('.');
-		for (uint32_t i = 0; i <= TestRange; i++)
+		for (uint32_t i = 0; i < TestRange; i++)
 		{
 			if (!TestTimestampSubSecond<SecondsOffset, SubSecondsOffset>(i))
 			{
@@ -339,6 +340,7 @@ private:
 	}
 
 public:
+	template<uint32_t Range>
 	static const bool RunTests()
 	{
 		if (!TestTimestampShiftSeconds<Range>())
