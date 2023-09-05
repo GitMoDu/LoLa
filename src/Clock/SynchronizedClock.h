@@ -22,7 +22,7 @@ private:
 	static constexpr uint32_t MICROS_OVERFLOW_WRAP_REMAINDER = 967295;
 
 private:
-	uint32_t OffsetMicros = 1;
+	int32_t OffsetMicros = 0;
 
 	uint32_t LastTickCounter = 0;
 	volatile uint32_t TickCounter = 0;
@@ -122,9 +122,9 @@ public:
 		timestamp.ShiftSubSeconds(OffsetMicros);
 	}
 
-	void ShiftTuneMicros(const int16_t offsetMicros)
+	void ShiftTuneMicros(const int16_t ppm)
 	{
-		TuneMicros += offsetMicros;
+		TuneMicros += ppm;
 		if (TuneMicros > LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
 		{
 			TuneMicros = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
@@ -141,10 +141,11 @@ public:
 	{
 		OffsetMicros += offsetMicros;
 
-		if (OffsetMicros >= ONE_SECOND_MICROS)
+		if (OffsetMicros >= (int32_t)ONE_SECOND_MICROS
+			|| OffsetMicros <= -(int32_t)ONE_SECOND_MICROS)
 		{
-			Seconds += OffsetMicros / ONE_SECOND_MICROS;
-			OffsetMicros %= ONE_SECOND_MICROS;
+			Seconds += OffsetMicros / (int32_t)ONE_SECOND_MICROS;
+			OffsetMicros %= (int32_t)ONE_SECOND_MICROS;
 		}
 	}
 };

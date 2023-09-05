@@ -23,7 +23,7 @@ private:
 	uint32_t LastSmear = 0;
 
 	uint32_t Overflows = 0;
-	uint32_t TuneOffset = 0;
+	int32_t TuneOffset = 0;
 
 	int16_t TuneMicros = 0;
 
@@ -69,6 +69,8 @@ public:
 	/// <returns></returns>
 	virtual const uint32_t GetCounter() final
 	{
+		CheckSmearAdaptive();
+
 		return micros() + TuneOffset;
 	}
 
@@ -123,6 +125,7 @@ public:
 	virtual const uint32_t GetTicklessOverflows() final
 	{
 		CheckOverflows();
+		CheckSmearAdaptive();
 
 		return Overflows;
 	}
@@ -236,7 +239,6 @@ private:
 
 				// Tune up/down, check TuneOffset for rollover
 				//  and compensate in overflows.
-				const uint32_t preTune = TuneOffset;
 				if (TuneMicros > 0)
 				{
 					if (TuneOffset == INT32_MAX)
@@ -247,7 +249,7 @@ private:
 				}
 				else if (TuneMicros < 0)
 				{
-					if (TuneOffset == 0)
+					if (TuneOffset == INT32_MIN)
 					{
 						Overflows--;
 					}
