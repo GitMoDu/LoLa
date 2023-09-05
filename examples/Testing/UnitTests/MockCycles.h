@@ -1,4 +1,4 @@
-// Mock.h
+// MockCycles.h
 
 #ifndef _MOCK_h
 #define _MOCK_h
@@ -68,6 +68,4 @@ public:
 	virtual void StopCycles() final
 	{}
 };
-
 #endif
-

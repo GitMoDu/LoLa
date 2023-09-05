@@ -33,9 +33,9 @@ private:
 
 	uint32_t MatchStartTimestamp = 0;
 
-	CycleClock* MatchReference = nullptr;
-	CycleClock* MatchTest = nullptr;
-	void (*MatchTestComplete)(const bool success) = nullptr;
+	//CycleClock* MatchReference = nullptr;
+	//CycleClock* MatchTest = nullptr;
+	//void (*MatchTestComplete)(const bool success) = nullptr;
 
 	MatchStateEnum MatchState = MatchStateEnum::MatchStart;
 
@@ -86,35 +86,35 @@ public:
 		return true;
 	}
 
-	const bool StartTestMicrosMatchCycles(CycleClock* reference, CycleClock* test, void (*matchTestComplete)(const bool success))
-	{
-		////TODO: move to task.
-		//MatchReference = reference;
-		//MatchTest = test;
-		//MatchTestComplete = matchTestComplete;
+	//const bool StartTestMicrosMatchCycles(CycleClock* reference, CycleClock* test, void (*matchTestComplete)(const bool success))
+	//{
+	//	////TODO: move to task.
+	//	//MatchReference = reference;
+	//	//MatchTest = test;
+	//	//MatchTestComplete = matchTestComplete;
 
-		//if (MatchReference != nullptr
-		//	&& MatchTest != nullptr
-		//	&& MatchTestComplete != nullptr)
-		//{
-		//	MatchState = MatchStateEnum::MatchStart;
-		//	MatchReference->Start(0);
-		//	MatchTest->Start(0);
+	//	//if (MatchReference != nullptr
+	//	//	&& MatchTest != nullptr
+	//	//	&& MatchTestComplete != nullptr)
+	//	//{
+	//	//	MatchState = MatchStateEnum::MatchStart;
+	//	//	MatchReference->Start(0);
+	//	//	MatchTest->Start(0);
 
-		//	TestState = TestStateEnum::TestingMatch;
+	//	//	TestState = TestStateEnum::TestingMatch;
 
-		//	Task::enable();
+	//	//	Task::enable();
 
-		//	return true;
-		//}
+	//	//	return true;
+	//	//}
 
-		return false;
-	}
+	//	return false;
+	//}
 
 private:
 	const bool RunTestMicrosMatchCycles()
 	{
-		uint32_t matchCyclestampReference = 0;
+		/*uint32_t matchCyclestampReference = 0;
 		uint32_t matchCyclestampTest = 0;
 		uint32_t elapsed = 0;
 
@@ -177,7 +177,7 @@ private:
 			break;
 		default:
 			break;
-		}
+		}*/
 
 		return false;
 	}
