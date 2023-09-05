@@ -616,15 +616,22 @@ protected:
 private:
 	const bool InEstimateWithinTolerance()
 	{
-		const int32_t errorMicros = EstimateErrorReply.ErrorMicros();
-
-		if (errorMicros >= 0)
+		if (EstimateErrorReply.Seconds <= 1
+			&& EstimateErrorReply.Seconds >= -1)
 		{
-			return errorMicros < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+			const int32_t totalError = (EstimateErrorReply.Seconds * ONE_SECOND_MICROS) + EstimateErrorReply.SubSeconds;
+			if (totalError >= 0)
+			{
+				return totalError < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+			}
+			else
+			{
+				return (-totalError) < (int32_t)LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+			}
 		}
 		else
 		{
-			return (-errorMicros) < (int32_t)LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+			return false;
 		}
 	}
 
