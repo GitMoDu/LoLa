@@ -129,16 +129,6 @@ public:
 
 	/// <summary>
 	/// IClockSource override.
-	/// No clock tick interrupt, micros().
-	/// </summary>
-	/// <returns></returns>
-	virtual const bool ClockHasTick() final
-	{
-		return false;
-	}
-
-	/// <summary>
-	/// IClockSource override.
 	/// </summary>
 	virtual void StopClock() final
 	{

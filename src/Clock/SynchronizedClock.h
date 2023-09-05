@@ -39,14 +39,12 @@ private:
 	ITimerSource* TimerSource;
 	IClockSource* ClockSource;
 
-	const bool ClockHasTick;
 
 public:
 	SynchronizedClock(IClockSource* clockSource, ITimerSource* timerSource)
 		: IClockSource::IClockListener()
 		, TimerSource(timerSource)
 		, ClockSource(clockSource)
-		, ClockHasTick(ClockSource->ClockHasTick())
 	{}
 
 public:
@@ -102,30 +100,17 @@ public:
 	{
 		// Get the latest clock seconds and timer counter.
 		timestamp.SubSeconds = TimerSource->GetCounter();
-		timestamp.Seconds = Seconds;
+		const uint32_t overflows = ClockSource->GetTicklessOverflows();
+
+		timestamp.Seconds = 0;
 		timestamp.ConsolidateSubSeconds();
 
-		if (ClockHasTick)
-		{
-			if (timestamp.SubSeconds < TickCounter)
-			{
-				// Overflow detected and compensated before final subseconds calculation.
-				timestamp.Seconds++;
-				timestamp.SubSeconds += CountsOneSecond;
-			}
+		timestamp.Seconds += Seconds;
 
-			// Update the SubSeconds field to one second in us,
-			// by scaling the delta of the counter and counts to tick.
-			timestamp.SubSeconds = (((uint64_t)(timestamp.SubSeconds - TickCounter)) * ONE_SECOND_MICROS) / CountsOneSecond;
-		}
-		else
-		{
-			// On tickless sources (i.e. micros()), compensate with external overflow count.
-			const uint32_t overflows = ClockSource->GetTicklessOverflows();
-			timestamp.Seconds += overflows * MICROS_OVERFLOW_WRAP_SECONDS;
-			timestamp.SubSeconds += overflows * MICROS_OVERFLOW_WRAP_REMAINDER;
-			timestamp.ConsolidateSubSeconds();
-		}
+		// Compensate with external overflow count.
+		timestamp.Seconds += overflows * MICROS_OVERFLOW_WRAP_SECONDS;
+		timestamp.SubSeconds += overflows * MICROS_OVERFLOW_WRAP_REMAINDER;
+		timestamp.ConsolidateSubSeconds();
 	}
 
 	void GetTimestamp(Timestamp& timestamp)

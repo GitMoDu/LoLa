@@ -17,22 +17,13 @@ private:
 	IClockSource::IClockListener* TickListener = nullptr;
 
 public:
-	AbstractClockSource(Scheduler& scheduler) 
+	AbstractClockSource(Scheduler& scheduler)
 		: IClockSource()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
 	}
 
 public:
-	/// <summary>
-	/// AbstractClockSource is made for clocks with tick. 
-	/// </summary>
-	/// <returns></returns>
-	virtual const bool ClockHasTick() final
-	{
-		return true;
-	}
-
 	/// <summary>
 	/// Start the clock source, 
 	/// with tune parameter to speed up/slow down as requested.
