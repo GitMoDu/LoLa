@@ -30,7 +30,6 @@ private:
 	struct HopRequestStruct
 	{
 		uint32_t StartTimestamp = 0;
-		uint8_t Channel = 0;
 		bool UpdatePending = false;
 
 		const bool HasPending()
@@ -38,19 +37,10 @@ private:
 			return UpdatePending;
 		}
 
-		void Request(const uint8_t currentChannel, const uint8_t newChannel)
+		void Request()
 		{
 			StartTimestamp = micros();
-			if (currentChannel != newChannel)
-			{
-				Channel = newChannel;
-				UpdatePending = true;
-			}
-			else
-			{
-				Clear();
-			}
-
+			UpdatePending = true;
 		}
 
 		void Clear()
@@ -138,6 +128,12 @@ public:
 		// Simulate transmit delay, from request to on-air start.
 		if (OutGoing.HasPending() && ((micros() - OutGoing.StartTimestamp) >= GetTimeToAir(OutGoing.Size)))
 		{
+			if (CurrentChannel != OutGoing.Channel)
+			{
+				CurrentChannel = OutGoing.Channel;
+				LogChannel(CurrentChannel);
+			}
+
 			if (!OutGoing.AirStarted)
 			{
 				if ((micros() - OutGoing.StartTimestamp) > GetTimeToAir(OutGoing.Size))
@@ -165,9 +161,7 @@ public:
 						Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
 					}
 #endif
-
-					UpdateChannel(OutGoing.Channel);
-					if (!Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel))
+					if (!Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, OutGoing.Channel))
 					{
 #if defined(DEBUG_LOLA)
 						PrintName();
@@ -178,8 +172,11 @@ public:
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
-					// Optional auto-set to RX on TX channel.
-					//HopRequest.Request(CurrentChannel, CurrentChannel);
+					if (CurrentChannel != OutGoing.Channel)
+					{
+						CurrentChannel = OutGoing.Channel % Config::ChannelCount;
+						LogChannel(CurrentChannel);
+					}
 
 					if (Listener != nullptr)
 					{
@@ -189,6 +186,8 @@ public:
 			}
 			else if ((micros() - OutGoing.StartTimestamp) > GetDurationInAir(OutGoing.Size))
 			{
+				// After TX, TX channel is the current internal channel.
+				Task::enable();
 				OutGoing.Clear();
 			}
 		}
@@ -230,7 +229,6 @@ public:
 		{
 			if ((micros() - HopRequest.StartTimestamp) >= Config::HopMicros)
 			{
-				UpdateChannel(HopRequest.Channel);
 				HopRequest.Clear();
 			}
 			Task::enable();
@@ -323,7 +321,7 @@ public:
 		// simulating the transmit delay.
 		OutGoing.Size = packetSize;
 		OutGoing.StartTimestamp = timestamp;
-		OutGoing.Channel = channel;
+		OutGoing.Channel = channel % Config::ChannelCount;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
 			OutGoing.Buffer[i] = data[i];
@@ -336,7 +334,14 @@ public:
 
 	virtual void Rx(const uint8_t channel) final
 	{
-		HopRequest.Request(CurrentChannel, channel);
+		if (CurrentChannel != channel)
+		{
+			HopRequest.Request();
+			LogChannel(channel);
+		}
+
+		CurrentChannel = channel % Config::ChannelCount;
+
 		Task::enable();
 	}
 
@@ -431,24 +436,12 @@ public:
 	}
 
 private:
-	void UpdateChannel(const uint8_t channel)
-	{
-		const uint8_t newChannel = channel % Config::ChannelCount;
-
-		if (LogChannelHop)
-		{
-			if (CurrentChannel != newChannel)
-			{
-				LogChannel(newChannel);
-			}
-		}
-
-		CurrentChannel = newChannel;
-	}
-
 	void LogChannel(const uint8_t channel)
 	{
-		LogChannel(channel, Config::ChannelCount, 1);
+		if (LogChannelHop)
+		{
+			LogChannel(channel % Config::ChannelCount, Config::ChannelCount, 1);
+		}
 	}
 
 	void LogChannel(const uint8_t channel, const uint8_t channelCount, const uint8_t channelDivisor)
