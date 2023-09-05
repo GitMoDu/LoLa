@@ -23,43 +23,31 @@ struct Timestamp
 		return SubSeconds < ONE_SECOND_MICROS;
 	}
 
-	/// Shift SubSeconds by micros and consolidate timestamp.
-	void ShiftSubSeconds(const int32_t offsetMicros)
+	/// <summary>
+	/// </summary>
+	/// <param name="offsetSeconds"></param>
+	void ShiftSeconds(const int32_t offsetSeconds)
 	{
-		if (offsetMicros > 0)
-		{
-			if ((SubSeconds + offsetMicros) < SubSeconds)
-			{
-				// Subseconds rollover when adding offset.
-				Seconds += SECONDS_ROLLOVER;
-				SubSeconds += offsetMicros + SUB_SECONDS_ROLLOVER;
-			}
-			else
-			{
-				SubSeconds += offsetMicros;
-			}
-			ConsolidateOverflow();
-		}
-		else if (offsetMicros < 0)
-		{
-			if ((SubSeconds + offsetMicros) > SubSeconds)
-			{
-				// Subseconds rollover when removing offset.
-				Seconds -= SECONDS_ROLLOVER;
-				SubSeconds += offsetMicros - SUB_SECONDS_ROLLOVER;
-			}
-			else
-			{
-				SubSeconds += offsetMicros;
-			}
-			ConsolidateOverflow();
-		}
+		Seconds += offsetSeconds;
 	}
 
-	/// Push overflow of subseconds into seconds.
-	void ConsolidateOverflow()
+	/// <summary>
+	/// Shift SubSeconds.
+	/// </summary>
+	/// <param name="offsetMicros">In us.</param>
+	void ShiftSubSeconds(const int32_t offsetMicros)
 	{
-		if (SubSeconds > ONE_SECOND_MICROS)
+		SubSeconds += offsetMicros;
+
+		ConsolidateSubSeconds();
+	}
+
+	/// <summary>
+	/// Consolidate subseconds into seconds.
+	/// </summary>
+	void ConsolidateSubSeconds()
+	{
+		if (SubSeconds >= ONE_SECOND_MICROS)
 		{
 			Seconds += SubSeconds / ONE_SECOND_MICROS;
 			SubSeconds %= ONE_SECOND_MICROS;
@@ -86,6 +74,9 @@ struct Timestamp
 #endif
 };
 
+/// <summary>
+/// Timestamp differential error.
+/// </summary>
 struct TimestampError
 {
 	int32_t Seconds;
@@ -107,7 +98,8 @@ struct TimestampError
 		if (abs(SubSeconds) < 10) Serial.print(0);
 		Serial.print(abs(SubSeconds));
 		Serial.print('\t');
-		Serial.print(ErrorMicros());
+		const int32_t totalError = ((int64_t)Seconds * ONE_SECOND_MICROS) + SubSeconds;
+		Serial.print(totalError);
 	}
 #endif
 
@@ -117,36 +109,25 @@ struct TimestampError
 	/// <returns>True if valid.</returns>
 	const bool Validate()
 	{
-		if (SubSeconds >= 0)
-		{
-			return SubSeconds < (int32_t)ONE_SECOND_MICROS;
-		}
-		else
-		{
-			return SubSeconds > -((int32_t)ONE_SECOND_MICROS);
-		}
+		return SubSeconds < (int32_t)ONE_SECOND_MICROS && SubSeconds > -((int32_t)ONE_SECOND_MICROS);
 	}
 
-	const int32_t ErrorMicros()
-	{
-		return (((int64_t)Seconds * ONE_SECOND_MICROS)) + SubSeconds;
-	}
-
+	/// <summary>
+	/// Fill error with delta from estimation to timestamp.
+	/// </summary>
+	/// <param name="timestamp"></param>
+	/// <param name="estimation"></param>
 	void CalculateError(const Timestamp& timestamp, const Timestamp& estimation)
 	{
 		Seconds = timestamp.Seconds - estimation.Seconds;
 		SubSeconds = timestamp.SubSeconds - estimation.SubSeconds;
 
 		// Consolidate SubSeconds.
-		while (SubSeconds < 0)
+		if (SubSeconds >= (int32_t)ONE_SECOND_MICROS
+			|| SubSeconds <= -(int32_t)ONE_SECOND_MICROS)
 		{
-			SubSeconds += ONE_SECOND_MICROS;
-			Seconds--;
-		}
-		while (SubSeconds > (int32_t)ONE_SECOND_MICROS)
-		{
-			SubSeconds -= ONE_SECOND_MICROS;
-			Seconds++;
+			Seconds += SubSeconds / (int32_t)ONE_SECOND_MICROS;
+			SubSeconds %= (int32_t)ONE_SECOND_MICROS;
 		}
 	}
 };

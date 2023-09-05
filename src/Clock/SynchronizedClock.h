@@ -22,7 +22,7 @@ private:
 	static constexpr uint32_t MICROS_OVERFLOW_WRAP_REMAINDER = 967295;
 
 private:
-	int32_t OffsetMicros = 0;
+	uint32_t OffsetMicros = 1;
 
 	uint32_t LastTickCounter = 0;
 	volatile uint32_t TickCounter = 0;
@@ -95,18 +95,15 @@ public:
 
 	void ShiftSeconds(const int32_t offsetSeconds)
 	{
-		noInterrupts();
 		Seconds += offsetSeconds;
-		interrupts();
 	}
 
 	void GetTimestamp(Timestamp& timestamp)
 	{
-		// Stop interrupts and get the latest clock seconds and timer counter.
-		noInterrupts();
+		// Get the latest clock seconds and timer counter.
 		timestamp.SubSeconds = TimerSource->GetCounter();
 		timestamp.Seconds = Seconds;
-		interrupts();
+		timestamp.ConsolidateSubSeconds();
 
 		if (ClockHasTick)
 		{
@@ -127,9 +124,8 @@ public:
 			const uint32_t overflows = ClockSource->GetTicklessOverflows();
 			timestamp.Seconds += overflows * MICROS_OVERFLOW_WRAP_SECONDS;
 			timestamp.SubSeconds += overflows * MICROS_OVERFLOW_WRAP_REMAINDER;
+			timestamp.ConsolidateSubSeconds();
 		}
-
-		timestamp.ConsolidateOverflow();
 
 		// Add local and parameter offset.
 		timestamp.ShiftSubSeconds(OffsetMicros);
@@ -153,6 +149,12 @@ public:
 	void ShiftMicros(const int32_t offsetMicros)
 	{
 		OffsetMicros += offsetMicros;
+
+		if (OffsetMicros >= ONE_SECOND_MICROS)
+		{
+			Seconds += OffsetMicros / ONE_SECOND_MICROS;
+			OffsetMicros %= ONE_SECOND_MICROS;
+		}
 	}
 };
 #endif

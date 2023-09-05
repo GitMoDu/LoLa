@@ -249,21 +249,19 @@ private:
 				const uint32_t preTune = TuneOffset;
 				if (TuneMicros > 0)
 				{
-					TuneOffset++;
-
-					if (TuneOffset < preTune)
+					if (TuneOffset == INT32_MAX)
 					{
 						Overflows++;
 					}
+					TuneOffset++;
 				}
 				else if (TuneMicros < 0)
 				{
-					TuneOffset--;
-
-					if (TuneOffset > preTune)
+					if (TuneOffset == 0)
 					{
 						Overflows--;
 					}
+					TuneOffset--;
 				}
 
 				return smearPeriod;

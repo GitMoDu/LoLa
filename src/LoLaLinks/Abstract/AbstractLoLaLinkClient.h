@@ -22,8 +22,8 @@ private:
 	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
 
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
-	static constexpr uint8_t CLOCK_FILTER_RATIO = 90;
-	static constexpr uint8_t CLOCK_TUNE_RATIO = 50;
+	static constexpr uint8_t CLOCK_FILTER_RATIO = 130;
+	static constexpr uint8_t CLOCK_TUNE_RATIO = 3;
 
 	enum WaitingStateEnum
 	{
