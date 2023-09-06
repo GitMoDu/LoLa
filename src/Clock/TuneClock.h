@@ -165,11 +165,11 @@ private:
 				// Smear up/down. according to tune.
 				if (TuneMicros > 0)
 				{
-					//ShiftSubSeconds(+1);
+					ShiftSubSeconds(+1);
 				}
 				else if (TuneMicros < 0)
 				{
-					//ShiftSubSeconds(-1);
+					ShiftSubSeconds(-1);
 				}
 
 				return smearPeriod;

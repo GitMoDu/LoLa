@@ -29,6 +29,7 @@ public:
 	virtual void Start()
 	{
 		LastCyclestamp = 0;
+		CycleCounter::Start();
 	}
 
 	const uint32_t GetCycleOverflows(const uint32_t cyclestamp)
