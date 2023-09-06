@@ -364,14 +364,10 @@ protected:
 				if (payloadSize == Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE
 					&& !ClockReplyPending)
 				{
-					// Re-use linking-time clock sync holders.
-					InEstimate.Seconds = 0;
-					InEstimate.SubSeconds = ArrayToUInt32(&payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
-
 					SyncClock.GetTimestamp(LinkTimestamp);
-					LinkTimestamp.ShiftSubSeconds(startTimestamp - micros());
-					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros();
-					EstimateErrorReply.SubSeconds -= InEstimate.SubSeconds;
+					LinkTimestamp.ShiftSubSeconds((int32_t)(startTimestamp - micros()));
+
+					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - ArrayToUInt32(&payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
 					EstimateErrorReply.Seconds = 0;
 
 					ClockReplyPending = true;

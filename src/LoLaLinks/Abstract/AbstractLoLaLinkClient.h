@@ -518,16 +518,15 @@ protected:
 
 				LinkSendDuration = GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
 
-				SyncClock.GetTimestamp(LinkTimestamp);
-				LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
-
-				UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
-				UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
-
 				if (UnlinkedCanSendPacket(Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
 					SyncSequence++;
 					OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
+					SyncClock.GetTimestamp(LinkTimestamp);
+					LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
+
+					UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
+					UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
 					if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
 					{
 					}
@@ -599,7 +598,7 @@ protected:
 		}
 	}
 
-	virtual void OnPreSend()
+	virtual void OnPreSend() final
 	{
 		if (OutPacket.GetPort() == Linked::PORT &&
 			OutPacket.GetHeader() == Linked::ClockTuneMicrosRequest::HEADER)
