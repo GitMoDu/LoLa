@@ -6,7 +6,7 @@
 #include "TuneClock.h"
 
 /// <summary>
-/// Tuneable timestamp clock.
+/// Tuneable real time clock.
 /// Rolls over after ~136.1 years.
 /// </summary>
 class LinkClock final : public TuneClock

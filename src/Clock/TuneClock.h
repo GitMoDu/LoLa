@@ -6,11 +6,10 @@
 #include "TimeClock.h"
 
 /// <summary>
-/// Tuneable cycle clock.
+/// Tuneable timestamp clock.
 /// Tracks Cyclestamp overflow count.
 /// Uses task callback to smear the tune offset, 
 ///  as well as ensure cyclestamp' overflows are tracked.
-/// Provides TunedTimestamp with overflows, based on cycle counts.
 /// </summary>
 class TuneClock : public TimeClock
 {

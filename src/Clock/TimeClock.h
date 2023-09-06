@@ -10,7 +10,7 @@
 /// Cycle Clock based Time Clock.
 /// Provides elapsed seconds and subseconds.
 /// Shiftable time.
-/// Provides real time based Timestamp.
+/// Provides real time based Timestamp with overflows and cycle counts.
 /// Rolls over after ~136.1 years.
 /// </summary>
 class TimeClock : public CycleClock
