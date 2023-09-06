@@ -84,15 +84,11 @@ public:
 		// This enableds the full range of UINT32_MAX us.
 		timestamp.Seconds = 0;
 		timestamp.SubSeconds += GetElapsedDuration(cyclestamp);
-		timestamp.ConsolidateOverflow();
+		timestamp.ConsolidateSubSeconds();
 
 		// Shift cycle clock overflows.
 		timestamp.ShiftSeconds(overflows * OverflowWrapSeconds);
 		timestamp.ShiftSubSeconds(overflows * OverflowWrapRemainder);
-
-		// Shift the local offset.
-		timestamp.ShiftSeconds(OffsetSeconds);
-		timestamp.ShiftSubSeconds(OffsetSubSeconds);
 	}
 
 	void ShiftSeconds(const int32_t offsetSeconds)
@@ -103,16 +99,21 @@ public:
 	void ShiftSubSeconds(const int32_t offsetMicros)
 	{
 		if (offsetMicros > 0
-			&& ((OffsetSubSeconds + offsetMicros) < OffsetSubSeconds))
+			&& ((uint32_t)(OffsetSubSeconds + offsetMicros) < OffsetSubSeconds))
+		{
+			// Subseconds rollover when adding offset.
+			OffsetSeconds += OverflowWrapSeconds;
+			OffsetSubSeconds += OverflowWrapRemainder;
+		}
+		else if (offsetMicros < 0
+			&& ((uint32_t)(OffsetSubSeconds + offsetMicros) > OffsetSubSeconds))
 		{
 			// Subseconds rollover when removing offset.
-			OffsetSeconds -= OVER_SECONDS;
-			OffsetSubSeconds += offsetMicros - OVER_SUB_SECONDS;
+			OffsetSeconds -= OverflowWrapSeconds;
+			OffsetSubSeconds -= OverflowWrapRemainder;
 		}
-		else
-		{
-			OffsetSubSeconds += offsetMicros;
-		}
+
+		OffsetSubSeconds += offsetMicros;
 
 		if (OffsetSubSeconds >= ONE_SECOND_MICROS)
 		{
