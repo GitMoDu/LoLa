@@ -59,7 +59,23 @@ public:
 		GetTimestamp(cyclestamp, timestamp);
 	}
 
+	void GetTimestampMonotonic(Timestamp& timestamp)
+	{
+		const uint32_t cyclestamp = GetCyclestamp();
+
+		GetTimestampMonotonic(cyclestamp, timestamp);
+	}
+
 	void GetTimestamp(const uint32_t cyclestamp, Timestamp& timestamp)
+	{
+		GetTimestampMonotonic(cyclestamp, timestamp);
+
+		// Shift the local offset.
+		timestamp.ShiftSeconds(OffsetSeconds);
+		timestamp.ShiftSubSeconds(OffsetSubSeconds);
+	}
+
+	void GetTimestampMonotonic(const uint32_t cyclestamp, Timestamp& timestamp)
 	{
 		// Get the overflow count.
 		const uint32_t overflows = GetCycleOverflows(cyclestamp);
@@ -67,16 +83,12 @@ public:
 		// Start with duration from cycle clock and consolidate.
 		// This enableds the full range of UINT32_MAX us.
 		timestamp.Seconds = 0;
-		timestamp.SubSeconds += GetElapsedDuration(cyclestamp);
+		timestamp.SubSeconds = GetElapsedDuration(cyclestamp);
 		timestamp.ConsolidateSubSeconds();
 
 		// Shift cycle clock overflows.
 		timestamp.ShiftSeconds(overflows * OverflowWrapSeconds);
 		timestamp.ShiftSubSeconds(overflows * OverflowWrapRemainder);
-
-		// Shift the local offset.
-		timestamp.ShiftSeconds(OffsetSeconds);
-		timestamp.ShiftSubSeconds(OffsetSubSeconds);
 	}
 
 	void ShiftSeconds(const int32_t offsetSeconds)
@@ -87,16 +99,21 @@ public:
 	void ShiftSubSeconds(const int32_t offsetMicros)
 	{
 		if (offsetMicros > 0
-			&& ((OffsetSubSeconds + offsetMicros) < OffsetSubSeconds))
+			&& ((uint32_t)(OffsetSubSeconds + offsetMicros) < OffsetSubSeconds))
+		{
+			// Subseconds rollover when adding offset.
+			OffsetSeconds += OverflowWrapSeconds;
+			OffsetSubSeconds += OverflowWrapRemainder;
+		}
+		else if (offsetMicros < 0
+			&& ((uint32_t)(OffsetSubSeconds + offsetMicros) > OffsetSubSeconds))
 		{
 			// Subseconds rollover when removing offset.
-			OffsetSeconds -= OVER_SECONDS;
-			OffsetSubSeconds += offsetMicros - OVER_SUB_SECONDS;
+			OffsetSeconds -= OverflowWrapSeconds;
+			OffsetSubSeconds -= OverflowWrapRemainder;
 		}
-		else
-		{
-			OffsetSubSeconds += offsetMicros;
-		}
+
+		OffsetSubSeconds += offsetMicros;
 
 		if (OffsetSubSeconds >= ONE_SECOND_MICROS)
 		{

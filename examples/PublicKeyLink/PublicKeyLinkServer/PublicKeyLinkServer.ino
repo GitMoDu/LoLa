@@ -112,15 +112,14 @@ ArduinoEntropy EntropySource{};
 #endif
 
 #if !defined(LINK_USE_TIMER_AND_RTC)
-ArduinoTaskTimerClockSource TimerClockSource(SchedulerBase);
+ArduinoCycles CyclesSource{};
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32TimerSource TimerSource(1, 'A');
-Stm32RtcClockSource ClockSource(SchedulerBase);
+Stm32TimerCycles CyclesSource{};
 #elif defined(ARDUINO_ARCH_ESP8266)
-#error No RTC/Timer sources found.
+#error No CyclesSource found.
 #else 
-#error No RTC/Timer sources found.
+#error No CyclesSource found.
 #endif
 #endif
 
@@ -140,8 +139,7 @@ HalfDuplex<DuplexPeriod, false, DuplexDeadZone> Duplex{};
 LoLaPkeLinkServer<> Server(SchedulerBase,
 	&TransceiverDriver,
 	&EntropySource,
-	&TimerClockSource,
-	&TimerClockSource,
+	&CyclesSource,
 	&Duplex,
 	&ChannelHop,
 	ServerPublicKey,

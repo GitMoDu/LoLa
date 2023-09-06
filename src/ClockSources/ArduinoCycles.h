@@ -7,10 +7,10 @@
 /// <summary>
 /// Uses Arduino micros() as a system cycle counter.
 /// </summary>
-//#if defined(LOLA_UNIT_TESTING)
+#if defined(LOLA_UNIT_TESTING)
 /// <typeparam name="TestOffset">Starting offset in us.</typeparam>
 template<const uint32_t TestOffset = 0>
-//#endif
+#endif
 class ArduinoCycles final : public virtual ICycles
 {
 public:
@@ -24,11 +24,11 @@ public:
 	/// <returns>Current cycle count.</returns>
 	virtual const uint32_t GetCycles() final
 	{
-		//#if defined(LOLA_UNIT_TESTING)
+#if defined(LOLA_UNIT_TESTING)
 		return micros() + TestOffset;
-		//#else
-				//return micros();
-		//#endif
+#else
+		return micros();
+#endif
 	}
 
 	/// <summary>

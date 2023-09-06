@@ -93,12 +93,11 @@ public:
 	AbstractLoLaLinkServer(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IClockSource* clockSource,
-		ITimerSource* timerSource,
+		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource, entropy, duplex, hop)
+		: BaseClass(scheduler, encoder, transceiver, cycles, entropy, duplex, hop)
 		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
 		, PreLinkDuplexStart(0)
 		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))
@@ -365,14 +364,10 @@ protected:
 				if (payloadSize == Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE
 					&& !ClockReplyPending)
 				{
-					// Re-use linking-time clock sync holders.
-					InEstimate.Seconds = 0;
-					InEstimate.SubSeconds = ArrayToUInt32(&payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
-
 					SyncClock.GetTimestamp(LinkTimestamp);
-					LinkTimestamp.ShiftSubSeconds(startTimestamp - micros());
-					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros();
-					EstimateErrorReply.SubSeconds -= InEstimate.SubSeconds;
+					LinkTimestamp.ShiftSubSeconds((int32_t)(startTimestamp - micros()));
+
+					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - ArrayToUInt32(&payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
 					EstimateErrorReply.Seconds = 0;
 
 					ClockReplyPending = true;

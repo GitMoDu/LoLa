@@ -46,20 +46,17 @@
 
 /// Clock Timer Sources
 #if defined(ARDUINO)
-#include "ClockSources\ArduinoTaskTimerClockSource.h"
+#include "ClockSources\ArduinoCycles.h"
 #endif
 #if defined(ARDUINO_ARCH_AVR)
 #include "TimerSources\AvrTimer1Source.h"
 #endif
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-#include "TimerSources\Stm32TimerSource.h"
-#include "ClockSources\Stm32RtcClockSource.h"
+#include "ClockSources\Stm32TimerCycles.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP8266)
-//#include "TimerSources\Esp8266TimerSource.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP32)
-//#include "TimerSources\Esp32TimerSource.h"
 #endif
 ///
 

@@ -104,12 +104,12 @@ using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 160, 1000, 200, 
 using FastMultiChannel = IVirtualTransceiver::Configuration<160, 40, 500, 40, 2000, 10>;
 
 // Used Virtual Driver Configuration.
-using TestRadioConfig = SlowSingleChannel;
+using TestRadioConfig = FastMultiChannel;
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 4000;
-static const uint16_t DuplexDeadZone = TestRadioConfig::HopMicros * 2;
-static const uint32_t ChannelHopPeriod = DuplexPeriod * 4;
+static const uint16_t DuplexPeriod = 5000;
+static const uint16_t DuplexDeadZone = DuplexPeriod / 20;
+static const uint32_t ChannelHopPeriod = DuplexPeriod;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
@@ -120,30 +120,18 @@ Esp8266Entropy EntropySource{};
 ArduinoEntropy EntropySource{};
 #endif
 
-
 #if !defined(LINK_USE_TIMER_AND_RTC)
-ArduinoTaskTimerClockSource ServerTimerClockSource(SchedulerBase);
-ArduinoTaskTimerClockSource ClientTimerClockSource(SchedulerBase);
-IClockSource* ServerClock = &ServerTimerClockSource;
-ITimerSource* ServerTimer = &ServerTimerClockSource;
-IClockSource* ClientClock = &ClientTimerClockSource;
-ITimerSource* ClientTimer = &ClientTimerClockSource;
+ArduinoCycles ServerCyclesSource{};
+ArduinoCycles ClientCyclesSource{};
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32TimerSource ServerTimerSource(1, 'A');
-Stm32RtcClockSource ServerClockSource(SchedulerBase);
-
-Stm32RtcClockSource ClientClockSource(SchedulerBase);
-Stm32TimerSource ClientTimerSource(2, 'A');
-//#elif defined(ARDUINO_ARCH_ESP8266)
+Stm32TimerCycles<1, 'A'> ServerCyclesSource{};
+Stm32TimerCycles<2, 'A'> ClientCyclesSource{};
+#elif defined(ARDUINO_ARCH_ESP8266)
+#error No CyclesSource found.
 #else 
-#error No RTC/Timer sources found.
+#error No CyclesSource found.
 #endif
-IClockSource* ServerClock = &ServerClockSource;
-ITimerSource* ServerTimer = &ServerTimerSource;
-
-IClockSource* ClientClock = &ClientClockSource;
-ITimerSource* ClientTimer = &ClientTimerSource;
 #endif
 
 #if defined(LINK_USE_CHANNEL_HOP)
@@ -159,8 +147,7 @@ VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerTransc
 HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 LoLaPkeLinkServer<> Server(SchedulerBase,
 	&ServerTransceiver,
-	ServerClock,
-	ServerTimer,
+	&ServerCyclesSource,
 	&EntropySource,
 	&ServerDuplex,
 	&ServerChannelHop,
@@ -173,8 +160,7 @@ VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> 
 HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&ClientTransceiver,
-	ClientClock,
-	ClientTimer,
+	&ClientCyclesSource,
 	&EntropySource,
 	&ClientDuplex,
 	&ClientChannelHop,

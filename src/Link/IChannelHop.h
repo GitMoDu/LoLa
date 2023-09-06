@@ -4,7 +4,7 @@
 #define _I_CHANEL_HOP_h
 
 #include <stdint.h>
-#include "..\Clock\SynchronizedClock.h"
+#include "..\Clock\LinkClock.h"
 
 class IChannelHop
 {
@@ -19,7 +19,7 @@ public:
 	};
 
 public:
-	virtual const bool Setup(IChannelHop::IHopListener* listener, SynchronizedClock* syncClock) { return false; }
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) { return false; }
 
 	/// General Channel Interfaces
 public:

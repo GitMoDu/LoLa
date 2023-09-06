@@ -32,7 +32,7 @@ struct Timestamp
 	}
 
 	/// <summary>
-	/// Shift SubSeconds.
+	/// Shift SubSeconds by micros and consolidate timestamp.
 	/// </summary>
 	/// <param name="offsetMicros">In us.</param>
 	void ShiftSubSeconds(const int32_t offsetMicros)

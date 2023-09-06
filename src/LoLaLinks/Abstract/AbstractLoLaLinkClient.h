@@ -111,12 +111,11 @@ public:
 	AbstractLoLaLinkClient(Scheduler& scheduler,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
-		IClockSource* clockSource,
-		ITimerSource* timerSource,
+		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, clockSource, timerSource, entropy, duplex, hop)
+		: BaseClass(scheduler, encoder, transceiver, cycles, entropy, duplex, hop)
 		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
 		, PreLinkDuplexStart(GetPreLinkDuplexStart(duplex, transceiver))
 		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))
@@ -255,7 +254,7 @@ protected:
 				{
 					// Adjust local clock to match estimation error.
 					SyncClock.ShiftSeconds(EstimateErrorReply.Seconds);
-					SyncClock.ShiftMicros(EstimateErrorReply.SubSeconds);
+					SyncClock.ShiftSubSeconds(EstimateErrorReply.SubSeconds);
 
 					if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
 					{
@@ -354,10 +353,10 @@ protected:
 						TuneErrorFiltered += (((EstimateErrorReply.SubSeconds * 1000) - TuneErrorFiltered) * CLOCK_TUNE_RATIO) / UINT8_MAX;
 
 						// Adjust client clock with filtered estimation error.
-						SyncClock.ShiftMicros(AdjustErrorFiltered / 1000);
+						SyncClock.ShiftSubSeconds(AdjustErrorFiltered / 1000);
 
 						// Adjust tune and consume adjustment from filter value.
-						SyncClock.ShiftTuneMicros(TuneErrorFiltered / 1000);
+						SyncClock.ShiftTune(TuneErrorFiltered / 1000);
 						TuneErrorFiltered -= (TuneErrorFiltered / 1000) * 1000;
 
 						// Stop waiting for a clock reply and timestamp clock sync.
@@ -519,16 +518,15 @@ protected:
 
 				LinkSendDuration = GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
 
-				SyncClock.GetTimestamp(LinkTimestamp);
-				LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
-
-				UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
-				UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
-
 				if (UnlinkedCanSendPacket(Linking::ClockSyncRequest::PAYLOAD_SIZE))
 				{
 					SyncSequence++;
 					OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
+					SyncClock.GetTimestamp(LinkTimestamp);
+					LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
+
+					UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
+					UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
 					if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
 					{
 					}
@@ -600,7 +598,7 @@ protected:
 		}
 	}
 
-	virtual void OnPreSend()
+	virtual void OnPreSend() final
 	{
 		if (OutPacket.GetPort() == Linked::PORT &&
 			OutPacket.GetHeader() == Linked::ClockTuneMicrosRequest::HEADER)
