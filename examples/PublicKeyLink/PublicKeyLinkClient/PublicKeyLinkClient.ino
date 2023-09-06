@@ -98,8 +98,8 @@ static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 5000;
-static const uint16_t DuplexDeadZone = 100;
-static const uint32_t ChannelHopPeriod = DuplexPeriod * 4;
+static const uint16_t DuplexDeadZone = DuplexPeriod / 20;
+static const uint32_t ChannelHopPeriod = DuplexPeriod;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
@@ -136,8 +136,8 @@ HalfDuplex<DuplexPeriod, false, DuplexDeadZone> Duplex{};
 
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&TransceiverDriver,
-	&EntropySource,
 	&CyclesSource,
+	&EntropySource,
 	&Duplex,
 	&ChannelHop,
 	ClientPublicKey,
