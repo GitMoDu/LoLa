@@ -13,7 +13,7 @@
 class FullDuplex : public virtual IDuplex
 {
 public:
-	virtual const bool IsInRange(const uint32_t startTimestamp, const uint16_t duration) final
+	virtual const bool IsInRange(const uint32_t timestamp, const uint16_t duration) final
 	{
 		return true;
 	}
@@ -48,7 +48,7 @@ public:
 	{}
 
 public:
-	virtual const bool IsInRange(const uint32_t startTimestamp, const uint16_t duration) final
+	virtual const bool IsInRange(const uint32_t timestamp, const uint16_t duration) final
 	{
 #if defined(DEBUG_LOLA)
 		if (duration >= DuplexPeriodMicros)
@@ -58,8 +58,8 @@ public:
 		}
 #endif
 
-		const uint_fast16_t startRemainder = startTimestamp % DuplexPeriodMicros;
-		const uint_fast16_t endRemainder = (startTimestamp + duration) % DuplexPeriodMicros;
+		const uint_fast16_t startRemainder = timestamp % DuplexPeriodMicros;
+		const uint_fast16_t endRemainder = (timestamp + duration) % DuplexPeriodMicros;
 
 		if (IsOddSlot)
 		{
@@ -173,10 +173,10 @@ public:
 	}
 
 public:
-	virtual const bool IsInRange(const uint32_t startTimestamp, uint16_t duration) final
+	virtual const bool IsInRange(const uint32_t timestamp, uint16_t duration) final
 	{
-		const uint_fast16_t startRemainder = startTimestamp % DuplexPeriodMicros;
-		const uint_fast16_t endRemainder = (startTimestamp + duration) % DuplexPeriodMicros;
+		const uint_fast16_t startRemainder = timestamp % DuplexPeriodMicros;
+		const uint_fast16_t endRemainder = (timestamp + duration) % DuplexPeriodMicros;
 
 		return endRemainder >= startRemainder
 			&& startRemainder >= (Start + DeadZoneMicros)

@@ -39,14 +39,14 @@ public:
 
 public:
 	// PIM Driver overrides.
-	virtual void OnDriverPacketReceived(const uint32_t startTimestamp, const uint8_t packetSize) final
+	virtual void OnDriverPacketReceived(const uint32_t receiveTimestamp, const uint8_t packetSize) final
 	{
-		Listener->OnRx(IncomingPacket, startTimestamp, packetSize, UINT8_MAX);
+		Listener->OnRx(IncomingPacket, receiveTimestamp, packetSize, UINT8_MAX);
 	}
 
-	virtual void OnDriverPacketLost(const uint32_t startTimestamp) final
+	virtual void OnDriverPacketLost(const uint32_t receiveTimestamp) final
 	{
-		Listener->OnRxLost(startTimestamp);
+		Listener->OnRxLost(receiveTimestamp);
 	}
 
 	virtual void OnDriverPacketSent() final

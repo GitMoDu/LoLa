@@ -186,13 +186,13 @@ protected:
 		}
 	}
 
-	void NotifyPacketReceived(const uint32_t startTimestamp, const uint8_t port, const uint8_t payloadSize)
+	void NotifyPacketReceived(const uint32_t timestamp, const uint8_t port, const uint8_t payloadSize)
 	{
 		for (uint_fast8_t i = 0; i < PacketServiceListenersCount; i++)
 		{
 			if (port == LinkPacketServiceListeners[i].Port)
 			{
-				LinkPacketServiceListeners[i].Listener->OnPacketReceived(startTimestamp,
+				LinkPacketServiceListeners[i].Listener->OnPacketReceived(timestamp,
 					&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
 					payloadSize,
 					port);

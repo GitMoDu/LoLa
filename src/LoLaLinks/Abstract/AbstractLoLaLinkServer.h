@@ -155,7 +155,7 @@ protected:
 	}
 
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -207,7 +207,7 @@ protected:
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("StateTransition Server got Ack: "));
-				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
 				Serial.println(F("us remaining."));
 #endif				
 			}
@@ -222,7 +222,7 @@ protected:
 		}
 	}
 
-	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
+	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -291,7 +291,7 @@ protected:
 				}
 
 				SyncClock.GetTimestamp(LinkTimestamp);
-				LinkTimestamp.ShiftSubSeconds((int32_t)(startTimestamp - micros()));
+				LinkTimestamp.ShiftSubSeconds((int32_t)(timestamp - micros()));
 				EstimateErrorReply.CalculateError(LinkTimestamp, InEstimate);
 				ClockReplyPending = true;
 				Task::enable();
@@ -338,7 +338,7 @@ protected:
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("StateTransition Server got Ack: "));
-				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
 				Serial.println(F("us remaining."));
 #endif
 				Task::enable();
@@ -354,7 +354,7 @@ protected:
 		}
 	}
 
-	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
+	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 		if (port == Linked::PORT)
 		{
@@ -365,7 +365,7 @@ protected:
 					&& !ClockReplyPending)
 				{
 					SyncClock.GetTimestamp(LinkTimestamp);
-					LinkTimestamp.ShiftSubSeconds((int32_t)(startTimestamp - micros()));
+					LinkTimestamp.ShiftSubSeconds((int32_t)(timestamp - micros()));
 
 					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - ArrayToUInt32(&payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
 					EstimateErrorReply.Seconds = 0;
@@ -380,7 +380,7 @@ protected:
 #endif
 				break;
 			default:
-				BaseClass::OnPacketReceived(startTimestamp, payload, payloadSize, port);
+				BaseClass::OnPacketReceived(timestamp, payload, payloadSize, port);
 				break;
 			}
 		}
@@ -737,10 +737,10 @@ protected:
 		SyncClock.GetTimestamp(LinkTimestamp);
 		LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
-		const uint32_t startTimestamp = LinkTimestamp.GetRollingMicros();
+		const uint32_t timestamp = LinkTimestamp.GetRollingMicros();
 
-		const uint_fast16_t startRemainder = startTimestamp % (PreLinkDuplexPeriod);
-		const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod);
+		const uint_fast16_t startRemainder = timestamp % (PreLinkDuplexPeriod);
+		const uint_fast16_t endRemainder = (timestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod);
 
 		if (endRemainder >= startRemainder
 			&& startRemainder > PreLinkDuplexStart

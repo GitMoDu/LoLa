@@ -137,7 +137,7 @@ protected:
 	}
 
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -174,15 +174,15 @@ protected:
 					return;
 					break;
 				}
-				StateTransition.OnReceived(startTimestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+				StateTransition.OnReceived(timestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
 
-				OnLinkSyncReceived(startTimestamp);
+				OnLinkSyncReceived(timestamp);
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("Got LinkingTimedSwitchOver: "));
-				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
 				Serial.println(F("us remaining."));
 #endif
 			}
@@ -197,7 +197,7 @@ protected:
 		}
 	}
 
-	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
+	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
 		switch (payload[Linking::ServerChallengeRequest::HEADER_INDEX])
 		{
@@ -208,7 +208,7 @@ protected:
 				Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 				LinkingState = LinkingStateEnum::AuthenticationReply;
 				Task::enable();
-				OnLinkSyncReceived(startTimestamp);
+				OnLinkSyncReceived(timestamp);
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -227,7 +227,7 @@ protected:
 #endif
 				LinkingState = LinkingStateEnum::ClockSyncing;
 				Task::enable();
-				OnLinkSyncReceived(startTimestamp);
+				OnLinkSyncReceived(timestamp);
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -309,15 +309,15 @@ protected:
 					break;
 				}
 
-				StateTransition.OnReceived(startTimestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
-				OnLinkSyncReceived(startTimestamp);
+				StateTransition.OnReceived(timestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
+				OnLinkSyncReceived(timestamp);
 				SyncSequence = payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
 
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("Got LinkTimedSwitchOver: "));
-				Serial.print(StateTransition.GetDurationUntilTimeOut(startTimestamp));
+				Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
 				Serial.println(F("us remaining."));
 #endif
 			}
@@ -332,7 +332,7 @@ protected:
 		}
 	}
 
-	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
+	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 		if (port == Linked::PORT)
 		{
@@ -379,7 +379,7 @@ protected:
 #endif
 				break;
 			default:
-				BaseClass::OnPacketReceived(startTimestamp, payload, payloadSize, port);
+				BaseClass::OnPacketReceived(timestamp, payload, payloadSize, port);
 				break;
 			}
 		}
@@ -740,10 +740,10 @@ protected:
 	/// <returns>True when packet can be sent.</returns>
 	const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
 	{
-		const uint32_t startTimestamp = (micros() - PreLinkLastSync) + GetSendDuration(payloadSize);
+		const uint32_t timestamp = (micros() - PreLinkLastSync) + GetSendDuration(payloadSize);
 
-		const uint_fast16_t startRemainder = startTimestamp % PreLinkDuplexPeriod;
-		const uint_fast16_t endRemainder = (startTimestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
+		const uint_fast16_t startRemainder = timestamp % PreLinkDuplexPeriod;
+		const uint_fast16_t endRemainder = (timestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
 
 		if (endRemainder >= startRemainder
 			&& startRemainder > PreLinkDuplexStart

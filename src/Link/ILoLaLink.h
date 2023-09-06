@@ -21,10 +21,10 @@ public:
 	/// 
 	/// </summary>
 	/// <param name="data"></param>
-	/// <param name="startTimestamp"></param>
+	/// <param name="timestamp"></param>
 	/// <param name="port"></param>
 	/// <param name="payloadSize"></param>
-	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
+	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 };
 
 class ILoLaLink

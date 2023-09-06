@@ -162,7 +162,7 @@ public:
 		}
 	}
 
-	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port)
+	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port)
 	{
 		if (port == Linked::PORT)
 		{

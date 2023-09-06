@@ -155,7 +155,7 @@ protected:
 		}
 	}
 
-	virtual void OnDiscoveredPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) final
+	virtual void OnDiscoveredPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
 	{
 		switch (payload[WriterUpdateBlockDefinition::HEADER_INDEX])
 		{

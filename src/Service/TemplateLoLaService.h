@@ -63,7 +63,7 @@ protected:
 public:
 	virtual void OnLinkStateUpdated(const bool hasLink) {}
 
-	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
+	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 
 public:
 	TemplateLoLaService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)

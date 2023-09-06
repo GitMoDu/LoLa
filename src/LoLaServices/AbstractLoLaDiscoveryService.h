@@ -85,10 +85,10 @@ protected:
 	/// <summary>
 	/// After discovery is completed, any non-discovery packets will be routed to the user class.
 	/// </summary>
-	/// <param name="startTimestamp"></param>
+	/// <param name="timestamp"></param>
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
-	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize) {}
+	virtual void OnLinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) {}
 
 private:
 	uint32_t DiscoveryStart = 0;
@@ -134,7 +134,7 @@ public:
 		}
 	}
 
-	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
+	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 		if (port != Port)
 		{
@@ -184,7 +184,7 @@ public:
 		}
 		else
 		{
-			OnLinkedPacketReceived(startTimestamp, payload, payloadSize);
+			OnLinkedPacketReceived(timestamp, payload, payloadSize);
 		}
 	}
 

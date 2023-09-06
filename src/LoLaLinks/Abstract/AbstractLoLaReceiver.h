@@ -61,13 +61,13 @@ protected:
 	/// <summary>
 	/// Packet parser for Link implementation classes. Only fires when link is not active.
 	///// </summary>
-	/// <param name="startTimestamp"></param>
+	/// <param name="timestamp"></param>
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
 	/// <param name="port"></param>
-	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
 
-	virtual void OnLinkingPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
+	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
 
 	/// <summary>
 	/// Inform any Link class of packet loss detection.
@@ -86,7 +86,7 @@ public:
 
 public:
 	// IPacketServiceListener
-	virtual void OnLost(const uint32_t startTimestamp) final
+	virtual void OnLost(const uint32_t timestamp) final
 	{
 		OnEvent(PacketEventEnum::ReceiveRejectedTransceiver);
 	}

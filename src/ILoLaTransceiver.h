@@ -16,13 +16,13 @@ public:
 	/// <param name="packetSize">Packet size.</param>
 	/// <param name="rssi">Normalized RX RSSI [0:255].</param>
 	/// <returns>True if packet was successfully consumed. False, try again later.</returns>
-	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) { return false; }
+	virtual const bool OnRx(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssi) { return false; }
 
 	/// <summary>
 	/// Transceiver was receiveing a packet but couldn't read it or finish it.
 	/// </summary>
 	/// <param name="startTimestamp">Accurate timestamp (micros()) of lost packet start.</param>
-	virtual void OnRxLost(const uint32_t receiveTimestamp) {}
+	virtual void OnRxLost(const uint32_t timestamp) {}
 
 	/// <summary>
 	/// Transceiver has finished transmitting a packet.

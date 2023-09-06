@@ -91,7 +91,7 @@ public:
 	}
 
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -115,7 +115,7 @@ protected:
 					this->Owner();
 					Serial.println(F("Found a PKE Session."));
 #endif
-					OnLinkSyncReceived(startTimestamp);
+					OnLinkSyncReceived(timestamp);
 					break;
 				default:
 #if defined(DEBUG_LOLA)
@@ -131,7 +131,7 @@ protected:
 #endif
 			break;
 		default:
-			BaseClass::OnUnlinkedPacketReceived(startTimestamp, payload, payloadSize, counter);
+			BaseClass::OnUnlinkedPacketReceived(timestamp, payload, payloadSize, counter);
 			break;
 		}
 	}
