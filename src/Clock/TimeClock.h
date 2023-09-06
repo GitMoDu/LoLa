@@ -59,7 +59,23 @@ public:
 		GetTimestamp(cyclestamp, timestamp);
 	}
 
+	void GetTimestampMonotonic(Timestamp& timestamp)
+	{
+		const uint32_t cyclestamp = GetCyclestamp();
+
+		GetTimestampMonotonic(cyclestamp, timestamp);
+	}
+
 	void GetTimestamp(const uint32_t cyclestamp, Timestamp& timestamp)
+	{
+		GetTimestampMonotonic(cyclestamp, timestamp);
+
+		// Shift the local offset.
+		timestamp.ShiftSeconds(OffsetSeconds);
+		timestamp.ShiftSubSeconds(OffsetSubSeconds);
+	}
+
+	void GetTimestampMonotonic(const uint32_t cyclestamp, Timestamp& timestamp)
 	{
 		// Get the overflow count.
 		const uint32_t overflows = GetCycleOverflows(cyclestamp);
