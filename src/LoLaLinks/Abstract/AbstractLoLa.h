@@ -58,7 +58,7 @@ protected:
 	// The outgoing content is encrypted and MAC'd here before being sent to the Transceiver for transmission.
 	uint8_t RawOutPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
-	// The incoming encrypted and MAC'd packet is stored, here before validated, and decrypted to InData.
+	// The incoming encrypted and MAC'd packet is stored here before validated, and decrypted to InData.
 	uint8_t RawInPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
 	// The incoming plaintext content is decrypted to here, from the RawInPacket.

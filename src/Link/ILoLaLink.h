@@ -18,9 +18,7 @@ class ILinkPacketListener
 {
 public:
 	/// <summary>
-	/// 
 	/// </summary>
-	/// <param name="data"></param>
 	/// <param name="timestamp"></param>
 	/// <param name="port"></param>
 	/// <param name="payloadSize"></param>
