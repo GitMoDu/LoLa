@@ -104,12 +104,12 @@ using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 160, 1000, 200, 
 using FastMultiChannel = IVirtualTransceiver::Configuration<160, 40, 500, 40, 2000, 10>;
 
 // Used Virtual Driver Configuration.
-using TestRadioConfig = SlowSingleChannel;
+using TestRadioConfig = FastMultiChannel;
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 4000;
-static const uint16_t DuplexDeadZone = TestRadioConfig::HopMicros * 2;
-static const uint32_t ChannelHopPeriod = DuplexPeriod * 4;
+static const uint16_t DuplexPeriod = 5000;
+static const uint16_t DuplexDeadZone = DuplexPeriod / 20;
+static const uint32_t ChannelHopPeriod = DuplexPeriod;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
