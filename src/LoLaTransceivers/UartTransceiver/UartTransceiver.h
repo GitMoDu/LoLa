@@ -320,10 +320,10 @@ public:
 
 			if (TxSize > 0)
 			{
+				TxStartTimestamp = micros();
 #if defined(TX_TEST_PIN)
 				digitalWrite(TX_TEST_PIN, HIGH);
 #endif
-				TxStartTimestamp = micros();
 				if (IO->write(TxBuffer, TxSize) == TxSize)
 				{
 					TxState = TxStateEnum::TxStart;
