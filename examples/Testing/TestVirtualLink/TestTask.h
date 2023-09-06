@@ -64,11 +64,12 @@ public:
 	virtual bool Callback() final
 	{
 		bool workDone = false;
-		uint32_t timestamp = millis();
+		const uint32_t timestamp = millis();
 
 #if defined(SERVER_DROP_LINK_TEST) 
 		if (Server->HasLink() && Server->GetLinkDuration() > SERVER_DROP_LINK_TEST)
 		{
+			Serial.println(F("# Server Stop Link."));
 			Server->Stop();
 			Server->Start();
 		}
@@ -77,6 +78,7 @@ public:
 #if defined(CLIENT_DROP_LINK_TEST) 
 		if (Client->HasLink() && Client->GetLinkDuration() > CLIENT_DROP_LINK_TEST)
 		{
+			Serial.println(F("# Client Stop Link."));
 			Client->Stop();
 			Client->Start();
 		}
@@ -123,11 +125,11 @@ public:
 					Serial.println(F(" Failed!"));
 #endif
 				}
-				}
 			}
+		}
 
 		return workDone;
-		}
+	}
 private:
 	void PrintTag(const char tag)
 	{
@@ -150,7 +152,8 @@ public:
 public:
 	virtual void OnLinkStateUpdated(const bool hasLink)
 	{
-		Serial.print(micros());
+		const uint32_t timestamp = millis();
+		Serial.print(timestamp);
 		if (hasLink)
 		{
 			Serial.println(F("\tLink Acquired."));
@@ -209,6 +212,10 @@ public:
 		const uint32_t durationMinutesRemainder = durationMinutes % 60;
 		const uint32_t durationSecondsRemainder = durationSeconds % 60;
 
+		Serial.print(F("( "));
+		Serial.print(durationSeconds);
+		Serial.print(F(" UTC seconds) "));
+
 		if (durationYears > 0)
 		{
 			Serial.print(durationYears);
@@ -242,5 +249,5 @@ public:
 		Serial.print(durationSecondsRemainder);
 		Serial.println();
 	}
-	};
+};
 #endif

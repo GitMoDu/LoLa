@@ -72,10 +72,6 @@ protected:
 	/// </summary>
 	virtual void OnLinkedService()
 	{
-#if defined(PRINT_DISCOVERY)
-		PrintName();
-		Serial.println(F("Test Discovery Service Run."));
-#endif
 		Task::disable();
 	}
 
