@@ -51,10 +51,10 @@ public:
 
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
 	{
+		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
+
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
-
-		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		switch (LinkStage)
 		{
