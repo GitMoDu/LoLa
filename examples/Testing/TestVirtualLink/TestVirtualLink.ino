@@ -121,8 +121,8 @@ ArduinoEntropy EntropySource{};
 #endif
 
 #if !defined(LINK_USE_TIMER_AND_RTC)
-ArduinoCycles<UINT32_MAX - 10000000> ServerCyclesSource{};
-ArduinoCycles<0> ClientCyclesSource{};
+ArduinoCycles ServerCyclesSource{};
+ArduinoCycles ClientCyclesSource{};
 #else
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
 Stm32TimerCycles<1, 'A'> ServerCyclesSource{};
