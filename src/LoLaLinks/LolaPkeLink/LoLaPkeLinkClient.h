@@ -15,10 +15,10 @@
 /// <typeparam name="MaxLinkListeners"></typeparam>
 template<const uint8_t MaxPacketReceiveListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
-class LoLaPkeLinkClient : public AbstractLoLaLinkClient<MaxPacketReceiveListeners, MaxLinkListeners>
+class LoLaPkeLinkClient : public AbstractLoLaLinkClient
 {
 private:
-	using BaseClass = AbstractLoLaLinkClient<MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaLinkClient;
 
 private:
 	using Unlinked = LoLaLinkDefinition::Unlinked;
@@ -34,24 +34,13 @@ private:
 		SessionCached
 	};
 
-protected:
-	using BaseClass::ExpandedKey;
-	using BaseClass::OutPacket;
-	using BaseClass::PacketService;
-
-	using BaseClass::IsInSessionCreation;
-	using BaseClass::OnLinkSyncReceived;
-	using BaseClass::UnlinkedCanSendPacket;
-	using BaseClass::UnlinkedPacketThrottle;
-	using BaseClass::ResetUnlinkedPacketThrottle;
-
-	using BaseClass::SendPacket;
-
 private:
 	uint8_t PublicCompressedKey[LoLaCryptoDefinition::COMPRESSED_KEY_SIZE]{};
 	uint8_t PartnerCompressedKey[LoLaCryptoDefinition::COMPRESSED_KEY_SIZE]{};
 
 private:
+	LinkRegistry<MaxPacketReceiveListeners, MaxLinkListeners> RegistryInstance{};
+
 	LoLaCryptoPkeSession Session;
 
 	PkeStateEnum PkeState = PkeStateEnum::RequestingSession;
@@ -68,7 +57,7 @@ public:
 		const uint8_t* publicKey,
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
-		: BaseClass(scheduler, &Session, transceiver, cycles, entropy, duplex, hop)
+		: BaseClass(scheduler, &RegistryInstance, &Session, transceiver, cycles, entropy, duplex, hop)
 		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
 	{}
 

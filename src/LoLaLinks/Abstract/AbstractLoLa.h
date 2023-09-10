@@ -16,25 +16,20 @@
 #include "..\..\Link\ILoLaLink.h"
 #include "..\..\Link\ILinkRegistry.h"
 #include "..\..\Link\LoLaPacketDefinition.h"
+#include "..\..\Link\LoLaLinkDefinition.h"
 #include "..\..\Crypto\LoLaCryptoEncoderSession.h"
 
 /// <summary>
 /// LoLa Link base (AbstractLoLa) is a special case of a TemplateLoLaService,
 /// as it will handle pre-link Packet as well as use link time packets for link upkeep.
-/// As a partial abstract class, it implements the following ILoLaLink calls:
-///		- Link Listeners.
-///		- Receive Listeners.
-///		- Link state and virtual update.
+/// As a partial abstract class, it implements ILoLaLink Listeners public register.
 /// </summary>
-template<const uint8_t MaxPayloadLinkSend,
-	const uint8_t MaxPacketReceiveListeners = 10,
-	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLa : protected TemplateLoLaService<MaxPayloadLinkSend>
+class AbstractLoLa : protected TemplateLoLaService<LoLaLinkDefinition::LARGEST_PAYLOAD>
 	, public virtual ILoLaLink
 	, public virtual IPacketServiceListener
 {
 private:
-	using BaseClass = TemplateLoLaService<MaxPayloadLinkSend>;
+	using BaseClass = TemplateLoLaService<LoLaLinkDefinition::LARGEST_PAYLOAD>;
 
 	struct PacketListenerWrapper
 	{
@@ -46,16 +41,12 @@ protected:
 	// Static value with all zeros.
 	Timestamp ZeroTimestamp{};
 
-private:
-	// Listener registry instance.
-	LinkRegistry<MaxPacketReceiveListeners, MaxLinkListeners> RegistryInstance{};
-
 protected:
-	// Listener registry interface.
-	ILinkRegistry* Registry = &RegistryInstance;
-
 	// Packet service instance;
 	LoLaPacketService PacketService;
+
+	// Listener registry interface.
+	ILinkRegistry* Registry;
 
 	// The outgoing content is encrypted and MAC'd here before being sent to the Transceiver for transmission.
 	uint8_t RawOutPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
@@ -94,6 +85,7 @@ public:
 		, IPacketServiceListener()
 		, BaseClass(scheduler, this)
 		, PacketService(scheduler, this, transceiver, RawInPacket, RawOutPacket)
+		, Registry(linkRegistry)
 		, Transceiver(transceiver)
 		, Encoder(encoder)
 		, SyncClock(scheduler, cycles)
@@ -141,6 +133,35 @@ public:
 			return Registry->RegisterPacketListener(listener, port);
 		}
 		return false;
+	}
+
+protected:
+	static const uint32_t ArrayToUInt32(const uint8_t* source)
+	{
+		uint32_t value = source[0];
+		value += (uint32_t)source[1] << 8;
+		value += (uint32_t)source[2] << 16;
+		value += (uint32_t)source[3] << 24;
+
+		return value;
+	}
+
+	static void UInt32ToArray(const uint32_t value, uint8_t* target)
+	{
+		target[0] = value;
+		target[1] = value >> 8;
+		target[2] = value >> 16;
+		target[3] = value >> 24;
+	}
+
+	static void Int32ToArray(const int32_t value, uint8_t* target)
+	{
+		UInt32ToArray(value, target);
+	}
+
+	static const int32_t ArrayToInt32(const uint8_t* source)
+	{
+		return (int32_t)ArrayToUInt32(source);
 	}
 
 #if defined(DEBUG_LOLA)

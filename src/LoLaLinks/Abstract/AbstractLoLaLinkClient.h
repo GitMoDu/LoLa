@@ -5,12 +5,10 @@
 
 #include "..\Abstract\AbstractLoLaLink.h"
 
-template<const uint8_t MaxPacketReceiveListeners = 10,
-	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLaLinkClient : public AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractLoLaLinkClient : public AbstractLoLaLink
 {
 private:
-	using BaseClass = AbstractLoLaLink<MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaLink;
 
 	using Unlinked = LoLaLinkDefinition::Unlinked;
 	using Linking = LoLaLinkDefinition::Linking;
@@ -42,34 +40,6 @@ private:
 		RequestingLinkStart,
 		SwitchingToLinked
 	};
-
-protected:
-	using BaseClass::OutPacket;
-	using BaseClass::Duplex;
-	using BaseClass::Encoder;
-	using BaseClass::SyncClock;
-	using BaseClass::RandomSource;
-	using BaseClass::PacketService;
-	using BaseClass::LinkTimestamp;
-	using BaseClass::LinkSendDuration;
-
-	using BaseClass::SendPacket;
-	using BaseClass::SetHopperFixedChannel;
-	using BaseClass::GetSendDuration;
-	using BaseClass::GetOnAirDuration;
-	using BaseClass::ResetUnlinkedPacketThrottle;
-	using BaseClass::UnlinkedPacketThrottle;
-
-	using BaseClass::RequestSendPacket;
-	using BaseClass::CanRequestSend;
-	using BaseClass::GetStageElapsedMillis;
-	using BaseClass::ResetStageStartTime;
-	using BaseClass::GetPreLinkDuplexPeriod;
-
-	using BaseClass::UInt32ToArray;
-	using BaseClass::ArrayToUInt32;
-	using BaseClass::Int32ToArray;
-	using BaseClass::ArrayToInt32;
 
 private:
 	const uint16_t PreLinkDuplexPeriod;
@@ -109,13 +79,14 @@ protected:
 
 public:
 	AbstractLoLaLinkClient(Scheduler& scheduler,
+		ILinkRegistry* linkRegistry,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, cycles, entropy, duplex, hop)
+		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
 		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
 		, PreLinkDuplexStart(GetPreLinkDuplexStart(duplex, transceiver))
 		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))

@@ -10,74 +10,14 @@
 /// <summary>
 /// 
 /// </summary>
-/// <typeparam name="MaxPayloadSize"></typeparam>
-/// <typeparam name="MaxPacketReceiveListeners"></typeparam>
-/// <typeparam name="MaxLinkListeners"></typeparam>
-template<const uint8_t MaxPacketReceiveListeners = 10,
-	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLaLink : public AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractLoLaLink : public AbstractLoLaLinkPacket
 {
 private:
-	using BaseClass = AbstractLoLaLinkPacket<LoLaLinkDefinition::LARGEST_PAYLOAD, MaxPacketReceiveListeners, MaxLinkListeners>;
-
+	using BaseClass = AbstractLoLaLinkPacket;
 
 	using Unlinked = LoLaLinkDefinition::Unlinked;
 	using Linking = LoLaLinkDefinition::Linking;
 	using Linked = LoLaLinkDefinition::Linked;
-
-
-protected:
-	using BaseClass::Transceiver;
-	using BaseClass::OutPacket;
-	using BaseClass::LinkStage;
-	using BaseClass::LinkTimestamp;
-	using BaseClass::LastValidReceivedCounter;
-	using BaseClass::SendCounter;
-	using BaseClass::SyncClock;
-	using BaseClass::LastReceivedRssi;
-
-	using BaseClass::RandomSource;
-	using BaseClass::PacketService;
-	using BaseClass::Registry;
-
-	using BaseClass::GetSendDuration;
-	using BaseClass::GetPacketThrottlePeriod;
-	using BaseClass::CanRequestSend;
-	using BaseClass::RequestSendPacket;
-	using BaseClass::ResetLastValidReceived;
-
-	using BaseClass::GetStageElapsedMillis;
-	using BaseClass::GetElapsedSinceLastValidReceived;
-
-
-protected:
-	static const uint32_t ArrayToUInt32(const uint8_t* source)
-	{
-		uint32_t value = source[0];
-		value += (uint32_t)source[1] << 8;
-		value += (uint32_t)source[2] << 16;
-		value += (uint32_t)source[3] << 24;
-
-		return value;
-	}
-
-	static void UInt32ToArray(const uint32_t value, uint8_t* target)
-	{
-		target[0] = value;
-		target[1] = value >> 8;
-		target[2] = value >> 16;
-		target[3] = value >> 24;
-	}
-
-	static void Int32ToArray(const int32_t value, uint8_t* target)
-	{
-		UInt32ToArray(value, target);
-	}
-
-	static const int32_t ArrayToInt32(const uint8_t* source)
-	{
-		return (int32_t)ArrayToUInt32(source);
-	}
 
 private:
 	/// <summary>
@@ -111,13 +51,14 @@ protected:
 
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
+		ILinkRegistry* linkRegistry,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, encoder, transceiver, cycles, entropy, duplex, hop)
+		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
 		, ReportTracking()
 	{}
 

@@ -5,25 +5,10 @@
 
 #include "AbstractLoLa.h"
 
-template<const uint8_t MaxPayloadLinkSend,
-	const uint8_t MaxPacketReceiveListeners = 10,
-	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLaSender : public AbstractLoLa<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractLoLaSender : public AbstractLoLa
 {
 private:
-	using BaseClass = AbstractLoLa<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
-
-protected:
-	using BaseClass::Transceiver;
-	using BaseClass::PacketService;
-	using BaseClass::Encoder;
-	using BaseClass::SyncClock;
-	using BaseClass::LinkStage;
-
-	using BaseClass::RawOutPacket;
-	using BaseClass::ZeroTimestamp;
-
-	using BaseClass::OnEvent;
+	using BaseClass = AbstractLoLa;
 
 private:
 	Timestamp SendTimestamp{};
@@ -43,10 +28,11 @@ protected:
 
 public:
 	AbstractLoLaSender(Scheduler& scheduler,
+		ILinkRegistry* linkRegistry,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)
-		: BaseClass(scheduler, encoder, transceiver, cycles)
+		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
 	{}
 
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final

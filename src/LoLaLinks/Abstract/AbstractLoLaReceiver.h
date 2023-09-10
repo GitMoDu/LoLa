@@ -5,32 +5,13 @@
 
 #include "AbstractLoLaSender.h"
 
-
-template<const uint8_t MaxPayloadLinkSend,
-	const uint8_t MaxPacketReceiveListeners = 10,
-	const uint8_t MaxLinkListeners = 10>
-class AbstractLoLaReceiver : public AbstractLoLaSender<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>
+class AbstractLoLaReceiver : public AbstractLoLaSender
 {
 private:
-	using BaseClass = AbstractLoLaSender<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaSender;
 
 	using Unlinked = LoLaLinkDefinition::Unlinked;
 	using Linking = LoLaLinkDefinition::Linking;
-
-protected:
-	using BaseClass::SyncClock;
-	using BaseClass::Encoder;
-
-	using BaseClass::RawInPacket;
-	using BaseClass::ZeroTimestamp;
-
-	using BaseClass::PacketService;
-
-	using BaseClass::LinkStage;
-
-
-	using BaseClass::OnEvent;
-	using BaseClass::Registry;
 
 private:
 	// The incoming plaintext content is decrypted to here, from the RawInPacket.
@@ -81,10 +62,11 @@ protected:
 
 public:
 	AbstractLoLaReceiver(Scheduler& scheduler,
+		ILinkRegistry* linkRegistry,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)
-		: BaseClass(scheduler, encoder, transceiver, cycles)
+		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
 	{}
 
 public:

@@ -9,8 +9,6 @@
 #include "..\..\Link\IChannelHop.h"
 
 #include "..\..\Link\IDuplex.h"
-
-#include "..\..\Link\LoLaLinkDefinition.h"
 #include "..\..\Link\LoLaLinkSession.h"
 
 
@@ -28,34 +26,14 @@
 ///		- CanSendPacket.
 ///		- GetRxChannel.
 /// </summary>
-template<const uint8_t MaxPayloadLinkSend,
-	const uint8_t MaxPacketReceiveListeners = 10,
-	const uint8_t MaxLinkListeners = 10>
 class AbstractLoLaLinkPacket
-	: public AbstractLoLaReceiver<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>
+	: public AbstractLoLaReceiver
 	, public virtual IChannelHop::IHopListener
 {
 private:
-	using BaseClass = AbstractLoLaReceiver<MaxPayloadLinkSend, MaxPacketReceiveListeners, MaxLinkListeners>;
+	using BaseClass = AbstractLoLaReceiver;
 
 	static constexpr uint_least16_t CALIBRATION_ROUNDS = F_CPU / 2000000L;
-
-protected:
-	using BaseClass::Transceiver;
-	using BaseClass::LinkStage;
-	using BaseClass::SyncClock;
-	using BaseClass::PacketService;
-	using BaseClass::SendCounter;
-	using BaseClass::ZeroTimestamp;
-
-	using BaseClass::RawInPacket;
-	using BaseClass::RawOutPacket;
-	using BaseClass::OutPacket;
-
-	using BaseClass::Registry;
-	using BaseClass::SetSendCalibration;
-	using BaseClass::GetSendDuration;
-	using BaseClass::GetOnAirDuration;
 
 protected:
 	/// <summary>
@@ -86,6 +64,7 @@ private:
 
 public:
 	AbstractLoLaLinkPacket(Scheduler& scheduler,
+		ILinkRegistry* linkRegistry,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
@@ -93,7 +72,7 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: IChannelHop::IHopListener()
-		, BaseClass(scheduler, encoder, transceiver, cycles)
+		, BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
 		, ExpandedKey()
 		, RandomSource(entropy)
 		, FastHasher()
