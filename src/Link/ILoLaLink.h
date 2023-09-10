@@ -3,6 +3,7 @@
 #ifndef _I_LOLA_LINK_h
 #define _I_LOLA_LINK_h
 
+#include <stdint.h>
 
 class ILinkListener
 {
@@ -88,6 +89,6 @@ public:
 	/// <param name="listener"></param>
 	/// <param name="port">Port number to register. Note that a port (upmost) may be reserved for Link.</param>
 	/// <returns>True if success. False if no more slots are available or port is reserved.</returns>
-	virtual const bool RegisterPacketReceiver(ILinkPacketListener* listener, const uint8_t port) { return false; }
+	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) { return false; }
 };
 #endif

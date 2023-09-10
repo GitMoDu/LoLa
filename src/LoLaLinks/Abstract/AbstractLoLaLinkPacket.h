@@ -52,9 +52,8 @@ protected:
 	using BaseClass::RawOutPacket;
 	using BaseClass::OutPacket;
 
-	using BaseClass::RegisterPacketListenerInternal;
+	using BaseClass::Registry;
 	using BaseClass::SetSendCalibration;
-	using BaseClass::PostLinkState;
 	using BaseClass::GetSendDuration;
 	using BaseClass::GetOnAirDuration;
 
@@ -201,15 +200,6 @@ public:
 		}
 	}
 
-	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) final
-	{
-		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
-		{
-			return RegisterPacketListenerInternal(listener, port);
-		}
-		return false;
-	}
-
 	virtual const bool CanSendPacket(const uint8_t payloadSize) final
 	{
 		if (LinkStage == LinkStageEnum::Linked && PacketService.CanSendPacket())
@@ -271,7 +261,7 @@ protected:
 			{
 			case LinkStageEnum::Linked:
 				ChannelHopper->OnLinkStopped();
-				PostLinkState(false);
+				Registry->NotifyLinkListeners(false);
 				break;
 			default:
 				break;
@@ -294,7 +284,7 @@ protected:
 				break;
 			case LinkStageEnum::Linked:
 				ChannelHopper->OnLinkStarted();
-				PostLinkState(true);
+				Registry->NotifyLinkListeners(true);
 				Task::enable();
 				break;
 			default:

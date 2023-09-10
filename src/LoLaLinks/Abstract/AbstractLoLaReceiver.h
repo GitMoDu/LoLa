@@ -23,7 +23,6 @@ protected:
 
 	using BaseClass::RawInPacket;
 	using BaseClass::ZeroTimestamp;
-	using BaseClass::InData;
 
 	using BaseClass::PacketService;
 
@@ -31,7 +30,11 @@ protected:
 
 
 	using BaseClass::OnEvent;
-	using BaseClass::NotifyPacketReceived;
+	using BaseClass::Registry;
+
+private:
+	// The incoming plaintext content is decrypted to here, from the RawInPacket.
+	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
 protected:
 	/// <summary>
@@ -207,9 +210,11 @@ public:
 		case LinkStageEnum::Linked:
 			LastValidReceived = millis();
 
-			NotifyPacketReceived(receiveTimestamp,
-				InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX],
-				LoLaPacketDefinition::GetPayloadSize(packetSize));
+			Registry->NotifyPacketListener(receiveTimestamp,
+				&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+				LoLaPacketDefinition::GetPayloadSize(packetSize),
+				InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX]);
+
 			break;
 		default:
 			return;

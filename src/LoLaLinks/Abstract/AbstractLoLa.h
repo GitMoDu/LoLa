@@ -14,6 +14,7 @@
 #include "..\..\Clock\LinkClock.h"
 
 #include "..\..\Link\ILoLaLink.h"
+#include "..\..\Link\ILinkRegistry.h"
 #include "..\..\Link\LoLaPacketDefinition.h"
 #include "..\..\Crypto\LoLaCryptoEncoderSession.h"
 
@@ -46,13 +47,13 @@ protected:
 	Timestamp ZeroTimestamp{};
 
 private:
-	PacketListenerWrapper LinkPacketListeners[MaxPacketReceiveListeners];
-	uint8_t PacketListenersCount = 0;
-
-	ILinkListener* LinkListeners[MaxLinkListeners]{};
-	uint8_t LinkListenersCount = 0;
+	// Listener registry instance.
+	LinkRegistry<MaxPacketReceiveListeners, MaxLinkListeners> RegistryInstance{};
 
 protected:
+	// Listener registry interface.
+	ILinkRegistry* Registry = &RegistryInstance;
+
 	// Packet service instance;
 	LoLaPacketService PacketService;
 
@@ -61,9 +62,6 @@ protected:
 
 	// The incoming encrypted and MAC'd packet is stored here before validated, and decrypted to InData.
 	uint8_t RawInPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
-
-	// The incoming plaintext content is decrypted to here, from the RawInPacket.
-	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
 protected:
 	// Rx/Tx Transceiver for PHY.
@@ -83,33 +81,18 @@ protected:
 	virtual void OnEvent(const PacketEventEnum packetEvent) {}
 
 #if defined(DEBUG_LOLA)
-protected:
 	virtual void Owner() {}
-
-
-	void Skipped(const __FlashStringHelper* ifsh)
-	{
-		return Skipped(reinterpret_cast<const char*>(ifsh));
-	}
-
-	void Skipped(const String& label)
-	{
-		this->Owner();
-		Serial.print(F("Rejected "));
-		Serial.println(label);
-	}
 #endif
-
 
 public:
 	AbstractLoLa(Scheduler& scheduler,
+		ILinkRegistry* linkRegistry,
 		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)
 		: ILoLaLink()
 		, IPacketServiceListener()
 		, BaseClass(scheduler, this)
-		, LinkPacketListeners()
 		, PacketService(scheduler, this, transceiver, RawInPacket, RawOutPacket)
 		, Transceiver(transceiver)
 		, Encoder(encoder)
@@ -146,91 +129,33 @@ public:
 	}
 
 public:
-	/// <summary>
-	/// Overridable callback.
-	/// </summary>
-	/// <param name="result">SendResultEnum</param>
-	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result)
-	{}
-
-public:
 	virtual const bool RegisterLinkListener(ILinkListener* listener) final
 	{
-		if (listener != nullptr && LinkListenersCount < MaxLinkListeners - 1)
+		return Registry->RegisterLinkListener(listener);
+	}
+
+	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) final
+	{
+		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
 		{
-			for (uint_fast8_t i = 0; i < LinkListenersCount; i++)
-			{
-				if (LinkListeners[i] == listener)
-				{
-					// Listener already registered.
-#if defined(DEBUG_LOLA)
-					Serial.println(F("Listener already registered."));
-#endif
-					return false;
-				}
-			}
-
-			LinkListeners[LinkListenersCount] = listener;
-			LinkListenersCount++;
-
-			return true;
+			return Registry->RegisterPacketListener(listener, port);
 		}
-
 		return false;
 	}
 
+#if defined(DEBUG_LOLA)
 protected:
-	void PostLinkState(const bool hasLink)
+	void Skipped(const __FlashStringHelper* ifsh)
 	{
-		for (uint_fast8_t i = 0; i < LinkListenersCount; i++)
-		{
-			LinkListeners[i]->OnLinkStateUpdated(hasLink);
-		}
+		return Skipped(reinterpret_cast<const char*>(ifsh));
 	}
 
-	void NotifyPacketReceived(const uint32_t timestamp, const uint8_t port, const uint8_t payloadSize)
+	void Skipped(const String& label)
 	{
-		for (uint_fast8_t i = 0; i < PacketListenersCount; i++)
-		{
-			if (port == LinkPacketListeners[i].Port)
-			{
-				LinkPacketListeners[i].Listener->OnPacketReceived(timestamp,
-					&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
-					payloadSize,
-					port);
-
-				break;
-			}
-		}
+		this->Owner();
+		Serial.print(F("Rejected "));
+		Serial.println(label);
 	}
-
-	const bool RegisterPacketListenerInternal(ILinkPacketListener* listener, const uint8_t port)
-	{
-		if (listener != nullptr
-			&& (PacketListenersCount < MaxPacketReceiveListeners))
-		{
-			for (uint_fast8_t i = 0; i < PacketListenersCount; i++)
-			{
-				if (LinkPacketListeners[i].Port == port)
-				{
-					// Port already registered.
-#if defined(DEBUG_LOLA)
-					Serial.print(F("Port "));
-					Serial.print(port);
-					Serial.println(F(" already registered."));
 #endif
-					return false;
-				}
-			}
-
-			LinkPacketListeners[PacketListenersCount].Listener = listener;
-			LinkPacketListeners[PacketListenersCount].Port = port;
-			PacketListenersCount++;
-
-			return true;
-		}
-
-		return false;
-	}
 };
 #endif

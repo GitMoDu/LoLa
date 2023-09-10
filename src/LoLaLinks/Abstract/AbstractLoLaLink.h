@@ -38,15 +38,14 @@ protected:
 
 	using BaseClass::RandomSource;
 	using BaseClass::PacketService;
+	using BaseClass::Registry;
 
-	using BaseClass::RegisterPacketListenerInternal;
 	using BaseClass::GetSendDuration;
 	using BaseClass::GetPacketThrottlePeriod;
 	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::ResetLastValidReceived;
 
-	using BaseClass::PostLinkState;
 	using BaseClass::GetStageElapsedMillis;
 	using BaseClass::GetElapsedSinceLastValidReceived;
 
@@ -124,7 +123,7 @@ public:
 
 	virtual const bool Setup()
 	{
-		if (RegisterPacketListenerInternal(this, Linked::PORT))
+		if (Registry->RegisterPacketListener(this, Linked::PORT))
 		{
 			return BaseClass::Setup();
 		}
