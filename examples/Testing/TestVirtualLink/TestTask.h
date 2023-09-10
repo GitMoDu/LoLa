@@ -47,7 +47,7 @@ public:
 	{
 		if (Client != nullptr)
 		{
-			if (Client->RegisterPacketReceiver(this, Port))
+			if (Client->RegisterPacketListener(this, Port))
 			{
 				if (Server != nullptr)
 				{

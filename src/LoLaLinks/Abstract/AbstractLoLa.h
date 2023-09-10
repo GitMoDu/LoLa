@@ -35,7 +35,7 @@ class AbstractLoLa : protected TemplateLoLaService<MaxPayloadLinkSend>
 private:
 	using BaseClass = TemplateLoLaService<MaxPayloadLinkSend>;
 
-	struct LinkPacketServiceWrapper
+	struct PacketListenerWrapper
 	{
 		ILinkPacketListener* Listener = nullptr;
 		uint8_t Port = 0;
@@ -45,13 +45,14 @@ protected:
 	// Static value with all zeros.
 	Timestamp ZeroTimestamp{};
 
-protected:
-	LinkPacketServiceWrapper LinkPacketServiceListeners[MaxPacketReceiveListeners];
-	uint8_t PacketServiceListenersCount = 0;
+private:
+	PacketListenerWrapper LinkPacketListeners[MaxPacketReceiveListeners];
+	uint8_t PacketListenersCount = 0;
 
 	ILinkListener* LinkListeners[MaxLinkListeners]{};
 	uint8_t LinkListenersCount = 0;
 
+protected:
 	// Packet service instance;
 	LoLaPacketService PacketService;
 
@@ -108,7 +109,7 @@ public:
 		: ILoLaLink()
 		, IPacketServiceListener()
 		, BaseClass(scheduler, this)
-		, LinkPacketServiceListeners()
+		, LinkPacketListeners()
 		, PacketService(scheduler, this, transceiver, RawInPacket, RawOutPacket)
 		, Transceiver(transceiver)
 		, Encoder(encoder)
@@ -174,6 +175,7 @@ public:
 
 			return true;
 		}
+
 		return false;
 	}
 
@@ -188,11 +190,11 @@ protected:
 
 	void NotifyPacketReceived(const uint32_t timestamp, const uint8_t port, const uint8_t payloadSize)
 	{
-		for (uint_fast8_t i = 0; i < PacketServiceListenersCount; i++)
+		for (uint_fast8_t i = 0; i < PacketListenersCount; i++)
 		{
-			if (port == LinkPacketServiceListeners[i].Port)
+			if (port == LinkPacketListeners[i].Port)
 			{
-				LinkPacketServiceListeners[i].Listener->OnPacketReceived(timestamp,
+				LinkPacketListeners[i].Listener->OnPacketReceived(timestamp,
 					&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
 					payloadSize,
 					port);
@@ -202,14 +204,14 @@ protected:
 		}
 	}
 
-	const bool RegisterPacketReceiverInternal(ILinkPacketListener* listener, const uint8_t port)
+	const bool RegisterPacketListenerInternal(ILinkPacketListener* listener, const uint8_t port)
 	{
 		if (listener != nullptr
-			&& (PacketServiceListenersCount < MaxPacketReceiveListeners))
+			&& (PacketListenersCount < MaxPacketReceiveListeners))
 		{
-			for (uint_fast8_t i = 0; i < PacketServiceListenersCount; i++)
+			for (uint_fast8_t i = 0; i < PacketListenersCount; i++)
 			{
-				if (LinkPacketServiceListeners[i].Port == port)
+				if (LinkPacketListeners[i].Port == port)
 				{
 					// Port already registered.
 #if defined(DEBUG_LOLA)
@@ -221,16 +223,14 @@ protected:
 				}
 			}
 
-			LinkPacketServiceListeners[PacketServiceListenersCount].Listener = listener;
-			LinkPacketServiceListeners[PacketServiceListenersCount].Port = port;
-			PacketServiceListenersCount++;
+			LinkPacketListeners[PacketListenersCount].Listener = listener;
+			LinkPacketListeners[PacketListenersCount].Port = port;
+			PacketListenersCount++;
 
 			return true;
 		}
-		else
-		{
-			return false;
-		}
+
+		return false;
 	}
 };
 #endif

@@ -52,7 +52,7 @@ protected:
 	using BaseClass::RawOutPacket;
 	using BaseClass::OutPacket;
 
-	using BaseClass::RegisterPacketReceiverInternal;
+	using BaseClass::RegisterPacketListenerInternal;
 	using BaseClass::SetSendCalibration;
 	using BaseClass::PostLinkState;
 	using BaseClass::GetSendDuration;
@@ -201,11 +201,11 @@ public:
 		}
 	}
 
-	virtual const bool RegisterPacketReceiver(ILinkPacketListener* listener, const uint8_t port) final
+	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) final
 	{
 		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
 		{
-			return RegisterPacketReceiverInternal(listener, port);
+			return RegisterPacketListenerInternal(listener, port);
 		}
 		return false;
 	}

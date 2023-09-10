@@ -39,7 +39,7 @@ protected:
 	using BaseClass::RandomSource;
 	using BaseClass::PacketService;
 
-	using BaseClass::RegisterPacketReceiverInternal;
+	using BaseClass::RegisterPacketListenerInternal;
 	using BaseClass::GetSendDuration;
 	using BaseClass::GetPacketThrottlePeriod;
 	using BaseClass::CanRequestSend;
@@ -124,7 +124,7 @@ public:
 
 	virtual const bool Setup()
 	{
-		if (RegisterPacketReceiverInternal(this, Linked::PORT))
+		if (RegisterPacketListenerInternal(this, Linked::PORT))
 		{
 			return BaseClass::Setup();
 		}
