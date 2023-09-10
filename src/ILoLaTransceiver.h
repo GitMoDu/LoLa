@@ -60,7 +60,7 @@ public:
 
 	/// <summary>
 	/// Tx/Transmit a packet at the indicated channel.
-	/// Transceiver can optionally auto-return to RX mode on same channel,
+	/// Transceiver should auto-return to RX mode on same channel,
 	///  but Rx() will be always called after OnTx() is called from transceiver.
 	/// </summary>
 	/// <param name="data">Raw packet data.</param>
@@ -77,17 +77,16 @@ public:
 	/// If the transceiver has a fast RX_HOP mode, do a fast hop to new channel,
 	///  otherwise set new channel in RX mode.
 	/// </summary>
-	/// <param name="channel">Abstract channel [0:255]. Must be ranged (%mod) to actual number of available channels.</param>
+	/// <param name="channel">Abstract channel [0:255]. Must be ranged to actual number of available channels: channel % (channel_count+1).</param>
 	virtual void Rx(const uint8_t channel) { }
 
 	/// <summary>
 	/// How long transmiting will take from Tx request to start In-Air.
 	/// This includes memory copies and SPI transactions and pre-ambles,
 	///	 but does not include medium delay (ex: lightspeed) or internal transceiver processing. 
-	/// In microseconds.
 	/// </summary>
 	/// <param name="packetSize"></param>
-	/// <returns></returns>
+	/// <returns>Duration In microseconds.</returns>
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) { return 0; }
 
 	/// <summary>
@@ -95,7 +94,7 @@ public:
 	/// In microseconds.
 	/// </summary>
 	/// <param name="packetSize"></param>
-	/// <returns></returns>
+	/// <returns>Duration In microseconds.</returns>
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) { return 0; }
 };
 #endif
