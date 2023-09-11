@@ -439,12 +439,7 @@ private:
 
 	const uint8_t CobsDecodeInPlace()
 	{
-		return CobsDecodeInPlace(RxSize);
-	}
-
-	const uint8_t CobsDecodeInPlace(const uint_fast8_t size)
-	{
-		unsigned decodedSize = size;
+		unsigned decodedSize = RxSize;
 		if (cobs_decode_inplace(
 			(void*)RxBuffer,
 			decodedSize) == COBS_RET_SUCCESS)
