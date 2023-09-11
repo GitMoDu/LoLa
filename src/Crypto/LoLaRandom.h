@@ -5,6 +5,10 @@
 
 #include "LoLaCryptoDefinition.h"
 #include <IEntropy.h>
+
+/*
+* https://www.pcg-random.org
+*/
 #include "PCG.h"
 
 
@@ -16,7 +20,7 @@ class LoLaRandom
 {
 private:
 	IEntropy* EntropySource; // Entropy source for CSPRNG.
-	
+
 	PCG::pcg32_random_t Rng;
 
 public:

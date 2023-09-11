@@ -3,24 +3,25 @@
 #ifndef _LOLA_CRYPTO_SESSION_h
 #define _LOLA_CRYPTO_SESSION_h
 
-#include "..\Link\LoLaLinkDefinition.h"
-
 #include <IEntropy.h>
+
 #include "LoLaCryptoDefinition.h"
-#include "LoLaCryptoPrimitives.h"
 #include "LoLaRandom.h"
 
-#include "..\Clock\Timestamp.h"
 #include "..\Link\LoLaLinkSession.h"
 
+/*
+* https://github.com/rweather/arduinolibs
+*/
+#include <Poly1305.h>
 
 class LoLaCryptoSession : public LoLaLinkSession
 {
 protected:
-	LoLaCryptoPrimitives::KeyHashType KeyHasher; // HKDF and Signature hasher.
+	Poly1305 CryptoHasher; // HMAC and Signature hasher.
 
-private:
-	HKDF<LoLaCryptoPrimitives::KeyHashType> KeyExpander; // N-Bytes key expander HKDF.
+protected:
+	uint8_t Nonce[LoLaCryptoDefinition::MAC_KEY_SIZE]{}; // Reusable nonce for CryptoHasher.
 
 protected:
 	/// <summary>
@@ -54,12 +55,10 @@ private:
 	/// </summary>
 	uint8_t SessionToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
 
-
 private:
 	uint8_t LocalChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE]{};
 	uint8_t PartnerChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE]{};
 	uint8_t PartnerChallengeSignature[LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE]{};
-
 
 public:
 	/// <summary>
@@ -68,8 +67,7 @@ public:
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	LoLaCryptoSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey, const uint8_t* accessPassword)
 		: LoLaLinkSession()
-		, KeyHasher()
-		, KeyExpander()
+		, CryptoHasher()
 		, ExpandedKey(expandedKey)
 		, AccessPassword(accessPassword)
 	{}
@@ -89,40 +87,58 @@ public:
 	void SetRandomSessionId(LoLaRandom* randomSource)
 	{
 		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-
 		ClearCachedSessionToken();
-	}
-
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="key">sizeof = LoLaCryptoDefinition::CYPHER_KEY_SIZE</param>
-	void SetSecretKey(const uint8_t* key)
-	{
-		// Populate crypto keys with HKDF from secret key.
-		KeyExpander.setKey((uint8_t*)(key), LoLaCryptoDefinition::CYPHER_KEY_SIZE, SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}
 
 	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
 	{
-		KeyHasher.reset(LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
-		KeyHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-		KeyHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
-		KeyHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
+		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
+		CryptoHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 
-		KeyHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
-
-		// Clear hasher from sensitive material.
-		KeyHasher.clear();
+		CopySessionIdTo(Nonce);
+		for (uint_fast8_t i = LoLaLinkDefinition::SESSION_ID_SIZE; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = 0;
+		}
+		CryptoHasher.finalize(Nonce, signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
+		CryptoHasher.clear();
 	}
 
-	void CalculateExpandedKey()
+	/// <summary>
+	/// Populate crypto keys with HKDF from secret key.
+	/// N-Bytes key expander sourcing key and session id.
+	/// </summary>
+	/// <param name="key"></param>
+	void CalculateExpandedKey(const uint8_t* key)
 	{
-		// Populate crypto keys with HKDF from secret key.
-		KeyExpander.extract(((uint8_t*)(ExpandedKey)), LoLaLinkDefinition::HKDFSize);
+		uint8_t index = 0;
 
-		// Clear hasher from sensitive material.
-		KeyExpander.clear();
+		CopySessionIdTo(Nonce);
+		for (uint_fast8_t i = LoLaLinkDefinition::SESSION_ID_SIZE; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = 0;
+		}
+
+		while (index < LoLaLinkDefinition::HKDFSize)
+		{
+			CryptoHasher.reset(EmptyKey);
+			CryptoHasher.update(&index, sizeof(uint8_t));
+			CryptoHasher.update(key, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
+
+			if (LoLaLinkDefinition::HKDFSize - index > LoLaCryptoDefinition::MAC_KEY_SIZE)
+			{
+				CryptoHasher.finalize(Nonce, &((uint8_t*)ExpandedKey)[index], LoLaCryptoDefinition::MAC_KEY_SIZE);
+				index += LoLaCryptoDefinition::MAC_KEY_SIZE;
+			}
+			else
+			{
+				CryptoHasher.finalize(Nonce, &((uint8_t*)ExpandedKey)[index], LoLaLinkDefinition::HKDFSize - index);
+				index += (LoLaLinkDefinition::HKDFSize - index);
+			}
+		}
+
+		CryptoHasher.clear();
 	}
 
 	/// <summary>
@@ -131,31 +147,39 @@ public:
 	/// <param name="partnerPublicKey"></param>
 	void CalculateSessionAddressing(const uint8_t* localPublicKey, const uint8_t* partnerPublicKey)
 	{
-		KeyHasher.reset(LoLaLinkDefinition::ADDRESS_KEY_SIZE);
-		KeyHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
-		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		KeyHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		KeyHasher.finalize(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+		CryptoHasher.reset(EmptyKey); // 16 byte Auth Key.
+		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 
-		KeyHasher.reset(LoLaLinkDefinition::ADDRESS_KEY_SIZE);
-		KeyHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
-		KeyHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		KeyHasher.finalize(OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::ADDRESS_SEED_SIZE; i++)
+		{
+			Nonce[i] = ExpandedKey->AdressingSeed[i];
+		}
+		for (uint_fast8_t i = LoLaLinkDefinition::ADDRESS_SEED_SIZE; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = 0;
+		}
+		CryptoHasher.finalize(Nonce, InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
-		// Clear hasher from sensitive material.
-		KeyHasher.clear();
+		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.finalize(Nonce, OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+		CryptoHasher.clear();
 	}
 
 	void CalculateSessionToken(const uint8_t* partnerPublicKey)
 	{
-		KeyHasher.reset(LoLaLinkDefinition::SESSION_TOKEN_SIZE);
-		KeyHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		KeyHasher.finalize(SessionToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
+		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 
-		// Clear hasher from sensitive material.
-		KeyHasher.clear();
+		CopySessionIdTo(Nonce);
+		for (uint_fast8_t i = LoLaLinkDefinition::SESSION_ID_SIZE; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = 0;
+		}
+		CryptoHasher.finalize(Nonce, SessionToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
+		CryptoHasher.clear();
 	}
 
 	/// <summary>
@@ -165,13 +189,16 @@ public:
 	/// <returns>True if the calculated secrets are already set for this SessionId and PublicKey</returns>
 	const bool SessionTokenMatches(const uint8_t* partnerPublicKey)
 	{
-		KeyHasher.reset(LoLaLinkDefinition::SESSION_TOKEN_SIZE);
-		KeyHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-		KeyHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		KeyHasher.finalize(MatchToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
+		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 
-		// Clear hasher from sensitive material.
-		KeyHasher.clear();
+		CopySessionIdTo(Nonce);
+		for (uint_fast8_t i = LoLaLinkDefinition::SESSION_TOKEN_SIZE; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = 0;
+		}
+		CryptoHasher.finalize(Nonce, MatchToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
+		CryptoHasher.clear();
 
 		return CachedSessionTokenMatches(MatchToken);
 	}

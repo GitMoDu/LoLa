@@ -1,12 +1,12 @@
 // PCG.h
 // *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
+// https://www.pcg-random.org
 
 #ifndef _PCG_h
 #define _PCG_h
 
 #include <stdint.h>
-
 
 class PCG
 {

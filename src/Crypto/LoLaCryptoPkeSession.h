@@ -3,7 +3,6 @@
 #ifndef _LOLA_CRYPTO_PKE_SESSION_h
 #define _LOLA_CRYPTO_PKE_SESSION_h
 
-#include "LoLaCryptoPrimitives.h"
 #include "LoLaCryptoEncoderSession.h"
 
 /*
@@ -17,14 +16,15 @@ private:
 	enum PkeEnum
 	{
 		CalculatingSecret,
-		CalculatingExpandedKey1,
-		CalculatingExpandedKey2,
+		CalculatingExpandedKey,
 		CalculatingAddressing,
 		CalculatingSessionToken,
 		PkeCached
 	};
 
 private:
+	static const uint8_t UECC_KEY_SIZE = 20;
+
 	const uECC_Curve_t* ECC_CURVE; // uECC_secp160r1
 
 private:
@@ -85,14 +85,16 @@ public:
 		{
 		case PkeEnum::CalculatingSecret:
 			uECC_shared_secret(PartnerPublicKey, LocalPrivateKey, SecretKey, ECC_CURVE);
-			PkeState = PkeEnum::CalculatingExpandedKey1;
+			// uECC_secp160r1 produces a secret key of 20 bytes.
+			// Add the remaining zero padding.
+			for (uint_fast8_t i = UECC_KEY_SIZE; i < LoLaCryptoDefinition::CYPHER_KEY_SIZE; i++)
+			{
+				SecretKey[i] = 0;
+			}
+			PkeState = PkeEnum::CalculatingExpandedKey;
 			break;
-		case PkeEnum::CalculatingExpandedKey1:
-			SetSecretKey(SecretKey);
-			PkeState = PkeEnum::CalculatingExpandedKey2;
-			break;
-		case PkeEnum::CalculatingExpandedKey2:
-			CalculateExpandedKey();
+		case PkeEnum::CalculatingExpandedKey:
+			CalculateExpandedKey(SecretKey);
 			PkeState = PkeEnum::CalculatingAddressing;
 			break;
 		case PkeEnum::CalculatingAddressing:

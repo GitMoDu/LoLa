@@ -4,6 +4,7 @@
 #define _LOLA_LINK_SESSION_h
 
 #include <stdint.h>
+#include "..\Link\LoLaLinkDefinition.h"
 
 class LoLaLinkSession
 {
