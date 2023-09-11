@@ -128,9 +128,9 @@ public:
 		// Simulate transmit delay, from request to on-air start.
 		if (OutGoing.HasPending() && ((micros() - OutGoing.StartTimestamp) >= GetTimeToAir(OutGoing.Size)))
 		{
-			if (CurrentChannel != OutGoing.Channel)
+			if (CurrentChannel != (OutGoing.Channel % Config::ChannelCount))
 			{
-				CurrentChannel = OutGoing.Channel;
+				CurrentChannel = OutGoing.Channel % Config::ChannelCount;
 				LogChannel(CurrentChannel);
 			}
 
@@ -172,7 +172,7 @@ public:
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
-					if (CurrentChannel != OutGoing.Channel)
+					if (CurrentChannel != (OutGoing.Channel % Config::ChannelCount))
 					{
 						CurrentChannel = OutGoing.Channel % Config::ChannelCount;
 						LogChannel(CurrentChannel);
