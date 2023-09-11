@@ -93,7 +93,7 @@ public:
 		/// <summary>
 		/// Packet Id Key.
 		/// </summary>
-		uint8_t IdKey[LoLaCryptoDefinition::CYPHER_TAG_ID_SIZE];
+		uint8_t IdKey[LoLaCryptoDefinition::PACKET_ID_SIZE];
 
 		/// <summary>
 		/// Addressing entropy.

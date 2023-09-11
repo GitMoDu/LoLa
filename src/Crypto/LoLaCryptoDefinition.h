@@ -108,15 +108,10 @@ public:
 	/// <summary>
 	/// Cypher Tag (Nonce) content indexes.
 	/// </summary>
-public:
 	static constexpr uint8_t CYPHER_TAG_ID_INDEX = 0;
-	static constexpr uint8_t CYPHER_TAG_ID_SIZE = 1;
 	static constexpr uint8_t CYPHER_TAG_SIZE_INDEX = CYPHER_TAG_ID_INDEX + PACKET_ID_SIZE;
-	static constexpr uint8_t CYPHER_TAG_ROLL_INDEX = CYPHER_TAG_SIZE_INDEX + CYPHER_TAG_ID_SIZE;
+	static constexpr uint8_t CYPHER_TAG_ROLL_INDEX = CYPHER_TAG_SIZE_INDEX + PACKET_ID_SIZE;
 	static constexpr uint8_t CYPHER_TAG_TIMESTAMP_INDEX = CYPHER_TAG_ROLL_INDEX + TIME_SUB_TOKEN_KEY_SIZE;
 	static constexpr uint8_t CYPHER_TAG_SIZE = CYPHER_TAG_TIMESTAMP_INDEX + TIME_TOKEN_KEY_SIZE;
 };
-
-static const uint8_t EmptyKey[LoLaCryptoDefinition::MAC_KEY_SIZE] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-static const uint8_t CounterZero[1] = { 0 };
 #endif
