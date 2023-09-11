@@ -76,14 +76,14 @@ public:
 		OnEvent(PacketEventEnum::ReceiveRejectedTransceiver);
 	}
 
+	virtual void OnDropped(const uint32_t timestamp, const uint8_t packetSize) final
+	{
+		// PacketService validates for size.
+		OnEvent(PacketEventEnum::ReceiveRejectedInvalid);
+	}
+
 	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
-		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE || packetSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-		{
-			OnEvent(PacketEventEnum::ReceiveRejectedInvalid);
-			return;
-		}
-
 		const uint8_t receivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
 
 		switch (LinkStage)

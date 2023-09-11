@@ -13,8 +13,8 @@ public:
 	/// </summary>
 	/// <param name="data">Raw packet data.</param>
 	/// <param name="receiveTimestamp">Accurate timestamp (micros()) of incoming packet start.</param>
-	/// <param name="packetSize">Packet size.</param>
-	/// <param name="rssi">Normalized RX RSSI [0:255].</param>
+	/// <param name="packetSize">[MIN_PACKET_SIZE;MAX_PACKET_TOTAL_SIZE]</param>
+	/// <param name="rssi">Normalized RX RSSI [0;255].</param>
 	/// <returns>True if packet was successfully consumed. False, try again later.</returns>
 	virtual const bool OnRx(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssi) { return false; }
 

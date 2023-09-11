@@ -16,7 +16,7 @@
 /// Interfaces directly with and abstracts ILoLaTransceiver.
 /// Properties:
 ///		Content abstract.
-///		Buffers input packets, so transceiver is free to receive more while the service processes it.
+///		Pushes input packets straight to Link buffer, so transceiver is free to receive more while the service processes it.
 /// </summary>
 class LoLaPacketService : private Task, public virtual ILoLaTransceiverListener
 {
@@ -127,7 +127,8 @@ public:
 
 		if (PendingReceiveSize > 0)
 		{
-			if (PendingReceiveSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+			if (PendingReceiveSize < LoLaPacketDefinition::MIN_PACKET_SIZE
+				|| PendingReceiveSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 			{
 				ServiceListener->OnDropped(ReceiveTimestamp, PendingReceiveSize);
 			}
@@ -137,9 +138,10 @@ public:
 			}
 			PendingReceiveSize = 0;
 			Task::enable();
+			return true;
 		}
 
-		return true;
+		return State != StateEnum::Done;
 	}
 
 public:
@@ -229,35 +231,40 @@ public:
 	/// ILoLaTransceiverListener overrides.
 	/// </summary>
 public:
+	/// <summary>
+	/// Handles incoming packets.
+	/// Checks for valid size and forwards the events to the listener.
+	/// </summary>
+	/// <param name="data">Raw packet data.</param>
+	/// <param name="receiveTimestamp">Accurate timestamp (micros()) of incoming packet start.</param>
+	/// <param name="packetSize">[MIN_PACKET_SIZE;MAX_PACKET_TOTAL_SIZE]</param>
+	/// <param name="rssi">Normalized RX RSSI [0:255].</param>
+	/// <returns>True if packet was successfully consumed. False, try again later.</returns>
 	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
 		if (PendingReceiveSize > 0)
 		{
-			// We still have a pending packet, drop this one.
-			ServiceListener->OnDropped(receiveTimestamp, packetSize);
-
+			// We still have a pending packet, refuse this one for now.
 			return false;
 		}
-		else
+
+		// Double buffer input packet, so we don't miss any in the meanwhile.
+		PendingReceiveSize = packetSize;
+		ReceiveTimestamp = receiveTimestamp;
+		PendingReceiveRssi = rssi;
+
+		// Only copy buffer if packet fits, but let task notify listener that a packet was dropped.
+		if (packetSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
-			// Double buffer input packet, so we don't miss any in the meanwhile.
-			PendingReceiveSize = packetSize;
-			ReceiveTimestamp = receiveTimestamp;
-			PendingReceiveRssi = rssi;
-
-			// Only copy buffer if packet fits, but let task notify listener that a packet was dropped.
-			if (packetSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+			for (uint_fast8_t i = 0; i < packetSize; i++)
 			{
-				for (uint_fast8_t i = 0; i < packetSize; i++)
-				{
-					RawInPacket[i] = data[i];
-				}
+				RawInPacket[i] = data[i];
 			}
-
-			Task::enable();
-
-			return true;
 		}
+
+		Task::enable();
+
+		return true;
 	}
 
 	virtual void OnRxLost(const uint32_t receiveTimestamp) final
