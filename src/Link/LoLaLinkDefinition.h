@@ -20,6 +20,7 @@ public:
 	/// When unlinked, only top 2 ports are used.
 	/// </summary>
 	static constexpr uint8_t LINK_PORT_ALLOCATION = 1;
+	static constexpr uint8_t UN_LINKED_PORT_ALLOCATION = 2;
 	static constexpr uint8_t MAX_DEFINITION_PORT = UINT8_MAX - LINK_PORT_ALLOCATION;
 
 	/// <summary>

@@ -5,7 +5,6 @@
 
 #include "ILoLaLink.h"
 
-
 class ILinkRegistry
 {
 public:
@@ -26,6 +25,7 @@ public:
 
 
 	virtual void NotifyLinkListeners(const bool hasLink) { }
+
 	virtual void NotifyPacketListener(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) { }
 };
 
@@ -50,8 +50,13 @@ public:
 	LinkRegistry()
 		: LinkPacketListeners()
 	{
-
 	}
+
+	const bool Setup()
+	{
+		return MaxPacketReceiveListeners >= LoLaLinkDefinition::UN_LINKED_PORT_ALLOCATION;
+	}
+
 	/// <summary>
 	/// Register link status listener.
 	/// </summary>
@@ -85,8 +90,7 @@ public:
 	/// 
 	/// </summary>
 	/// <param name="listener"></param>
-	/// <param name="port">Port number to register. Note that a port (upmost) may be reserved for Link.</param>
-	/// <returns>True if success. False if no more slots are available or port is reserved.</returns>
+	/// <returns>True if success. False if no more slots are available.</returns>
 	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) final
 	{
 		if (listener != nullptr
@@ -117,7 +121,6 @@ public:
 		}
 	}
 
-
 	virtual void NotifyLinkListeners(const bool hasLink) final
 	{
 		for (uint_fast8_t i = 0; i < LinkListenersCount; i++)
@@ -132,7 +135,8 @@ public:
 		{
 			if (port == LinkPacketListeners[i].Port)
 			{
-				LinkPacketListeners[i].Listener->OnPacketReceived(timestamp,
+				LinkPacketListeners[i].Listener->OnPacketReceived(
+					timestamp,
 					payload,
 					payloadSize,
 					port);
@@ -142,5 +146,4 @@ public:
 		}
 	}
 };
-
 #endif

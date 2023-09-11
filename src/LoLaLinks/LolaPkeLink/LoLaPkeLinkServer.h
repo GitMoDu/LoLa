@@ -71,7 +71,7 @@ public:
 		{
 			Session.CompressPublicKeyTo(PublicCompressedKey);
 
-			return BaseClass::Setup();
+			return RegistryInstance.Setup() && BaseClass::Setup();
 		}
 #if defined(DEBUG_LOLA)
 		else
