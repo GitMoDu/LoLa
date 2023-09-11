@@ -62,11 +62,11 @@ public:
 		, ReportTracking()
 	{}
 
-	virtual const bool Setup()
+	virtual const bool Setup(const LoLaLinkDefinition::LinkType linkType)
 	{
 		if (Registry->RegisterPacketListener(this, Linked::PORT))
 		{
-			return BaseClass::Setup();
+			return BaseClass::Setup(linkType);
 		}
 #if defined(DEBUG_LOLA)
 		else

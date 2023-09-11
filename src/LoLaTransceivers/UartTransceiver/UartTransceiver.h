@@ -34,6 +34,9 @@ class UartTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
 private:
+	static constexpr uint16_t TRANSCEIVER_ID = 0x0457;
+
+private:
 	enum TxStateEnum
 	{
 		NoTx,
@@ -348,6 +351,12 @@ public:
 	/// <param name="channel"></param>
 	virtual void Rx(const uint8_t channel) final
 	{
+	}
+
+	virtual const uint32_t GetTransceiverCode() final
+	{
+		return (uint32_t)TRANSCEIVER_ID
+			+ (uint32_t)(BaudRate / 1000) << 16;
 	}
 
 	/// <summary>

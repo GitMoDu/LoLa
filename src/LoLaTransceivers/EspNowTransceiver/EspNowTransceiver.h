@@ -18,6 +18,8 @@ class EspNowTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
 private:
+	static constexpr uint16_t TRANSCEIVER_ID = 0x3403;
+
 	static const uint8_t ChannelCount = 13;
 	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
@@ -68,6 +70,13 @@ public:
 	virtual const bool TxAvailable() final
 	{
 		return false;
+	}
+
+	virtual const uint32_t GetTransceiverCode()
+	{
+		return (uint32_t)TRANSCEIVER_ID //+ (((uint32_t)AddressPipe + 1) * AddressSize)
+			//+ (uint32_t)dataRateCode << 16
+			+ (uint32_t)ChannelCount << 24;
 	}
 
 	/// <summary>

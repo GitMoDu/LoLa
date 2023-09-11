@@ -140,13 +140,14 @@ public:
 
 		// Calculate MAC from content.
 		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Only the first MAC_SIZE bytes are effectively used.
 		CryptoHasher.finalize(Nonce, MatchMac, LoLaPacketDefinition::MAC_SIZE);
 
-		// Clear cypher from sensitive material. Disabled for performance.
-		// CryptoCypher->clear();
+		// Clear cypher from sensitive material.
+		CryptoHasher.clear();
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAC_SIZE; i++)
@@ -198,13 +199,14 @@ public:
 
 		// Set HMAC without implicit addressing or token.
 		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Only the first LoLaPacketDefinition:MAC_SIZE bytes are effectively used.
 		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
 
-		// Clear cypher from sensitive material. Disabled for performance.
-		// CryptoCypher->clear();
+		// Clear cypher from sensitive material.
+		CryptoHasher.clear();
 	}
 
 	/// <summary>

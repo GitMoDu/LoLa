@@ -61,13 +61,13 @@ public:
 		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
 	{}
 
-	virtual const bool Setup()
+	const bool Setup()
 	{
 		if (Session.Setup())
 		{
 			Session.CompressPublicKeyTo(PublicCompressedKey);
 
-			return RegistryInstance.Setup() && BaseClass::Setup();
+			return RegistryInstance.Setup() && BaseClass::Setup(LoLaLinkDefinition::LinkType::PublicKeyExchange);
 		}
 #if defined(DEBUG_LOLA)
 		else

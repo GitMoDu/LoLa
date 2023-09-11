@@ -35,6 +35,8 @@ class nRF24Transceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
 private:
+	static constexpr uint16_t TRANSCEIVER_ID = 0x3F24;
+
 	static constexpr uint32_t EVENT_TIMEOUT_MICROS = 3000;
 
 	// 126 RF channels, 1 MHz steps.
@@ -427,6 +429,27 @@ public:
 		Radio.setChannel(GetRealChannel(channel));
 		Radio.startListening();
 		Task::enable();
+	}
+
+	virtual const uint32_t GetTransceiverCode() final
+	{
+		uint8_t dataRateCode = 0;
+		switch (DataRate)
+		{
+		case RF24_250KBPS:
+			dataRateCode = 25;
+			break;
+		case RF24_1MBPS:
+			dataRateCode = 100;
+			break;
+		case RF24_2MBPS:
+			dataRateCode = 200;
+		default:
+			break;
+		}
+		return (uint32_t)TRANSCEIVER_ID + (((uint32_t)AddressPipe + 1) * AddressSize)
+			+ (uint32_t)dataRateCode << 16
+			+ (uint32_t)ChannelCount << 24;
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final

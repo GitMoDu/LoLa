@@ -14,7 +14,7 @@
 /// Provides a double-buffered simulated PHY, for LoLaLinks.
 /// Can send and transmit to IVirtualTransceiver partner.
 /// </summary>
-/// <typeparam name="Config">IVirtualTransceiver::ConfigurationStruct: Simulated PHY characteristics.</typeparam>
+/// <typeparam name="Config">IVirtualTransceiver::Configuration: Simulated PHY characteristics.</typeparam>
 /// <typeparam name="OnwerName">Indentifier for debug logging.</typeparam>
 /// <typeparam name="LogChannelHop">Enables current channel logging, when DEBUG_LOLA is defined.</typeparam>
 template<typename Config,
@@ -27,6 +27,8 @@ class VirtualTransceiver final
 	, public virtual ILoLaTransceiver
 {
 private:
+	static constexpr uint32_t TRANSCEIVER_ID = 0x00FFFFFF;
+
 	struct HopRequestStruct
 	{
 		uint32_t StartTimestamp = 0;
@@ -263,6 +265,11 @@ public:
 		Task::enable();
 
 		return true;
+	}
+
+	virtual const uint32_t GetTransceiverCode() final
+	{
+		return TRANSCEIVER_ID + ((uint32_t)Config::ChannelCount << 24);
 	}
 
 	virtual const bool Stop() final

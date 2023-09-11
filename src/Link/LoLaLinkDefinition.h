@@ -15,6 +15,9 @@
 class LoLaLinkDefinition
 {
 public:
+	static constexpr uint8_t LOLA_VERSION = 1;
+
+
 	// <summary>
 	/// When linked, top port is reserved.
 	/// When unlinked, only top 2 ports are used.
@@ -27,6 +30,11 @@ public:
 	/// 32 bit session id.
 	/// </summary>
 	static constexpr uint8_t SESSION_ID_SIZE = 4;
+
+	/// <summary>
+	/// 32 bit protocol id.
+	/// </summary>
+	static constexpr uint8_t PROTOCOL_ID_SIZE = 4;
 
 	/// <summary>
 	/// Session linking token.
@@ -175,6 +183,12 @@ public:
 	static constexpr int16_t CLOCK_TUNE_RANGE_MICROS = 250;
 
 	static constexpr uint32_t CLOCK_TUNE_PERIOD = 666;
+
+	enum class LinkType : uint8_t
+	{
+		PublicKeyExchange = 0xBE,
+		PublicAddressKey = 0xAE
+	};
 
 private:
 	/// <summary>

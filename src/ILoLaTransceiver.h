@@ -96,5 +96,18 @@ public:
 	/// <param name="packetSize"></param>
 	/// <returns>Duration In microseconds.</returns>
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) { return 0; }
+
+	/// <summary>
+	///	Unique id for this Transceiver type (i.e. nRF24).
+	/// Should also change with configuration parameters such as:
+	/// - Channel count.
+	/// - Baud-rate.
+	/// - Modulation.
+	/// - Encoding.
+	/// - Framing.
+	/// Only used for Link Signature purposes.
+	/// </summary>
+	/// <returns>32 Bit unique id.</returns>
+	virtual const uint32_t GetTransceiverCode() { return 0; }
 };
 #endif

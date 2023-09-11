@@ -10,13 +10,16 @@
 #include <PulsePacketTaskDriver.h>
 
 
-template<const uint8_t MaxPayloadSize>
+template<const uint8_t IdCode = 0>
 class PimTransceiver
-	: public PulsePacketTaskDriver<LoLaPacketDefinition::GetTotalSize(MaxPayloadSize)>
+	: public PulsePacketTaskDriver<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE>
 	, public virtual ILoLaTransceiver
 {
 private:
-	using BaseClass = PulsePacketTaskDriver<LoLaPacketDefinition::GetTotalSize(MaxPayloadSize)>;
+	static constexpr uint16_t TRANSCEIVER_ID = 0x9114;
+
+private:
+	using BaseClass = PulsePacketTaskDriver<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE>;
 
 	using BaseClass::IncomingPacket;
 	using BaseClass::Start;
@@ -85,6 +88,13 @@ public:
 	virtual void Rx(const uint8_t channel) final
 	{
 
+	}
+
+	virtual const uint32_t GetTransceiverCode()
+	{
+		return (uint32_t)TRANSCEIVER_ID
+			//+ (uint32_t)baudRateCode << 16 //TODO:
+			+ (uint32_t)IdCode << 24;
 	}
 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final

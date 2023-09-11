@@ -89,7 +89,25 @@ public:
 	}
 #endif
 
-	virtual const bool Setup()
+public:
+	virtual const bool Setup(const LoLaLinkDefinition::LinkType linkType)
+	{
+		if (SetupLoLa())
+		{
+			Encoder->GenerateProtocolId(
+				linkType,
+				Duplex->GetPeriod(),
+				ChannelHopper->GetHopPeriod(),
+				Transceiver->GetTransceiverCode());
+
+			return true;
+		}
+
+		return false;
+	}
+
+protected:
+	virtual const bool SetupLoLa() final
 	{
 		if (!RandomSource.Setup())
 		{
@@ -144,7 +162,7 @@ public:
 		Serial.println();
 #endif
 
-		return BaseClass::Setup();
+		return BaseClass::SetupLoLa();
 	}
 
 	/// <summary>

@@ -91,7 +91,8 @@ public:
 		, SyncClock(scheduler, cycles)
 	{}
 
-	virtual const bool Setup()
+protected:
+	virtual const bool SetupLoLa()
 	{
 		if (Transceiver == nullptr)
 		{

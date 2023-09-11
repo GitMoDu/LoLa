@@ -23,6 +23,8 @@ class LoLaCryptoSession : public LoLaLinkSession
 protected:
 	Poly1305 CryptoHasher; // HMAC and Signature hasher.
 
+	uint8_t ProtocolId[LoLaLinkDefinition::PROTOCOL_ID_SIZE]{};
+
 protected:
 	uint8_t Nonce[LoLaCryptoDefinition::MAC_KEY_SIZE]{}; // Reusable nonce for CryptoHasher.
 
@@ -80,6 +82,54 @@ public:
 		return ExpandedKey != nullptr && AccessPassword != nullptr;
 	}
 
+	void GenerateProtocolId(
+		const LoLaLinkDefinition::LinkType linkType,
+		const uint16_t duplexPeriod,
+		const uint32_t hopperPeriod,
+		const uint32_t transceiverCode)
+	{
+		Nonce[0] = LoLaLinkDefinition::LOLA_VERSION;
+		for (uint_fast8_t i = 1; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = 0;
+		}
+
+		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update((uint8_t*)&linkType, sizeof(LoLaLinkDefinition::LinkType));
+		CryptoHasher.update((uint8_t*)&duplexPeriod, sizeof(uint16_t));
+		CryptoHasher.update((uint8_t*)&hopperPeriod, sizeof(uint32_t));
+		CryptoHasher.update((uint8_t*)&transceiverCode, sizeof(uint32_t));
+
+		CryptoHasher.finalize(Nonce, ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
+		CryptoHasher.clear();
+
+#if defined(DEBUG_LOLA)
+		Serial.print(F("Transceiver Code: |"));
+		for (size_t i = 0; i < sizeof(uint32_t); i++)
+		{
+			if (((uint8_t*)&transceiverCode)[i] < 0x10)
+			{
+				Serial.print(0);
+			}
+			Serial.print(((uint8_t*)&transceiverCode)[i], HEX);
+			Serial.print('|');
+		}
+		Serial.println();
+		Serial.print(F("Protocol Id: |"));
+		for (size_t i = 0; i < LoLaLinkDefinition::PROTOCOL_ID_SIZE; i++)
+		{
+			if (ProtocolId[i] < 0x10)
+			{
+				Serial.print(0);
+			}
+			Serial.print(ProtocolId[i], HEX);
+			Serial.print('|');
+		}
+		Serial.println();
+		Serial.println();
+#endif
+	}
+
 	virtual void SetSessionId(const uint8_t* sessionId)
 	{
 		LoLaLinkSession::SetSessionId(sessionId);
@@ -127,6 +177,7 @@ public:
 		{
 			CryptoHasher.reset(EmptyKey);
 			CryptoHasher.update(&index, sizeof(uint8_t));
+			CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 			CryptoHasher.update(key, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
 
 			if (LoLaLinkDefinition::HKDFSize - index > LoLaCryptoDefinition::MAC_KEY_SIZE)
