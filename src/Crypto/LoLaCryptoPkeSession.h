@@ -61,11 +61,10 @@ public:
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	/// <param name="publicKey">sizeof = LoLaCryptoDefinition::PUBLIC_KEY_SIZE</param>
 	/// <param name="privateKey">size of = LoLaCryptoDefinition::PRIVATE_KEY_SIZE</param>
-	LoLaCryptoPkeSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey,
-		const uint8_t* accessPassword,
+	LoLaCryptoPkeSession(const uint8_t* accessPassword,
 		const uint8_t* publicKey,
 		const uint8_t* privateKey)
-		: LoLaCryptoEncoderSession(expandedKey, accessPassword)
+		: LoLaCryptoEncoderSession(accessPassword)
 		, ECC_CURVE(uECC_secp160r1())
 		, LocalPublicKey(publicKey)
 		, LocalPrivateKey(privateKey)

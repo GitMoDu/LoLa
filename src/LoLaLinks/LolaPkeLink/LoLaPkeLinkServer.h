@@ -62,7 +62,7 @@ public:
 		const uint8_t* privateKey,
 		const uint8_t* accessPassword)
 		: BaseClass(scheduler, &RegistryInstance, &Session, transceiver, cycles, entropy, duplex, hop)
-		, Session(&ExpandedKey, accessPassword, publicKey, privateKey)
+		, Session(accessPassword, publicKey, privateKey)
 	{}
 
 	const bool Setup()

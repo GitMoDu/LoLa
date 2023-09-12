@@ -25,10 +25,9 @@ private:
 public:
 	/// <summary>
 	/// </summary>
-	/// <param name="expandedKey">sizeof = LoLaLinkDefinition::HKDFSize</param>
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
-	LoLaCryptoEncoderSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey, const uint8_t* accessPassword)
-		: LoLaCryptoSession(expandedKey, accessPassword)
+	LoLaCryptoEncoderSession(const uint8_t* accessPassword)
+		: LoLaCryptoSession(accessPassword)
 		, CryptoCypher(LoLaCryptoDefinition::CYPHER_ROUNDS)
 	{
 	}
@@ -56,7 +55,7 @@ public:
 		const uint16_t tokenRoll = timestamp.GetRollingMicros() / LoLaLinkDefinition::SUB_TOKEN_PERIOD_MICROS;
 
 		// Set packet authentication tag.
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = ExpandedKey->IdKey[0] ^ ((uint8_t)timestamp.Seconds) ^ inPacket[LoLaPacketDefinition::ID_INDEX];
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = ExpandedKey.IdKey[0] ^ ((uint8_t)timestamp.Seconds) ^ inPacket[LoLaPacketDefinition::ID_INDEX];
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = (uint8_t)(tokenRoll);
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = (uint8_t)(tokenRoll >> 8);
@@ -73,7 +72,7 @@ public:
 
 		/*****************/
 		// Start HMAC with 16 byte Auth Key.
-		CryptoHasher.reset(ExpandedKey->MacKey);
+		CryptoHasher.reset(ExpandedKey.MacKey);
 
 		// Add upper nonce to hash content, as it is discarded on finalization truncation.
 		CryptoHasher.update(&Nonce[LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE], LoLaCryptoDefinition::CYPHER_TAG_SIZE - LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE);
@@ -109,8 +108,8 @@ public:
 		counter = Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
 
 		// Reset entropy.
-		CryptoCypher.setKey(ExpandedKey->CypherKey, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
-		CryptoCypher.setIV(ExpandedKey->CypherIv, LoLaCryptoDefinition::CYPHER_IV_SIZE);
+		CryptoCypher.setKey(ExpandedKey.CypherKey, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
+		CryptoCypher.setIV(ExpandedKey.CypherIv, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
 		// Set the cypher counter with the Nonce.
 		CryptoCypher.setCounter(Nonce, LoLaCryptoDefinition::CYPHER_TAG_SIZE);
@@ -236,8 +235,8 @@ public:
 
 		/*****************/
 		// Reset entropy.
-		CryptoCypher.setKey(ExpandedKey->CypherKey, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
-		CryptoCypher.setIV(ExpandedKey->CypherIv, LoLaCryptoDefinition::CYPHER_IV_SIZE);
+		CryptoCypher.setKey(ExpandedKey.CypherKey, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
+		CryptoCypher.setIV(ExpandedKey.CypherIv, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
 		// Set cypher counter with mixed cypher counter for packet data.
 		CryptoCypher.setCounter(Nonce, LoLaCryptoDefinition::CYPHER_TAG_SIZE);
@@ -249,12 +248,12 @@ public:
 		//CryptoCypher.clear();
 
 		// Write encrypted counter as packet id.
-		outPacket[LoLaPacketDefinition::ID_INDEX] = ExpandedKey->IdKey[0] ^ ((uint8_t)timestamp.Seconds) ^ counter;
+		outPacket[LoLaPacketDefinition::ID_INDEX] = ExpandedKey.IdKey[0] ^ ((uint8_t)timestamp.Seconds) ^ counter;
 		/*****************/
 
 		/*****************/
 		// Start HMAC.
-		CryptoHasher.reset(ExpandedKey->MacKey);
+		CryptoHasher.reset(ExpandedKey.MacKey);
 
 		// Add upper nonce to hash content, as it is discarded on finalization truncation.
 		CryptoHasher.update(&Nonce[LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE], LoLaCryptoDefinition::CYPHER_TAG_SIZE - LoLaCryptoDefinition::NONCE_EFFECTIVE_SIZE);

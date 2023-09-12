@@ -15,15 +15,28 @@
 */
 #include <Poly1305.h>
 
+/*
+* https://github.com/FrankBoesing/FastCRC
+*/
+#include <FastCRC.h>
+
 static const uint8_t EmptyKey[LoLaCryptoDefinition::MAC_KEY_SIZE] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
 class LoLaCryptoSession : public LoLaLinkSession
 {
+private:
+	FastCRC8 FastHasher; // 8 bit fast hasher for deterministic PRNG.
+
 protected:
 	/// <summary>
 	/// HMAC and Signature hasher.
 	/// </summary>
 	Poly1305 CryptoHasher;
+
+	///// <summary>
+	///// HKDF Expanded key, with extra seeds.
+	///// </summary>
+	LoLaLinkDefinition::ExpandedKeyStruct ExpandedKey{};
 
 	/// <summary>
 	/// Reusable nonce for CryptoHasher.
@@ -50,11 +63,6 @@ protected:
 	uint8_t OutputKey[LoLaLinkDefinition::ADDRESS_KEY_SIZE]{};
 
 protected:
-	///// <summary>
-	///// HKDF Expanded key, with extra seeds.
-	///// </summary>
-	LoLaLinkDefinition::ExpandedKeyStruct* ExpandedKey;
-
 	/// <summary>
 	/// Access control password.
 	/// </summary>
@@ -69,18 +77,26 @@ private:
 public:
 	/// <summary>
 	/// </summary>
-	/// <param name="expandedKey">sizeof = LoLaLinkDefinition::HKDFSize</param>
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
-	LoLaCryptoSession(LoLaLinkDefinition::ExpandedKeyStruct* expandedKey, const uint8_t* accessPassword)
+	LoLaCryptoSession(const uint8_t* accessPassword)
 		: LoLaLinkSession()
+		, FastHasher()
 		, CryptoHasher()
-		, ExpandedKey(expandedKey)
 		, AccessPassword(accessPassword)
 	{}
 
+	const uint8_t GetPrngHopChannel(const uint32_t tokenIndex)
+	{
+		// Start Hash with Channel Hop Seed.
+		FastHasher.smbus(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
+
+		// Add Token Index and return the result.
+		return FastHasher.smbus_upd((uint8_t*)&tokenIndex, sizeof(uint32_t));
+	}
+
 	virtual const bool Setup()
 	{
-		return ExpandedKey != nullptr && AccessPassword != nullptr;
+		return AccessPassword != nullptr;
 	}
 
 	/// <summary>
@@ -174,12 +190,12 @@ public:
 
 			if (LoLaLinkDefinition::HKDFSize - index > LoLaCryptoDefinition::MAC_KEY_SIZE)
 			{
-				CryptoHasher.finalize(Nonce, &((uint8_t*)ExpandedKey)[index], LoLaCryptoDefinition::MAC_KEY_SIZE);
+				CryptoHasher.finalize(Nonce, &((uint8_t*)&ExpandedKey)[index], LoLaCryptoDefinition::MAC_KEY_SIZE);
 				index += LoLaCryptoDefinition::MAC_KEY_SIZE;
 			}
 			else
 			{
-				CryptoHasher.finalize(Nonce, &((uint8_t*)ExpandedKey)[index], LoLaLinkDefinition::HKDFSize - index);
+				CryptoHasher.finalize(Nonce, &((uint8_t*)&ExpandedKey)[index], LoLaLinkDefinition::HKDFSize - index);
 				index += (LoLaLinkDefinition::HKDFSize - index);
 			}
 		}
@@ -198,13 +214,13 @@ public:
 		FillNonceClear();
 
 		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
+		CryptoHasher.update(ExpandedKey.AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
 		CryptoHasher.update(partnerKey, keySize);
 		CryptoHasher.update(localKey, keySize);
 		CryptoHasher.finalize(Nonce, InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
 		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
+		CryptoHasher.update(ExpandedKey.AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
 		CryptoHasher.update(localKey, keySize);
 		CryptoHasher.update(partnerKey, keySize);
 		CryptoHasher.finalize(Nonce, OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
@@ -220,7 +236,7 @@ public:
 		FillNonceClear();
 
 		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update(ExpandedKey->LinkingSeed, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+		CryptoHasher.update(ExpandedKey.LinkingSeed, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
 		CryptoHasher.finalize(Nonce, LinkingToken, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 	}
 

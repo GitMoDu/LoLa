@@ -12,12 +12,6 @@
 #include "..\..\Link\LoLaLinkSession.h"
 
 
-/*
-* https://github.com/FrankBoesing/FastCRC
-*/
-#include <FastCRC.h>
-
-
 
 /// <summary>
 /// Implements PacketServce functionality and leaves interfaces open for implementation.
@@ -36,14 +30,8 @@ private:
 	static constexpr uint_least16_t CALIBRATION_ROUNDS = F_CPU / 2000000L;
 
 protected:
-	/// <summary>
-	/// HKDF Expanded key, with extra seeds.
-	/// </summary>
-	LoLaLinkDefinition::ExpandedKeyStruct ExpandedKey;
-
 	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
 
-	FastCRC8 FastHasher; // 8 bit fast hasher for deterministic PRNG.
 
 protected:
 	// Collision avoidance time slotting.
@@ -73,9 +61,7 @@ public:
 		IChannelHop* hop)
 		: IChannelHop::IHopListener()
 		, BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
-		, ExpandedKey()
 		, RandomSource(entropy)
-		, FastHasher()
 		, Duplex(duplex)
 		, ChannelHopper(hop)
 		, LinkTimestamp()
@@ -236,7 +222,7 @@ public:
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
-				return GetPrngHopChannel(ChannelHopper->GetTimedHopIndex());
+				return Encoder->GetPrngHopChannel(ChannelHopper->GetTimedHopIndex());
 			}
 			else
 			{
@@ -311,7 +297,7 @@ protected:
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
-				return GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
+				return Encoder->GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
 			}
 			else
 			{
@@ -342,14 +328,6 @@ protected:
 	}
 
 private:
-	const uint8_t GetPrngHopChannel(const uint32_t tokenIndex)
-	{
-		// Start Hash with Token Seed.
-		FastHasher.smbus(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
-
-		// Add Token Index and return the mod of the result.
-		return FastHasher.smbus_upd((uint8_t*)&tokenIndex, sizeof(uint32_t));
-	}
 
 	/// <summary>
 	/// Calibrate CPU dependent durations.
