@@ -85,8 +85,7 @@ public:
 		{
 		case PkeEnum::CalculatingSecret:
 			uECC_shared_secret(PartnerPublicKey, LocalPrivateKey, SecretKey, ECC_CURVE);
-			// uECC_secp160r1 produces a secret key of 20 bytes.
-			// Add the remaining zero padding.
+			// uECC_secp160r1 produces a secret key of 20 bytes. Pad the remaining with zeros.
 			for (uint_fast8_t i = UECC_KEY_SIZE; i < LoLaCryptoDefinition::CYPHER_KEY_SIZE; i++)
 			{
 				SecretKey[i] = 0;

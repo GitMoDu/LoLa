@@ -53,7 +53,7 @@ public:
 		const uint16_t tokenRoll = timestamp.GetRollingMicros() / LoLaLinkDefinition::SUB_TOKEN_PERIOD_MICROS;
 
 		// Set packet authentication tag.
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = ExpandedKey->IdKey[0] ^ ((uint8_t)tokenRoll) ^ inPacket[LoLaPacketDefinition::ID_INDEX];
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = ExpandedKey->IdKey[0] ^ ((uint8_t)timestamp.Seconds) ^ inPacket[LoLaPacketDefinition::ID_INDEX];
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX] = (uint8_t)(tokenRoll);
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX + 1] = (uint8_t)(tokenRoll >> 8);
@@ -86,7 +86,7 @@ public:
 		CryptoHasher.finalize(Nonce, MatchMac, LoLaPacketDefinition::MAC_SIZE);
 
 		// Clear hasher from sensitive material. Disabled for performance.
-		//CryptoHasher->clear();
+		//CryptoHasher.clear();
 		/*****************/
 
 		/*****************/
@@ -116,7 +116,7 @@ public:
 		CryptoCypher.decrypt(data, &inPacket[LoLaPacketDefinition::DATA_INDEX], dataSize);
 
 		// Clear cypher from sensitive material. Disabled for performance.
-		// CryptoCypher->clear();
+		//CryptoCypher.clear();
 		/*****************/
 
 		return true;
@@ -130,24 +130,21 @@ public:
 	/// <returns>True if packet was accepted.</returns>
 	const bool DecodeInPacket(const uint8_t* inPacket, uint8_t* data, uint8_t& counter, const uint8_t dataSize)
 	{
-		// Set packet authentication tag.
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[LoLaPacketDefinition::ID_INDEX];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
-		for (uint_fast8_t i = LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
-		{
-			Nonce[i] = 0;
-		}
+		// Set clear authentication tag.
+		FillNonceClear();
 
 		// Calculate MAC from content.
 		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(&inPacket[LoLaPacketDefinition::ID_INDEX], sizeof(uint8_t));
+		CryptoHasher.update(&dataSize, sizeof(uint8_t));
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Only the first MAC_SIZE bytes are effectively used.
 		CryptoHasher.finalize(Nonce, MatchMac, LoLaPacketDefinition::MAC_SIZE);
 
-		// Clear cypher from sensitive material.
-		CryptoHasher.clear();
+		// Clear hasher from sensitive material. Disabled for performance.
+		//CryptoHasher.clear();
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAC_SIZE; i++)
@@ -160,7 +157,7 @@ public:
 		}
 
 		// Copy plaintext counter.
-		counter = Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
+		counter = inPacket[LoLaPacketDefinition::ID_INDEX];
 
 		// Copy plaintext content to in data.
 		for (uint_fast8_t i = 0; i < dataSize; i++)
@@ -172,7 +169,7 @@ public:
 	}
 
 	/// <summary>
-	/// 
+	/// Encodes HMAC without implicit addressing, key or token.
 	/// </summary>
 	/// <param name="data"></param>
 	/// <param name="outPacket"></param>
@@ -180,33 +177,30 @@ public:
 	/// <param name="dataSize"></param>
 	void EncodeOutPacket(const uint8_t* data, uint8_t* outPacket, const uint8_t counter, const uint8_t dataSize)
 	{
+		// Set rolling plaintext rolling counter id.
+		outPacket[LoLaPacketDefinition::ID_INDEX] = counter;
+
 		// Plaintext copy of data to output.
 		for (uint_fast8_t i = 0; i < dataSize; i++)
 		{
 			outPacket[i + LoLaPacketDefinition::DATA_INDEX] = data[i];
 		}
 
-		// Set rolling plaintext rolling counter id.
-		outPacket[LoLaPacketDefinition::ID_INDEX] = counter;
+		// Set clear authentication tag.
+		FillNonceClear();
 
-		// Set packet authentication tag.
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = outPacket[LoLaPacketDefinition::ID_INDEX];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
-		for (uint_fast8_t i = LoLaCryptoDefinition::CYPHER_TAG_ROLL_INDEX; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
-		{
-			Nonce[i] = 0;
-		}
-
-		// Set HMAC without implicit addressing or token.
+		// Set HMAC without implicit addressing, key or token.
 		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(&counter, sizeof(uint8_t));
+		CryptoHasher.update(&dataSize, sizeof(uint8_t));
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Only the first LoLaPacketDefinition:MAC_SIZE bytes are effectively used.
 		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
 
-		// Clear cypher from sensitive material.
-		CryptoHasher.clear();
+		// Clear hasher from sensitive material. Disabled for performance.
+		//CryptoHasher.clear();
 	}
 
 	/// <summary>
@@ -249,10 +243,10 @@ public:
 		CryptoCypher.encrypt(&outPacket[LoLaPacketDefinition::DATA_INDEX], data, dataSize);
 
 		// Clear cypher from sensitive material. Disabled for performance.
-		// CryptoCypher->clear();
+		//CryptoCypher.clear();
 
 		// Write encrypted counter as packet id.
-		outPacket[LoLaPacketDefinition::ID_INDEX] = ExpandedKey->IdKey[0] ^ ((uint8_t)tokenRoll) ^ Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
+		outPacket[LoLaPacketDefinition::ID_INDEX] = ExpandedKey->IdKey[0] ^ ((uint8_t)timestamp.Seconds) ^ counter;
 		/*****************/
 
 		/*****************/
@@ -274,7 +268,7 @@ public:
 		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
 
 		// Clear hasher from sensitive material. Disabled for performance.
-		//CryptoHasher->clear();
+		//CryptoHasher.clear();
 		/*****************/
 	}
 };
