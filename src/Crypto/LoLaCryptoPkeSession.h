@@ -48,7 +48,7 @@ private:
 	/// <summary>
 	/// Shared secret key.
 	/// </summary>
-	uint8_t SecretKey[LoLaCryptoDefinition::CYPHER_KEY_SIZE]{};
+	uint8_t SecretKey[ECC_KEY_SIZE]{};
 
 private:
 	const uint8_t* LocalPublicKey = nullptr;
@@ -137,11 +137,10 @@ public:
 		{
 		case PkeEnum::CalculatingSecret:
 			uECC_shared_secret(PartnerPublicKey, LocalPrivateKey, SecretKey, ECC_CURVE);
-			PadKeySecp160r1();
 			PkeState = PkeEnum::CalculatingExpandedKey;
 			break;
 		case PkeEnum::CalculatingExpandedKey:
-			CalculateExpandedKey(SecretKey);
+			CalculateExpandedKey(SecretKey, ECC_KEY_SIZE);
 			PkeState = PkeEnum::CalculatingAddressing;
 			break;
 		case PkeEnum::CalculatingAddressing:
@@ -216,17 +215,6 @@ private:
 		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		CryptoHasher.finalize(Nonce, token, MATCHING_TOKEN_SIZE);
 		CryptoHasher.clear();
-	}
-
-	/// <summary>
-	/// uECC_secp160r1 produces a secret key of 20 bytes. Pad the remaining with 0xFF.
-	/// </summary>
-	void PadKeySecp160r1()
-	{
-		for (uint_fast8_t i = ECC_KEY_SIZE; i < LoLaCryptoDefinition::CYPHER_KEY_SIZE; i++)
-		{
-			SecretKey[i] = UINT8_MAX;
-		}
 	}
 };
 #endif

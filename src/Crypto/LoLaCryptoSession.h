@@ -157,7 +157,7 @@ public:
 	/// N-Bytes key expander sourcing key and session id.
 	/// </summary>
 	/// <param name="key"></param>
-	void CalculateExpandedKey(const uint8_t* key)
+	void CalculateExpandedKey(const uint8_t* key, const uint8_t keySize)
 	{
 		uint8_t index = 0;
 		while (index < LoLaLinkDefinition::HKDFSize)
@@ -170,7 +170,7 @@ public:
 			CryptoHasher.reset(EmptyKey);
 			CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 			CryptoHasher.update(AccessPassword, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
-			CryptoHasher.update(key, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
+			CryptoHasher.update(key, keySize);
 
 			if (LoLaLinkDefinition::HKDFSize - index > LoLaCryptoDefinition::MAC_KEY_SIZE)
 			{
