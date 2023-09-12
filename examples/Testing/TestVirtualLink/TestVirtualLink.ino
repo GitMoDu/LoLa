@@ -83,7 +83,6 @@
 Scheduler SchedulerBase;
 //
 
-
 // Diceware created access control password.
 static const uint8_t Password[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
 //
@@ -243,7 +242,7 @@ void setup()
 	if (Server.Start() &&
 		Client.Start())
 	{
-		Serial.print(micros());
+		Serial.print(millis());
 		Serial.println(F("\tLoLa Links have started."));
 	}
 	else

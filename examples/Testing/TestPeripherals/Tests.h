@@ -87,4 +87,52 @@ const bool TestTimerSource(ITimerSource& testSource)
 
 	return true;
 }
+
+
+//#if defined(DEBUG_LOLA)
+//Serial.println(F("Random Seeding complete."));
+//if (idSize > 0)
+//{
+//	Serial.print(F("\tUnique Id ("));
+//	Serial.print(idSize);
+//	Serial.println(F("bytes):"));
+
+//	Serial.println('\t');
+//	Serial.print('|');
+//	Serial.print('|');
+//	for (size_t i = 0; i < idSize; i++)
+//	{
+//		Serial.print(F("0x"));
+//		if (uniqueId[i] < 0x10)
+//		{
+//			Serial.print(0);
+//		}
+//		Serial.print(uniqueId[i], HEX);
+//		Serial.print('|');
+//	}
+//	Serial.println('|');
+//}
+
+//Serial.print(F("\tSeed noise: "));
+//Serial.println(EntropySource->GetNoise());
+//Serial.print(F("\tFirst Random: "));
+//Serial.println(GetNextRandom());
+
+//uint32_t sum = 0;
+//const uint32_t start = micros();
+//static const uint32_t samples = 1000;
+//for (uint32_t i = 0; i < samples; i++)
+//{
+//	sum += GetNextRandom();
+//}
+//const uint32_t duration = micros() - start;
+
+//Serial.println(F("\tBenchmark "));
+//Serial.print(samples);
+//Serial.println(F(" samples took  "));
+//Serial.print(duration);
+//Serial.print(F(" us ("));
+//Serial.print(((uint64_t)duration * 1000) / (samples * sizeof(uint32_t)));
+//Serial.println(F(" ns/byte )"));
+//#endif
 #endif
