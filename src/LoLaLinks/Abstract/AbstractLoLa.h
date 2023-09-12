@@ -91,9 +91,14 @@ public:
 		, SyncClock(scheduler, cycles)
 	{}
 
-protected:
-	virtual const bool SetupLoLa()
+public:
+	virtual const bool Setup()
 	{
+		if (!BaseClass::Setup())
+		{
+			return false;
+		}
+
 		if (Transceiver == nullptr)
 		{
 #if defined(DEBUG_LOLA)

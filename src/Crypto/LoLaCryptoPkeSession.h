@@ -69,11 +69,19 @@ public:
 		, LocalPublicKey(publicKey)
 		, LocalPrivateKey(privateKey)
 	{}
+
 public:
 	const bool SessionIsCached()
 	{
 		return PkeState == PkeEnum::PkeCached && SessionTokenMatches(PartnerPublicKey);
 	}
+
+protected:
+	virtual const LoLaLinkDefinition::LinkType GetLinkType() final
+	{
+		return LoLaLinkDefinition::LinkType::PublicKeyExchange;
+	}
+
 public:
 	virtual const bool Setup() final
 	{

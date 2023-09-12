@@ -71,7 +71,7 @@ public:
 		{
 			Session.CompressPublicKeyTo(PublicCompressedKey);
 
-			return RegistryInstance.Setup() && BaseClass::Setup(LoLaLinkDefinition::LinkType::PublicKeyExchange);
+			return RegistryInstance.Setup() && BaseClass::Setup();
 		}
 #if defined(DEBUG_LOLA)
 		else

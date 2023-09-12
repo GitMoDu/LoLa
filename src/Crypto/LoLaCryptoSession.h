@@ -74,6 +74,9 @@ private:
 	uint8_t PartnerChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE]{};
 	uint8_t PartnerChallengeSignature[LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE]{};
 
+protected:
+	virtual const LoLaLinkDefinition::LinkType GetLinkType() { return LoLaLinkDefinition::LinkType::PublicKeyExchange; }
+
 public:
 	/// <summary>
 	/// </summary>
@@ -102,13 +105,10 @@ public:
 	/// <summary>
 	/// Generate and set the Protocol Id that will bind this Link.
 	/// </summary>
-	/// <param name="linkType">LoLaLinkDefinition::LinkType</param>
 	/// <param name="duplexPeriod">Result from IDuplex.</param>
 	/// <param name="hopperPeriod">Result from IHop.</param>
 	/// <param name="transceiverCode">Result from ILoLaTransceiver.</param>
-	void GenerateProtocolId(
-		const LoLaLinkDefinition::LinkType linkType,
-		const uint16_t duplexPeriod,
+	void GenerateProtocolId(const uint16_t duplexPeriod,
 		const uint32_t hopperPeriod,
 		const uint32_t transceiverCode)
 	{
@@ -116,9 +116,10 @@ public:
 		{
 			Nonce[i] = LoLaLinkDefinition::LOLA_VERSION;
 		}
+		const uint8_t linkType = (uint8_t)GetLinkType();
 
 		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update((uint8_t*)&linkType, sizeof(LoLaLinkDefinition::LinkType));
+		CryptoHasher.update((uint8_t*)&linkType, sizeof(uint8_t));
 		CryptoHasher.update((uint8_t*)&duplexPeriod, sizeof(uint16_t));
 		CryptoHasher.update((uint8_t*)&hopperPeriod, sizeof(uint32_t));
 		CryptoHasher.update((uint8_t*)&transceiverCode, sizeof(uint32_t));
