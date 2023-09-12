@@ -36,14 +36,6 @@ public:
 
 	// Encryption
 public:
-	/// <summary>
-	/// Blake2S (Cryptographic Hash function) - secret key expansion using HKDF.
-	/// Up to 32 bytes of output.
-	/// Not found to patentable.
-	/// </summary>
-	/// </summary>
-	//using KeyHashType = BLAKE2s
-
 	/// Chacha8 256 (Cryptographic Cypher function) - message encoding/encryption.
 	/// 32 byte (256 bit) cypher key.
 	/// 8 Byte IV, Counter with the same size, according to specification.
@@ -66,11 +58,16 @@ public:
 	static constexpr uint8_t NONCE_SIZE = 16;
 
 	/// <summary>
-	/// CRC-32/ISO-HDLC (Fast Hash function) - non-cryptographic, fast 32-bit pseudo-hasher.
-	/// HDLC is attested and defined in ISO / IEC 13239.
-	/// Alias: CRC-32, CRC-32/ADCCP, CRC-32/V-42, CRC-32/XZ, PKZIP
+	/// SMBus 1.1 (Fast Hash function) - non-cryptographic, fast 8-bit pseudo-hasher.
+	/// Alias: CRC-8
+	/// Single byte output.
+	/// CRC-8
+	///		polynomial = 0x07
+	///		init = 0x00
+	///		check = 0xf4
+	/// Expired patent.
 	/// </summary>
-	//using FastHashType = FastCRC32
+	//using FastHashType = FastCRC8
 
 	/// <summary>
 	/// Size of time-based token.
