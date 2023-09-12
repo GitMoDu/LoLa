@@ -11,6 +11,9 @@
 */
 #include <ChaCha.h>
 
+/// <summary>
+/// Encodes and decodes LoLa packets.
+/// </summary>
 class LoLaCryptoEncoderSession : public LoLaCryptoSession
 {
 private:

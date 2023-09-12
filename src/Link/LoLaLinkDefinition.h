@@ -17,7 +17,6 @@ class LoLaLinkDefinition
 public:
 	static constexpr uint8_t LOLA_VERSION = 1;
 
-
 	// <summary>
 	/// When linked, top port is reserved.
 	/// When unlinked, only top 2 ports are used.
@@ -37,11 +36,6 @@ public:
 	static constexpr uint8_t PROTOCOL_ID_SIZE = 4;
 
 	/// <summary>
-	/// Session linking token.
-	/// </summary>
-	static constexpr uint8_t SESSION_TOKEN_SIZE = 4;
-
-	/// <summary>
 	/// Implicit addressing key size.
 	/// </summary>
 	static constexpr uint8_t ADDRESS_KEY_SIZE = 4;
@@ -58,7 +52,6 @@ public:
 
 	/// <summary>
 	/// One time linking token.
-	/// Hash mix of SessionId and Public Key pairs.
 	/// </summary>
 	static constexpr uint8_t LINKING_TOKEN_SIZE = 4;
 
@@ -108,10 +101,10 @@ public:
 		/// </summary>
 		uint8_t AdressingSeed[ADDRESS_SEED_SIZE];
 
-		/// <summary>
-		/// Ephemeral session linking start token.
-		/// </summary>
-		uint8_t LinkingToken[LINKING_TOKEN_SIZE];
+		///// <summary>
+		///// Ephemeral session linking start token.
+		///// </summary>
+		uint8_t LinkingSeed[LINKING_TOKEN_SIZE];
 
 		/// <summary>
 		/// Channel PRNG seed.
@@ -195,24 +188,25 @@ private:
 	/// ||SessionId|CompressedPublicKey||
 	/// </summary>
 	template<const uint8_t Header>
-	struct PkeBroadcastDefinition : public TemplateHeaderDefinition<Header, SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
+	struct PkeDefinition : public TemplateHeaderDefinition<Header, SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
 	{
 		static constexpr uint8_t PAYLOAD_SESSION_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		static constexpr uint8_t PAYLOAD_PUBLIC_KEY_INDEX = PAYLOAD_SESSION_ID_INDEX + SESSION_ID_SIZE;
 	};
 
 	/// <summary>
-	/// ||RequestId|SessionToken||
+	/// Abstract struct.
+	/// ||RequestId||
 	/// </summary>
 	template<const uint8_t Header, const uint8_t ExtraSize>
-	struct SwitchOverDefinition : public TemplateHeaderDefinition<Header, 1 + LINKING_TOKEN_SIZE + ExtraSize>
+	struct SwitchOverDefinition : public TemplateHeaderDefinition<Header, 1 + ExtraSize>
 	{
 		static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
-		static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
+
 	};
 
 	/// <summary>
-	/// Abstract struct.
+	/// Abstract struct with full timestamp.
 	/// ||RequestId|Seconds|SubSeconds|||
 	/// </summary>
 	template<const uint8_t Header, const uint8_t ExtraSize = 0>
@@ -242,37 +236,49 @@ public:
 		/// </summary>
 		using SearchReply = TemplateHeaderDefinition<SearchRequest::HEADER + 1, 0>;
 
+
+		//____________PKE LINK__________________
 		/// <summary>
 		/// ||||
 		/// Request server to start a PKE session.
 		/// TODO: Add support for search for specific Device Id.
 		/// </summary>
-		using SessionRequest = TemplateHeaderDefinition<SearchReply::HEADER + 1, 0>;
+		using PkeSessionRequest = TemplateHeaderDefinition<SearchReply::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||SessionId|CompressedServerPublicKey||
 		/// </summary>
-		using SessionAvailable = PkeBroadcastDefinition<SessionRequest::HEADER + 1>;
+		using PkeSessionAvailable = PkeDefinition<PkeSessionRequest::HEADER + 1>;
 
 		/// <summary>
 		/// ||SessionId|CompressedClientPublicKey||
 		/// </summary>
-		using LinkingStartRequest = PkeBroadcastDefinition<SessionAvailable::HEADER + 1>;
+		using PkeLinkingStartRequest = PkeDefinition<PkeSessionAvailable::HEADER + 1>;
+		//______________________________________
+
 
 		/// <summary>
-		/// ||RequestId|SessionToken|Remaining||
+		/// ||RequestId|Remaining|Token||
 		/// </summary>
-		struct LinkingTimedSwitchOver : public SwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>
+		struct LinkingTimedSwitchOver : public SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, TIME_SIZE + LINKING_TOKEN_SIZE>
 		{
-			using BaseClass = SwitchOverDefinition<LinkingStartRequest::HEADER + 1, TIME_SIZE>;
+			using BaseClass = SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, TIME_SIZE + LINKING_TOKEN_SIZE>;
 
-			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_SESSION_TOKEN_INDEX + LINKING_TOKEN_SIZE;
+			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_REQUEST_ID_INDEX + 1;
+
+			static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = PAYLOAD_TIME_INDEX + TIME_SIZE;
+
 		};
 
 		/// <summary>
 		/// ||RequestId|SessionToken||
 		/// </summary>
-		using LinkingTimedSwitchOverAck = SwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, 0>;
+		struct LinkingTimedSwitchOverAck : public SwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, LINKING_TOKEN_SIZE>
+		{
+			using BaseClass = SwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, LINKING_TOKEN_SIZE>;
+
+			static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = BaseClass::PAYLOAD_REQUEST_ID_INDEX + 1;
+		};
 	};
 
 	struct Linking
@@ -330,17 +336,17 @@ public:
 		using StartLinkRequest = TemplateHeaderDefinition<ClockSyncReply::HEADER + 1, 0>;
 
 		/// <summary>
-		/// ||RequestId|SessionToken|Remaining||
+		/// ||RequestId|Remaining||
 		/// </summary>
 		struct LinkTimedSwitchOver : public SwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>
 		{
 			using BaseClass = SwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>;
 
-			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_SESSION_TOKEN_INDEX + LINKING_TOKEN_SIZE;
+			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_REQUEST_ID_INDEX + 1;
 		};
 
 		/// <summary>
-		/// ||RequestId|SessionToken||
+		/// ||RequestId||
 		/// </summary>
 		using LinkTimedSwitchOverAck = SwitchOverDefinition<LinkTimedSwitchOver::HEADER + 1, 0>;
 	};
@@ -382,6 +388,6 @@ public:
 	/// <summary>
 	/// Largest Link Packets will be the Broadcast packets, that contain the SessionId+PublicKey(compressed).
 	/// </summary>
-	static constexpr uint8_t LARGEST_PAYLOAD = PkeBroadcastDefinition<0>::PAYLOAD_SIZE;
+	static constexpr uint8_t LARGEST_PAYLOAD = PkeDefinition<0>::PAYLOAD_SIZE;
 };
 #endif

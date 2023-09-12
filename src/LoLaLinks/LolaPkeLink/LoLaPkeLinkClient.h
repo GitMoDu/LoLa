@@ -84,20 +84,20 @@ protected:
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
-		case Unlinked::SessionAvailable::HEADER:
-			if (payloadSize == Unlinked::SessionAvailable::PAYLOAD_SIZE
+		case Unlinked::PkeSessionAvailable::HEADER:
+			if (payloadSize == Unlinked::PkeSessionAvailable::PAYLOAD_SIZE
 				&& IsInSessionCreation())
 			{
 				switch (PkeState)
 				{
 				case PkeStateEnum::RequestingSession:;
 					PkeState = PkeStateEnum::DecompressingPartnerKey;
-					Session.SetSessionId(&payload[Unlinked::SessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
+					Session.SetSessionId(&payload[Unlinked::PkeSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 					ResetUnlinkedPacketThrottle();
 
 					for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 					{
-						PartnerCompressedKey[i] = payload[Unlinked::SessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i];
+						PartnerCompressedKey[i] = payload[Unlinked::PkeSessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i];
 					}
 					Task::enable();
 #if defined(DEBUG_LOLA)
@@ -140,11 +140,11 @@ protected:
 		case PkeStateEnum::RequestingSession:
 			// Wait longer because reply is big.
 			if (UnlinkedPacketThrottle()
-				&& UnlinkedCanSendPacket(Unlinked::SessionRequest::PAYLOAD_SIZE))
+				&& UnlinkedCanSendPacket(Unlinked::PkeSessionRequest::PAYLOAD_SIZE))
 			{
 				OutPacket.SetPort(Unlinked::PORT);
-				OutPacket.SetHeader(Unlinked::SessionRequest::HEADER);
-				if (SendPacket(OutPacket.Data, Unlinked::SessionRequest::PAYLOAD_SIZE))
+				OutPacket.SetHeader(Unlinked::PkeSessionRequest::HEADER);
+				if (SendPacket(OutPacket.Data, Unlinked::PkeSessionRequest::PAYLOAD_SIZE))
 				{
 #if defined(DEBUG_LOLA)
 					this->Owner();
@@ -199,16 +199,16 @@ protected:
 			if (UnlinkedPacketThrottle())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
-				OutPacket.SetHeader(Unlinked::LinkingStartRequest::HEADER);
+				OutPacket.SetHeader(Unlinked::PkeLinkingStartRequest::HEADER);
 				for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 				{
-					OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];
+					OutPacket.Payload[Unlinked::PkeLinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];
 				}
-				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
+				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::PkeLinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
 
-				if (UnlinkedCanSendPacket(Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
+				if (UnlinkedCanSendPacket(Unlinked::PkeLinkingStartRequest::PAYLOAD_SIZE))
 				{
-					if (SendPacket(OutPacket.Data, Unlinked::LinkingStartRequest::PAYLOAD_SIZE))
+					if (SendPacket(OutPacket.Data, Unlinked::PkeLinkingStartRequest::PAYLOAD_SIZE))
 					{
 #if defined(DEBUG_LOLA)
 						this->Owner();

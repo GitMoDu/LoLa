@@ -10,24 +10,36 @@
 */
 #include <uECC.h>
 
+/// <summary>
+/// Public Key Exchange session based on uECC_secp160r1.
+/// </summary>
 class LoLaCryptoPkeSession : public LoLaCryptoEncoderSession
 {
 private:
-	enum PkeEnum
+	enum class PkeEnum
 	{
 		CalculatingSecret,
 		CalculatingExpandedKey,
 		CalculatingAddressing,
+		CalculatingLinkingToken,
 		CalculatingSessionToken,
 		PkeCached
 	};
 
-private:
-	static const uint8_t UECC_KEY_SIZE = 20;
+	static constexpr uint8_t MATCHING_TOKEN_SIZE = 4;
 
+	static constexpr uint8_t ECC_KEY_SIZE = 20;
+
+private:
 	const uECC_Curve_t* ECC_CURVE; // uECC_secp160r1
 
 private:
+	/// <summary>
+	/// Ephemeral session matching token.
+	/// Only valid if PkeState == PkeCached.
+	/// </summary>
+	uint8_t CachedToken[MATCHING_TOKEN_SIZE]{};
+
 	PkeEnum PkeState = PkeEnum::CalculatingSecret;
 
 private:
@@ -58,16 +70,56 @@ public:
 		, LocalPublicKey(publicKey)
 		, LocalPrivateKey(privateKey)
 	{}
-
+public:
+	const bool SessionIsCached()
+	{
+		return PkeState == PkeEnum::PkeCached && SessionTokenMatches(PartnerPublicKey);
+	}
+public:
 	virtual const bool Setup() final
 	{
 		return LoLaCryptoEncoderSession::Setup() &&
 			LocalPublicKey != nullptr && LocalPrivateKey != nullptr;
 	}
 
-	const bool SessionIsCached()
+	virtual void SetSessionId(const uint8_t* sessionId)
 	{
-		return PkeState == PkeEnum::PkeCached && SessionTokenMatches(PartnerPublicKey);
+		LoLaCryptoEncoderSession::SetSessionId(sessionId);
+		for (uint_fast8_t i = 0; i < MATCHING_TOKEN_SIZE; i++)
+		{
+			CachedToken[i] = 0;
+		}
+	}
+
+	virtual void SetRandomSessionId(LoLaRandom* randomSource)
+	{
+		LoLaCryptoEncoderSession::SetRandomSessionId(randomSource);
+		for (uint_fast8_t i = 0; i < MATCHING_TOKEN_SIZE; i++)
+		{
+			CachedToken[i] = 0;
+		}
+	}
+
+	/// <summary>
+	/// Assumes SessionId has been set.
+	/// </summary>
+	/// <param name="partnerPublicKey"></param>
+	/// <returns>True if the calculated secrets are already set for this SessionId and PublicKey</returns>
+	const bool SessionTokenMatches(const uint8_t* partnerPublicKey)
+	{
+		uint8_t matchToken[MATCHING_TOKEN_SIZE]{};
+
+		CalculateSessionToken(partnerPublicKey, matchToken);
+
+		for (uint_fast8_t i = 0; i < MATCHING_TOKEN_SIZE; i++)
+		{
+			if (CachedToken[i] != matchToken[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	void ResetPke()
@@ -85,11 +137,7 @@ public:
 		{
 		case PkeEnum::CalculatingSecret:
 			uECC_shared_secret(PartnerPublicKey, LocalPrivateKey, SecretKey, ECC_CURVE);
-			// uECC_secp160r1 produces a secret key of 20 bytes. Pad the remaining with zeros.
-			for (uint_fast8_t i = UECC_KEY_SIZE; i < LoLaCryptoDefinition::CYPHER_KEY_SIZE; i++)
-			{
-				SecretKey[i] = 0;
-			}
+			PadKeySecp160r1();
 			PkeState = PkeEnum::CalculatingExpandedKey;
 			break;
 		case PkeEnum::CalculatingExpandedKey:
@@ -97,11 +145,18 @@ public:
 			PkeState = PkeEnum::CalculatingAddressing;
 			break;
 		case PkeEnum::CalculatingAddressing:
-			CalculateSessionAddressing(LocalPublicKey, PartnerPublicKey);
+			CalculateSessionAddressing(
+				LocalPublicKey,
+				PartnerPublicKey,
+				LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+			PkeState = PkeEnum::CalculatingLinkingToken;
+			break;
+		case PkeEnum::CalculatingLinkingToken:
+			CalculateLinkingToken();
 			PkeState = PkeEnum::CalculatingSessionToken;
 			break;
 		case PkeEnum::CalculatingSessionToken:
-			CalculateSessionToken(PartnerPublicKey);
+			CalculateSessionToken(PartnerPublicKey, CachedToken);
 			PkeState = PkeEnum::PkeCached;
 			break;
 		case PkeEnum::PkeCached:
@@ -141,6 +196,37 @@ public:
 	void CompressPublicKeyTo(uint8_t* target)
 	{
 		uECC_compress(LocalPublicKey, target, ECC_CURVE);
+	}
+
+private:
+	/// <summary>
+	/// Generates a unique id for this session id and partner.
+	/// Assumes SessionId has been set.
+	/// </summary>
+	/// <param name="partnerPublicKey"></param>
+	/// <param name="token"></param>
+	void CalculateSessionToken(const uint8_t* partnerPublicKey, uint8_t* token)
+	{
+		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = SessionId[i % LoLaLinkDefinition::SESSION_ID_SIZE];
+		}
+
+		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.finalize(Nonce, token, MATCHING_TOKEN_SIZE);
+		CryptoHasher.clear();
+	}
+
+	/// <summary>
+	/// uECC_secp160r1 produces a secret key of 20 bytes. Pad the remaining with 0xFF.
+	/// </summary>
+	void PadKeySecp160r1()
+	{
+		for (uint_fast8_t i = ECC_KEY_SIZE; i < LoLaCryptoDefinition::CYPHER_KEY_SIZE; i++)
+		{
+			SecretKey[i] = UINT8_MAX;
+		}
 	}
 };
 #endif

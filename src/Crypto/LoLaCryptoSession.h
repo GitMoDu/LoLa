@@ -20,12 +20,21 @@ static const uint8_t EmptyKey[LoLaCryptoDefinition::MAC_KEY_SIZE] = { 0xFF, 0xFF
 class LoLaCryptoSession : public LoLaLinkSession
 {
 protected:
-	Poly1305 CryptoHasher; // HMAC and Signature hasher.
+	/// <summary>
+	/// HMAC and Signature hasher.
+	/// </summary>
+	Poly1305 CryptoHasher;
 
-	uint8_t ProtocolId[LoLaLinkDefinition::PROTOCOL_ID_SIZE]{};
+	/// <summary>
+	/// Reusable nonce for CryptoHasher.
+	/// </summary>
+	uint8_t Nonce[LoLaCryptoDefinition::MAC_KEY_SIZE]{};
 
 protected:
-	uint8_t Nonce[LoLaCryptoDefinition::MAC_KEY_SIZE]{}; // Reusable nonce for CryptoHasher.
+	/// <summary>
+	/// 32 bit protocol id.
+	/// </summary>
+	uint8_t ProtocolId[LoLaLinkDefinition::PROTOCOL_ID_SIZE]{};
 
 protected:
 	/// <summary>
@@ -52,14 +61,7 @@ protected:
 	const uint8_t* AccessPassword;
 
 private:
-	uint8_t MatchToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
-
-	/// <summary>
-	/// Ephemeral session matching token.
-	/// </summary>
-	uint8_t SessionToken[LoLaLinkDefinition::SESSION_TOKEN_SIZE]{};
-
-private:
+	uint8_t LinkingToken[LoLaLinkDefinition::LINKING_TOKEN_SIZE]{};
 	uint8_t LocalChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE]{};
 	uint8_t PartnerChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE]{};
 	uint8_t PartnerChallengeSignature[LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE]{};
@@ -96,13 +98,10 @@ public:
 	{
 		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
 		{
-			Nonce[i] = 0;
+			Nonce[i] = LoLaLinkDefinition::LOLA_VERSION;
 		}
 
-		const uint8_t loLaVersion = LoLaLinkDefinition::LOLA_VERSION;
-
 		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update((uint8_t*)&loLaVersion, sizeof(uint8_t));
 		CryptoHasher.update((uint8_t*)&linkType, sizeof(LoLaLinkDefinition::LinkType));
 		CryptoHasher.update((uint8_t*)&duplexPeriod, sizeof(uint16_t));
 		CryptoHasher.update((uint8_t*)&hopperPeriod, sizeof(uint32_t));
@@ -141,14 +140,16 @@ public:
 	virtual void SetSessionId(const uint8_t* sessionId)
 	{
 		LoLaLinkSession::SetSessionId(sessionId);
-		ClearCachedSessionToken();
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
+		{
+			LinkingToken[i] = 0;
+		}
 	}
 
 public:
-	void SetRandomSessionId(LoLaRandom* randomSource)
+	virtual void SetRandomSessionId(LoLaRandom* randomSource)
 	{
 		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-		ClearCachedSessionToken();
 	}
 
 	/// <summary>
@@ -158,13 +159,15 @@ public:
 	/// <param name="key"></param>
 	void CalculateExpandedKey(const uint8_t* key)
 	{
-		FillNonceSessionId();
-
 		uint8_t index = 0;
 		while (index < LoLaLinkDefinition::HKDFSize)
 		{
+			for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+			{
+				Nonce[i] = SessionId[i % LoLaLinkDefinition::SESSION_ID_SIZE] ^ index;
+			}
+
 			CryptoHasher.reset(EmptyKey);
-			CryptoHasher.update(&index, sizeof(uint8_t));
 			CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 			CryptoHasher.update(AccessPassword, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 			CryptoHasher.update(key, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
@@ -185,61 +188,47 @@ public:
 	}
 
 	/// <summary>
+	/// Set the directional Input and Output keys.
 	/// </summary>
-	/// <param name="localPublicKey"></param>
-	/// <param name="partnerPublicKey"></param>
-	void CalculateSessionAddressing(const uint8_t* localPublicKey, const uint8_t* partnerPublicKey)
+	/// <param name="localKey">Pointer to array of size = keySize.</param>
+	/// <param name="partnerKey">Pointer to array of size = keySize.</param>
+	/// <param name="keySize">[0;UINT8_MAX]</param>
+	void CalculateSessionAddressing(const uint8_t* localKey, const uint8_t* partnerKey, const uint8_t keySize)
 	{
 		FillNonceClear();
 
 		CryptoHasher.reset(EmptyKey);
 		CryptoHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
-		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		CryptoHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.update(partnerKey, keySize);
+		CryptoHasher.update(localKey, keySize);
 		CryptoHasher.finalize(Nonce, InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
 		CryptoHasher.reset(EmptyKey);
 		CryptoHasher.update(ExpandedKey->AdressingSeed, LoLaLinkDefinition::ADDRESS_SEED_SIZE);
-		CryptoHasher.update(localPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.update(localKey, keySize);
+		CryptoHasher.update(partnerKey, keySize);
 		CryptoHasher.finalize(Nonce, OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.clear();
 	}
 
 	/// <summary>
-	/// Assumes SessionId has been set.
+	/// Hash the linking seed to get a common linking token,
+	/// without exposing raw key data.
 	/// </summary>
-	/// <param name="partnerPublicKey"></param>
-	void CalculateSessionToken(const uint8_t* partnerPublicKey)
+	void CalculateLinkingToken()
 	{
-		FillNonceSessionId();
-		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		CryptoHasher.finalize(Nonce, SessionToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
-		CryptoHasher.clear();
-	}
+		FillNonceClear();
 
-	/// <summary>
-	/// Assumes SessionId has been set.
-	/// </summary>
-	/// <param name="partnerPublicKey"></param>
-	/// <returns>True if the calculated secrets are already set for this SessionId and PublicKey</returns>
-	const bool SessionTokenMatches(const uint8_t* partnerPublicKey)
-	{
-		FillNonceSessionId();
 		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		CryptoHasher.finalize(Nonce, MatchToken, LoLaLinkDefinition::SESSION_TOKEN_SIZE);
-		CryptoHasher.clear();
-
-		return CachedSessionTokenMatches(MatchToken);
+		CryptoHasher.update(ExpandedKey->LinkingSeed, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+		CryptoHasher.finalize(Nonce, LinkingToken, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 	}
 
 	void CopyLinkingTokenTo(uint8_t* target)
 	{
 		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
 		{
-			target[i] = ExpandedKey->LinkingToken[i];
+			target[i] = LinkingToken[i];
 		}
 	}
 
@@ -247,33 +236,12 @@ public:
 	{
 		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
 		{
-			if (linkingToken[i] != ExpandedKey->LinkingToken[i])
+			if (linkingToken[i] != LinkingToken[i])
 			{
 				return false;
 			}
 		}
 		return true;
-	}
-
-	const bool CachedSessionTokenMatches(const uint8_t* matchToken)
-	{
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::SESSION_TOKEN_SIZE; i++)
-		{
-			if (matchToken[i] != SessionToken[i])
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	void ClearCachedSessionToken()
-	{
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
-		{
-			MatchToken[i] = 0;
-		}
 	}
 
 	const bool VerifyChallengeSignature(const uint8_t* signatureSource)
@@ -330,20 +298,15 @@ public:
 		}
 	}
 
-	void FillNonceSessionId()
-	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
-		{
-			Nonce[i] = SessionId[i % LoLaLinkDefinition::SESSION_ID_SIZE];
-		}
-	}
-
 private:
 	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
 	{
-		FillNonceClear();
+		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
+		{
+			Nonce[i] = challenge[i % LoLaCryptoDefinition::CHALLENGE_CODE_SIZE];
+		}
+
 		CryptoHasher.reset(EmptyKey);
-		CryptoHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
 		CryptoHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 		CryptoHasher.finalize(Nonce, signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
 		CryptoHasher.clear();

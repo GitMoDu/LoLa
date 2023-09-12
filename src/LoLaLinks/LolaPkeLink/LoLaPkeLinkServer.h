@@ -88,8 +88,8 @@ protected:
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
-		case Unlinked::SessionRequest::HEADER:
-			if (payloadSize == Unlinked::SessionRequest::PAYLOAD_SIZE)
+		case Unlinked::PkeSessionRequest::HEADER:
+			if (payloadSize == Unlinked::PkeSessionRequest::PAYLOAD_SIZE)
 			{
 				if (IsInSearchingLink())
 				{
@@ -137,9 +137,9 @@ protected:
 			}
 #endif
 			break;
-		case Unlinked::LinkingStartRequest::HEADER:
-			if (payloadSize == Unlinked::LinkingStartRequest::PAYLOAD_SIZE
-				&& Session.SessionIdMatches(&payload[Unlinked::LinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
+		case Unlinked::PkeLinkingStartRequest::HEADER:
+			if (payloadSize == Unlinked::PkeLinkingStartRequest::PAYLOAD_SIZE
+				&& Session.SessionIdMatches(&payload[Unlinked::PkeLinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
 			{
 				if (IsInSearchingLink())
 				{
@@ -171,7 +171,7 @@ protected:
 
 				for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 				{
-					PartnerCompressedKey[i] = payload[Unlinked::LinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i];
+					PartnerCompressedKey[i] = payload[Unlinked::PkeLinkingStartRequest::PAYLOAD_PUBLIC_KEY_INDEX + i];
 				}
 				PkeState = PkeStateEnum::DecompressingPartnerKey;
 			}
@@ -199,17 +199,17 @@ protected:
 		if (PkeSessionRequested)
 		{
 			OutPacket.SetPort(Unlinked::PORT);
-			OutPacket.SetHeader(Unlinked::SessionAvailable::HEADER);
+			OutPacket.SetHeader(Unlinked::PkeSessionAvailable::HEADER);
 			for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 			{
-				OutPacket.Payload[Unlinked::SessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];
+				OutPacket.Payload[Unlinked::PkeSessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i] = PublicCompressedKey[i];
 			}
-			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::SessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
+			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::PkeSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 
-			if (UnlinkedCanSendPacket(Unlinked::SessionAvailable::PAYLOAD_SIZE))
+			if (UnlinkedCanSendPacket(Unlinked::PkeSessionAvailable::PAYLOAD_SIZE))
 			{
 				PkeSessionRequested = false;
-				if (SendPacket(OutPacket.Data, Unlinked::SessionAvailable::PAYLOAD_SIZE))
+				if (SendPacket(OutPacket.Data, Unlinked::PkeSessionAvailable::PAYLOAD_SIZE))
 				{
 #if defined(DEBUG_LOLA)
 					this->Owner();
