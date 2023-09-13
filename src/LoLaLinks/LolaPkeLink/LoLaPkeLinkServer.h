@@ -58,9 +58,9 @@ public:
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop,
+		const uint8_t* accessPassword,
 		const uint8_t* publicKey,
-		const uint8_t* privateKey,
-		const uint8_t* accessPassword)
+		const uint8_t* privateKey)
 		: BaseClass(scheduler, &RegistryInstance, &Session, transceiver, cycles, entropy, duplex, hop)
 		, Session(accessPassword, publicKey, privateKey)
 	{}

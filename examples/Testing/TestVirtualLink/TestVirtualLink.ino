@@ -150,9 +150,9 @@ LoLaPkeLinkServer<> Server(SchedulerBase,
 	&EntropySource,
 	&ServerDuplex,
 	&ServerChannelHop,
+	Password,
 	ServerPublicKey,
-	ServerPrivateKey,
-	Password);
+	ServerPrivateKey);
 
 // Link Client and its required instances.
 VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientTransceiver(SchedulerBase);
@@ -163,9 +163,9 @@ LoLaPkeLinkClient<> Client(SchedulerBase,
 	&EntropySource,
 	&ClientDuplex,
 	&ClientChannelHop,
+	Password,
 	ClientPublicKey,
-	ClientPrivateKey,
-	Password);
+	ClientPrivateKey);
 
 TestTask Tester(SchedulerBase, &Server, &Client);
 

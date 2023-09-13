@@ -140,9 +140,9 @@ LoLaPkeLinkClient<> Client(SchedulerBase,
 	&EntropySource,
 	&Duplex,
 	&ChannelHop,
+	Password,
 	ClientPublicKey,
-	ClientPrivateKey,
-	Password);
+	ClientPrivateKey);
 
 
 void BootError()

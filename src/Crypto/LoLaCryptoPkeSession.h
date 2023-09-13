@@ -107,28 +107,6 @@ public:
 		}
 	}
 
-	/// <summary>
-	/// Assumes SessionId has been set.
-	/// </summary>
-	/// <param name="partnerPublicKey"></param>
-	/// <returns>True if the calculated secrets are already set for this SessionId and PublicKey</returns>
-	const bool SessionTokenMatches(const uint8_t* partnerPublicKey)
-	{
-		uint8_t matchToken[MATCHING_TOKEN_SIZE]{};
-
-		CalculateSessionToken(partnerPublicKey, matchToken);
-
-		for (uint_fast8_t i = 0; i < MATCHING_TOKEN_SIZE; i++)
-		{
-			if (CachedToken[i] != matchToken[i])
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	void ResetPke()
 	{
 		PkeState = PkeEnum::CalculatingSecret;
@@ -222,6 +200,28 @@ private:
 		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 		CryptoHasher.finalize(Nonce, token, MATCHING_TOKEN_SIZE);
 		CryptoHasher.clear();
+	}
+
+	/// <summary>
+	/// Assumes SessionId has been set.
+	/// </summary>
+	/// <param name="partnerPublicKey"></param>
+	/// <returns>True if the calculated secrets are already set for this SessionId and PublicKey</returns>
+	const bool SessionTokenMatches(const uint8_t* partnerPublicKey)
+	{
+		uint8_t matchToken[MATCHING_TOKEN_SIZE]{};
+
+		CalculateSessionToken(partnerPublicKey, matchToken);
+
+		for (uint_fast8_t i = 0; i < MATCHING_TOKEN_SIZE; i++)
+		{
+			if (CachedToken[i] != matchToken[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 };
 #endif

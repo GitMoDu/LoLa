@@ -142,9 +142,9 @@ LoLaPkeLinkServer<> Server(SchedulerBase,
 	&EntropySource,
 	&Duplex,
 	&ChannelHop,
+	Password,
 	ServerPublicKey,
-	ServerPrivateKey,
-	Password);
+	ServerPrivateKey);
 
 
 void BootError()
