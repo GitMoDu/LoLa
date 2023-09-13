@@ -34,6 +34,14 @@ public:
 	/// </summary>
 	static constexpr uint8_t PRIVATE_KEY_SIZE = COMPRESSED_KEY_SIZE;
 
+	// Public Address Exchange
+public:
+	/// <summary>
+	/// Public key.
+	/// Uncompressed size is 40 bytes.
+	/// </summary>
+	static constexpr uint8_t PUBLIC_ADDRESS_SIZE = 8;
+
 	// Encryption
 public:
 	/// Chacha8 256 (Cryptographic Cypher function) - message encoding/encryption.

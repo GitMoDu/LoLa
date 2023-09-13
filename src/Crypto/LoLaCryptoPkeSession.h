@@ -13,7 +13,7 @@
 /// <summary>
 /// Public Key Exchange session based on uECC_secp160r1.
 /// </summary>
-class LoLaCryptoPkeSession : public LoLaCryptoEncoderSession
+class LoLaCryptoPkeSession final : public LoLaCryptoEncoderSession
 {
 private:
 	enum class PkeEnum
