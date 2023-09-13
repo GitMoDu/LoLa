@@ -179,7 +179,7 @@ public:
 	enum class LinkType : uint8_t
 	{
 		PublicKeyExchange = 0xBE,
-		PublicAddressExchange = 0xAE
+		AddressMatch = 0xAE
 	};
 
 private:
@@ -246,25 +246,25 @@ public:
 		/// </summary>
 		using SearchReply = TemplateHeaderDefinition<SearchRequest::HEADER + 1, 0>;
 
-		//_____________Public Address Exchange LINK______________
+		//_____________Address Match LINK______________
 		/// <summary>
 		/// ||||
-		/// Request server to start a PKE session.
+		/// Request server to start an AM session.
 		/// TODO: Add support for search for specific Device Id.
 		/// </summary>
-		using PaeSessionRequest = TemplateHeaderDefinition<SearchReply::HEADER + 1, 0>;
+		using AmSessionRequest = TemplateHeaderDefinition<SearchReply::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||SessionId|PublicAddress||
 		/// </summary>
-		using PaeSessionAvailable = PaeBroadcastDefinition<PaeSessionRequest::HEADER + 1, 0>;
+		using AmSessionAvailable = PaeBroadcastDefinition<AmSessionRequest::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||SessionId|ServerPublicAddress|ClientPublicAddress||
 		/// </summary>
-		struct PaeLinkingStartRequest : public PaeBroadcastDefinition<PaeSessionAvailable::HEADER + 1, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE>
+		struct AmLinkingStartRequest : public PaeBroadcastDefinition<AmSessionAvailable::HEADER + 1, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE>
 		{
-			using BaseClass = PaeBroadcastDefinition<PaeSessionAvailable::HEADER + 1, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE>;
+			using BaseClass = PaeBroadcastDefinition<AmSessionAvailable::HEADER + 1, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE>;
 
 			static constexpr uint8_t PAYLOAD_CLIENT_ADDRESS_INDEX = BaseClass::PAYLOAD_SERVER_ADDRESS_INDEX + LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE;
 		};
@@ -277,7 +277,7 @@ public:
 		/// Request server to start a PKE session.
 		/// TODO: Add support for search for specific Device Id.
 		/// </summary>
-		using PkeSessionRequest = TemplateHeaderDefinition<PaeLinkingStartRequest::HEADER + 1, 0>;
+		using PkeSessionRequest = TemplateHeaderDefinition<AmLinkingStartRequest::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||SessionId|CompressedServerPublicKey||

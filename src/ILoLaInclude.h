@@ -65,6 +65,9 @@
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkServer.h"
 #include "LoLaLinks\LolaPkeLink\LoLaPkeLinkClient.h"
 
+#include "LoLaLinks\LolaAddressMatchLink\LoLaAddressMatchLinkServer.h"
+#include "LoLaLinks\LolaAddressMatchLink\LoLaAddressMatchLinkClient.h"
+
 /// Available Link Based Services
 #if defined(LOLA_DEBUG)
 //#include "Services\Debug\DiscoveryTestService.h"

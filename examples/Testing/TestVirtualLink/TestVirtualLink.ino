@@ -45,7 +45,7 @@
 #endif
 
 
-
+//#define LINK_USE_PKE_LINK
 
 // Medium Simulation error chances, out 255, for every call.
 //#define DROP_CHANCE 70
@@ -144,6 +144,7 @@ NoHopNoChannel ClientChannelHop{};
 // Link Server and its required instances.
 VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerTransceiver(SchedulerBase);
 HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
+#if defined(LINK_USE_PKE_LINK)
 LoLaPkeLinkServer<> Server(SchedulerBase,
 	&ServerTransceiver,
 	&ServerCyclesSource,
@@ -153,10 +154,21 @@ LoLaPkeLinkServer<> Server(SchedulerBase,
 	Password,
 	ServerPublicKey,
 	ServerPrivateKey);
+#else
+LoLaAddressMatchLinkServer<> Server(SchedulerBase,
+	&ServerTransceiver,
+	&ServerCyclesSource,
+	&EntropySource,
+	&ServerDuplex,
+	&ServerChannelHop,
+	Password,
+	ServerPublicKey);
+#endif
 
 // Link Client and its required instances.
 VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientTransceiver(SchedulerBase);
 HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
+#if defined(LINK_USE_PKE_LINK)
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&ClientTransceiver,
 	&ClientCyclesSource,
@@ -166,6 +178,16 @@ LoLaPkeLinkClient<> Client(SchedulerBase,
 	Password,
 	ClientPublicKey,
 	ClientPrivateKey);
+#else
+LoLaAddressMatchLinkClient<> Client(SchedulerBase,
+	&ClientTransceiver,
+	&ClientCyclesSource,
+	&EntropySource,
+	&ClientDuplex,
+	&ClientChannelHop,
+	Password,
+	ClientPublicKey);
+#endif
 
 TestTask Tester(SchedulerBase, &Server, &Client);
 
