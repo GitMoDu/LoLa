@@ -32,7 +32,6 @@ private:
 protected:
 	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
 
-
 protected:
 	// Collision avoidance time slotting.
 	IDuplex* Duplex;

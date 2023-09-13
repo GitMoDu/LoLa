@@ -127,10 +127,10 @@ protected:
 	/// <returns></returns>
 	const bool MockSendPacket(const uint8_t* data, const uint8_t payloadSize)
 	{
+		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
+
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
-
-		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		// Encrypt packet with token based on time.
 		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
