@@ -585,7 +585,7 @@ private:
 		if (EstimateErrorReply.Seconds <= 1
 			&& EstimateErrorReply.Seconds >= -1)
 		{
-			const int32_t totalError = (EstimateErrorReply.Seconds * ONE_SECOND_MICROS) + EstimateErrorReply.SubSeconds;
+			const int32_t totalError = (EstimateErrorReply.Seconds * (int32_t)ONE_SECOND_MICROS) + EstimateErrorReply.SubSeconds;
 			if (totalError >= 0)
 			{
 				return totalError < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
