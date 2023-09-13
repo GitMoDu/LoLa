@@ -95,9 +95,9 @@ public:
 	void OnReceived(const uint32_t receiveTimestamp, const uint8_t* source)
 	{
 		uint32_t remaining = source[0];
-		remaining += source[1] << 8;
-		remaining += source[2] << 16;
-		remaining += source[3] << 24;
+		remaining |= source[1] << 8;
+		remaining |= source[2] << 16;
+		remaining |= source[3] << 24;
 
 		if ((remaining < TransitionTimeout)
 			|| (receiveTimestamp + remaining >= TransitionEnd))

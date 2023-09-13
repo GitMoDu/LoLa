@@ -269,7 +269,7 @@ public:
 
 	virtual const uint32_t GetTransceiverCode() final
 	{
-		return TRANSCEIVER_ID + ((uint32_t)Config::ChannelCount << 24);
+		return TRANSCEIVER_ID | ((uint32_t)Config::ChannelCount << 24);
 	}
 
 	virtual const bool Stop() final
@@ -482,9 +482,9 @@ private:
 		Serial.print('|');
 
 		uint32_t mac = data[0];
-		mac += data[1] << 8;
-		mac += (uint32_t)data[2] << 16;
-		mac += (uint32_t)data[3] << 24;
+		mac |= data[1] << 8;
+		mac |= (uint32_t)data[2] << 16;
+		mac |= (uint32_t)data[3] << 24;
 		Serial.print(mac);
 		Serial.print('|');
 

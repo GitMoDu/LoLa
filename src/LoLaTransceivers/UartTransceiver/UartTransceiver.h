@@ -356,7 +356,7 @@ public:
 	virtual const uint32_t GetTransceiverCode() final
 	{
 		return (uint32_t)TRANSCEIVER_ID
-			+ (uint32_t)(BaudRate / 1000) << 16;
+			| (uint32_t)(BaudRate / 100) << 16;
 	}
 
 	/// <summary>

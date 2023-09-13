@@ -447,9 +447,9 @@ public:
 		default:
 			break;
 		}
-		return (uint32_t)TRANSCEIVER_ID + (((uint32_t)AddressPipe + 1) * AddressSize)
-			+ (uint32_t)dataRateCode << 16
-			+ (uint32_t)ChannelCount << 24;
+		return ((uint32_t)TRANSCEIVER_ID ^ AddressPipe ^ ((uint32_t)AddressSize << 8))
+			| (uint32_t)dataRateCode << 16
+			| (uint32_t)ChannelCount << 24;
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final

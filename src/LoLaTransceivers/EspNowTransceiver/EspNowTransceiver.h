@@ -76,7 +76,7 @@ public:
 	{
 		return (uint32_t)TRANSCEIVER_ID //+ (((uint32_t)AddressPipe + 1) * AddressSize)
 			//+ (uint32_t)dataRateCode << 16
-			+ (uint32_t)ChannelCount << 24;
+			| (uint32_t)ChannelCount << 24;
 	}
 
 	/// <summary>

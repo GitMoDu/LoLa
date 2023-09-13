@@ -145,9 +145,9 @@ protected:
 	static const uint32_t ArrayToUInt32(const uint8_t* source)
 	{
 		uint32_t value = source[0];
-		value += (uint32_t)source[1] << 8;
-		value += (uint32_t)source[2] << 16;
-		value += (uint32_t)source[3] << 24;
+		value |= (uint32_t)source[1] << 8;
+		value |= (uint32_t)source[2] << 16;
+		value |= (uint32_t)source[3] << 24;
 
 		return value;
 	}

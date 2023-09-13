@@ -94,7 +94,7 @@ public:
 	{
 		return (uint32_t)TRANSCEIVER_ID
 			//+ (uint32_t)baudRateCode << 16 //TODO:
-			+ (uint32_t)IdCode << 24;
+			| (uint32_t)IdCode << 24;
 	}
 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
