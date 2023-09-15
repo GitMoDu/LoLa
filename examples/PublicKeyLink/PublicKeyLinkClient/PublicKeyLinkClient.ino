@@ -14,9 +14,11 @@
 #define LED_BUILTIN 33
 #endif // !LED_BUILTIN
 
+#define LINK_USE_PKE_LINK
+
 // Selected Driver for test.
 #define USE_SERIAL_TRANSCEIVER
-//#define USE_NRF21_TRANSCEIVER
+//#define USE_NRF24_TRANSCEIVER
 
 //#define LINK_USE_CHANNEL_HOP
 //#define LINK_USE_TIMER_AND_RTC
@@ -47,11 +49,11 @@
 #define SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN 8
 #define SERIAL_TRANSCEIVER_INSTANCE			Serial2
 #define SERIAL_TRANSCEIVER_BAUDRATE			115200
-#elif defined(USE_NRF21_TRANSCEIVER)
-#define NRF21_TRANSCEIVER_PIN_CE			3
-#define NRF21_TRANSCEIVER_PIN_CS			7
-#define NRF21_TRANSCEIVER_RX_INTERRUPT_PIN	1
-#define NRF21_TRANSCEIVER_DATA_RATE			RF24_250KBPS
+#elif defined(USE_NRF24_TRANSCEIVER)
+#define NRF24_TRANSCEIVER_PIN_CE			3
+#define NRF24_TRANSCEIVER_PIN_CS			7
+#define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	1
+#define NRF24_TRANSCEIVER_DATA_RATE			RF24_250KBPS
 #elif defined(USE_SI446X_TRANSCEIVER)
 #define SI446X_TRANSCEIVER_PIN_CS			0
 #define SI446X_TRANSCEIVER_PIN_SDN			12
@@ -62,11 +64,11 @@
 #define SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN 2
 #define SERIAL_TRANSCEIVER_INSTANCE			Serial
 #define SERIAL_TRANSCEIVER_BAUDRATE			115200
-#elif defined(USE_NRF21_TRANSCEIVER)
-#define NRF21_TRANSCEIVER_PIN_CE			9
-#define NRF21_TRANSCEIVER_PIN_CS			10
-#define NRF21_TRANSCEIVER_RX_INTERRUPT_PIN	2
-#define NRF21_TRANSCEIVER_DATA_RATE			RF24_250KBPS
+#elif defined(USE_NRF24_TRANSCEIVER)
+#define NRF24_TRANSCEIVER_PIN_CE			9
+#define NRF24_TRANSCEIVER_PIN_CS			10
+#define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	2
+#define NRF24_TRANSCEIVER_DATA_RATE			RF24_250KBPS
 #elif defined(USE_SI446X_TRANSCEIVER)
 #define SI446X_TRANSCEIVER_PIN_CS			10
 #define SI446X_TRANSCEIVER_PIN_SDN			9
@@ -82,8 +84,8 @@ Scheduler SchedulerBase;
 // Transceiver Driver.
 #if defined(USE_SERIAL_TRANSCEIVER)
 UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
-#elif defined(USE_NRF21_TRANSCEIVER)
-nRF24Transceiver<NRF21_TRANSCEIVER_PIN_CE, NRF21_TRANSCEIVER_PIN_CS, NRF21_TRANSCEIVER_RX_INTERRUPT_PIN, NRF21_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase);
+#elif defined(USE_NRF24_TRANSCEIVER)
+nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_RX_INTERRUPT_PIN, NRF24_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase);
 #endif
 //
 
@@ -134,6 +136,7 @@ FullDuplex Duplex{};
 HalfDuplex<DuplexPeriod, false, DuplexDeadZone> Duplex{};
 #endif
 
+#if defined(LINK_USE_PKE_LINK)
 LoLaPkeLinkClient<> Client(SchedulerBase,
 	&TransceiverDriver,
 	&CyclesSource,
@@ -143,7 +146,16 @@ LoLaPkeLinkClient<> Client(SchedulerBase,
 	Password,
 	ClientPublicKey,
 	ClientPrivateKey);
-
+#else
+LoLaAddressMatchLinkClient<> Client(SchedulerBase,
+	&TransceiverDriver,
+	&CyclesSource,
+	&EntropySource,
+	&Duplex,
+	&ChannelHop,
+	Password,
+	ClientPublicKey);
+#endif
 
 void BootError()
 {
@@ -171,7 +183,7 @@ void setup()
 #if defined(USE_SERIAL_TRANSCEIVER)
 	TransceiverDriver.SetupInterrupt(OnSeriaInterrupt);
 #endif
-#if defined(USE_NRF21_TRANSCEIVER)
+#if defined(USE_NRF24_TRANSCEIVER)
 	TransceiverDriver.SetupInterrupt(OnRxInterrupt);
 #endif
 
@@ -214,7 +226,7 @@ void OnSeriaInterrupt()
 	TransceiverDriver.OnSeriaInterrupt();
 }
 #endif
-#if defined(USE_NRF21_TRANSCEIVER)
+#if defined(USE_NRF24_TRANSCEIVER)
 void OnRxInterrupt()
 {
 	TransceiverDriver.OnRfInterrupt();
