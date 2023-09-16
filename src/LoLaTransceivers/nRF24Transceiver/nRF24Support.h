@@ -8,6 +8,19 @@
 
 struct EventStruct
 {
+	volatile uint32_t Timestamp = 0;
+	volatile bool Pending = false;
+	volatile bool DoubleEvent = false;
+
+	void Clear()
+	{
+		Pending = false;
+		DoubleEvent = false;
+	}
+};
+
+struct PacketEventStruct
+{
 	uint32_t Timestamp = 0;
 	bool TxOk = false;
 	bool TxFail = false;

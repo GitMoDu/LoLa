@@ -37,7 +37,7 @@ class nRF24Transceiver final
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x3F24;
 
-	static constexpr uint32_t EVENT_TIMEOUT_MICROS = 3000;
+	static constexpr uint32_t EVENT_TIMEOUT_MILLIS = 10;
 
 	// 126 RF channels, 1 MHz steps.
 	static constexpr uint8_t ChannelCount = 126;
@@ -63,6 +63,10 @@ private:
 	RF24 Radio;
 
 	EventStruct Event;
+	PacketEventStruct PacketEvent;
+
+	//static constexpr uint8_t NO_CHANNEL = UINT8_MAX;
+	uint8_t CurrentChannel = 0;
 
 private:
 	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
@@ -74,11 +78,10 @@ private:
 	uint8_t RssiHistory = 0;
 
 private:
-	volatile uint32_t InterruptTimestamp = 0;
-	volatile bool DoubleEvent = false;
-	volatile bool InterruptPending = false;
+	bool HopPending = false;
 
 	bool TxPending = false;
+	uint32_t TxStart = 0;
 
 public:
 	nRF24Transceiver(Scheduler& scheduler)
@@ -86,6 +89,7 @@ public:
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, Radio(CePin, CsPin)
 		, Event()
+		, PacketEvent()
 	{
 		pinMode(InterruptPin, INPUT);
 		pinMode(CePin, INPUT);
@@ -112,15 +116,18 @@ public:
 	/// </summary>
 	void OnRfInterrupt()
 	{
-		if (InterruptPending)
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, HIGH);
+#endif
+		if (Event.Pending)
 		{
 			// Double event detected.
-			DoubleEvent = true;
+			Event.DoubleEvent = true;
 		}
 		else
 		{
-			InterruptTimestamp = micros();
-			InterruptPending = true;
+			Event.Timestamp = micros();
+			Event.Pending = true;
 			Task::enable();
 		}
 	}
@@ -136,11 +143,11 @@ public:
 
 	virtual const bool Start() final
 	{
-		if (Listener != nullptr)
+		if (Listener != nullptr && OnInterrupt != nullptr)
 		{
 			// Set pins again, in case Transceiver has been reset.
 			DisableInterrupt();
-			pinMode(InterruptPin, INPUT);
+			pinMode(InterruptPin, INPUT_PULLUP);
 			pinMode(CsPin, OUTPUT);
 			pinMode(CePin, OUTPUT);
 
@@ -159,9 +166,8 @@ public:
 			// LoLa already ensures integrity AND authenticity with its own MAC-CRC.
 			//Radio.setCRCLength(RF24_CRC_DISABLED);
 			//Radio.disableCRC();
-			// Rx is not working if no CRC is used.
+			// nRF Reading pipe drops every 4th packet if CRC is not enabled.
 			Radio.setCRCLength(RF24_CRC_8);
-
 
 			// LoLa doesn't specify any data rate, this should be defined in the user Link Protocol.
 			if (!Radio.setDataRate(DataRate))
@@ -198,7 +204,8 @@ public:
 			RssiHistory = 0;
 
 			// Set random channel to start with.
-			Rx(0);
+			CurrentChannel = 0;
+			HopPending = true;
 			Task::enable();
 
 			// Start listening to IRQ.
@@ -225,114 +232,44 @@ public:
 public:
 	virtual bool Callback() final
 	{
-		if (InterruptPending)
+		// Process pending interrupt events to trigger aware PacketEvent.
+		if (Event.Pending && !PacketEvent.Pending())
 		{
-			if (DoubleEvent)
+			Radio.whatHappened(PacketEvent.TxOk, PacketEvent.TxFail, PacketEvent.RxReady);
+			if (Event.DoubleEvent)
 			{
-				DoubleEvent = false;
-				InterruptPending = false;
-				Radio.whatHappened(Event.TxOk, Event.TxFail, Event.RxReady);
-				Event.Clear();
-				if (TxPending)
-				{
-					TxPending = false;
-					Radio.flush_tx();
-					Listener->OnTx();
-				}
 #if defined(DEBUG_LOLA)
 				Serial.print(millis());
 				Serial.print(F(": "));
 				Serial.println(F("Got Double Event!"));
 #endif
-				return true;
 			}
-
-			if (!Event.Pending())
+			else
 			{
-				Radio.whatHappened(Event.TxOk, Event.TxFail, Event.RxReady);
-
-				if (TxPending)
-				{
-					if (!Event.TxOk && !Event.TxFail)
-					{
-						Event.TxOk = true;
-						Event.TxFail = false;
-#if defined(DEBUG_LOLA)
-						Serial.print(millis());
-						Serial.print(F(": "));
-						Serial.println(F("Tx Collision, Rx lost."));
-#endif
-					}
-				}
-				else if (!Event.RxReady && (Event.TxOk || Event.TxFail))
-				{
-					// Unexpected interrupt.
-#if defined(DEBUG_LOLA)
-					Serial.print(millis());
-					Serial.print(F(": "));
-					Serial.println(F("Unexpected Tx interrupt."));
-#endif
-				}
-
-				if (Event.Pending())
-				{
-					Event.Timestamp = InterruptTimestamp;
-					InterruptPending = false;
-				}
-				else if ((micros() - InterruptTimestamp) > EVENT_TIMEOUT_MICROS)
-				{
-#if defined(DEBUG_LOLA)
-					Serial.print(millis());
-					Serial.print(F(": "));
-					Serial.println(F("Event Timeout."));
-#endif
-					Radio.whatHappened(Event.TxOk, Event.TxFail, Event.RxReady);
-					Radio.flush_rx();
-					Radio.flush_tx();
-					Radio.startListening();
-					Event.Clear();
-					InterruptPending = false;
-					if (TxPending)
-					{
-						TxPending = false;
-						Radio.flush_tx();
-						Listener->OnTx();
-					}
-				}
+				PacketEvent.Timestamp = Event.Timestamp;
 			}
-		}
-
-		if (Event.TxOk || Event.TxFail)
-		{
-			if (Event.TxFail)
-			{
-				//TODO: Log.
-				Radio.flush_tx();
-			}
-
-			Event.TxOk = false;
-			Event.TxFail = false;
-
-			if (TxPending)
-			{
-				TxPending = false;
-				Listener->OnTx();
-			}
-		}
-
-		if (Event.RxReady)
-		{
-			Event.RxReady = false;
+			Event.Clear();
 #ifdef RX_TEST_PIN
-			digitalWrite(RX_TEST_PIN, HIGH);
 			digitalWrite(RX_TEST_PIN, LOW);
 #endif
+		}
 
+		// Process Rx event.
+		if (PacketEvent.RxReady)
+		{
+			//Radio.stopListening();
+
+#if defined(DEBUG_LOLA)
+			Serial.print(millis());
+			Serial.print(F(": "));
+			Serial.println(F("Got Rx Event."));
+#endif
+			//HopPending = true;
 			if (Radio.available())
 			{
 				const int8_t packetSize = Radio.getDynamicPayloadSize();
 
-				Event.Timestamp -= GetRxDelay(packetSize);
+				//HopPending = true;
 				if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
 				{
 					// Store 8 packet history of 1-bit RSSI. 
@@ -346,24 +283,102 @@ public:
 					Radio.read(InBuffer, packetSize);
 
 					// Rx Interrupt only occurs when packet has been fully received, so the timestamp must be compensated with RxDelay.
-					Listener->OnRx(InBuffer, Event.Timestamp, packetSize, GetRxRssi());
+					Listener->OnRx(InBuffer, PacketEvent.Timestamp - GetRxDelay(packetSize), packetSize, GetRxRssi());
 				}
 				else
 				{
-					// Invalid packet.
-					//if (packetSize < 1)
-					// Corrupt packet has been flushed.
+					// Corrupt packet, flush.
 					Radio.flush_rx();
-
-					Listener->OnRxLost(Event.Timestamp);
+#if defined(DEBUG_LOLA)
+					Serial.print(millis());
+					Serial.print(F(": "));
+					Serial.println(F("Corrupt Rx."));
+#endif
+					Listener->OnRxLost(PacketEvent.Timestamp - GetRxDelay(packetSize));
 				}
-
+				//Radio.flush_rx();
+				PacketEvent.RxReady = false;
+				//Radio.startListening();
 				Task::enable();
+
 				return true;
 			}
+			else
+			{
+				Radio.flush_rx();
+				PacketEvent.RxReady = false;
+				Radio.startListening();
+#if defined(DEBUG_LOLA)
+				Serial.print(millis());
+				Serial.print(F(": "));
+				Serial.println(F("Got Rx Event but no data."));
+#endif
+			}
+		}
+		// Process Tx event.
+		else if (PacketEvent.TxOk
+			//|| (TxPending && PacketEvent.TxFail)
+			)
+		{
+#ifdef TX_TEST_PIN
+			digitalWrite(TX_TEST_PIN, LOW);
+#endif
+			HopPending = true;
+
+			if (TxPending)
+			{
+				if (!PacketEvent.TxOk)
+				{
+#if defined(DEBUG_LOLA)
+					Serial.print(millis());
+					Serial.print(F(": "));
+					Serial.println(F("Tx Collision."));
+#endif
+				}
+				Listener->OnTx();
+			}
+			else
+			{
+				// Unexpected interrupt.
+				Radio.flush_rx();
+				Radio.flush_tx();
+#if defined(DEBUG_LOLA)
+				Serial.print(millis());
+				Serial.print(F(": "));
+				Serial.println(F("Unexpected Tx interrupt."));
+#endif
+			}
+			PacketEvent.TxOk = false;
+			PacketEvent.TxFail = false;
+			TxPending = false;
 		}
 
-		if (InterruptPending || TxPending || Event.Pending())
+		if (TxPending && ((millis() - TxStart) > EVENT_TIMEOUT_MILLIS))
+		{
+#ifdef TX_TEST_PIN
+			digitalWrite(TX_TEST_PIN, LOW);
+#endif
+#if defined(DEBUG_LOLA)
+			Serial.print(millis());
+			Serial.print(F(": "));
+			Serial.println(F("Tx Timeout."));
+#endif
+			TxPending = false;
+			HopPending = true;
+			Listener->OnTx();
+		}
+
+		if (HopPending)
+		{
+			Radio.setChannel(CurrentChannel);
+			Radio.flush_tx();
+			Radio.flush_rx();
+			Radio.startListening();
+
+			HopPending = false;
+		}
+
+		if (TxPending || Event.Pending || HopPending || PacketEvent.Pending())
 		{
 			Task::enable();
 			return true;
@@ -381,8 +396,13 @@ public:
 	/// <returns></returns>
 	virtual const bool TxAvailable() final
 	{
-		//TODO: Check radio status.
-		return !TxPending && !InterruptPending && !Event.Pending();
+		if (TxPending || Event.Pending || HopPending || PacketEvent.Pending())
+		{
+			return false;
+		}
+
+		// Check radio status.
+		return Radio.isFifo(true, true);
 	}
 
 	/// <summary>
@@ -399,23 +419,29 @@ public:
 		{
 #ifdef TX_TEST_PIN
 			digitalWrite(TX_TEST_PIN, HIGH);
-			digitalWrite(TX_TEST_PIN, LOW);
 #endif
 			Radio.stopListening();
-			Radio.setChannel(GetRealChannel(channel));
+			CurrentChannel = GetRealChannel(channel);
+			Radio.setChannel(CurrentChannel);
 
 			// Sending clears interrupt flags.
 			// Wait for on Sent interrupt.
-			TxPending = true;
-			Event.TxOk = false;
-			Event.TxFail = false;
-			Task::enable();
 
+			TxPending = true;
 
 			// Transmit packet.
-			Radio.startFastWrite(data, packetSize, 0);
+			//Radio.startFastWrite(data, packetSize, false);
+			if (Radio.startWrite(data, packetSize, false))
+			{
+				TxStart = millis();
+				Task::enable();
 
-			return true;
+				return true;
+			}
+			else
+			{
+				TxPending = false;
+			}
 		}
 
 		return false;
@@ -426,9 +452,13 @@ public:
 	/// <param name="channel">LoLa abstract channel [0;255].</param>
 	virtual void Rx(const uint8_t channel) final
 	{
-		Radio.setChannel(GetRealChannel(channel));
-		Radio.startListening();
-		Task::enable();
+		const uint8_t realChannel = GetRealChannel(channel);
+
+		if (CurrentChannel != realChannel) {
+			CurrentChannel = realChannel;
+			HopPending = true;
+			Task::enable();
+		}
 	}
 
 	virtual const uint32_t GetTransceiverCode() final
