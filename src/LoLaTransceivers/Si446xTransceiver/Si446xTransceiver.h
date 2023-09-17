@@ -9,24 +9,25 @@
 #include <ILoLaTransceiver.h>
 
 #include <Si446x.h>
+#include "Si4463Support.h"
+
 
 
 /// <summary>
+/// 
 /// </summary>
+/// <typeparam name="CsPin"></typeparam>
+/// <typeparam name="SdnPin"></typeparam>
+/// <typeparam name="InterruptPin"></typeparam>
 template<const uint8_t CsPin,
 	const uint8_t SdnPin,
 	const uint8_t InterruptPin>
 class Si446xTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
-	static constexpr uint16_t RADIO_CONFIG_868_CENTER_FREQUENCY = 868;
-	static constexpr uint8_t RADIO_CONFIG_868_CHANNEL_COUNT = 99;
+	static constexpr uint8_t ChannelCount = LoLaSi4463Config::GetRadioConfigChannelCount(MODEM_2_1);
 
-	static constexpr uint16_t RADIO_CONFIG_433_CENTER_FREQUENCY = 433;
-	static constexpr uint8_t RADIO_CONFIG_433_CHANNEL_COUNT = 35;
-
-	static const uint8_t ChannelCount = RADIO_CONFIG_868_CHANNEL_COUNT;
-
+	static constexpr uint16_t TRANSCEIVER_ID = 0x4463;
 
 private:
 	// TODO: These values might change with different SPI and CPU clock speed.
@@ -83,7 +84,7 @@ private:
 	};
 
 private:
-	static constexpr uint32_t TRANSCEIVER_ID = 0x514463;
+
 	static constexpr uint8_t TX_TIMEOUT_MILLIS = 8;
 
 
@@ -227,7 +228,8 @@ public:
 	virtual const bool Start() final
 	{
 		if (Listener != nullptr
-			&& RadioInterrupt != nullptr)
+			&& RadioInterrupt != nullptr
+			&& LoLaSi4463Config::ValidateConfig(MODEM_2_1))
 		{
 			// Set pins again, in case Transceiver has been reset.
 			DisableInterrupt();
@@ -276,7 +278,9 @@ public:
 
 	virtual const uint32_t GetTransceiverCode()
 	{
-		return TRANSCEIVER_ID | (uint32_t)ChannelCount << 24;
+		return (uint32_t)TRANSCEIVER_ID
+			| (uint32_t)LoLaSi4463Config::GetConfigId(MODEM_2_1) << 16
+			| (uint32_t)ChannelCount << 24;
 	}
 
 	/// <summary>
