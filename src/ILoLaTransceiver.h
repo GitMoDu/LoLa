@@ -9,7 +9,7 @@ class ILoLaTransceiverListener
 {
 public:
 	/// <summary>
-	/// Transceiver has a received packet to deliver,
+	/// Transceiver has a received packet to deliver.
 	/// </summary>
 	/// <param name="data">Raw packet data.</param>
 	/// <param name="receiveTimestamp">Accurate timestamp (micros()) of incoming packet start.</param>
@@ -19,7 +19,7 @@ public:
 	virtual const bool OnRx(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssi) { return false; }
 
 	/// <summary>
-	/// Transceiver was receiveing a packet but couldn't read it or finish it.
+	/// Transceiver was receiving a packet but couldn't read it or finish it.
 	/// </summary>
 	/// <param name="startTimestamp">Accurate timestamp (micros()) of lost packet start.</param>
 	virtual void OnRxLost(const uint32_t timestamp) {}
