@@ -150,7 +150,7 @@ Stm32TimerCycles CyclesSource{};
 #if defined(LINK_USE_CHANNEL_HOP) && !defined(USE_SERIAL_TRANSCEIVER)
 TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
 #else
-NoHopNoChannel ChannelHop;
+NoHopNoChannel ChannelHop{};
 #endif
 
 #if defined(USE_SERIAL_TRANSCEIVER)
