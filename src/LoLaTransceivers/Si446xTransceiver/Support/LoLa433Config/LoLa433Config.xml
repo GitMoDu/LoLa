@@ -4,13 +4,13 @@
     <tbpFrequencyAndPower Type="System.Windows.Forms.TabPage">
       <grbFequencyControl Type="System.Windows.Forms.GroupBox">
         <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudChannelNumber">
-          <Value>26</Value>
+          <Value>34</Value>
         </DataItem>
         <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudCenterFrequency">
-          <Value>433</Value>
+          <Value>433.05</Value>
         </DataItem>
         <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudChannelSpacing">
-          <Value>70</Value>
+          <Value>50.00</Value>
         </DataItem>
       </grbFequencyControl>
       <grbCrystalControl Type="System.Windows.Forms.GroupBox">
@@ -59,13 +59,13 @@
           <SelectedIndex>2</SelectedIndex>
         </DataItem>
         <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudDataRate">
-          <Value>100</Value>
+          <Value>250.000</Value>
         </DataItem>
         <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudDeviation">
           <Value>50</Value>
         </DataItem>
         <DataItem Type="System.Windows.Forms.CheckBox" Name="chbManualRxBandwidth">
-          <Checked>True</Checked>
+          <Checked>False</Checked>
         </DataItem>
         <DataItem Type="NewWDS.Applications.App_Common.CustomContols.NumericUpDownExtended" Name="nudBandwidth">
           <Value>150</Value>
@@ -114,12 +114,6 @@
           <Checked>False</Checked>
         </DataItem>
         <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnableIqCalibration">
-          <Checked>True</Checked>
-        </DataItem>
-        <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnablePllAFC">
-          <Checked>True</Checked>
-        </DataItem>
-        <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnableAdaptiveChannelFilterBandwidth">
           <Checked>True</Checked>
         </DataItem>
       </grbRfParameters>
@@ -247,7 +241,7 @@
             <grbPreamble Type="System.Windows.Forms.GroupBox">
               <grbPreambleType Type="System.Windows.Forms.GroupBox">
                 <DataItem Type="System.Windows.Forms.ComboBox" Name="cbbPreamblePattern">
-                  <SelectedIndex>0</SelectedIndex>
+                  <SelectedIndex>1</SelectedIndex>
                 </DataItem>
                 <DataItem Type="System.Windows.Forms.RadioButton" Name="rdbPreambleType0101">
                   <Checked>False</Checked>
@@ -257,7 +251,7 @@
                 </DataItem>
               </grbPreambleType>
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudPreambleTxLength">
-                <Value>8</Value>
+                <Value>4</Value>
               </DataItem>
               <DataItem Type="System.Windows.Forms.TrackBar" Name="trbPreambleTimeot">
                 <Value>15</Value>
@@ -270,19 +264,6 @@
               </DataItem>
             </grbPreamble>
           </tbpPreamble>
-          <tbpField2 Type="System.Windows.Forms.TabPage">
-            <grbField2 Type="System.Windows.Forms.GroupBox">
-              <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField2Length">
-                <Value>63</Value>
-              </DataItem>
-              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2DataWhitening">
-                <Checked>True</Checked>
-              </DataItem>
-              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2ManchesterEncoding">
-                <Checked>False</Checked>
-              </DataItem>
-            </grbField2>
-          </tbpField2>
           <tbpSyncWord Type="System.Windows.Forms.TabPage">
             <grbSyncWord Type="System.Windows.Forms.GroupBox">
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbSyncWordErrorAtBeginningOnly">
@@ -349,6 +330,19 @@
               </DataItem>
             </grbField3>
           </tbpField3>
+          <tbpField2 Type="System.Windows.Forms.TabPage">
+            <grbField2 Type="System.Windows.Forms.GroupBox">
+              <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField2Length">
+                <Value>32</Value>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2DataWhitening">
+                <Checked>True</Checked>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2ManchesterEncoding">
+                <Checked>False</Checked>
+              </DataItem>
+            </grbField2>
+          </tbpField2>
           <tbpField1 Type="System.Windows.Forms.TabPage">
             <grbField1 Type="System.Windows.Forms.GroupBox">
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField1Length">

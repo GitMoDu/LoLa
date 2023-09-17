@@ -19,12 +19,22 @@ template<const uint8_t CsPin,
 class Si446xTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
+	static constexpr uint16_t RADIO_CONFIG_868_CENTER_FREQUENCY = 868;
+	static constexpr uint8_t RADIO_CONFIG_868_CHANNEL_COUNT = 99;
+
+	static constexpr uint16_t RADIO_CONFIG_433_CENTER_FREQUENCY = 433;
+	static constexpr uint8_t RADIO_CONFIG_433_CHANNEL_COUNT = 35;
+
+	static const uint8_t ChannelCount = RADIO_CONFIG_868_CHANNEL_COUNT;
+
+
 private:
 	// TODO: These values might change with different SPI and CPU clock speed.
-	static constexpr uint16_t TTA_LONG = 1376;
-	static constexpr uint16_t TTA_SHORT = 1283;
-	static constexpr uint16_t DIA_LONG = 4475;
-	static constexpr uint16_t DIA_SHORT = 2235;
+	static constexpr uint16_t TTA_LONG = 719;
+	static constexpr uint16_t TTA_SHORT = 638;
+
+	static constexpr uint16_t DIA_LONG = 1923;
+	static constexpr uint16_t DIA_SHORT = 987;
 
 private:
 	// TODO: Only InterruptEvent should need volatile members.
@@ -76,7 +86,6 @@ private:
 	static constexpr uint32_t TRANSCEIVER_ID = 0x514463;
 	static constexpr uint8_t TX_TIMEOUT_MILLIS = 8;
 
-	static const uint8_t ChannelCount = 15;
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
