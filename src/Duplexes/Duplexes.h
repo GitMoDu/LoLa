@@ -20,7 +20,7 @@ public:
 
 	virtual const uint16_t GetRange() final
 	{
-		return UINT32_MAX;
+		return UINT16_MAX;
 	}
 
 	virtual const uint16_t GetPeriod() final
