@@ -186,9 +186,6 @@ public:
 #ifdef RX_TEST_PIN
 		digitalWrite(RX_TEST_PIN, HIGH);
 #endif
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, LOW);
-#endif
 
 		if (RxEvent.Pending())
 		{

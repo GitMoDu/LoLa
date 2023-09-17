@@ -189,7 +189,7 @@ void OnRxInterrupt(const uint8_t* mac, const uint8_t* buf, size_t count, void* a
 {
 	TransceiverDriver.OnRxInterrupt(mac, buf, count);
 }
-#elif 
+#else
 void OnRxInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
 {
 	TransceiverDriver.OnRxInterrupt(data, data_len);
