@@ -52,8 +52,6 @@ public:
 	/// </summary>
 	virtual const uint32_t GetLinkDuration() { return 0; }
 
-	virtual void DebugClock() { }
-
 	/// <summary>
 	/// Can a Link time packet be sent now?
 	/// Even on true result, SendPacket() might still fail afterwards.

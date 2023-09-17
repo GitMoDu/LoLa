@@ -56,6 +56,10 @@ protected:
 	uint8_t LastKnownBroadCastChannel = INT8_MAX + 1;
 
 private:
+#if defined(DEBUG_LOLA)
+	uint32_t LinkingStarted = 0;
+#endif
+
 	int32_t TuneErrorFiltered = 0;
 	int32_t AdjustErrorFiltered = 0;
 	uint32_t LastClockSync = 0;
@@ -119,8 +123,8 @@ protected:
 				WaitingState = WaitingStateEnum::SessionCreation;
 				ResetSessionCreation();
 				Task::enable();
-
 #if defined(DEBUG_LOLA)
+				LinkingStarted = millis();
 				this->Owner();
 				Serial.println(F("Found a server!"));
 #endif
@@ -333,6 +337,10 @@ protected:
 						// Stop waiting for a clock reply and timestamp clock sync.
 						WaitingForClockReply = false;
 						LastClockSync = millis();
+
+#if defined(LOLA_DEBUG_LINK_CLOCK)
+						DebugClockError();
+#endif
 					}
 #if defined(DEBUG_LOLA)
 					else {
@@ -384,12 +392,20 @@ protected:
 			LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
 			break;
 		case LinkStageEnum::Linked:
+#if defined(DEBUG_LOLA)
+			Serial.print(millis - LinkingStarted);
+			Serial.println(F(" ms to Link."));
+#endif
 			LastKnownBroadCastChannel = SearchChannel;
 			TuneErrorFiltered = 0;
 			AdjustErrorFiltered = 0;
 			WaitingForClockReply = false;
 			LastClockSync = millis();
 			LastClockSent = millis();
+
+#if defined(LOLA_DEBUG_LINK_CLOCK)
+			DebugClockHeader();
+#endif
 			break;
 		default:
 			break;
@@ -739,23 +755,19 @@ private:
 		return GetPreLinkDuplexStart(duplex, transceiver) + (GetPreLinkDuplexPeriod(duplex, transceiver) / 2);
 	}
 
-#if defined(DEBUG_LOLA)
+#if defined(LOLA_DEBUG_LINK_CLOCK)
+	void DebugClockHeader()
+	{
+		Serial.println(F("Error\tFilter\tTune"));
+	}
+
 	void DebugClockError()
 	{
-		return;
-		Serial.print(F("Clock"));
-		Serial.print(F("\tError: "));
 		Serial.print((int32_t)1000 * EstimateErrorReply.SubSeconds);
-		Serial.println(F("ns."));
-		Serial.print(F("\tFiltered: "));
+		Serial.print('\t');
 		Serial.print(AdjustErrorFiltered);
-		Serial.println(F("ns."));
-		Serial.print(F("\tAdjust: "));
-		Serial.print((int32_t)1000 * (AdjustErrorFiltered / 1000));
-		Serial.println(F("ns."));
-		Serial.print(F("\tTune: "));
+		Serial.print('\t');
 		Serial.print(TuneErrorFiltered);
-		Serial.println(F("ns."));
 		Serial.println();
 	}
 #endif

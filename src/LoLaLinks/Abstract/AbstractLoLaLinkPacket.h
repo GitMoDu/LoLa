@@ -67,13 +67,6 @@ public:
 		, IsLinkHopper(hop->GetHopPeriod() == IChannelHop::NOT_A_HOPPER)
 	{}
 
-#if defined(DEBUG_LOLA)
-	virtual void DebugClock() final
-	{
-		//SyncClock.Debug();
-	}
-#endif
-
 public:
 	virtual const bool Setup()
 	{

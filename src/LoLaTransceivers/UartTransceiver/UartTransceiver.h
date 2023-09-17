@@ -502,7 +502,10 @@ private:
 		uint32_t start, end, duration;
 		uint8_t benchIndex = 0;
 
+#if defined(DEBUG_LOLA)
 		const uint32_t calibrationStart = micros();
+#endif
+
 		start = micros();
 		for (uint_fast8_t i = 0; i < CalibrationSamples; i++)
 		{
@@ -551,9 +554,8 @@ private:
 			EncodeRangeDuration = 1;
 		}
 
-		const uint32_t calibrationEnd = micros();
-
 #if defined(DEBUG_LOLA)
+		const uint32_t calibrationEnd = micros();
 		Serial.print(F("UART @ "));
 		Serial.print(BaudRate);
 		Serial.println(F(" bps"));

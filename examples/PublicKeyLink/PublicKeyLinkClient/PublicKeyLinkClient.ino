@@ -6,6 +6,7 @@
 
 #if defined(DEBUG)
 #define DEBUG_LOLA
+//#define LOLA_DEBUG_LINK_CLOCK
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
@@ -229,8 +230,10 @@ void setup()
 	// Start Link instance.
 	if (Client.Start())
 	{
+#if !defined(LOLA_DEBUG_LINK_CLOCK)
 		Serial.print(millis());
 		Serial.println(F("\tLoLa Link Client Started."));
+#endif
 	}
 	else
 	{
