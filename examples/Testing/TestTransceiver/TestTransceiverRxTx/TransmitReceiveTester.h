@@ -31,8 +31,8 @@ private:
 	volatile uint32_t TxEndTimestamp = 0;
 	bool TxActive = false;
 
-	// Packet service instance, templated to max packet size and reference low latency timeouts.
-	LoLaPacketService<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE> PacketService;
+	// Packet service instance, with reference low latency timeouts.
+	LoLaPacketService PacketService;
 
 public:
 	TransmitReceiveTester(Scheduler& scheduler, ILoLaTransceiver* transceiver)

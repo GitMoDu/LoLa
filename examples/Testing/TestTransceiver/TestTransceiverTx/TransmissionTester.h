@@ -10,15 +10,11 @@
 #include <Arduino.h>
 
 
-
-
 template<const uint32_t SendPeriodMillis,
 	const uint8_t TxActivePin = 0>
 class TransmissionTester : private Task, public virtual ILoLaTransceiverListener
 {
 private:
-	//static constexpr uint8_t TestPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
-
 	uint8_t TestPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
 
 	// Selected Driver for test.
@@ -51,6 +47,8 @@ public:
 
 		if (Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start())
 		{
+			Transceiver->Rx(UINT8_MAX / 2);
+
 			return true;
 		}
 
@@ -61,7 +59,7 @@ public:
 public:
 	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
-		return false;
+		return true;
 	}
 
 	virtual void OnRxLost(const uint32_t receiveTimestamp) final
@@ -80,13 +78,13 @@ public:
 		Serial.print(F("OnTx. Took "));
 		Serial.print(endTimestamp - TxStartTimestamp);
 		Serial.println(F(" us"));
+
+		Transceiver->Rx(UINT8_MAX / 2);
 	}
 
 public:
 	virtual bool Callback() final
 	{
-		const uint32_t timestamp = millis();
-
 		if (!TxActive &&
 			Transceiver->TxAvailable())
 		{
@@ -97,7 +95,6 @@ public:
 				digitalWrite(TxActivePin, HIGH);
 			}
 
-			Serial.println(F("Tx..."));
 			uint8_t TestPacketSize = 0;
 			if (SmallBig)
 			{
@@ -108,7 +105,7 @@ public:
 				TestPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
 			}
 
-			if (Transceiver->Tx(TestPacket, TestPacketSize, 0))
+			if (Transceiver->Tx(TestPacket, TestPacketSize, UINT8_MAX / 2))
 			{
 				TxActive = true;
 				SmallBig = !SmallBig;

@@ -32,7 +32,7 @@ public:
 
 		if (Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start())
 		{
-			Transceiver->Rx(0);
+			Transceiver->Rx(UINT8_MAX / 2);
 			return true;
 		}
 
@@ -60,6 +60,7 @@ public:
 
 	virtual void OnTx() final
 	{
+		Transceiver->Rx(UINT8_MAX / 2);
 	}
 
 private:
