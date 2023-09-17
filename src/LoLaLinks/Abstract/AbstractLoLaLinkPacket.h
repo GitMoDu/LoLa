@@ -330,7 +330,9 @@ private:
 	/// </summary>
 	const bool CalibrateSendDuration()
 	{
+#if defined(DEBUG_LOLA)
 		const uint32_t calibrationStart = micros();
+#endif
 
 		// Measure short (baseline) packet first.
 		uint32_t start = 0;
@@ -381,9 +383,9 @@ private:
 			longDuration = shortDuration + 1;
 		}
 
-		const uint32_t calibrationDuration = micros() - calibrationStart;
 
 #if defined(DEBUG_LOLA)
+		const uint32_t calibrationDuration = micros() - calibrationStart;
 		Serial.print(F("Calibration done. ("));
 		Serial.print(CALIBRATION_ROUNDS);
 		Serial.print(F(" rounds took "));
