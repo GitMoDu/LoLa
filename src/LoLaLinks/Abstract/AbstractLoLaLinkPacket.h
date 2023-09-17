@@ -110,7 +110,11 @@ public:
 		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL && GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
 		{
 #if defined(DEBUG_LOLA)
-			Serial.println(F("Estimated Time-On-Air is longer than the duplex slot duration."));
+			Serial.print(F("Estimated Time-On-Air ( is longer than the duplex slot duration."));
+			Serial.print(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+			Serial.print(F("us) is longer than the duplex slot duration ("));
+			Serial.print(Duplex->GetRange());
+			Serial.println(F(" us)."));
 #endif
 			return false;
 		}
