@@ -128,8 +128,8 @@ public:
 		{
 			Event.Timestamp = micros();
 			Event.Pending = true;
-			Task::enable();
 		}
+		Task::enable();
 	}
 
 public:
@@ -235,6 +235,9 @@ public:
 		// Process pending interrupt events to trigger aware PacketEvent.
 		if (Event.Pending && !PacketEvent.Pending())
 		{
+#ifdef RX_TEST_PIN
+			digitalWrite(RX_TEST_PIN, LOW);
+#endif
 			Radio.whatHappened(PacketEvent.TxOk, PacketEvent.TxFail, PacketEvent.RxReady);
 			if (Event.DoubleEvent)
 			{
@@ -249,9 +252,6 @@ public:
 				PacketEvent.Timestamp = Event.Timestamp;
 			}
 			Event.Clear();
-#ifdef RX_TEST_PIN
-			digitalWrite(RX_TEST_PIN, LOW);
-#endif
 		}
 
 		// Process Rx event.
@@ -415,11 +415,11 @@ public:
 	/// 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, HIGH);
+#endif
 		if (TxAvailable())
 		{
-#ifdef TX_TEST_PIN
-			digitalWrite(TX_TEST_PIN, HIGH);
-#endif
 			Radio.stopListening();
 			CurrentChannel = GetRealChannel(channel);
 			Radio.setChannel(CurrentChannel);
