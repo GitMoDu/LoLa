@@ -12,9 +12,8 @@
 #define DEBUG_LOLA
 #endif
 
-#if defined(ARDUINO_ARCH_ESP32)
-// ESP32 Serial with low bitrate stalls the scheduler loop.
-#define SERIAL_BAUD_RATE 1000000
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+#define SERIAL_BAUD_RATE 2000000 // ESP Serial with low bitrate stalls the scheduler loop.
 #else
 #define SERIAL_BAUD_RATE 115200
 #endif

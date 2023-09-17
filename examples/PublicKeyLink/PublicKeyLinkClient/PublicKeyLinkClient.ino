@@ -8,7 +8,11 @@
 #define DEBUG_LOLA
 #endif
 
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+#define SERIAL_BAUD_RATE 2000000 // ESP Serial with low bitrate stalls the scheduler loop.
+#else
 #define SERIAL_BAUD_RATE 115200
+#endif
 
 #if !defined(LED_BUILTIN) && defined(ARDUINO_ARCH_ESP32)
 #define LED_BUILTIN 33
@@ -19,8 +23,10 @@
 // Selected Driver for test.
 #define USE_SERIAL_TRANSCEIVER
 //#define USE_NRF24_TRANSCEIVER
+//#define USE_ESPNOW_TRANSCEIVER
+//#define USE_SI446X_TRANSCEIVER
 
-//#define LINK_USE_CHANNEL_HOP
+#define LINK_USE_CHANNEL_HOP
 //#define LINK_USE_TIMER_AND_RTC
 
 // Test pins for logic analyser.
@@ -36,7 +42,9 @@
 
 
 #define _TASK_OO_CALLBACKS
-#ifndef ARDUINO_ARCH_ESP32
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP32)
+#define _TASK_THREAD_SAFE
+#else
 #define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
 #endif
 
@@ -54,10 +62,17 @@
 #define NRF24_TRANSCEIVER_PIN_CS			7
 #define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	1
 #define NRF24_TRANSCEIVER_DATA_RATE			RF24_250KBPS
+#elif defined(USE_ESPNOW_TRANSCEIVER)
+#if defined(ARDUINO_ARCH_ESP8266)
+#elif defined(ARDUINO_ARCH_ESP32)
+#define ESPNOW_TRANSCEIVER_DATA_RATE		WIFI_PHY_RATE_1M_L
+#else
+#error "USE_ESPNOW_TRANSCEIVER Is only available for the ESP32 and ESP8266 Arduino core platforms."
+#endif
 #elif defined(USE_SI446X_TRANSCEIVER)
-#define SI446X_TRANSCEIVER_PIN_CS			0
-#define SI446X_TRANSCEIVER_PIN_SDN			12
-#define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	11
+#define SI446X_TRANSCEIVER_PIN_CS			31
+#define SI446X_TRANSCEIVER_PIN_SDN			25
+#define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	26
 #endif
 #else
 #if defined(USE_SERIAL_TRANSCEIVER)
@@ -65,8 +80,8 @@
 #define SERIAL_TRANSCEIVER_INSTANCE			Serial
 #define SERIAL_TRANSCEIVER_BAUDRATE			115200
 #elif defined(USE_NRF24_TRANSCEIVER)
-#define NRF24_TRANSCEIVER_PIN_CE			9
 #define NRF24_TRANSCEIVER_PIN_CS			10
+#define NRF24_TRANSCEIVER_PIN_CE			9
 #define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	2
 #define NRF24_TRANSCEIVER_DATA_RATE			RF24_250KBPS
 #elif defined(USE_SI446X_TRANSCEIVER)
@@ -86,6 +101,14 @@ Scheduler SchedulerBase;
 UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF24_TRANSCEIVER)
 nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_RX_INTERRUPT_PIN, NRF24_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase);
+#elif defined(USE_ESPNOW_TRANSCEIVER)
+#if defined(ARDUINO_ARCH_ESP8266)
+EspNowTransceiver TransceiverDriver(SchedulerBase);
+#else
+EspNowTransceiver<ESPNOW_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase);
+#endif
+#elif defined(USE_SI446X_TRANSCEIVER)
+Si446xTransceiver<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase);
 #endif
 //
 
@@ -99,7 +122,7 @@ static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 //
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 5000;
+static const uint16_t DuplexPeriod = 12000;
 static const uint16_t DuplexDeadZone = DuplexPeriod / 20;
 static const uint32_t ChannelHopPeriod = DuplexPeriod;
 
@@ -182,9 +205,16 @@ void setup()
 
 #if defined(USE_SERIAL_TRANSCEIVER)
 	TransceiverDriver.SetupInterrupt(OnSeriaInterrupt);
-#endif
-#if defined(USE_NRF24_TRANSCEIVER)
+#elif defined(USE_NRF24_TRANSCEIVER)
 	TransceiverDriver.SetupInterrupt(OnRxInterrupt);
+#elif defined(USE_ESPNOW_TRANSCEIVER)
+#if defined(ARDUINO_ARCH_ESP8266)
+	TransceiverDriver.SetupInterrupts(OnRxInterrupt);
+#else
+	TransceiverDriver.SetupInterrupts(OnRxInterrupt, OnTxInterrupt);
+#endif
+#elif defined(USE_SI446X_TRANSCEIVER)
+	TransceiverDriver.SetupInterrupt(OnRadioInterrupt);
 #endif
 
 	// Setup Link instance.
@@ -225,10 +255,50 @@ void OnSeriaInterrupt()
 {
 	TransceiverDriver.OnSeriaInterrupt();
 }
-#endif
-#if defined(USE_NRF24_TRANSCEIVER)
+#elif defined(USE_NRF24_TRANSCEIVER)
 void OnRxInterrupt()
 {
 	TransceiverDriver.OnRfInterrupt();
+}
+#elif defined(USE_ESPNOW_TRANSCEIVER)
+#if defined(ARDUINO_ARCH_ESP8266)
+void OnRxInterrupt(const uint8_t* mac, const uint8_t* buf, size_t count, void* arg)
+{
+	TransceiverDriver.OnRxInterrupt(mac, buf, count);
+}
+#else
+void OnRxInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
+{
+	TransceiverDriver.OnRxInterrupt(data, data_len);
+}
+void OnTxInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
+{
+	TransceiverDriver.OnTxInterrupt(status);
+}
+#endif
+#elif defined(USE_SI446X_TRANSCEIVER)
+void OnRadioInterrupt()
+{
+	TransceiverDriver.OnRadioInterrupt();
+}
+
+void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
+{
+	TransceiverDriver.OnPostRxInterrupt(length, rssi);
+}
+
+void SI446X_CB_RXINVALID(int16_t rssi)
+{
+	TransceiverDriver.OnPostRxInterrupt(0, rssi);
+}
+
+void SI446X_CB_RXBEGIN(int16_t rssi)
+{
+	TransceiverDriver.OnPreRxInterrupt();
+}
+
+void SI446X_CB_SENT(void)
+{
+	TransceiverDriver.OnTxInterrupt();
 }
 #endif
