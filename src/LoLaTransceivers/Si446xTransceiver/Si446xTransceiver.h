@@ -1,293 +1,485 @@
-//// Si446xTransceiver.h
-//
-//#ifndef _LOLASI446XPACKETDRIVER_h
-//#define _LOLASI446XPACKETDRIVER_h
-//
-//
-//#include <ILoLaPacketDriver.h>
-//
-//#include <PacketDriver\LoLaSi446x\LoLaSi446xRadioDriver.h>
-//#include <PacketDriver\LoLaSi446x\PendingActionsTracker.h>
-//
-//
-//class Si446xTransceiver
-//	: public virtual ILoLaTransceiver
-//{
-//private:
-//	static const uint32_t RESPONSE_TIMEOUT_MICROS = 500000;
-//	static const uint32_t RESPONSE_SHORT_TIMEOUT_MICROS = 250;
-//	static const uint32_t RESPONSE_CHECK_PERIOD_MICROS = 2;
-//
-//	uint8_t InterruptFlags[8];
-//
-//	uint32_t LastEventTimestamp = 0;
-//
-//	//PendingActionsTracker PendingActions;
-// 
-//  Si446xRadioDriver& RadioDriver;
-//
-//public:
-//	Si446xTransceiver(SPIClass* spi, const uint8_t cs, const uint8_t reset, const uint8_t irq)
-//		: ILoLaTransceiver()
-//		, RadioDriver(Si446xRadioDriver& radioDriver)
-//	{
-//	}
-//
-//#ifdef DEBUG_LOLA
-//	virtual void Debug(Stream* serial)
-//	{
-//		LoLaPacketDriver::Debug(serial);
-//
-//		serial->print(F("Driver timeouts: "));
-//		serial->println(TimeoutCount);
-//	}
-//#endif
-//
-//	//Return true when there is no more work to be done.
-//	bool CheckPending()
-//	{
-//		//Only update event timestamp if an interrupt hasn't touched it.
-//		if (LastEventTimestamp == 0 ||
-//			LastEventTimestamp == EventTimestamp)
-//		{
-//			EventTimestamp = micros();
-//		}
-//
-//		LastEventTimestamp = EventTimestamp;
-//		if (CheckQueue(LastEventTimestamp))
-//		{
-//			if (PendingActions.GetRX())
-//			{
-//				SetRadioReceive();
-//			}
-//			else if (PendingActions.GetPower())
-//			{
-//				SetRadioPower();
-//			}
-//			else if (PendingActions.GetChannel())
-//			{
-//				SetRadioChannel();
-//			}
-//			else
-//			{
-//				return true;
-//			}
-//		}
-//
-//		return false;
-//	}
-//
-//protected:
-//	virtual void OnResetLiveData()
-//	{
-//		PendingActions.Clear();
-//	}
-//
-//	virtual void OnChannelUpdated()
-//	{
-//		PendingActions.SetChannel();
-//		Wake();
-//	}
-//
-//	virtual void OnTransmitPowerUpdated()
-//	{
-//		PendingActions.SetPower();
-//		Wake();
-//	}
-//
-//	void SetRadioPower()
-//	{
-//		if (AllowedRadioChange() &&
-//			SetProperty(CONFIG_PA_POWER, GetTransmitPower()))
-//		{
-//			PendingActions.ClearPower();
-//		}
-//		else
-//		{
-//			PendingActions.SetPower();
-//			Wake();
-//		}
-//	}
-//
-//	void SetRadioChannel()
-//	{
-//		if (AllowedRadioChange())
-//		{
-//			SetRadioReceive();
-//			PendingActions.ClearChannel();
-//		}
-//		else
-//		{
-//			PendingActions.SetChannel();
-//			Wake();
-//		}
-//	}
-//
-//	bool RadioTransmit()
-//	{
-//#ifdef LOLA_MOCK_RADIO
-//		delayMicroseconds(500);
-//		return true;
-//#else
-//
-//		if (!AllowedRadioChange())
-//		{
-//			return false;
-//		}
-//
-//		return RadioTransmitInternal();
-//#endif
-//	}
-//
-//	bool RadioSetup()
-//	{
-//#ifdef LOLA_MOCK_RADIO
-//		return true;
-//#else
-//		if (!LoLaSi446xRadioDriver::RadioSetup())
-//		{
-//			return false;
-//		}
-//
-//		Serial.println(F("RadioSetup2"));
-//		ApplyStartupConfig();
-//
-//		ReadInfo();
-//
-//		if (DeviceInfo.PartId == PART_NUMBER_SI4463X)
-//		{
-//			SetupCallbacks(); // Enable packet RX begin and packet sent callbacks.
-//			SetRadioPower();
-//			SetBatteryWarningThreshold(3200); // Set low battery voltage to 3200mV.
-//
-//			SetupWUT(1, 8192); // Run check battery every 2 seconds.
-//
-//			SleepRadio();
-//
-//			// Start up.
-//			InterruptsEnabled = false;
-//			InterruptOn();
-//
-//#ifdef DEBUG_LOLA
-//			//Serial.println(F("Si4463 Present"));
-//			//Serial.println(DeviceInfo.revBranch);
-//			//Serial.println(DeviceInfo.revExternal);
-//			//Serial.println(DeviceInfo.revInternal);
-//			//Serial.println(DeviceInfo.chipRev);
-//			//Serial.println(DeviceInfo.customer);
-//			//Serial.println(DeviceInfo.id);
-//			//Serial.println(DeviceInfo.patch);
-//			//Serial.println(DeviceInfo.partBuild);
-//			//Serial.println(DeviceInfo.func);
-//			//Serial.println(DeviceInfo.romId);
-//#endif // DEBUG_LOLA
-//			return true;
-//		}
-//		else
-//		{
-//#ifdef DEBUG_LOLA
-//			Serial.print(F("Part number invalid: "));
-//			Serial.println(DeviceInfo.PartId);
-//			Serial.println(F("Si4463 Driver failed to start."));
-//#endif // DEBUG_LOLA
-//			return false;
-//		}
-//#endif
-//	}
-//
-//private:
-//	// Return true if done.
-//	bool CheckQueue(const uint32_t timeMicros)
-//	{
-//		ReadInterruptFlags();
-//
-//		// Valid PREAMBLE and SYNC, packet data now begins
-//		if (InterruptFlags[4] & PENDING_EVENT_SYNC_DETECT)
-//		{
-//			LastReceivedInfo.Micros = timeMicros;
-//			LastReceivedInfo.RSSI = GetLatchedRSSI();
-//			OnIncoming();
-//		}
-//		// Valid packet.
-//		else if (InterruptFlags[2] & PENDING_EVENT_RX)
-//		{
-//			uint8_t PacketLength = GetReceivedLength();
-//
-//			if (PacketLength >= LOLA_PACKET_MIN_PACKET_SIZE &&
-//				PacketLength < LOLA_PACKET_MAX_PACKET_SIZE &&
-//				AllowedReceive())
-//			{
-//				ReadReceived(PacketLength);
-//				if (OnReceiveOk(PacketLength))
-//				{
-//					SetRadioReceive();
-//				}
-//			}
-//			else
-//			{
-//				OnReceiveFail();
-//				SetRadioReceive();
-//			}
-//		}
-//		// Internal CRC is not used.
-//		// Corrupted packet.
-//		else if (InterruptFlags[2] & PENDING_EVENT_CRC_ERROR)
-//		{
-//			SetRadioReceive();
-//			OnReceiveFail();
-//		}
-//		// Packet sent.
-//		else if (InterruptFlags[2] & PENDING_EVENT_SENT_OK)
-//		{
-//			if (OnSentOk(timeMicros))
-//			{
-//				SetRadioReceive();
-//			}
-//		}
-//		else if (InterruptFlags[6] & PENDING_EVENT_LOW_BATTERY)
-//		{
-//			OnBatteryAlarm();
-//		}
-//		else if (InterruptFlags[6] & (1 << PENDING_EVENT_WUT))
-//		{
-//			return true;//Not used.
-//		}
-//		else
-//		{
-//			return true;
-//		}
-//
-//		return false;
-//	}
-//
-//	void SetRadioReceive()
-//	{
-//		if (AllowedRadioChange() && SetRadioReceiveInternal())
-//		{
-//			PendingActions.ClearRX();
-//		}
-//		else 
-//		{
-//			PendingActions.SetRX();
-//			Wake();
-//		}
-//	}
-//
-//	void ReadInterruptFlags()
-//	{
-//		if (WaitForResponse(MessageIn, 0, RESPONSE_SHORT_TIMEOUT_MICROS)) // Make sure it's ok to send a command
-//		{
-//			RADIO_ATOMIC()
-//			{
-//				CHIP_SELECT()
-//				{
-//					MessageOut[0] = COMMAND_GET_STATUS;
-//					spi->transfer(MessageOut[0]);
-//				}
-//			}
-//
-//			WaitForResponse(InterruptFlags, sizeof(InterruptFlags), RESPONSE_SHORT_TIMEOUT_MICROS);
-//		}
-//	}
-//};
-//#endif
+// Si446xTransceiver.h
+
+#ifndef _LOLA_SI446X_TRANSCEIVER_h
+#define _LOLA_SI446X_TRANSCEIVER_h
+
+#define _TASK_OO_CALLBACKS
+#include <TaskSchedulerDeclarations.h>
+
+#include <ILoLaTransceiver.h>
+
+#include <Si446x.h>
+
+
+/// <summary>
+/// </summary>
+template<const uint8_t CsPin,
+	const uint8_t SdnPin,
+	const uint8_t InterruptPin>
+class Si446xTransceiver final
+	: private Task, public virtual ILoLaTransceiver
+{
+private:
+	// TODO: These values might change with different SPI and CPU clock speed.
+	static constexpr uint16_t TTA_LONG = 1376;
+	static constexpr uint16_t TTA_SHORT = 1283;
+	static constexpr uint16_t DIA_LONG = 4475;
+	static constexpr uint16_t DIA_SHORT = 2235;
+
+private:
+	// TODO: Only InterruptEvent should need volatile members.
+	struct InterruptEventStruct
+	{
+		volatile uint32_t Timestamp = 0;
+		volatile bool Pending = false;
+		volatile bool Double = false;
+
+		void Clear()
+		{
+			Pending = false;
+			Double = false;
+		}
+	};
+
+	struct TxEventStruct
+	{
+		volatile uint32_t Timestamp = 0;
+		volatile bool Pending = false;
+		volatile bool Double = false;
+
+		void Clear()
+		{
+			Pending = false;
+			Double = false;
+		}
+	};
+
+	struct RxEventStruct
+	{
+		volatile uint32_t Timestamp = 0;
+		volatile uint8_t Size = 0;
+		volatile int16_t Rssi = 0;
+		volatile bool Double = false;
+
+		const bool Pending()
+		{
+			return Size > 0;
+		}
+
+		void Clear()
+		{
+			Size = 0;
+		}
+	};
+
+private:
+	static constexpr uint32_t TRANSCEIVER_ID = 0x514463;
+	static constexpr uint8_t TX_TIMEOUT_MILLIS = 8;
+
+	static const uint8_t ChannelCount = 15;
+
+	ILoLaTransceiverListener* Listener = nullptr;
+
+private:
+	void (*RadioInterrupt)(void) = nullptr;
+
+private:
+	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
+
+	InterruptEventStruct RadioEvent{};
+	TxEventStruct TxEvent{};
+	RxEventStruct RxEvent{};
+
+	uint32_t TxStartTimestamp = 0;
+	uint32_t RxStartTimestamp = 0;
+	uint8_t CurrentChannel = 0;
+
+	uint8_t RxPending = 0;
+	uint8_t RxPendingRssi = 0;
+	volatile bool TxPending = false;
+
+	bool HopPending = false;
+
+public:
+	Si446xTransceiver(Scheduler& scheduler)
+		: ILoLaTransceiver()
+		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+	{
+		pinMode(InterruptPin, INPUT);
+		pinMode(CsPin, INPUT);
+		pinMode(SdnPin, INPUT);
+
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, LOW);
+		pinMode(RX_TEST_PIN, OUTPUT);
+#endif
+
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, LOW);
+		pinMode(TX_TEST_PIN, OUTPUT);
+#endif
+	}
+
+	void SetupInterrupt(void (*onRadioInterrupt)(void))
+	{
+		RadioInterrupt = onRadioInterrupt;
+	}
+
+public:
+	void OnRadioInterrupt()
+	{
+		if (RadioEvent.Pending)
+		{
+			RadioEvent.Double = true;
+		}
+		else
+		{
+			RadioEvent.Timestamp = micros();
+			RadioEvent.Pending = true;
+		}
+		Task::enable();
+	}
+
+	void OnTxInterrupt()
+	{
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, LOW);
+#endif
+		if (TxEvent.Pending)
+		{
+			TxEvent.Double = true;
+		}
+		else
+		{
+			TxEvent.Timestamp = micros();
+			TxEvent.Pending = true;
+		}
+		Task::enable();
+	}
+
+
+	void OnPreRxInterrupt()
+	{
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, HIGH);
+#endif
+
+		if (TxPending)
+		{
+			RxEvent.Double = true;
+			return;
+		}
+
+		if (RxEvent.Pending())
+		{
+			RxEvent.Double = true;
+		}
+		else
+		{
+			RxEvent.Timestamp = micros();
+		}
+		Task::enable();
+	}
+
+	void OnPostRxInterrupt(const uint8_t size, const int16_t rssi)
+	{
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, HIGH);
+#endif
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, LOW);
+#endif
+
+		if (RxEvent.Pending())
+		{
+			RxEvent.Double = true;
+		}
+		else
+		{
+			if (size > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+			{
+				Listener->OnRxLost(RxEvent.Timestamp);
+			}
+			else
+			{
+				RxEvent.Size = size;
+				RxEvent.Rssi = rssi;
+			}
+		}
+		Task::enable();
+	}
+
+public:
+	// ILoLaTransceiver overrides.
+	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
+	{
+		Listener = listener;
+
+		return Listener != nullptr;
+	}
+
+	virtual const bool Start() final
+	{
+		if (Listener != nullptr
+			&& RadioInterrupt != nullptr)
+		{
+			// Set pins again, in case Transceiver has been reset.
+			DisableInterrupt();
+			pinMode(InterruptPin, INPUT_PULLUP);
+			pinMode(CsPin, OUTPUT);
+			pinMode(SdnPin, OUTPUT);
+
+			Si446x_init();
+
+			// Enable packet RX begin and packet sent callbacks
+			Si446x_setupCallback(
+				SI446X_CBS_SENT
+				| SI446X_CBS_RXBEGIN
+				| SI446X_CBS_RXCOMPLETE
+				| SI446X_CBS_RXINVALID
+				, 1);
+
+			// Sleep until first command.
+			Si446x_sleep();
+
+			// Set random channel to start with.
+			CurrentChannel = UINT8_MAX;
+
+			// Start listening to IRQ.
+			EnableInterrupt();
+
+			Task::enable();
+
+			return true;
+		}
+
+		return false;
+	}
+
+	virtual const bool Stop() final
+	{
+		Task::disable();
+
+		return true;
+	}
+
+	virtual const bool TxAvailable() final
+	{
+		return !TxPending && !TxEvent.Pending && !RadioEvent.Pending && !TxEvent.Pending;
+	}
+
+	virtual const uint32_t GetTransceiverCode()
+	{
+		return TRANSCEIVER_ID | (uint32_t)ChannelCount << 24;
+	}
+
+	/// <summary>
+	/// Packet copy to serial buffer, and start transmission.
+	/// The first byte is the packet size, excluding the size byte.
+	/// </summary>
+	/// <param name="data"></param>
+	/// <param name="length"></param>
+	/// <returns>True if transmission was successful.</returns> 
+	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
+	{
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, HIGH);
+#endif
+		if (TxAvailable())
+		{
+			CurrentChannel = GetRealChannel(channel);
+
+			TxPending = true;
+
+			TxStartTimestamp = millis();
+			Task::enable();
+
+			return 1 == Si446x_TX((uint8_t*)data, packetSize, CurrentChannel, si446x_state_t::SI446X_STATE_RX);
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// </summary>
+	/// <param name="channel">LoLa abstract channel [0;255].</param>
+	virtual void Rx(const uint8_t channel) final
+	{
+		const uint8_t realChannel = GetRealChannel(channel);
+
+		if (CurrentChannel != realChannel) {
+			CurrentChannel = realChannel;
+			HopPending = true;
+			Task::enable();
+		}
+	}
+
+	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
+	{
+		return TTA_SHORT + (((uint16_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (TTA_LONG - TTA_SHORT));
+	}
+
+	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
+	{
+		return DIA_SHORT + (((uint16_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (DIA_LONG - DIA_SHORT));
+	}
+
+public:
+	virtual bool Callback() final
+	{
+		// Process pending Radio events.
+		Si446x_SERVICE();
+
+		if (RadioEvent.Pending)
+		{
+			if (RadioEvent.Double)
+			{
+#if defined(DEBUG_LOLA)
+				Serial.println(F("Si446x Double Interrupt Event"));
+#endif
+			}
+			else
+			{
+				//TODO: Ask Radio what event triggered and OnRxEvent/OnTxEvent
+			}
+
+			RadioEvent.Clear();
+		}
+
+		if (TxEvent.Pending)
+		{
+			if (TxEvent.Double)
+			{
+#if defined(DEBUG_LOLA)
+				Serial.println(F("Si446x Double TxEvent"));
+#endif
+			}
+
+			if (TxPending)
+			{
+				Listener->OnTx();
+				TxPending = false;
+			}
+			else
+			{
+#if defined(DEBUG_LOLA)
+				Serial.println(F("Si446x Tx Unexpected TxEvent."));
+#endif
+			}
+
+			TxEvent.Clear();
+			HopPending = true;
+		}
+
+		// Distribute any pending packets before responding to RxEvent.
+		if (RxPending > 0)
+		{
+			Listener->OnRx(InBuffer, RxStartTimestamp, RxPending, RxPendingRssi);
+			RxPending = 0;
+		}
+
+		if (RxEvent.Pending())
+		{
+			if (RxEvent.Double)
+			{
+#if defined(DEBUG_LOLA)
+				Serial.print(F("Si446x Double RxEvent."));
+#endif
+				// TODO: Replace with clear Rx FIFO.
+				Si446x_read(InBuffer, RxEvent.Size);
+				Listener->OnRxLost(RxEvent.Timestamp);
+			}
+			else
+			{
+				Si446x_read(InBuffer, RxEvent.Size);
+
+				if (RxEvent.Size < LoLaPacketDefinition::MIN_PACKET_SIZE)
+				{
+					// Invalid size.
+					Listener->OnRxLost(RxEvent.Timestamp);
+				}
+				else
+				{
+					// Reading the data over SPI already took some time.
+					// The buffered packet will be distributed on next run instead.
+					// Since we have to double buffer the input, might as well use it to avoid skipping packets.
+					RxPending = RxEvent.Size;
+					RxPendingRssi = GetNormalizedRssi(RxEvent.Rssi);
+					RxStartTimestamp = RxEvent.Timestamp;
+				}
+			}
+			RxEvent.Clear();
+			HopPending = true;
+		}
+
+		if (TxPending
+			&& (millis() - TxStartTimestamp > TX_TIMEOUT_MILLIS))
+		{
+			TxPending = false;
+#if defined(DEBUG_LOLA)
+			Serial.print(F("Si446x TxPending timeout."));
+#endif
+		}
+
+		if (HopPending)
+		{
+			HopPending = false;
+#if defined(DEBUG_LOLA)
+			if (CurrentChannel == UINT8_MAX)
+			{
+				Serial.print(F("Si446x Missed Rx channel on hop."));
+				CurrentChannel = 0;
+				Task::enable();
+				return true;
+			}
+#endif
+			Si446x_RX(CurrentChannel);
+		}
+
+		if (RxPending > 0
+			|| RxEvent.Pending()
+			|| TxPending || RadioEvent.Pending || TxEvent.Pending)
+		{
+			Task::enable();
+		}
+		else
+		{
+#if defined(SI446X_INTERRUPTS)
+			Task::disable();
+#else
+			Task::enable();
+#endif
+		}
+
+		return true;
+	}
+
+
+private:
+	/// </summary>
+	/// Converts the LoLa abstract channel into a real channel index for the radio.
+	/// </summary>
+	/// <param name="abstractChannel">LoLa abstract channel [0;255].</param>
+	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
+	const uint8_t GetRealChannel(const uint8_t abstractChannel)
+	{
+		return (abstractChannel % ChannelCount);
+	}
+
+	const uint8_t GetNormalizedRssi(const int16_t rssi)
+	{
+		return ((150 - rssi) * UINT8_MAX) / 90;
+	}
+
+private:
+	void EnableInterrupt()
+	{
+		//attachInterrupt(digitalPinToInterrupt(InterruptPin), RadioInterrupt, FALLING);
+	}
+
+	void DisableInterrupt()
+	{
+		//detachInterrupt(digitalPinToInterrupt(InterruptPin));
+	}
+};
+#endif
