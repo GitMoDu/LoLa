@@ -393,7 +393,7 @@ protected:
 			break;
 		case LinkStageEnum::Linked:
 #if defined(DEBUG_LOLA)
-			Serial.print(millis - LinkingStarted);
+			Serial.print(millis() - LinkingStarted);
 			Serial.println(F(" ms to Link."));
 #endif
 			LastKnownBroadCastChannel = SearchChannel;
