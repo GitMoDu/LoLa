@@ -100,15 +100,6 @@ public:
 			Listener->OnRxLost(RxTimestamp);
 		}
 
-		for (uint_fast8_t i = 0; i < ESP_NOW_ETH_ALEN; i++)
-		{
-			if (mac_addr[i] != UINT8_MAX) {
-				// Mac mismatch.
-				Listener->OnRxLost(RxTimestamp);
-				return;
-			}
-		}
-
 		// Copy to buffer.
 		for (uint_fast8_t i = 0; i < data_len; i++)
 		{
