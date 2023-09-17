@@ -193,9 +193,8 @@ public:
 
 	virtual const uint32_t GetTransceiverCode()
 	{
-		return (uint32_t)TRANSCEIVER_ID //+ (((uint32_t)AddressPipe + 1) * AddressSize)
-			| (uint32_t)DataRateCode << 16
-			| (uint32_t)ChannelCount << 24
+		return (uint32_t)TRANSCEIVER_ID
+			| (uint32_t)((DataRateCode + 1) * ChannelCount) << 16
 			| (uint32_t)CHANNEL << 24;
 	}
 
