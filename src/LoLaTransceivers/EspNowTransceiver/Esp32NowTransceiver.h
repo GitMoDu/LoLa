@@ -33,8 +33,8 @@ private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
 private:
-	void (*OnDataSent)(const uint8_t* mac_addr, esp_now_send_status_t status) = nullptr;
-	void (*OnDataReceived)(const uint8_t* mac_addr, const uint8_t* data, int data_len) = nullptr;
+	void (*TxInterrupt)(const uint8_t* mac_addr, esp_now_send_status_t status) = nullptr;
+	void (*RxInterrupt)(const uint8_t* mac_addr, const uint8_t* data, int data_len) = nullptr;
 
 private:
 	esp_now_peer_info_t slave;
@@ -76,20 +76,20 @@ public:
 		return false;
 	}
 
-	void SetupInterrupts(void (*onDataReceived)(const uint8_t* mac_addr, const uint8_t* data, int data_len),
-		void (*onDataSent)(const uint8_t* mac_addr, esp_now_send_status_t status))
+	void SetupInterrupts(void (*onRxInterrupt)(const uint8_t* mac_addr, const uint8_t* data, int data_len),
+		void (*onTxInterrupt)(const uint8_t* mac_addr, esp_now_send_status_t status))
 	{
-		OnDataReceived = onDataReceived;
-		OnDataSent = onDataSent;
+		RxInterrupt = onRxInterrupt;
+		TxInterrupt = onTxInterrupt;
 	}
 
-	void OnDataSentInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
+	void OnTxInterrupt(esp_now_send_status_t status)
 	{
 		TxEvent = true;
 		Task::enable();
 	}
 
-	void OnDataReceivedInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
+	void OnRxInterrupt(const uint8_t* data, int data_len)
 	{
 		RxTimestamp = micros();
 
@@ -129,7 +129,10 @@ public:
 
 	virtual const bool Start() final
 	{
-		if (Listener != nullptr && OnDataSent != nullptr)
+		if (Listener != nullptr
+			&& RxInterrupt != nullptr
+			&& TxInterrupt != nullptr
+			)
 		{
 			WiFi.mode(WIFI_STA);
 			WiFi.disconnect(false, true);
@@ -144,12 +147,12 @@ public:
 				}
 			}
 
-			if (esp_now_register_send_cb(OnDataSent) != ESP_OK)
+			if (esp_now_register_send_cb(TxInterrupt) != ESP_OK)
 			{
 				return false;
 			}
 
-			if (esp_now_register_recv_cb(OnDataReceived) != ESP_OK)
+			if (esp_now_register_recv_cb(RxInterrupt) != ESP_OK)
 			{
 				return false;
 			}
