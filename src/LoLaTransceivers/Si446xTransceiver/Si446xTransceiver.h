@@ -265,7 +265,7 @@ public:
 
 	virtual const bool TxAvailable() final
 	{
-		return !TxPending && !TxEvent.Pending && !RadioEvent.Pending && !TxEvent.Pending;
+		return !RadioEvent.Pending && !TxPending && !TxEvent.Pending && !RxEvent.Pending();
 	}
 
 	virtual const uint32_t GetTransceiverCode()
