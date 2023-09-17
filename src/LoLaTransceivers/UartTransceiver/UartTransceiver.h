@@ -58,10 +58,10 @@ private:
 	static constexpr uint8_t COBS_IN_PLACE_OFFSET = 1;
 
 private:
+	static constexpr uint32_t MIN_BAUD_RATE = 80000;
 	static constexpr uint32_t REFERENCE_LONG = 35308;
 	static constexpr uint32_t REFERENCE_SHORT = 8230;
 	static constexpr uint16_t REFERENCE_BAUD_RATE = 9600;
-	static constexpr uint16_t MIN_BAUD_RATE = 80000;
 
 private:
 	static constexpr uint16_t DurationShort = (uint32_t)((REFERENCE_SHORT * REFERENCE_BAUD_RATE) / BaudRate);
