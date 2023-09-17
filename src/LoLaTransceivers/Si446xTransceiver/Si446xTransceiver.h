@@ -316,12 +316,26 @@ public:
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		return TTA_SHORT + (((uint16_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (TTA_LONG - TTA_SHORT));
+		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
+		{
+			return TTA_SHORT;
+		}
+		else
+		{
+			return TTA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (TTA_LONG - TTA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+		}
 	}
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
-		return DIA_SHORT + (((uint16_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (DIA_LONG - DIA_SHORT));
+		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
+		{
+			return DIA_SHORT;
+		}
+		else
+		{
+			return DIA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (DIA_LONG - DIA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+		}
 	}
 
 public:
