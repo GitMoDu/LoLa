@@ -12,11 +12,14 @@
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h> // only for esp_wifi_set_channel()
+
 /// <summary>
 /// ESP32 implementation for Expressif Arduino core.
-/// TODO: Implement Rx and listen.
 /// TODO: Read RSSI with callback https://github.com/TenoTrash/ESP32_ESPNOW_RSSI/blob/main/Modulo_Receptor_OLED_SPI_RSSI.ino
 /// TODO: Check how many channels in ESP-NOW mode https://github.com/espressif/esp-idf/issues/9592
+/// TODO: Check if power level is working and abstract power levels.
+/// TODO: Use broadcast mode.
+/// TODO: Remove Ack (retry count = 0).
 /// </summary>
 /// <typeparam name="DataRateCode"></typeparam>
 template<const wifi_phy_rate_t DataRateCode>
@@ -61,9 +64,12 @@ public:
 	{
 		if (TxEvent)
 		{
-			Listener->OnTx();
 			TxEvent = false;
-			TxPending = false;
+			if (TxPending)
+			{
+				Listener->OnTx();
+				TxPending = false;
+			}
 		}
 
 		if (RxSize > 0)
@@ -71,9 +77,19 @@ public:
 			Listener->OnRx(InBuffer, RxTimestamp, RxSize, 0);
 			RxSize = 0;
 		}
-		Task::disable();
 
-		return false;
+		if (TxEvent || RxSize > 0)
+		{
+			Task::enable();
+
+			return true;
+		}
+		else
+		{
+			Task::disable();
+			return false;
+		}
+
 	}
 
 	void SetupInterrupts(void (*onRxInterrupt)(const uint8_t* mac_addr, const uint8_t* data, int data_len),
@@ -127,6 +143,7 @@ public:
 		{
 			WiFi.mode(WIFI_STA);
 			WiFi.disconnect(false, true);
+
 
 			if (esp_now_init() != ESP_OK)
 			{
