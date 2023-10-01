@@ -413,7 +413,7 @@ public:
 		/// <summary>
 		/// ||Rolling Time error (us)||
 		/// </summary>
-		struct ClockTuneMicrosReply : public TemplateHeaderDefinition<ClockTuneRequest::HEADER + 1, TIME_SIZE>
+		struct ClockTuneReply : public TemplateHeaderDefinition<ClockTuneRequest::HEADER + 1, TIME_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_ERROR_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
