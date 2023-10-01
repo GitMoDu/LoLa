@@ -89,7 +89,7 @@ public:
 	/// Task callback override.
 	/// Executes all checks and schedules next for the shortest one.
 	/// </summary>
-	bool Callback() final
+	virtual bool Callback() final
 	{
 		const uint32_t cycles = CyclesSource->GetCycles();
 
