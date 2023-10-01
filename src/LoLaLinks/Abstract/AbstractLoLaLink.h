@@ -6,6 +6,7 @@
 #include "AbstractLoLaLinkPacket.h"
 #include "..\..\Link\ReportTracker.h"
 #include "..\..\Link\TimedStateTransition.h"
+#include "..\..\Link\LinkClockTracker.h"
 
 /// <summary>
 /// 

@@ -17,11 +17,7 @@ private:
 	static constexpr uint32_t CLIENT_SLEEP_TIMEOUT_MILLIS = 30000;
 	static constexpr uint32_t CHANNEL_SEARCH_TRY_COUNT = 3;
 
-	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 33;
-
 	static constexpr uint32_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
-	static constexpr uint8_t CLOCK_FILTER_RATIO = 110;
-	static constexpr uint8_t CLOCK_TUNE_RATIO = 30;
 
 	enum WaitingStateEnum
 	{
@@ -51,6 +47,8 @@ protected:
 
 	TimestampError EstimateErrorReply{};
 
+	LinkClientClockTracker ClockTracker{};
+
 protected:
 	uint8_t SearchChannel = 0;
 	uint8_t LastKnownBroadCastChannel = INT8_MAX + 1;
@@ -59,11 +57,6 @@ private:
 #if defined(DEBUG_LOLA)
 	uint32_t LinkingStarted = 0;
 #endif
-
-	int32_t TuneErrorFiltered = 0;
-	int32_t AdjustErrorFiltered = 0;
-	uint32_t LastClockSync = 0;
-	uint32_t LastClockSent = 0;
 
 	uint32_t PreLinkLastSync = 0;
 
@@ -315,41 +308,9 @@ protected:
 			{
 			case Linked::ClockTuneReply::HEADER:
 				if (payloadSize == Linked::ClockTuneReply::PAYLOAD_SIZE
-					&& WaitingForClockReply)
+					&& ClockTracker.WaitingForClockReply())
 				{
-					// Re-use linking-time estimate holder.
-					EstimateErrorReply.SubSeconds = ArrayToInt32(&payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
-
-					if ((EstimateErrorReply.SubSeconds >= 0 && EstimateErrorReply.SubSeconds < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
-						|| (EstimateErrorReply.SubSeconds < 0 && EstimateErrorReply.SubSeconds > -(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
-					{
-						// Due to error limit of LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS, operation doesn't need to be elevated to uint64_t.
-						AdjustErrorFiltered += (((EstimateErrorReply.SubSeconds * 1000) - AdjustErrorFiltered) * CLOCK_FILTER_RATIO) / UINT8_MAX;
-						TuneErrorFiltered += (((EstimateErrorReply.SubSeconds * 1000) - TuneErrorFiltered) * CLOCK_TUNE_RATIO) / UINT8_MAX;
-
-						// Adjust client clock with filtered estimation error.
-						SyncClock.ShiftSubSeconds(AdjustErrorFiltered / 1000);
-
-						// Adjust tune and consume adjustment from filter value.
-						SyncClock.ShiftTune(TuneErrorFiltered / 1000);
-						TuneErrorFiltered -= (TuneErrorFiltered / 1000) * 1000;
-
-						// Stop waiting for a clock reply and timestamp clock sync.
-						WaitingForClockReply = false;
-						LastClockSync = millis();
-
-#if defined(LOLA_DEBUG_LINK_CLOCK)
-						DebugClockError();
-#endif
-					}
-#if defined(DEBUG_LOLA)
-					else {
-						this->Owner();
-						Serial.print(F("Clock Sync error too big: "));
-						Serial.print(EstimateErrorReply.SubSeconds);
-						Serial.println(F(" us."));
-					}
-#endif
+					ClockTracker.OnReplyReceived(millis(), ArrayToInt32(&payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]));
 				}
 #if defined(DEBUG_LOLA)
 				else {
@@ -377,6 +338,8 @@ protected:
 			Encoder->SetRandomSessionId(&RandomSource);
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 			LastKnownBroadCastChannel = RandomSource.GetRandomShort();
+			// Remember the estimated send duration, to avoid calculating it on every PreSend.
+			ClockTracker.SetRequestSendDuration(GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE));
 			break;
 		case LinkStageEnum::AwaitingLink:
 			SearchChannel = LastKnownBroadCastChannel;
@@ -397,14 +360,11 @@ protected:
 			Serial.println(F(" ms to Link."));
 #endif
 			LastKnownBroadCastChannel = SearchChannel;
-			TuneErrorFiltered = 0;
-			AdjustErrorFiltered = 0;
 			WaitingForClockReply = false;
-			LastClockSync = millis();
-			LastClockSent = millis();
+			ClockTracker.Reset(millis(), false);
 
 #if defined(LOLA_DEBUG_LINK_CLOCK)
-			DebugClockHeader();
+			ClockTracker.DebugClockHeader();
 #endif
 			break;
 		default:
@@ -590,10 +550,8 @@ protected:
 		if (OutPacket.GetPort() == Linked::PORT &&
 			OutPacket.GetHeader() == Linked::ClockTuneRequest::HEADER)
 		{
-			LinkSendDuration = GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE);
-
 			SyncClock.GetTimestamp(LinkTimestamp);
-			LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
+			LinkTimestamp.ShiftSubSeconds(ClockTracker.GetRequestSendDuration());
 
 			UInt32ToArray(LinkTimestamp.GetRollingMicros(), &OutPacket.Payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
 		}
@@ -601,24 +559,29 @@ protected:
 
 	virtual const bool CheckForClockSyncUpdate() final
 	{
-		if (WaitingForClockReply)
+		if (ClockTracker.HasResultReady())
 		{
-			if (millis() - LastClockSent > CLOCK_TUNE_RETRY_PERIOD)
-			{
-				WaitingForClockReply = false;
+			// Adjust client clock with filtered estimation error in ns.
+			SyncClock.ShiftSubSeconds(ClockTracker.FilteredError / 1000);
 
-				// Wait for reply before trying again.
-				return true;
-			}
+			// Adjust tune and consume adjustment from filter value.
+			SyncClock.ShiftTune(ClockTracker.ConsumeTuneShiftMicros());
+
+			// Set the tracket state to wait for next round of sync.
+			ClockTracker.OnResultRead();
+
+#if defined(LOLA_DEBUG_LINK_CLOCK)
+			ClockTracker.DebugClockError();
+#endif
+			return true;
 		}
-		else if (millis() - LastClockSync > LoLaLinkDefinition::CLOCK_TUNE_PERIOD && CanRequestSend())
+		else if (ClockTracker.HasRequestToSend(millis()) && CanRequestSend())
 		{
 			OutPacket.SetPort(Linked::PORT);
 			OutPacket.SetHeader(Linked::ClockTuneRequest::HEADER);
 			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE))
 			{
-				WaitingForClockReply = true;
-				LastClockSent = millis();
+				ClockTracker.OnRequestSent(millis());
 			}
 			return true;
 		}
@@ -686,7 +649,6 @@ private:
 				Serial.println(F("StateTransition timed out."));
 				// No Ack before time out.
 				WaitingState = WaitingStateEnum::SearchingLink;
-
 #endif
 			}
 		}
@@ -701,12 +663,12 @@ private:
 			{
 				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
+					StateTransition.OnSent();
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.println(F("Sent StateTransition Ack."));
 #endif
 				}
-				StateTransition.OnSent();
 			}
 		}
 		Task::enable();
@@ -754,22 +716,5 @@ private:
 	{
 		return GetPreLinkDuplexStart(duplex, transceiver) + (GetPreLinkDuplexPeriod(duplex, transceiver) / 2);
 	}
-
-#if defined(LOLA_DEBUG_LINK_CLOCK)
-	void DebugClockHeader()
-	{
-		Serial.println(F("Error\tFilter\tTune"));
-	}
-
-	void DebugClockError()
-	{
-		Serial.print((int32_t)1000 * EstimateErrorReply.SubSeconds);
-		Serial.print('\t');
-		Serial.print(AdjustErrorFiltered);
-		Serial.print('\t');
-		Serial.print(TuneErrorFiltered);
-		Serial.println();
-	}
-#endif
 };
 #endif

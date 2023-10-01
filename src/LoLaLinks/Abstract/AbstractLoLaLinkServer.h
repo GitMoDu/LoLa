@@ -51,6 +51,7 @@ private:
 	uint8_t SyncSequence = 0;
 
 	bool SearchReplyPending = false;
+	LinkServerClockTracker ClockTracker{};
 	bool ClockReplyPending = false;
 
 protected:
@@ -332,15 +333,12 @@ protected:
 			{
 			case Linked::ClockTuneRequest::HEADER:
 				if (payloadSize == Linked::ClockTuneRequest::PAYLOAD_SIZE
-					&& !ClockReplyPending)
+					&& !ClockTracker.HasReplyPending())
 				{
 					SyncClock.GetTimestamp(LinkTimestamp);
 					LinkTimestamp.ShiftSubSeconds((int32_t)(timestamp - micros()));
 
-					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
-					EstimateErrorReply.Seconds = 0;
-
-					ClockReplyPending = true;
+					ClockTracker.OnLinkedEstimateReceived(ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]), LinkTimestamp.GetRollingMicros());
 					Task::enable();
 				}
 #if defined(DEBUG_LOLA)
@@ -375,6 +373,7 @@ protected:
 		case LinkStageEnum::Linking:
 			Encoder->GenerateLocalChallenge(&RandomSource);
 			LinkingState = LinkingStateEnum::AuthenticationRequest;
+			ClockTracker.Reset();
 			ClockReplyPending = false;
 			break;
 		case LinkStageEnum::Linked:
@@ -558,18 +557,18 @@ protected:
 
 	virtual const bool CheckForClockSyncUpdate() final
 	{
-		if (ClockReplyPending)
+		if (ClockTracker.HasReplyPending())
 		{
 			if (CanRequestSend())
 			{
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.SetHeader(Linked::ClockTuneReply::HEADER);
-				Int32ToArray(EstimateErrorReply.SubSeconds, &OutPacket.Payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
-
+				Int32ToArray(ClockTracker.GetLinkedReplyError(), &OutPacket.Payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
+				
 				if (RequestSendPacket(Linked::ClockTuneReply::PAYLOAD_SIZE))
 				{
 					// Only send a time reply once.
-					ClockReplyPending = false;
+					ClockTracker.OnReplySent();
 				}
 			}
 

@@ -174,8 +174,6 @@ public:
 	/// </summary>
 	static constexpr int16_t CLOCK_TUNE_RANGE_MICROS = 250;
 
-	static constexpr uint32_t CLOCK_TUNE_PERIOD = 666;
-
 	enum class LinkType : uint8_t
 	{
 		PublicKeyExchange = 0xBE,
