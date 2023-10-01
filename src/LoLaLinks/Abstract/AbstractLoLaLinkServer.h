@@ -330,14 +330,14 @@ protected:
 		{
 			switch (payload[HeaderDefinition::HEADER_INDEX])
 			{
-			case Linked::ClockTuneMicrosRequest::HEADER:
-				if (payloadSize == Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE
+			case Linked::ClockTuneRequest::HEADER:
+				if (payloadSize == Linked::ClockTuneRequest::PAYLOAD_SIZE
 					&& !ClockReplyPending)
 				{
 					SyncClock.GetTimestamp(LinkTimestamp);
 					LinkTimestamp.ShiftSubSeconds((int32_t)(timestamp - micros()));
 
-					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - ArrayToUInt32(&payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
+					EstimateErrorReply.SubSeconds = LinkTimestamp.GetRollingMicros() - ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
 					EstimateErrorReply.Seconds = 0;
 
 					ClockReplyPending = true;
@@ -345,7 +345,7 @@ protected:
 				}
 #if defined(DEBUG_LOLA)
 				else {
-					this->Skipped(F("ClockTuneMicrosRequest"));
+					this->Skipped(F("ClockTuneRequest"));
 				}
 #endif
 				break;
@@ -563,10 +563,10 @@ protected:
 			if (CanRequestSend())
 			{
 				OutPacket.SetPort(Linked::PORT);
-				OutPacket.SetHeader(Linked::ClockTuneMicrosReply::HEADER);
-				Int32ToArray(EstimateErrorReply.SubSeconds, &OutPacket.Payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX]);
+				OutPacket.SetHeader(Linked::ClockTuneReply::HEADER);
+				Int32ToArray(EstimateErrorReply.SubSeconds, &OutPacket.Payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
 
-				if (RequestSendPacket(Linked::ClockTuneMicrosReply::PAYLOAD_SIZE))
+				if (RequestSendPacket(Linked::ClockTuneReply::PAYLOAD_SIZE))
 				{
 					// Only send a time reply once.
 					ClockReplyPending = false;

@@ -313,12 +313,12 @@ protected:
 		{
 			switch (payload[HeaderDefinition::HEADER_INDEX])
 			{
-			case Linked::ClockTuneMicrosReply::HEADER:
-				if (payloadSize == Linked::ClockTuneMicrosReply::PAYLOAD_SIZE
+			case Linked::ClockTuneReply::HEADER:
+				if (payloadSize == Linked::ClockTuneReply::PAYLOAD_SIZE
 					&& WaitingForClockReply)
 				{
 					// Re-use linking-time estimate holder.
-					EstimateErrorReply.SubSeconds = ArrayToInt32(&payload[Linked::ClockTuneMicrosReply::PAYLOAD_ERROR_INDEX]);
+					EstimateErrorReply.SubSeconds = ArrayToInt32(&payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
 
 					if ((EstimateErrorReply.SubSeconds >= 0 && EstimateErrorReply.SubSeconds < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
 						|| (EstimateErrorReply.SubSeconds < 0 && EstimateErrorReply.SubSeconds > -(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
@@ -353,7 +353,7 @@ protected:
 				}
 #if defined(DEBUG_LOLA)
 				else {
-					this->Skipped(F("ClockTuneMicrosReply"));
+					this->Skipped(F("ClockTuneReply"));
 				}
 #endif
 				break;
@@ -588,14 +588,14 @@ protected:
 	virtual void OnPreSend() final
 	{
 		if (OutPacket.GetPort() == Linked::PORT &&
-			OutPacket.GetHeader() == Linked::ClockTuneMicrosRequest::HEADER)
+			OutPacket.GetHeader() == Linked::ClockTuneRequest::HEADER)
 		{
-			LinkSendDuration = GetSendDuration(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE);
+			LinkSendDuration = GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE);
 
 			SyncClock.GetTimestamp(LinkTimestamp);
 			LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
 
-			UInt32ToArray(LinkTimestamp.GetRollingMicros(), &OutPacket.Payload[Linked::ClockTuneMicrosRequest::PAYLOAD_ROLLING_INDEX]);
+			UInt32ToArray(LinkTimestamp.GetRollingMicros(), &OutPacket.Payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
 		}
 	}
 
@@ -614,8 +614,8 @@ protected:
 		else if (millis() - LastClockSync > LoLaLinkDefinition::CLOCK_TUNE_PERIOD && CanRequestSend())
 		{
 			OutPacket.SetPort(Linked::PORT);
-			OutPacket.SetHeader(Linked::ClockTuneMicrosRequest::HEADER);
-			if (RequestSendPacket(Linked::ClockTuneMicrosRequest::PAYLOAD_SIZE))
+			OutPacket.SetHeader(Linked::ClockTuneRequest::HEADER);
+			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE))
 			{
 				WaitingForClockReply = true;
 				LastClockSent = millis();

@@ -405,7 +405,7 @@ public:
 		/// <summary>
 		/// ||Rolling Time (us)||
 		/// </summary>
-		struct ClockTuneMicrosRequest : public TemplateHeaderDefinition<ReportUpdate::HEADER + 1, TIME_SIZE>
+		struct ClockTuneRequest : public TemplateHeaderDefinition<ReportUpdate::HEADER + 1, TIME_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_ROLLING_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
@@ -413,7 +413,7 @@ public:
 		/// <summary>
 		/// ||Rolling Time error (us)||
 		/// </summary>
-		struct ClockTuneMicrosReply : public TemplateHeaderDefinition<ClockTuneMicrosRequest::HEADER + 1, TIME_SIZE>
+		struct ClockTuneMicrosReply : public TemplateHeaderDefinition<ClockTuneRequest::HEADER + 1, TIME_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_ERROR_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
