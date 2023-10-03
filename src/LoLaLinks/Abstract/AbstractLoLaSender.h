@@ -25,6 +25,7 @@ protected:
 
 protected:
 	virtual const uint8_t GetTxChannel(const uint32_t rollingMicros) { return 0; }
+	virtual const uint8_t MockGetTxChannel(const uint32_t rollingMicros) { return 0; }
 
 public:
 	AbstractLoLaSender(Scheduler& scheduler,
@@ -131,7 +132,7 @@ protected:
 
 		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(packetSize,
-			GetTxChannel(SendTimestamp.GetRollingMicros())))
+			MockGetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
 			return true;
 		}

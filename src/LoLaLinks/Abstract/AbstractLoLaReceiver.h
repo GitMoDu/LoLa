@@ -224,6 +224,18 @@ protected:
 		LastValidReceived = millis();
 	}
 
+protected:
+	const bool MockReceiveFailPacket(const uint32_t receiveTimestamp, const uint8_t* data, const uint8_t payloadSize)
+	{
+		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
+
+		SyncClock.GetTimestamp(ReceiveTimestamp);
+		ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
+
+		// (Fail to) Decrypt packet with token based on time.
+		return Encoder->DecodeInPacket(data, RawInPacket, ReceiveTimestamp.Seconds, ReceivingCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+	}
+
 private:
 	const bool ValidateCounter(const uint8_t counter)
 	{

@@ -267,6 +267,18 @@ protected:
 	}
 
 protected:
+	virtual const uint8_t MockGetTxChannel(const uint32_t rollingMicros) final
+	{
+		if (IsLinkHopper)
+		{
+			return Encoder->GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
+		}
+		else
+		{
+			return ChannelHopper->GetFixedChannel();
+		}
+	}
+
 	///// <summary>
 	///// During Link, if the configured channel management is a hopper,
 	///// every N us the channel switches.
@@ -327,11 +339,7 @@ private:
 		const uint32_t calibrationStart = micros();
 #endif
 
-		// Measure short (baseline) packet first.
 		uint32_t start = 0;
-		uint32_t shortDuration = 0;
-		uint32_t longDuration = 0;
-
 		OutPacket.SetPort(123);
 		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PAYLOAD_SIZE; i++)
 		{
@@ -350,10 +358,7 @@ private:
 				return false;
 			}
 		}
-		shortDuration = micros();
-		shortDuration -= start;
-		shortDuration /= CALIBRATION_ROUNDS;
-
+		const uint32_t shortDuration = (micros() - start) / CALIBRATION_ROUNDS;
 
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
@@ -367,15 +372,12 @@ private:
 				return false;
 			}
 		}
-		longDuration = micros();
-		longDuration -= start;
-		longDuration /= CALIBRATION_ROUNDS;
+		uint32_t longDuration = (micros() - start) / CALIBRATION_ROUNDS;
 
 		if (longDuration <= shortDuration)
 		{
 			longDuration = shortDuration + 1;
 		}
-
 
 #if defined(DEBUG_LOLA)
 		const uint32_t calibrationDuration = micros() - calibrationStart;
@@ -384,7 +386,57 @@ private:
 		Serial.print(F(" rounds took "));
 		Serial.print(calibrationDuration);
 		Serial.println(F(" us)"));
-		Serial.println();
+
+		Serial.println(F("Short\tLong"));
+		Serial.print(shortDuration);
+		Serial.print('\t');
+		Serial.print(longDuration);
+		Serial.println(F(" us"));
+
+		// Measure rejection time.
+		start = micros();
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			if (BaseClass::MockReceiveFailPacket(micros(), OutPacket.Data, 0))
+			{
+				// Calibration failed.
+				Serial.print(F("Decrypt succeeded. It shouldn\'t."));
+			}
+		}
+		const uint32_t rejectionShortDuration = (micros() - start) / CALIBRATION_ROUNDS;
+
+		start = micros();
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			if (BaseClass::MockReceiveFailPacket(micros(), OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
+			{
+				// Calibration failed.
+				Serial.print(F("Decrypt succeeded. It shouldn\'t."));
+			}
+		}
+		const uint32_t rejectionLongDuration = (micros() - start) / CALIBRATION_ROUNDS;
+
+		Serial.println(F("Rejection duration: "));
+		Serial.println(F("Short\tLong"));
+		Serial.print(rejectionShortDuration);
+		Serial.print('\t');
+		Serial.print(rejectionLongDuration);
+		Serial.println(F(" us"));
+
+		// Measure PRNG Hop calculation time.
+		uint8_t target = 0;
+		uint32_t source = UINT32_MAX;
+		start = micros();
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			target = Encoder->GetPrngHopChannel(source);
+		}
+		uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
+		calculationDuration += target;
+
+		Serial.println(F("PRNG Hop calculation: "));
+		Serial.print(calculationDuration - target);
+		Serial.println(F(" ns."));
 #endif
 
 		return SetSendCalibration(shortDuration, longDuration);
