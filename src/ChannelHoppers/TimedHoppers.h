@@ -22,7 +22,6 @@ private:
 	};
 
 	static constexpr uint32_t MARGIN_MILLIS = 1;
-	static constexpr uint32_t CLOCK_MARGIN_PERCENTAGE = 2;
 
 	static constexpr uint32_t HopPeriodMillis()
 	{
