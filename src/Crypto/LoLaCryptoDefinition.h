@@ -12,9 +12,7 @@ public:
 	/// <summary>
 	/// Elliptic-curve Diffie–Hellman public key exchange.
 	/// SECP 160 R1
-	/// Depends on https://github.com/kmackay/micro-ecc .
 	/// </summary>
-	//using uECC_secp160r1
 
 	/// <summary>
 	/// Public key.
@@ -37,33 +35,25 @@ public:
 	// Public Address Exchange
 public:
 	/// <summary>
-	/// Public key.
-	/// Uncompressed size is 40 bytes.
+	/// Public key equivalent.
 	/// </summary>
 	static constexpr uint8_t PUBLIC_ADDRESS_SIZE = 8;
 
 	// Encryption
 public:
-	/// Chacha8 256 (Cryptographic Cypher function) - message encoding/encryption.
-	/// 32 byte (256 bit) cypher key.
-	/// 8 Byte IV, Counter with the same size, according to specification.
+	/// Ascon (Cryptographic Cypher function).
 	/// Public domain.
+	/// 16 byte (128 bit) cypher key.
 	/// </summary>
-	/// using MacHashType = Poly1305
-	static constexpr uint8_t CYPHER_KEY_SIZE = 32;
-	static constexpr uint8_t CYPHER_IV_SIZE = 8;
-	static constexpr uint8_t CYPHER_ROUNDS = 20;
+	static constexpr uint8_t CYPHER_KEY_SIZE = 16;
+	static constexpr uint8_t CYPHER_IV_SIZE = 16;
 
 	// Integrity and Authenticity
 public:
-	/// <summary>
-	/// Poly1305 (Cryptographic Message Authentication function) - verify the data integrity and the authenticity.
-	/// Up to 16 bytes of output.
-	/// Not found to be patentable.
+	/// Xoodyak (Cryptographic Hash function).
+	/// Creative Commons Attribution 4.0 International License.
+	/// 32 byte (256 bit) bit digest.
 	/// </summary>
-	/// using MacHashType = Poly1305
-	static constexpr uint8_t MAC_KEY_SIZE = 16;
-	static constexpr uint8_t NONCE_SIZE = 16;
 
 	/// <summary>
 	/// SMBus 1.1 (Fast Hash function) - non-cryptographic, fast 8-bit pseudo-hasher.
@@ -75,7 +65,7 @@ public:
 	///		check = 0xf4
 	/// Expired patent.
 	/// </summary>
-	//using FastHashType = FastCRC8
+	static constexpr uint8_t FAST_HASH_SIZE = 1;
 
 	/// <summary>
 	/// Size of time-based token.
@@ -84,21 +74,10 @@ public:
 	static constexpr uint8_t TIME_TOKEN_KEY_SIZE = 4;
 
 	/// <summary>
-	/// Size of sub second token.
-	/// 16 bit rolling sub-timestamp token.
-	/// </summary>
-	static constexpr uint8_t TIME_SUB_TOKEN_KEY_SIZE = 2;
-
-	/// <summary>
 	/// Size of encoded rolling counter.
 	/// 8 bit rolling token.
 	/// </summary>
 	static constexpr uint8_t PACKET_ID_SIZE = 1;
-
-	/// <summary>
-	/// MAC is truncated to 32 bits, so any nonce value above doesn't affect the HMAC result often.
-	/// </summary>
-	static constexpr uint8_t NONCE_EFFECTIVE_SIZE = 4;
 
 	/// <summary>
 	/// Random challenge to be solved by the partner,
@@ -113,10 +92,10 @@ public:
 	/// <summary>
 	/// Cypher Tag (Nonce) content indexes.
 	/// </summary>
-	static constexpr uint8_t CYPHER_TAG_ID_INDEX = 0;
+	static constexpr uint8_t CYPHER_TAG_TIMESTAMP_INDEX = 0;
+
+	static constexpr uint8_t CYPHER_TAG_ID_INDEX = CYPHER_TAG_TIMESTAMP_INDEX + TIME_TOKEN_KEY_SIZE;
 	static constexpr uint8_t CYPHER_TAG_SIZE_INDEX = CYPHER_TAG_ID_INDEX + PACKET_ID_SIZE;
-	static constexpr uint8_t CYPHER_TAG_ROLL_INDEX = CYPHER_TAG_SIZE_INDEX + PACKET_ID_SIZE;
-	static constexpr uint8_t CYPHER_TAG_TIMESTAMP_INDEX = CYPHER_TAG_ROLL_INDEX + TIME_SUB_TOKEN_KEY_SIZE;
-	static constexpr uint8_t CYPHER_TAG_SIZE = CYPHER_TAG_TIMESTAMP_INDEX + TIME_TOKEN_KEY_SIZE;
+	static constexpr uint8_t CYPHER_TAG_SIZE = CYPHER_TAG_SIZE_INDEX + 1;
 };
 #endif

@@ -86,7 +86,9 @@ public:
 	virtual const bool Setup() final
 	{
 		return LoLaCryptoEncoderSession::Setup() &&
-			LocalPublicKey != nullptr && LocalPrivateKey != nullptr;
+			LocalPublicKey != nullptr
+			&& LocalPrivateKey != nullptr
+			&& MATCHING_TOKEN_SIZE == LoLaPacketDefinition::MAC_SIZE;
 	}
 
 	virtual void SetSessionId(const uint8_t* sessionId)
@@ -191,14 +193,10 @@ private:
 	/// <param name="token"></param>
 	void CalculateSessionToken(const uint8_t* partnerPublicKey, uint8_t* token)
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::MAC_KEY_SIZE; i++)
-		{
-			Nonce[i] = SessionId[i % LoLaLinkDefinition::SESSION_ID_SIZE];
-		}
-
-		CryptoHasher.reset(EmptyKey);
+		CryptoHasher.reset();
+		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
-		CryptoHasher.finalize(Nonce, token, MATCHING_TOKEN_SIZE);
+		CryptoHasher.finalize(token, MATCHING_TOKEN_SIZE);
 		CryptoHasher.clear();
 	}
 
@@ -209,19 +207,14 @@ private:
 	/// <returns>True if the calculated secrets are already set for this SessionId and PublicKey</returns>
 	const bool SessionTokenMatches(const uint8_t* partnerPublicKey)
 	{
-		uint8_t matchToken[MATCHING_TOKEN_SIZE]{};
+		CryptoHasher.reset();
+		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 
-		CalculateSessionToken(partnerPublicKey, matchToken);
+		const bool match = CryptoHasher.macMatches(CachedToken);
+		CryptoHasher.clear();
 
-		for (uint_fast8_t i = 0; i < MATCHING_TOKEN_SIZE; i++)
-		{
-			if (CachedToken[i] != matchToken[i])
-			{
-				return false;
-			}
-		}
-
-		return true;
+		return match;
 	}
 };
 #endif

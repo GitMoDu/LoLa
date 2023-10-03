@@ -50,13 +50,13 @@ public:
 			break;
 		case LinkStageEnum::Linking:
 			// Encrypt packet without token.
-			Encoder->EncodeOutPacket(data, RawOutPacket, ZeroTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+			Encoder->EncodeOutPacket(data, RawOutPacket, 0, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 			break;
 		case LinkStageEnum::Linked:
 			// Encrypt packet with token based on time.
 			Encoder->EncodeOutPacket(data,
 				RawOutPacket,
-				SendTimestamp,
+				SendTimestamp.Seconds,
 				SendCounter,
 				LoLaPacketDefinition::GetDataSize(packetSize));
 			break;
@@ -86,17 +86,12 @@ protected:
 			SendVariableDurationMicros = longDuration - shortDuration;
 
 #if defined(DEBUG_LOLA)
-			Serial.println(F("Short\tLong"));
-			Serial.print(shortDuration);
-			Serial.print('\t');
-			Serial.println(longDuration);
-			Serial.println();
-			Serial.println(F("Full estimation"));
+			Serial.println(F("Time-to-Air estimation"));
 			Serial.println(F("Short\tLong"));
 			Serial.print(GetSendDuration(0));
 			Serial.print('\t');
-			Serial.println(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
-			Serial.println();
+			Serial.print(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+			Serial.println(F(" us"));
 #endif
 			return true;
 		}
@@ -121,7 +116,6 @@ protected:
 	/// Mock internal "SendPacket", 
 	/// for calibration/testing purposes.
 	/// </summary>
-	/// <param name="callback"></param>
 	/// <param name="data"></param>
 	/// <param name="payloadSize"></param>
 	/// <returns></returns>
@@ -133,7 +127,7 @@ protected:
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
 		// Encrypt packet with token based on time.
-		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp.Seconds, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 
 		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(packetSize,

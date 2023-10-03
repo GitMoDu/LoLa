@@ -107,7 +107,7 @@ public:
 			break;
 		case LinkStageEnum::Linking:
 			// Update MAC with implicit addressing but without token.
-			if (Encoder->DecodeInPacket(RawInPacket, InData, ZeroTimestamp, ReceivingCounter, receivingDataSize))
+			if (Encoder->DecodeInPacket(RawInPacket, InData, 0, ReceivingCounter, receivingDataSize))
 			{
 				if (ValidateCounter(ReceivingCounter))
 				{
@@ -137,7 +137,7 @@ public:
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestamp(ReceiveTimestamp);
 			ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
-			if (Encoder->DecodeInPacket(RawInPacket, InData, ReceiveTimestamp, ReceivingCounter, receivingDataSize))
+			if (Encoder->DecodeInPacket(RawInPacket, InData, ReceiveTimestamp.Seconds, ReceivingCounter, receivingDataSize))
 			{
 				if (ValidateCounter(ReceivingCounter))
 				{

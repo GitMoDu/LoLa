@@ -38,17 +38,12 @@ public:
 	/// <summary>
 	/// Implicit addressing key size.
 	/// </summary>
-	static constexpr uint8_t ADDRESS_KEY_SIZE = 4;
-
-	/// <summary>
-	/// Implicit addressing entropy size.
-	/// </summary>
-	static constexpr uint8_t ADDRESS_SEED_SIZE = 4;
+	static constexpr uint8_t ADDRESS_KEY_SIZE = LoLaCryptoDefinition::CYPHER_IV_SIZE;
 
 	/// <summary>
 	/// Channel PRNG entropy/key size.
 	/// </summary>
-	static constexpr uint8_t CHANNEL_KEY_SIZE = 4;
+	static constexpr uint8_t CHANNEL_KEY_SIZE = 1;
 
 	/// <summary>
 	/// One time linking token.
@@ -67,48 +62,30 @@ public:
 
 public:
 	/// <summary>
-	/// Period of sub-token update.
-	/// 20 ms guarantees up to 12800 packets/second without nonce re-use.
-	/// </summary>
-	static constexpr uint32_t SUB_TOKEN_PERIOD_MICROS = 20000;
-
-public:
-	/// <summary>
 	/// The raw keys that are used during runtime encryption.
 	/// These are filled in with HKDF from the shared secret key.
 	/// </summary>
 	struct ExpandedKeyStruct
 	{
 		/// <summary>
-		/// Cypher Key and IV.
+		/// Cypher Key.
 		/// </summary>
 		uint8_t CypherKey[LoLaCryptoDefinition::CYPHER_KEY_SIZE];
-		uint8_t CypherIv[LoLaCryptoDefinition::CYPHER_IV_SIZE];
 
 		/// <summary>
-		/// MAC Key.
+		/// Cypher Iv.
 		/// </summary>
-		uint8_t MacKey[LoLaCryptoDefinition::MAC_KEY_SIZE];
-
-		/// <summary>
-		/// Packet Id Key.
-		/// </summary>
-		uint8_t IdKey[LoLaCryptoDefinition::PACKET_ID_SIZE];
-
-		/// <summary>
-		/// Addressing entropy.
-		/// </summary>
-		uint8_t AdressingSeed[ADDRESS_SEED_SIZE];
-
-		///// <summary>
-		///// Ephemeral session linking start token.
-		///// </summary>
-		uint8_t LinkingSeed[LINKING_TOKEN_SIZE];
+		uint8_t CypherIvSeed[LoLaCryptoDefinition::CYPHER_IV_SIZE];
 
 		/// <summary>
 		/// Channel PRNG seed.
 		/// </summary>
 		uint8_t ChannelSeed[CHANNEL_KEY_SIZE];
+
+		///// <summary>
+		///// Ephemeral session linking start token.
+		///// </summary>
+		uint8_t LinkingSeed[LINKING_TOKEN_SIZE];
 	};
 
 	static constexpr uint8_t HKDFSize = sizeof(ExpandedKeyStruct);

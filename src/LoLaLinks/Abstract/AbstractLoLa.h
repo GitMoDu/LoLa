@@ -38,10 +38,6 @@ private:
 	};
 
 protected:
-	// Static value with all zeros.
-	Timestamp ZeroTimestamp{};
-
-protected:
 	// Packet service instance;
 	LoLaPacketService PacketService;
 
