@@ -43,7 +43,7 @@ public:
 	/// <summary>
 	/// Channel PRNG entropy/key size.
 	/// </summary>
-	static constexpr uint8_t CHANNEL_KEY_SIZE = 1;
+	static constexpr uint8_t CHANNEL_KEY_SIZE = 4;
 
 	/// <summary>
 	/// One time linking token.

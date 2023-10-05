@@ -5,25 +5,22 @@
 
 #include <IEntropy.h>
 
+#include "..\Link\LoLaLinkSession.h"
+
 #include "LoLaCryptoDefinition.h"
 #include "LoLaRandom.h"
-
-#include "..\Link\LoLaLinkSession.h"
+#include "SeedXorShifter.h"
 
 /*
 * https://github.com/rweather/lightweight-crypto
 */
 #include "XoodyakHashWrapper.h"
 
-/*
-* https://github.com/FrankBoesing/FastCRC
-*/
-#include <FastCRC.h>
 
 class LoLaCryptoSession : public LoLaLinkSession
 {
 private:
-	FastCRC8 FastHasher{}; // 8 bit fast hasher for deterministic PRNG.
+	SeedXorShifter ChannelHasher{}; // 8 bit fast hasher for deterministic pseudo-random channel.
 
 protected:
 	/// <summary>
@@ -87,11 +84,8 @@ public:
 
 	const uint8_t GetPrngHopChannel(const uint32_t tokenIndex)
 	{
-		// Start Hash with Channel Hop Seed.
-		FastHasher.smbus(ExpandedKey.ChannelSeed, LoLaLinkDefinition::CHANNEL_KEY_SIZE);
-
 		// Add Token Index and return the result.
-		return FastHasher.smbus_upd((uint8_t*)&tokenIndex, sizeof(uint32_t));
+		return ChannelHasher.GetHash(tokenIndex);
 	}
 
 	virtual const bool Setup()
@@ -174,6 +168,7 @@ public:
 	///	-	protocol id
 	/// </summary>
 	/// <param name="key"></param>
+	/// <param name="keySize"></param>
 	void CalculateExpandedKey(const uint8_t* key, const uint8_t keySize)
 	{
 		uint8_t index = 0;
@@ -197,8 +192,10 @@ public:
 				index += (LoLaLinkDefinition::HKDFSize - index);
 			}
 		}
-
 		CryptoHasher.clear();
+
+		// Set Hasher with Channel Hop Seed.
+		ChannelHasher.SetSeedArray(ExpandedKey.ChannelSeed);
 	}
 
 	/// <summary>

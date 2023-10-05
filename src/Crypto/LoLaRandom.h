@@ -8,7 +8,7 @@
 /*
 * https://www.pcg-random.org
 */
-#include "PCG.h"
+#include "PCG\PCG.h"
 
 
 /// <summary>

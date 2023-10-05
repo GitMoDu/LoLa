@@ -7,6 +7,7 @@
 * https://github.com/rweather/lightweight-crypto
 */
 #include "lightweight-crypto\xoodyak.h"
+#include <stdint.h>
 
 class XoodyakHashWrapper final
 {

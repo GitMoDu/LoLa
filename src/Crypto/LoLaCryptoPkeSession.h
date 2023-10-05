@@ -100,7 +100,7 @@ public:
 		}
 	}
 
-	virtual void SetRandomSessionId(LoLaRandom* randomSource)
+	virtual void SetRandomSessionId(LoLaRandom* randomSource) final
 	{
 		LoLaCryptoEncoderSession::SetRandomSessionId(randomSource);
 		for (uint_fast8_t i = 0; i < MATCHING_TOKEN_SIZE; i++)
