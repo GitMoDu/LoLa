@@ -555,6 +555,11 @@ protected:
 		}
 	}
 
+	virtual const uint8_t GetSyncClockQuality() final
+	{
+		return ClockTracker.GetQuality();
+	}
+
 	virtual const bool CheckForClockSyncUpdate() final
 	{
 		if (ClockTracker.HasReplyPending())

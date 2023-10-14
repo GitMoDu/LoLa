@@ -69,7 +69,6 @@ public:
 			GetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
 			SendCounter++;
-			OnEvent(PacketEventEnum::Sent);
 
 			return true;
 		}

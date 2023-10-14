@@ -26,11 +26,13 @@ private:
 	/// </summary>
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
+
+
 protected:
 	int32_t LinkSendDuration = 0;
 
 private:
-	ReportTracker ReportTracking;
+	ReportTracker QualityTracker{};
 
 	uint32_t LastUnlinkedSent = 0;
 
@@ -50,6 +52,8 @@ protected:
 	/// <returns>True if a clock sync update is due or pending to send.</returns>
 	virtual const bool CheckForClockSyncUpdate() { return false; }
 
+	virtual const uint8_t GetSyncClockQuality() { return 0; }
+
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
@@ -60,7 +64,6 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, ReportTracking()
 	{}
 
 	virtual const bool Setup()
@@ -105,49 +108,27 @@ public:
 
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port)
 	{
-		if (port == Linked::PORT)
+		if (port == Linked::PORT
+			&& payload[HeaderDefinition::HEADER_INDEX] == Linked::ReportUpdate::HEADER
+			&& payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
 		{
-			switch (payload[HeaderDefinition::HEADER_INDEX])
-			{
-			case Linked::ReportUpdate::HEADER:
-				if (payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
-				{
-					// Keep track of partner's RSSI, for output gain management.
-					ReportTracking.OnReportReceived(millis(), payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX]);
+			const uint_least16_t loopingDropCounter = payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX]
+				| ((uint_least16_t)payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX + 1] << 8);
 
-					// Update send counter, to prevent mismatches.
-					if ((SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX]) > LoLaLinkDefinition::ROLLING_COUNTER_TOLERANCE)
-					{
-						// Recover send counter to report provided.
-#if defined(DEBUG_LOLA)
-						this->Owner();
-						Serial.print(F("Report recovered counter delta: "));
-						Serial.println(SendCounter - payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] - LoLaLinkDefinition::ROLLING_COUNTER_TOLERANCE);
-#endif
-						SendCounter = payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] + LoLaLinkDefinition::ROLLING_COUNTER_TOLERANCE + 1;
-					}
-
-					// Check if partner is requesting a report back.
-					if (payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] > 0)
-					{
-						ReportTracking.RequestReportUpdate(false);
-					}
-				}
-#if defined(DEBUG_LOLA)
-				else {
-					this->Skipped(F("ReportUpdate"));
-				}
-#endif
-				break;
-			default:
-				// This is the top-most class to parse incoming packets as a consumer.
-				// So the base class call is not needed here.
-#if defined(DEBUG_LOLA)
-				this->Skipped(F("Unknown"));
-#endif
-				break;
-			}
+			// Keep track of partner's RSSI and packet drop, for output gain management.
+			QualityTracker.OnReportReceived(millis(),
+				loopingDropCounter,
+				payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX],
+				payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX]);
 		}
+#if defined(DEBUG_LOLA)
+		else
+		{
+			// This is the top-most class to parse incoming packets as a consumer.
+			// So the base class call is not needed here.
+			this->Skipped(F("Unknown"));
+		}
+#endif
 	}
 
 	virtual const bool Start() final
@@ -174,17 +155,12 @@ public:
 	}
 
 protected:
-	/// <summary>
-	/// Inform any Link class of packet loss detection,
-	/// due to skipped counter.
-	/// </summary>
-	/// <param name="lostCount"></param>
-	/// <returns></returns>
-	virtual void OnReceiveLossDetected(const uint8_t lostCount)
+	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint8_t lostCount) final
 	{
-		OnEvent(PacketEventEnum::ReceiveLossDetected);
+		QualityTracker.OnRxComplete(millis(), rssi, lostCount);
 	}
 
+protected:
 	void ResetUnlinkedPacketThrottle()
 	{
 		LastUnlinkedSent -= GetPacketThrottlePeriod() * 2;
@@ -225,15 +201,14 @@ protected:
 		case LinkStageEnum::AwaitingLink:
 			RandomSource.RandomReseed();
 			PacketService.RefreshChannel();
-			LastReceivedRssi = 0;
+			QualityTracker.ResetRssiQuality();
 			break;
 		case LinkStageEnum::Linking:
 			break;
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestampMonotonic(LinkTimestamp);
 			LinkStartSeconds = LinkTimestamp.Seconds;
-			ResetLastValidReceived();
-			ReportTracking.RequestReportUpdate(true);
+			QualityTracker.Reset(millis());
 			PacketService.RefreshChannel();
 			break;
 		default:
@@ -303,19 +278,20 @@ protected:
 			}
 			break;
 		case LinkStageEnum::Linked:
-			if (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::LINK_STAGE_TIMEOUT)
+			if (QualityTracker.GetLastValidReceivedAgeQuality() == 0)
 			{
+				// Zero quality means link has timed out.
 				UpdateLinkStage(LinkStageEnum::AwaitingLink);
 			}
 			else if (CheckForReportUpdate())
 			{
 				// Report takes priority over clock, as it refers to counters and RSSI.
 				CheckForClockSyncUpdate();
-				Task::enableIfNot();
+				Task::enable();
 			}
 			else if (CheckForClockSyncUpdate())
 			{
-				Task::enableIfNot();
+				Task::enable();
 			}
 			else
 			{
@@ -327,64 +303,39 @@ protected:
 		}
 	}
 
+#if defined(DEBUG_LOLA)
 	virtual void OnEvent(const PacketEventEnum packetEvent)
 	{
-		BaseClass::OnEvent(packetEvent);
-
-
+		this->Owner();
 		switch (packetEvent)
 		{
-		case PacketEventEnum::ReceiveRejectedCounter:
-			ReportTracking.RequestReportUpdate(true);
-			break;
-		default:
-			break;
-		}
-
-#if defined(DEBUG_LOLA)
-		switch (packetEvent)
-		{
-		case PacketEventEnum::Received:
-			break;
-		case PacketEventEnum::ReceiveRejectedCounter:
-			this->Owner();
-			Serial.println(F("@Link Event: ReceiveRejected: Counter"));
+		case PacketEventEnum::ReceiveRejectedHeader:
+			Serial.println(F("@Link Event: ReceiveRejected: Header/Counter"));
 			break;
 		case PacketEventEnum::ReceiveRejectedTransceiver:
-			this->Owner();
 			Serial.println(F("@Link Event: ReceiveRejected: Transceiver"));
 			break;
 		case PacketEventEnum::ReceiveRejectedDropped:
-			this->Owner();
 			Serial.println(F("@Link Event: ReceiveRejected: Dropped."));
 			break;
 		case PacketEventEnum::ReceiveRejectedInvalid:
-			this->Owner();
 			Serial.println(F("@Link Event: ReceiveRejected: Invalid."));
 			break;
 		case PacketEventEnum::ReceiveRejectedOutOfSlot:
-			this->Owner();
 			Serial.println(F("@Link Event: ReceiveRejected: OutOfSlot"));
 			break;
 		case PacketEventEnum::ReceiveRejectedMac:
-			this->Owner();
 			Serial.println(F("@Link Event: ReceiveRejectedMAC"));
 			break;
 		case PacketEventEnum::SendCollisionFailed:
-			this->Owner();
 			Serial.println(F("@Link Event: SendCollision: Failed"));
 			break;
-		case PacketEventEnum::ReceiveLossDetected:
-			this->Owner();
-			Serial.println(F("@Link Event: Detected lost packet(s)."));
-			break;
-		case PacketEventEnum::Sent:
-			break;
 		default:
+			Serial.println(F("@Link Event: Unknown."));
 			break;
 		}
-#endif
 	}
+#endif
 
 private:
 	/// <summary>
@@ -394,31 +345,64 @@ private:
 	const bool CheckForReportUpdate()
 	{
 		const uint32_t timestamp = millis();
-		if (ReportTracking.IsSendRequested())
+
+		QualityTracker.CheckUpdate(timestamp, GetSyncClockQuality());
+
+		if (QualityTracker.IsReportSendRequested())
 		{
-			if (CanRequestSend())
+			if (QualityTracker.IsTimeToSendReport(timestamp)
+				&& CanRequestSend())
 			{
 				OutPacket.SetPort(Linked::PORT);
+
+				const uint16_t rxLoopingDropCounter = QualityTracker.GetRxLoopingDropCount();
+
 				OutPacket.Payload[Linked::ReportUpdate::HEADER_INDEX] = Linked::ReportUpdate::HEADER;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = LastReceivedRssi;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RECEIVE_COUNTER_INDEX] = LastValidReceivedCounter;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = ReportTracking.IsBackReportNeeded(timestamp, GetElapsedSinceLastValidReceived());
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = QualityTracker.IsBackReportNeeded(timestamp);
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = QualityTracker.GetRxRssiQuality();
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX] = rxLoopingDropCounter;
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX + 1] = rxLoopingDropCounter >> 8;
 
 				if (RequestSendPacket(Linked::ReportUpdate::PAYLOAD_SIZE))
 				{
-					ReportTracking.OnReportSent(timestamp);
+					QualityTracker.OnReportSent(timestamp);
 				}
 			}
 
 			return true;
 		}
-		else if (ReportTracking.CheckReportNeeded(timestamp, GetElapsedSinceLastValidReceived()))
-		{
-			Task::enableIfNot();
-			return true;
-		}
 
 		return false;
 	}
+
+#if defined(DEBUG_LOLA)
+public:
+	void LogQuality()
+	{
+		this->Owner();
+		Serial.println(F("Quality Update"));
+		Serial.print(F("\tRSSI <- "));
+		Serial.println(QualityTracker.GetRxRssiQuality());
+		Serial.print(F("\tRSSI -> "));
+		Serial.println(QualityTracker.GetTxRssiQuality());
+
+		Serial.print(F("\tRx: "));
+		Serial.println(QualityTracker.GetRxDropQuality());
+		Serial.print(F("\tRx Drop Counter: "));
+		Serial.println(QualityTracker.GetRxLoopingDropCount());
+		Serial.print(F("\tRx Drop Rate: "));
+		Serial.println(QualityTracker.GetRxDropRate());
+		Serial.print(F("\tTx: "));
+		Serial.println(QualityTracker.GetTxDropQuality());
+		Serial.print(F("\tTx Drop Rate: "));
+		Serial.println(QualityTracker.GetTxDropRate());
+		Serial.print(F("\tReceive Freshness: "));
+		Serial.println(QualityTracker.GetLastValidReceivedAgeQuality());
+		Serial.print(F("\tSync Clock: "));
+		Serial.println(GetSyncClockQuality());
+
+		Serial.println();
+	}
+#endif
 };
 #endif

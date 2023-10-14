@@ -23,6 +23,12 @@ public:
 		ReplyPending = false;
 	}
 
+	const uint8_t GetQuality()
+	{
+		//TODO:
+		return UINT8_MAX / 2;
+	}
+
 	const bool HasReplyPending()
 	{
 		return ReplyPending;
@@ -98,6 +104,12 @@ public:
 		{
 			TuneError = 0;
 		}
+	}
+
+	const uint8_t GetQuality()
+	{
+		//TODO:
+		return UINT8_MAX / 2;
 	}
 
 	const bool HasResultReady()

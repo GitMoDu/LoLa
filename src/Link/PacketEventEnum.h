@@ -5,15 +5,12 @@
 
 enum PacketEventEnum
 {
-	Received,
-	Sent,
 	SendCollisionFailed,
 	ReceiveRejectedTransceiver,
 	ReceiveRejectedDropped,
 	ReceiveRejectedInvalid,
 	ReceiveRejectedOutOfSlot,
 	ReceiveRejectedMac,
-	ReceiveRejectedCounter,
-	ReceiveLossDetected
+	ReceiveRejectedHeader
 };
 #endif

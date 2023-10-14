@@ -6,14 +6,18 @@
 
 #include <stdint.h>
 #include "LoLaLinkDefinition.h"
+#include "Quality\LinkQualityTracker.h"
 
-class ReportTracker
+class ReportTracker : public LinkQualityTracker
 {
 private:
-	uint32_t LastSent = 0;
-	uint32_t LastReceived = 0;
+	static constexpr uint8_t REPORT_RESEND_PERIOD = LoLaLinkDefinition::REPORT_UPDATE_PERIOD / 4;
+	static constexpr uint8_t REPORT_RESEND_URGENT_PERIOD = REPORT_RESEND_PERIOD / 3;
+	static constexpr uint8_t PARTNER_SILENCE_WORST_QUALITY = 127;
 
-	uint8_t Rssi = 0;
+private:
+	uint32_t LastSent = 0;
+	uint32_t LastReportReceived = 0;
 
 	bool ReplyRequested = false;
 	bool SendRequested = false;
@@ -22,81 +26,88 @@ public:
 	ReportTracker()
 	{}
 
-	void Reset()
+	void Reset(const uint32_t timestamp)
 	{
 		LastSent = 0;
-		LastReceived = 0;
+		LastReportReceived = 0;
 		SendRequested = false;
 		ReplyRequested = false;
+
+		ResetQuality(timestamp);
+		ResetLastValidReceived(timestamp);
+
+		RequestReportUpdate(true);
 	}
 
-	const uint8_t GetReportedRssi()
+	void CheckUpdate(const uint32_t timestamp, const uint8_t syncClockQuality)
 	{
-		return Rssi;
+		CheckUpdateQuality(timestamp, syncClockQuality);
+
+		if (!SendRequested)
+		{
+			if (ReplyRequested
+				|| ((timestamp - LastSent) > LoLaLinkDefinition::REPORT_UPDATE_PERIOD)
+				|| GetLastValidReceivedAgeQuality() < PARTNER_SILENCE_WORST_QUALITY)
+			{
+				SendRequested = true;
+			}
+		}
 	}
 
 public:
-	void OnReportReceived(const uint32_t timestamp, const uint8_t rssi)
+	void OnReportReceived(const uint32_t timestamp, const uint16_t partnerLoopingDropCounter, const uint8_t partnerRssi, const bool replyBack)
 	{
 		// Updating the latest received dismisses internal request for back report, as we just got one.
-		LastReceived = timestamp;
-		Rssi = rssi;
+		LastReportReceived = timestamp;
 
-		ReplyRequested = false;
+		TxDropRate.Accumulate(partnerLoopingDropCounter);
+		TxRssi.Step(partnerRssi);
+
+		// Check if partner is requesting a report back.
+		ReplyRequested |= replyBack;
 	}
 
 	void RequestReportUpdate(const bool replyBack)
 	{
 		SendRequested = true;
-		ReplyRequested = replyBack;
+		ReplyRequested |= replyBack;
 	}
 
 	void OnReportSent(const uint32_t timestamp)
 	{
 		LastSent = timestamp;
 		SendRequested = false;
+		ReplyRequested = false;
 	}
 
 public:
-	const bool IsTimeToSend(const uint32_t timestamp)
+	const bool IsTimeToSendReport(const uint32_t timestamp)
 	{
-		return (timestamp - LastSent) > LoLaLinkDefinition::REPORT_RESEND_PERIOD;
+		if (IsBackReportNeeded(timestamp))
+		{
+			return (timestamp - LastSent) > REPORT_RESEND_URGENT_PERIOD;
+		}
+		else
+		{
+			return (timestamp - LastSent) > REPORT_RESEND_PERIOD;
+		}
 	}
 
-	const bool IsSendRequested()
+	const bool IsReportSendRequested()
 	{
 		return SendRequested;
 	}
 
-	const bool CheckReportNeeded(const uint32_t timestamp, const uint32_t elapsedSinceLastValidReceived)
+	/// <summary>
+	/// If the last received report has timed out.
+	/// If no other service is getting messages.
+	/// </summary>
+	/// <param name="timestamp"></param>
+	/// <returns></returns>
+	const bool IsBackReportNeeded(const uint32_t timestamp)
 	{
-		if (!SendRequested)
-		{
-			if (IsTimeToSend(timestamp))
-			{
-				if (ReplyRequested)
-				{
-					SendRequested = true;
-				}
-				else
-				{
-					ReplyRequested = (timestamp - LastReceived) > (LoLaLinkDefinition::REPORT_UPDATE_PERIOD + LoLaLinkDefinition::REPORT_RESEND_PERIOD);
-					ReplyRequested |= (elapsedSinceLastValidReceived > LoLaLinkDefinition::REPORT_PARTNER_SILENCE_TRIGGER_PERIOD);
-
-					if (ReplyRequested || ((timestamp - LastSent) > LoLaLinkDefinition::REPORT_UPDATE_PERIOD))
-					{
-						SendRequested = true;
-					}
-				}
-			}
-		}
-
-		return IsSendRequested();
-	}
-
-	const bool IsBackReportNeeded(const uint32_t timestamp, const uint32_t elapsedSinceLastValidReceived)
-	{
-		return ReplyRequested;
+		return ((timestamp - LastReportReceived) > (LoLaLinkDefinition::REPORT_UPDATE_PERIOD + REPORT_RESEND_PERIOD))
+			|| (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::REPORT_UPDATE_PERIOD);
 	}
 };
 #endif

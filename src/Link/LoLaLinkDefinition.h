@@ -92,14 +92,9 @@ public:
 
 public:
 	/// <summary>
-	/// 3 counts: +1 for sender sending report, +1 for local offset, +1 for margin.
-	/// </summary>
-	static constexpr uint8_t ROLLING_COUNTER_TOLERANCE = 3;
-
-	/// <summary>
 	/// Link will tolerate up to ~20% dropped packets without any correction.
 	/// </summary>
-	static constexpr uint8_t ROLLING_COUNTER_ERROR = UINT8_MAX / 5;
+	static constexpr uint8_t ROLLING_COUNTER_ERROR = 51;
 
 	/// <summary>
 	/// Link switch over will tolerate +-0.5% error (us) at the start.
@@ -134,17 +129,7 @@ public:
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.
 	/// </summary>
-	static constexpr uint16_t REPORT_UPDATE_PERIOD = 250;
-
-	/// <summary>
-	/// If no other service is getting messages, how long to trigger a report back.
-	/// </summary>
-	static constexpr uint8_t REPORT_PARTNER_SILENCE_TRIGGER_PERIOD = 150;
-
-	/// <summary>
-	/// Report (average) send back off period.
-	/// </summary>
-	static constexpr uint8_t REPORT_RESEND_PERIOD = 40;
+	static constexpr uint16_t REPORT_UPDATE_PERIOD = 1000 / 5;
 
 	/// <summary>
 	/// How many microseconds is the client allowed to tune its clock on one tune request. 
@@ -367,14 +352,16 @@ public:
 		/// </summary>
 		static constexpr uint8_t PORT = UINT8_MAX;
 
+		static constexpr uint8_t COUNTER_SIZE = 2;
+
 		/// <summary>
-		/// ||Average RSSI|ReceiveCounter|REQUEST_REPLY||
+		/// ||ReplyRequested|RxRssiQuality|RxCounter||
 		/// </summary>
-		struct ReportUpdate : public TemplateHeaderDefinition<0, 3>
+		struct ReportUpdate : public TemplateHeaderDefinition<0, 1 + 1 + COUNTER_SIZE>
 		{
-			static constexpr uint8_t PAYLOAD_RSSI_INDEX = SUB_PAYLOAD_INDEX;
-			static constexpr uint8_t PAYLOAD_RECEIVE_COUNTER_INDEX = PAYLOAD_RSSI_INDEX + 1;
-			static constexpr uint8_t PAYLOAD_REQUEST_INDEX = PAYLOAD_RECEIVE_COUNTER_INDEX + 1;
+			static constexpr uint8_t PAYLOAD_REQUEST_INDEX = SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_RSSI_INDEX = PAYLOAD_REQUEST_INDEX + 1;
+			static constexpr uint8_t PAYLOAD_DROP_COUNTER_INDEX = PAYLOAD_RSSI_INDEX + 1;
 		};
 
 		/// <summary>
