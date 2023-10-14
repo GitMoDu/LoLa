@@ -143,7 +143,7 @@ public:
 					OutGoing.AirStarted = true;
 
 #if defined(ECO_CHANCE)
-					if (random(UINT8_MAX) < ECO_CHANCE)
+					if (random(1 + UINT8_MAX) <= ECO_CHANCE)
 					{
 #if defined(DEBUG_LOLA)
 						PrintName();
@@ -154,7 +154,7 @@ public:
 #endif
 
 #if defined(DOUBLE_SEND_CHANCE)
-					if (random(UINT8_MAX) < DOUBLE_SEND_CHANCE)
+					if (random(1 + UINT8_MAX) <= DOUBLE_SEND_CHANCE)
 					{
 #if defined(DEBUG_LOLA)
 						PrintName();
@@ -201,7 +201,7 @@ public:
 			if (Listener != nullptr)
 			{
 #if defined(DROP_CHANCE)
-				if (random(UINT8_MAX) < DROP_CHANCE)
+				if (random(1 + UINT8_MAX) <= DROP_CHANCE)
 				{
 #if defined(DEBUG_LOLA)
 					PrintName();
@@ -428,9 +428,9 @@ public:
 		}
 
 #if defined(CORRUPT_CHANCE)
-		if (random(UINT8_MAX) < CORRUPT_CHANCE)
+		if (random(1 + UINT8_MAX) <= CORRUPT_CHANCE)
 		{
-			Incoming.Buffer[random(packetSize - 1)] = random(UINT8_MAX);
+			Incoming.Buffer[random(packetSize)] = random(1 + UINT8_MAX);
 #if defined(DEBUG_LOLA)
 			PrintName();
 			Serial.println(F("Corruption attack!"));
