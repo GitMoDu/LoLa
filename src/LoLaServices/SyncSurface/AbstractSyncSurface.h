@@ -43,7 +43,7 @@ private:
 	uint8_t LastRemoteHash = 0;
 	bool RemoteHashIsSet = false;
 
-	//CRC Calculator.
+	//CRC Calculator.TODO: Replace with Fletcher16.
 	FastCRC8 CRC8;
 
 	uint8_t LastLocalHash = 0;
