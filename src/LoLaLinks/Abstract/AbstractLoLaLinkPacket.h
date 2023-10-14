@@ -27,7 +27,7 @@ class AbstractLoLaLinkPacket
 private:
 	using BaseClass = AbstractLoLaReceiver;
 
-	static constexpr uint_least16_t CALIBRATION_ROUNDS = F_CPU / 2000000L;
+	static constexpr uint_least16_t CALIBRATION_ROUNDS = F_CPU / 1500000L;
 
 protected:
 	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
@@ -425,7 +425,7 @@ private:
 
 		// Measure PRNG Hop calculation time.
 		uint8_t target = 0;
-		uint32_t source = UINT32_MAX;
+		uint32_t source = UINT32_MAX/4;
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
