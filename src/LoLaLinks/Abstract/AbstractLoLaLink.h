@@ -83,11 +83,21 @@ public:
 		return false;
 	}
 
-	virtual const uint32_t GetLinkDuration() final
+	virtual void GetLinkStatus(LoLaLinkStatus& linkStatus) final
 	{
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
 
-		return LinkTimestamp.Seconds - LinkStartSeconds;
+		linkStatus.DurationSeconds = LinkTimestamp.Seconds - LinkStartSeconds;
+
+		linkStatus.Quality.RxRssi = QualityTracker.GetRxRssiQuality();
+		linkStatus.Quality.TxRssi = QualityTracker.GetTxRssiQuality();
+		linkStatus.Quality.RxDrop = QualityTracker.GetRxDropQuality();
+		linkStatus.Quality.TxDrop = QualityTracker.GetTxDropQuality();
+		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
+		linkStatus.Quality.ClockSync = GetSyncClockQuality();
+
+		linkStatus.RxDropRate = QualityTracker.GetRxDropRate();
+		linkStatus.TxDropRate = QualityTracker.GetTxDropRate();
 	}
 
 	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result)
@@ -374,35 +384,5 @@ private:
 
 		return false;
 	}
-
-#if defined(DEBUG_LOLA)
-public:
-	void LogQuality()
-	{
-		this->Owner();
-		Serial.println(F("Quality Update"));
-		Serial.print(F("\tRSSI <- "));
-		Serial.println(QualityTracker.GetRxRssiQuality());
-		Serial.print(F("\tRSSI -> "));
-		Serial.println(QualityTracker.GetTxRssiQuality());
-
-		Serial.print(F("\tRx: "));
-		Serial.println(QualityTracker.GetRxDropQuality());
-		Serial.print(F("\tRx Drop Counter: "));
-		Serial.println(QualityTracker.GetRxLoopingDropCount());
-		Serial.print(F("\tRx Drop Rate: "));
-		Serial.println(QualityTracker.GetRxDropRate());
-		Serial.print(F("\tTx: "));
-		Serial.println(QualityTracker.GetTxDropQuality());
-		Serial.print(F("\tTx Drop Rate: "));
-		Serial.println(QualityTracker.GetTxDropRate());
-		Serial.print(F("\tReceive Freshness: "));
-		Serial.println(QualityTracker.GetLastValidReceivedAgeQuality());
-		Serial.print(F("\tSync Clock: "));
-		Serial.println(GetSyncClockQuality());
-
-		Serial.println();
-	}
-#endif
 };
 #endif
