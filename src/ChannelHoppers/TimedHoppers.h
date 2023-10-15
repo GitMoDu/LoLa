@@ -6,9 +6,8 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include "..\Link\IChannelHop.h"
-#include "..\Clock\LinkClock.h"
-#include "..\Clock\Timestamp.h"
+#include <IChannelHop.h>
+
 
 template<const uint32_t HopPeriodMicros>
 class TimedChannelHopper final : private Task, public virtual IChannelHop
@@ -48,9 +47,7 @@ private:
 private:
 	IChannelHop::IHopListener* Listener = nullptr;
 
-	LinkClock* Clock = nullptr;
-
-	Timestamp CheckTimestamp{};
+	IRollingTimestamp* RollingTimestamp = nullptr;
 
 	uint32_t LastHopIndex = 0;
 	uint32_t HopIndex = 0;
@@ -70,12 +67,12 @@ public:
 #endif
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) final
 	{
 		Listener = listener;
-		Clock = clock;
+		RollingTimestamp = rollingTimestamp;
 
-		return Clock != nullptr && Listener != nullptr && HopPeriodMicros > 1;
+		return RollingTimestamp != nullptr && Listener != nullptr && HopPeriodMicros > 1;
 	}
 
 	// General Channel Interfaces //
@@ -127,8 +124,7 @@ public:
 
 	virtual bool Callback() final
 	{
-		Clock->GetTimestamp(CheckTimestamp);
-		HopIndex = GetHopIndex(CheckTimestamp.GetRollingMicros());
+		HopIndex = GetHopIndex(RollingTimestamp->GetRollingTimestamp());
 
 		switch (HopperState)
 		{

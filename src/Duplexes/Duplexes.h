@@ -3,8 +3,7 @@
 #ifndef _DUPLEXES_h
 #define _DUPLEXES_h
 
-#include "..\Link\IDuplex.h"
-#include "..\Link\LoLaLinkDefinition.h"
+#include <IDuplex.h>
 
 /// <summary>
 /// Fixed full duplex, is always in slot.

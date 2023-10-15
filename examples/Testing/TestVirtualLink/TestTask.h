@@ -94,11 +94,6 @@ public:
 			PrintDuration(Server->GetLinkDuration());
 			Serial.print(F("Client: "));
 			PrintDuration(Client->GetLinkDuration());
-
-			Serial.println(F("# DebugClock"));
-			Server->DebugClock();
-			Client->DebugClock();
-			Serial.println();
 		}
 #endif
 

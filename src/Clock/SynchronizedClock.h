@@ -5,7 +5,6 @@
 
 #include <ITimerSource.h>
 #include "Timestamp.h"
-#include "..\Clock\AbstractClockSource.h"
 
 /// <summary>
 /// Provides Seconds and Microseconds,

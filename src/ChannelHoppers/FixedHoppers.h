@@ -3,7 +3,7 @@
 #ifndef _FIXED_HOPPERS_h
 #define _FIXED_HOPPERS_h
 
-#include "..\Link\IChannelHop.h"
+#include <IChannelHop.h>
 
 /// <summary>
 /// For use when PHY layer doesn't support multiple channels.
@@ -15,9 +15,9 @@ public:
 	{}
 
 public:
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) final
 	{
-		return true;
+		return listener != nullptr && rollingTimestamp != nullptr;
 	}
 
 	virtual const uint32_t GetHopPeriod() final
@@ -52,9 +52,9 @@ public:
 		return IChannelHop::NOT_A_HOPPER;
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) final
 	{
-		return true;
+		return listener != nullptr && rollingTimestamp != nullptr;
 	}
 };
 
@@ -87,7 +87,7 @@ public:
 		FixedChannel = channel;
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) final
 	{
 		return true;
 	}
@@ -126,9 +126,9 @@ public:
 		FixedChannel = channel;
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) final
 	{
-		return true;
+		return listener != nullptr && rollingTimestamp != nullptr;
 	}
 
 	virtual const uint32_t GetHopPeriod() final

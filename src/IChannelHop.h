@@ -4,7 +4,7 @@
 #define _I_CHANEL_HOP_h
 
 #include <stdint.h>
-#include "..\Clock\LinkClock.h"
+#include <ITimestamp.h>
 
 class IChannelHop
 {
@@ -19,7 +19,7 @@ public:
 	};
 
 public:
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* clock) { return false; }
+	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) { return false; }
 
 	/// General Channel Interfaces
 public:
