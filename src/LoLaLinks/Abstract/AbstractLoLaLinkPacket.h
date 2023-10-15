@@ -4,11 +4,11 @@
 #define _ABSTRACT_LOLA_LINK_PACKET_
 
 
+#include <IDuplex.h>
+#include <IChannelHop.h>
+
 #include "AbstractLoLaReceiver.h"
 
-#include "..\..\Link\IChannelHop.h"
-
-#include "..\..\Link\IDuplex.h"
 #include "..\..\Link\LoLaLinkSession.h"
 
 
@@ -64,7 +64,7 @@ public:
 		, Duplex(duplex)
 		, ChannelHopper(hop)
 		, LinkTimestamp()
-		, IsLinkHopper(hop->GetHopPeriod() == IChannelHop::NOT_A_HOPPER)
+		, IsLinkHopper(hop->GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
 	{}
 
 public:
