@@ -61,6 +61,11 @@ public:
 		}
 	}
 
+	const int16_t GetTune()
+	{
+		return TuneMicros;
+	}
+
 	/// <summary>
 	/// Clock is tuneable up to +-CLOCK_TUNE_RANGE_MICROS.
 	/// </summary>

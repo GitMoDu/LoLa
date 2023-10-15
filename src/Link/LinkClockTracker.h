@@ -49,12 +49,13 @@ public:
 class LinkClientClockTracker
 {
 private:
-	static constexpr uint32_t CLOCK_TUNE_PERIOD = 666;
-	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 66;
+	static constexpr uint32_t CLOCK_TUNE_PERIOD = 1200;
+	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 87;
 
 	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
-	static constexpr uint8_t CLOCK_FILTER_RATIO = 110;
-	static constexpr uint8_t CLOCK_TUNE_RATIO = 30;
+	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
+	static constexpr uint8_t CLOCK_TUNE_RATIO = 32;
+	static constexpr uint8_t CLOCK_REJECT_DEVIATION = 10;
 
 	enum class ClockTuneStateEnum
 	{
@@ -64,8 +65,7 @@ private:
 		ResultReady
 	} ClockTuneState = ClockTuneStateEnum::Idling;
 
-public:
-	int32_t FilteredError = 0;
+private:
 	int32_t TuneError = 0;
 	uint16_t DeviationError = 0;
 
@@ -91,19 +91,19 @@ public:
 		return RequestSendDuration;
 	}
 
-	void Reset(const uint32_t timestamp, const bool clearTune)
+	const int16_t GetResultCorrection()
+	{
+		return AverageError / CLOCK_FILTER_SCALE;
+	}
+
+	void Reset(const uint32_t timestamp)
 	{
 		ClockTuneState = ClockTuneStateEnum::Idling;
 		LastClockSync = timestamp - CLOCK_TUNE_PERIOD;
 		LastClockSent = timestamp;
 		AverageError = 0;
-		FilteredError = 0;
 		DeviationError = 0;
-
-		if (clearTune)
-		{
-			TuneError = 0;
-		}
+		TuneError = 0;
 	}
 
 	const uint8_t GetQuality()
@@ -155,8 +155,26 @@ public:
 
 			if (SampleCount >= CLOCK_SYNC_SAMPLE_COUNT)
 			{
-				UpdateErrors();
 				LastClockSync = timestamp;
+				UpdateErrorsAverage();
+
+				if (DeviationError > CLOCK_REJECT_DEVIATION)
+				{
+#if defined(DEBUG_LOLA)
+					Serial.print(F("Clock Sync jitter error was big: "));
+					Serial.print(DeviationError / CLOCK_FILTER_SCALE);
+#endif
+					ReplaceAverageWithBest();
+					UpdateTuneError();
+#if defined(DEBUG_LOLA)
+					Serial.print(F(" us. Replacing with best error: "));
+					Serial.println(AverageError / CLOCK_FILTER_SCALE);
+#endif
+				}
+				else
+				{
+					UpdateTuneError();
+				}
 				ClockTuneState = ClockTuneStateEnum::ResultReady;
 			}
 		}
@@ -191,9 +209,9 @@ public:
 
 	const int16_t ConsumeTuneShiftMicros()
 	{
-		const int16_t tuneMicros = TuneError / 1000;
+		const int16_t tuneMicros = TuneError / CLOCK_FILTER_SCALE;
 
-		TuneError -= tuneMicros * 1000;
+		TuneError -= tuneMicros * CLOCK_FILTER_SCALE;
 
 		return tuneMicros;
 	}
@@ -217,22 +235,25 @@ private:
 		SampleCount++;
 	}
 
-	void UpdateErrors()
+	void UpdateTuneError()
+	{
+		TuneError += ((AverageError - TuneError) * CLOCK_TUNE_RATIO) / UINT8_MAX;
+	}
+
+	void UpdateErrorsAverage()
 	{
 		int32_t sum = 0;
 		for (uint_fast8_t i = 0; i < CLOCK_SYNC_SAMPLE_COUNT; i++)
 		{
-			sum += ErrorSamples[i] * 1000;
+			sum += (int32_t)ErrorSamples[i] * CLOCK_FILTER_SCALE;
 		}
 		AverageError = sum / CLOCK_SYNC_SAMPLE_COUNT;
 
-		FilteredError += ((AverageError - FilteredError) * CLOCK_FILTER_RATIO) / UINT8_MAX;
-		TuneError += ((FilteredError - TuneError) * CLOCK_TUNE_RATIO) / UINT8_MAX;
-
+		const int16_t average = AverageError / CLOCK_FILTER_SCALE;
 		uint32_t deviationSum = 0;
 		for (uint_fast8_t i = 0; i < CLOCK_SYNC_SAMPLE_COUNT; i++)
 		{
-			const int16_t delta = ErrorSamples[i] - AverageError;
+			const int16_t delta = ErrorSamples[i] - average;
 			if (delta >= 0)
 			{
 				deviationSum += delta;
@@ -245,21 +266,37 @@ private:
 		DeviationError = deviationSum / CLOCK_SYNC_SAMPLE_COUNT;
 	}
 
-#if defined(LOLA_DEBUG_LINK_CLOCK)
-public:
-	void DebugClockHeader()
+	void ReplaceAverageWithBest()
 	{
-		Serial.println(F("Error\tFilter\tTune"));
+		const int16_t average = AverageError / CLOCK_FILTER_SCALE;
+
+		int16_t bestError = 0;
+		int16_t bestDeviation = INT16_MAX;
+		for (uint_fast8_t i = 0; i < CLOCK_SYNC_SAMPLE_COUNT; i++)
+		{
+			int16_t delta = ErrorSamples[i] - average;
+			if (delta < 0)
+			{
+				delta = -delta;
+			}
+
+			if (delta < bestDeviation)
+			{
+				bestError = ErrorSamples[i];
+				bestDeviation = delta;
+			}
+		}
+
+		AverageError = (int32_t)bestError * CLOCK_FILTER_SCALE;
 	}
 
+#if defined(LOLA_DEBUG_LINK_CLOCK)
+public:
 	void DebugClockError()
 	{
 		Serial.print(AverageError);
 		Serial.print('\t');
-		Serial.print(FilteredError);
-		Serial.print('\t');
-		Serial.print(TuneError);
-		Serial.println();
+		Serial.print(DeviationError);
 	}
 #endif
 };

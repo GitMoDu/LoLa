@@ -356,10 +356,16 @@ protected:
 			Serial.println(F(" ms to Link."));
 #endif
 			WaitingForClockReply = false;
-			ClockTracker.Reset(millis(), false);
+			ClockTracker.Reset(millis());
 
 #if defined(LOLA_DEBUG_LINK_CLOCK)
-			ClockTracker.DebugClockHeader();
+			Serial.println();
+			Serial.println();
+			Serial.println(F("Avg\tDev\tTune"));
+			ClockTracker.DebugClockError();
+			Serial.print('\t');
+			Serial.print((int32_t)SyncClock.GetTune());
+			Serial.println();
 #endif
 			break;
 		default:
@@ -562,7 +568,7 @@ protected:
 		if (ClockTracker.HasResultReady())
 		{
 			// Adjust client clock with filtered estimation error in ns.
-			SyncClock.ShiftSubSeconds(ClockTracker.FilteredError / 1000);
+			SyncClock.ShiftSubSeconds(ClockTracker.GetResultCorrection());
 
 			// Adjust tune and consume adjustment from filter value.
 			SyncClock.ShiftTune(ClockTracker.ConsumeTuneShiftMicros());
@@ -572,6 +578,9 @@ protected:
 
 #if defined(LOLA_DEBUG_LINK_CLOCK)
 			ClockTracker.DebugClockError();
+			Serial.print('\t');
+			Serial.print((int32_t)SyncClock.GetTune());
+			Serial.println();
 #endif
 			return true;
 		}

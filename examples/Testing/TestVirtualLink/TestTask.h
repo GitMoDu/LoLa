@@ -155,16 +155,20 @@ public:
 public:
 	virtual void OnLinkStateUpdated(const bool hasLink)
 	{
-		const uint32_t timestamp = millis();
-		Serial.print(timestamp);
 		if (hasLink)
 		{
+#ifdef DEBUG_LOLA
+			Serial.print(millis());
 			Serial.println(F("\tLink Acquired."));
+#endif
 			Task::enable();
 		}
 		else
 		{
+#ifdef DEBUG_LOLA
+			Serial.print(millis());
 			Serial.println(F("\tLink Lost."));
+#endif
 			Task::disable();
 		}
 	}
