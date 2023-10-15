@@ -205,9 +205,8 @@ public:
 		case LinkStageEnum::Disabled:
 			break;
 		case LinkStageEnum::AwaitingLink:
-			return ChannelHopper->GetBroadcastChannel();
 		case LinkStageEnum::Linking:
-			return ChannelHopper->GetFixedChannel();
+			return LoLaLinkDefinition::GetAdvertisingChannel(ChannelHopper->GetChannel());
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
@@ -215,7 +214,7 @@ public:
 			}
 			else
 			{
-				return ChannelHopper->GetFixedChannel();
+				return ChannelHopper->GetChannel();
 			}
 		default:
 			break;
@@ -255,7 +254,11 @@ protected:
 				Task::enable();
 				break;
 			case LinkStageEnum::Linked:
+				// Set startup channel and start hopper.
+				ChannelHopper->SetChannel(GetRxChannel());
 				ChannelHopper->OnLinkStarted();
+
+				// Notify services that link is ready.
 				Registry->NotifyLinkListeners(true);
 				Task::enable();
 				break;
@@ -275,7 +278,7 @@ protected:
 		}
 		else
 		{
-			return ChannelHopper->GetFixedChannel();
+			return ChannelHopper->GetChannel();
 		}
 	}
 
@@ -292,9 +295,8 @@ protected:
 		case LinkStageEnum::Disabled:
 			break;
 		case LinkStageEnum::AwaitingLink:
-			return ChannelHopper->GetBroadcastChannel();
 		case LinkStageEnum::Linking:
-			return ChannelHopper->GetBroadcastChannel();
+			return LoLaLinkDefinition::GetAdvertisingChannel(ChannelHopper->GetChannel());
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
@@ -302,7 +304,7 @@ protected:
 			}
 			else
 			{
-				return ChannelHopper->GetFixedChannel();
+				return ChannelHopper->GetChannel();
 			}
 		default:
 			break;
@@ -322,14 +324,13 @@ protected:
 		StageStartTime = millis();
 	}
 
-	void SetHopperFixedChannel(const uint8_t channel)
+	void SetAdvertisingChannel(const uint8_t channel)
 	{
-		ChannelHopper->SetFixedChannel(channel);
+		ChannelHopper->SetChannel(channel);
 		PacketService.RefreshChannel();
 	}
 
 private:
-
 	/// <summary>
 	/// Calibrate CPU dependent durations.
 	/// </summary>
@@ -425,7 +426,7 @@ private:
 
 		// Measure PRNG Hop calculation time.
 		uint8_t target = 0;
-		uint32_t source = UINT32_MAX/4;
+		uint32_t source = UINT32_MAX / 4;
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{

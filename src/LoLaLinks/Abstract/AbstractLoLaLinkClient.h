@@ -49,10 +49,6 @@ protected:
 
 	LinkClientClockTracker ClockTracker{};
 
-protected:
-	uint8_t SearchChannel = 0;
-	uint8_t LastKnownBroadCastChannel = INT8_MAX + 1;
-
 private:
 #if defined(DEBUG_LOLA)
 	uint32_t LinkingStarted = 0;
@@ -66,6 +62,7 @@ private:
 
 	uint8_t SyncSequence = 0;
 
+	uint8_t SearchChannel = 0;
 	uint8_t SearchChannelTryCount = 0;
 
 	bool WaitingForClockReply = 0;
@@ -337,13 +334,12 @@ protected:
 		case LinkStageEnum::Booting:
 			Encoder->SetRandomSessionId(&RandomSource);
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
-			LastKnownBroadCastChannel = RandomSource.GetRandomShort();
 			// Remember the estimated send duration, to avoid calculating it on every PreSend.
 			ClockTracker.SetRequestSendDuration(GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE));
 			break;
 		case LinkStageEnum::AwaitingLink:
-			SearchChannel = LastKnownBroadCastChannel;
-			SetHopperFixedChannel(SearchChannel);
+			SearchChannel = RandomSource.GetRandomShort();
+			SetAdvertisingChannel(SearchChannel);
 			SearchChannelTryCount = 0;
 			StateTransition.Clear();
 			ResetUnlinkedPacketThrottle();
@@ -359,7 +355,6 @@ protected:
 			Serial.print(millis() - LinkingStarted);
 			Serial.println(F(" ms to Link."));
 #endif
-			LastKnownBroadCastChannel = SearchChannel;
 			WaitingForClockReply = false;
 			ClockTracker.Reset(millis(), false);
 
@@ -610,11 +605,11 @@ private:
 					// Switch channels after a few ms of failed attempt.
 					// Has no effect if Channel Hop is permanent.
 					SearchChannel++;
-					SetHopperFixedChannel(SearchChannel);
+					SetAdvertisingChannel(SearchChannel);
 					SearchChannelTryCount = 0;
-					Task::enable();
 				}
-				else if (PacketService.CanSendPacket())
+
+				if (PacketService.CanSendPacket())
 				{
 					OutPacket.SetPort(Unlinked::PORT);
 					OutPacket.SetHeader(Unlinked::SearchRequest::HEADER);

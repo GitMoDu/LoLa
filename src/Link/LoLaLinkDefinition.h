@@ -15,7 +15,7 @@
 class LoLaLinkDefinition
 {
 public:
-	static constexpr uint8_t LOLA_VERSION = 1;
+	static constexpr uint8_t LOLA_VERSION = 0;
 
 	// <summary>
 	/// When linked, top port is reserved.
@@ -103,6 +103,11 @@ public:
 	static constexpr int8_t LINKING_CLOCK_TOLERANCE = 50;
 
 	/// <summary>
+	/// Pre-link channels are spread over the pipe count.
+	/// </summary>
+	static constexpr uint8_t LINKING_ADVERTISING_PIPE_COUNT = 4;
+
+	/// <summary>
 	/// </summary>
 	static constexpr uint16_t LINKING_TRANSITION_PERIOD_MICROS = 33333;
 
@@ -141,6 +146,29 @@ public:
 		PublicKeyExchange = 0xBE,
 		AddressMatch = 0xAE
 	};
+
+	/// <summary>
+	/// Limit the possible pre-link Advertising channels, BLE style.
+	/// Spreads the pipes across the whole channel spectrum.
+	/// </summary>
+	/// <param name="abstractChannel"></param>
+	/// <returns>Abstract Advertising Channel</returns>
+	static const uint8_t GetAdvertisingChannel(const uint8_t abstractChannel)
+	{
+		// Mod the channel to get the selected pipe.
+		const uint8_t advertisingPipe = abstractChannel % LINKING_ADVERTISING_PIPE_COUNT;
+
+		// Scale the pipe back to an abstract channel.
+		switch (advertisingPipe)
+		{
+		case 0:
+			return 0;
+		case (LINKING_ADVERTISING_PIPE_COUNT - 1):
+			return UINT8_MAX;
+		default:
+			return ((uint_least16_t)advertisingPipe * UINT8_MAX) / (LINKING_ADVERTISING_PIPE_COUNT - 1);
+		}
+	}
 
 private:
 	/// <summary>

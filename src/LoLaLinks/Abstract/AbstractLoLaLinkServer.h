@@ -366,7 +366,7 @@ protected:
 		case LinkStageEnum::Booting:
 			break;
 		case LinkStageEnum::AwaitingLink:
-			SetHopperFixedChannel(RandomSource.GetRandomShort());
+			SetAdvertisingChannel(RandomSource.GetRandomShort());
 			NewSession();
 			WaitingState = WaitingStateEnum::Sleeping;
 			break;

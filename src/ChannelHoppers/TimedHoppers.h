@@ -40,7 +40,7 @@ private:
 	static constexpr uint32_t GetDelayPeriod()
 	{
 		// Constexpr workaround for conditional.
-		return (PeriodOverZero() * (HopPeriodMillis() - 1))
+		return (PeriodOverZero() * (HopPeriodMillis() - MARGIN_MILLIS))
 			+ (!PeriodOverZero() * HopPeriodMillis());
 	}
 
@@ -76,17 +76,12 @@ public:
 	}
 
 	// General Channel Interfaces //
-	virtual const uint8_t GetBroadcastChannel() final
+	virtual const uint8_t GetChannel() final
 	{
 		return FixedChannel;
 	}
 
-	virtual const uint8_t GetFixedChannel() final
-	{
-		return FixedChannel;
-	}
-
-	virtual void SetFixedChannel(const uint8_t channel) final
+	virtual void SetChannel(const uint8_t channel) final
 	{
 		FixedChannel = channel;
 	}

@@ -86,6 +86,11 @@ private:
 		}
 	};
 
+	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	{
+		return TransceiverHelper<Config::ChannelCount>::GetRealChannel(abstractChannel);
+	}
+
 private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
@@ -130,9 +135,9 @@ public:
 		// Simulate transmit delay, from request to on-air start.
 		if (OutGoing.HasPending() && ((micros() - OutGoing.StartTimestamp) >= GetTimeToAir(OutGoing.Size)))
 		{
-			if (CurrentChannel != (OutGoing.Channel % Config::ChannelCount))
+			if (CurrentChannel != OutGoing.Channel)
 			{
-				CurrentChannel = OutGoing.Channel % Config::ChannelCount;
+				CurrentChannel = OutGoing.Channel;
 				LogChannel(CurrentChannel);
 			}
 
@@ -174,9 +179,9 @@ public:
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
-					if (CurrentChannel != (OutGoing.Channel % Config::ChannelCount))
+					if (CurrentChannel != OutGoing.Channel)
 					{
-						CurrentChannel = OutGoing.Channel % Config::ChannelCount;
+						CurrentChannel = OutGoing.Channel;
 						LogChannel(CurrentChannel);
 					}
 
@@ -328,7 +333,8 @@ public:
 		// simulating the transmit delay.
 		OutGoing.Size = packetSize;
 		OutGoing.StartTimestamp = timestamp;
-		OutGoing.Channel = channel % Config::ChannelCount;
+
+		OutGoing.Channel = GetRealChannel(channel);
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
 			OutGoing.Buffer[i] = data[i];
@@ -341,13 +347,15 @@ public:
 
 	virtual void Rx(const uint8_t channel) final
 	{
-		if (CurrentChannel != channel)
+		const uint8_t realChannel = GetRealChannel(channel);
+
+		if (CurrentChannel != realChannel)
 		{
 			HopRequest.Request();
-			LogChannel(channel);
+			LogChannel(realChannel);
 		}
 
-		CurrentChannel = channel % Config::ChannelCount;
+		CurrentChannel = realChannel;
 
 		Task::enable();
 	}
@@ -447,7 +455,7 @@ private:
 	{
 		if (LogChannelHop)
 		{
-			LogChannel(channel % Config::ChannelCount, Config::ChannelCount, 1);
+			LogChannel(channel, Config::ChannelCount, 1);
 		}
 	}
 

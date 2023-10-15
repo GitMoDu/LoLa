@@ -24,16 +24,11 @@ public:
 	/// General Channel Interfaces
 public:
 	/// <summary>
-	/// Fixed broadcast channel.
+	/// Current channel.
 	/// </summary>
-	virtual const uint8_t GetBroadcastChannel() { return 0; }
+	virtual const uint8_t GetChannel() { return 0; }
 
-	/// <summary>
-	/// Fixed channel.
-	/// </summary>
-	virtual const uint8_t GetFixedChannel() { return 0; }
-
-	virtual void SetFixedChannel(const uint8_t channel) {}
+	virtual void SetChannel(const uint8_t channel) {}
 	///
 
 	/// Hopper Interfaces

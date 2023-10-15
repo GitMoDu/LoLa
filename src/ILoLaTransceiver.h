@@ -110,4 +110,19 @@ public:
 	/// <returns>32 Bit unique id.</returns>
 	virtual const uint32_t GetTransceiverCode() { return 0; }
 };
+
+template<const uint8_t ChannelCount>
+class TransceiverHelper
+{
+public:
+	/// <summary>
+	/// Maps the abstract channel to the limited physical channels.
+	/// </summary>
+	/// <param name="abstractChannel">[0;UINT8_MAX]</param>
+	/// <returns>Index of real channel to use.</returns>
+	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	{
+		return ((uint16_t)abstractChannel * ChannelCount) / UINT8_MAX;
+	}
+};
 #endif
