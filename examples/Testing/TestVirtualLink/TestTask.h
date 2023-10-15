@@ -73,7 +73,7 @@ public:
 		Client->GetLinkStatus(ClientStatus);
 
 #if defined(SERVER_DROP_LINK_TEST) 
-		if (Server->HasLink() && clientStatus.DurationSeconds > SERVER_DROP_LINK_TEST)
+		if (Server->HasLink() && ServerStatus.DurationSeconds > SERVER_DROP_LINK_TEST)
 		{
 			Serial.println(F("# Server Stop Link."));
 			Server->Stop();
@@ -82,7 +82,7 @@ public:
 #endif
 
 #if defined(CLIENT_DROP_LINK_TEST) 
-		if (Client->HasLink() && clientStatus.DurationSeconds > CLIENT_DROP_LINK_TEST)
+		if (Client->HasLink() && ClientStatus.DurationSeconds > CLIENT_DROP_LINK_TEST)
 		{
 			Serial.println(F("# Client Stop Link."));
 			Client->Stop();
