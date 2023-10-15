@@ -4,6 +4,7 @@
 #define _I_LOLA_LINK_h
 
 #include <stdint.h>
+#include "LoLaLinkStatus.h"
 
 class ILinkListener
 {
@@ -48,9 +49,9 @@ public:
 	virtual const bool HasLink() { return false; }
 
 	/// <summary>
-	/// Get the current link duration in seconds.
+	/// Get the current link status.
 	/// </summary>
-	virtual const uint32_t GetLinkDuration() { return 0; }
+	virtual void GetLinkStatus(LoLaLinkStatus& linkStatus) { }
 
 	/// <summary>
 	/// Can a Link time packet be sent now?

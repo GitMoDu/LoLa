@@ -56,9 +56,11 @@ public:
 			}
 		}
 
-
 		return false;
 	}
+
+	LoLaLinkStatus ServerStatus{};
+	LoLaLinkStatus ClientStatus{};
 
 	uint8_t Payload = 0;
 	virtual bool Callback() final
@@ -66,8 +68,12 @@ public:
 		bool workDone = false;
 		const uint32_t timestamp = millis();
 
+		// Update links' status.
+		Server->GetLinkStatus(ServerStatus);
+		Client->GetLinkStatus(ClientStatus);
+
 #if defined(SERVER_DROP_LINK_TEST) 
-		if (Server->HasLink() && Server->GetLinkDuration() > SERVER_DROP_LINK_TEST)
+		if (Server->HasLink() && clientStatus.DurationSeconds > SERVER_DROP_LINK_TEST)
 		{
 			Serial.println(F("# Server Stop Link."));
 			Server->Stop();
@@ -76,7 +82,7 @@ public:
 #endif
 
 #if defined(CLIENT_DROP_LINK_TEST) 
-		if (Client->HasLink() && Client->GetLinkDuration() > CLIENT_DROP_LINK_TEST)
+		if (Client->HasLink() && clientStatus.DurationSeconds > CLIENT_DROP_LINK_TEST)
 		{
 			Serial.println(F("# Client Stop Link."));
 			Client->Stop();
@@ -90,10 +96,12 @@ public:
 			workDone = true;
 			LastRan = timestamp;
 			Serial.println(F("# Link Clock"));
-			Serial.print(F("Server:"));
-			PrintDuration(Server->GetLinkDuration());
+			Serial.print(F("Server: "));
+			PrintDuration(ServerStatus.DurationSeconds);
+			ServerStatus.Log(Serial);
 			Serial.print(F("Client: "));
-			PrintDuration(Client->GetLinkDuration());
+			PrintDuration(ClientStatus.DurationSeconds);
+			ClientStatus.Log(Serial);
 		}
 #endif
 
@@ -206,10 +214,6 @@ public:
 		const uint32_t durationHoursRemainder = durationHours % 24;
 		const uint32_t durationMinutesRemainder = durationMinutes % 60;
 		const uint32_t durationSecondsRemainder = durationSeconds % 60;
-
-		Serial.print(F("( "));
-		Serial.print(durationSeconds);
-		Serial.print(F(" UTC seconds) "));
 
 		if (durationYears > 0)
 		{
