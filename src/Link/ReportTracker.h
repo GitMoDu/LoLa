@@ -39,9 +39,9 @@ public:
 		RequestReportUpdate(true);
 	}
 
-	void CheckUpdate(const uint32_t timestamp, const uint8_t syncClockQuality)
+	void CheckUpdate(const uint32_t timestamp)
 	{
-		CheckUpdateQuality(timestamp, syncClockQuality);
+		CheckUpdateQuality(timestamp);
 
 		if (!SendRequested)
 		{

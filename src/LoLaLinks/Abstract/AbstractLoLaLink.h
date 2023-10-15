@@ -346,7 +346,7 @@ private:
 	{
 		const uint32_t timestamp = millis();
 
-		QualityTracker.CheckUpdate(timestamp, GetSyncClockQuality());
+		QualityTracker.CheckUpdate(timestamp);
 
 		if (QualityTracker.IsReportSendRequested())
 		{

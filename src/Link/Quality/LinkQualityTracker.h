@@ -21,8 +21,6 @@ private:
 
 	uint32_t LastValidReceived = 0;
 
-	uint8_t LastSyncClockQuality = UINT8_MAX / 2;
-
 protected:
 	RxDropAccumulator<RX_DROP_FILTER_WEIGHT, DROP_REFERENCE> RxDropRate{};
 	TxDropAccumulator<TX_DROP_FILTER_WEIGHT, DROP_REFERENCE> TxDropRate{};
@@ -39,7 +37,6 @@ public:
 		TxDropRate.Clear();
 		RxRssi.Clear();
 		TxRssi.Clear();
-		LastSyncClockQuality = UINT8_MAX / 2;
 	}
 
 	void ResetRssiQuality()
@@ -141,10 +138,8 @@ public:
 	}
 
 protected:
-	void CheckUpdateQuality(const uint32_t timestamp, const uint8_t syncClockQuality)
+	void CheckUpdateQuality(const uint32_t timestamp)
 	{
-		LastSyncClockQuality = syncClockQuality;
-
 		// Consume accumulator around every LoLaLinkDefinition::REPORT_UPDATE_PERIOD.
 		if (timestamp - LastConsume >= LoLaLinkDefinition::REPORT_UPDATE_PERIOD)
 		{
