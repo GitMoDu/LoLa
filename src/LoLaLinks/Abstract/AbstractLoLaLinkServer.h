@@ -40,10 +40,11 @@ private:
 protected:
 	ServerTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
+private:
 	Timestamp InEstimate{};
 	TimestampError EstimateErrorReply{};
+	LinkServerClockTracker ClockTracker{};
 
-private:
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
 	LinkingStateEnum LinkingState = LinkingStateEnum::AuthenticationRequest;
@@ -51,7 +52,6 @@ private:
 	uint8_t SyncSequence = 0;
 
 	bool SearchReplyPending = false;
-	LinkServerClockTracker ClockTracker{};
 	bool ClockReplyPending = false;
 
 protected:

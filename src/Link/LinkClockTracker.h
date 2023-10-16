@@ -49,13 +49,13 @@ public:
 class LinkClientClockTracker
 {
 private:
-	static constexpr uint32_t CLOCK_TUNE_PERIOD = 1200;
-	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 87;
+	static constexpr uint32_t CLOCK_TUNE_PERIOD = 1250;
+	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 71;
 
 	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
 	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
 	static constexpr uint8_t CLOCK_TUNE_RATIO = 32;
-	static constexpr uint8_t CLOCK_REJECT_DEVIATION = 10;
+	static constexpr uint8_t CLOCK_REJECT_DEVIATION = 3;
 
 	enum class ClockTuneStateEnum
 	{
@@ -268,33 +268,29 @@ private:
 
 	void ReplaceAverageWithBest()
 	{
-		const int16_t average = AverageError / CLOCK_FILTER_SCALE;
-
-		int16_t bestError = 0;
-		int16_t bestDeviation = INT16_MAX;
+		int16_t bestError = INT16_MAX;
 		for (uint_fast8_t i = 0; i < CLOCK_SYNC_SAMPLE_COUNT; i++)
 		{
-			int16_t delta = ErrorSamples[i] - average;
-			if (delta < 0)
+			int16_t error = ErrorSamples[i];
+			if (error < 0)
 			{
-				delta = -delta;
+				error = -error;
 			}
 
-			if (delta < bestDeviation)
+			if (error < bestError)
 			{
-				bestError = ErrorSamples[i];
-				bestDeviation = delta;
+				bestError = error;
 			}
 		}
 
-		AverageError = (int32_t)bestError * CLOCK_FILTER_SCALE;
+		AverageError = ((int32_t)bestError * CLOCK_FILTER_SCALE) / 2;
 	}
 
 #if defined(LOLA_DEBUG_LINK_CLOCK)
 public:
 	void DebugClockError()
 	{
-		Serial.print(AverageError);
+		Serial.print(AverageError / CLOCK_FILTER_SCALE);
 		Serial.print('\t');
 		Serial.print(DeviationError);
 	}

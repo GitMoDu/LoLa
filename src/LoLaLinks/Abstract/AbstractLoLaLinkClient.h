@@ -45,11 +45,10 @@ private:
 protected:
 	ClientTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
+private:
 	TimestampError EstimateErrorReply{};
-
 	LinkClientClockTracker ClockTracker{};
 
-private:
 #if defined(DEBUG_LOLA)
 	uint32_t LinkingStarted = 0;
 #endif
