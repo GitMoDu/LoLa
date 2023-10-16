@@ -37,7 +37,7 @@ struct LoLaLinkStatus
 		stream.println(Quality.TxDrop);
 		stream.print(F("\tTx Drop Rate: "));
 		stream.println(TxDropRate);
-		stream.print(F("\tReceive Freshness: "));
+		stream.print(F("\tRx Youth: "));
 		stream.println(Quality.Age);
 		stream.print(F("\tSync Clock: "));
 		stream.println(Quality.ClockSync);

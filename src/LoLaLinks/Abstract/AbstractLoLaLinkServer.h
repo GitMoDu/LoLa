@@ -555,7 +555,7 @@ protected:
 		}
 	}
 
-	virtual const uint8_t GetSyncClockQuality() final
+	virtual const uint8_t GetClockSyncQuality() final
 	{
 		return ClockTracker.GetQuality();
 	}

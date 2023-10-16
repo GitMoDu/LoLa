@@ -6,16 +6,25 @@
 #include <stdint.h>
 #include "LoLaLinkDefinition.h"
 
+#include "Quality\QualityFilters.h"
+
 class LinkServerClockTracker
 {
 private:
+	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 3;
+	static constexpr uint8_t QUALITY_FILTER_SCALE = 190;
+
+private:
 	int32_t ReplyError = 0;
 	bool ReplyPending = false;
+
+	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
 
 public:
 	void Reset()
 	{
 		ReplyPending = false;
+		QualityFilter.Clear(UINT8_MAX / 2);
 	}
 
 	void OnReplySent()
@@ -25,8 +34,7 @@ public:
 
 	const uint8_t GetQuality()
 	{
-		//TODO:
-		return UINT8_MAX / 2;
+		return QualityFilter.Get();
 	}
 
 	const bool HasReplyPending()
@@ -43,19 +51,43 @@ public:
 	{
 		ReplyPending = true;
 		ReplyError = real - estimate;
+
+		QualityFilter.Step(GetErrorQuality(ReplyError));
+	}
+
+private:
+	const uint8_t GetErrorQuality(const int16_t error)
+	{
+		int16_t absError = error;
+		if (absError < 0)
+		{
+			absError = -absError;
+		}
+
+		if (absError >= ERROR_REFERENCE)
+		{
+			return 0;
+		}
+		else
+		{
+			return UINT8_MAX - (((uint32_t)absError * UINT8_MAX) / ERROR_REFERENCE);
+		}
 	}
 };
 
 class LinkClientClockTracker
 {
 private:
-	static constexpr uint32_t CLOCK_TUNE_PERIOD = 1250;
-	static constexpr uint32_t CLOCK_TUNE_RETRY_PERIOD = 71;
+	static constexpr uint16_t CLOCK_TUNE_PERIOD = 1250;
+	static constexpr uint8_t CLOCK_TUNE_RETRY_PERIOD = 71;
 
 	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
 	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
 	static constexpr uint8_t CLOCK_TUNE_RATIO = 32;
 	static constexpr uint8_t CLOCK_REJECT_DEVIATION = 3;
+
+	static constexpr uint8_t DEVIATION_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE / 4;
+	static constexpr uint8_t QUALITY_FILTER_SCALE = 105;
 
 	enum class ClockTuneStateEnum
 	{
@@ -66,10 +98,11 @@ private:
 	} ClockTuneState = ClockTuneStateEnum::Idling;
 
 private:
+	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
+
 	int32_t TuneError = 0;
 	uint16_t DeviationError = 0;
 
-private:
 	int32_t AverageError = 0;
 
 	uint32_t LastClockSync = 0;
@@ -104,12 +137,12 @@ public:
 		AverageError = 0;
 		DeviationError = 0;
 		TuneError = 0;
+		QualityFilter.Clear(UINT8_MAX / 2);
 	}
 
 	const uint8_t GetQuality()
 	{
-		//TODO:
-		return UINT8_MAX / 2;
+		return QualityFilter.Get();;
 	}
 
 	const bool HasResultReady()
@@ -160,16 +193,8 @@ public:
 
 				if (DeviationError > CLOCK_REJECT_DEVIATION)
 				{
-#if defined(DEBUG_LOLA)
-					Serial.print(F("Clock Sync jitter error was big: "));
-					Serial.print(DeviationError / CLOCK_FILTER_SCALE);
-#endif
 					ReplaceAverageWithBest();
 					UpdateTuneError();
-#if defined(DEBUG_LOLA)
-					Serial.print(F(" us. Replacing with best error: "));
-					Serial.println(AverageError / CLOCK_FILTER_SCALE);
-#endif
 				}
 				else
 				{
@@ -179,7 +204,8 @@ public:
 			}
 		}
 #if defined(DEBUG_LOLA)
-		else {
+		else
+		{
 			Serial.print(F("Clock Sync error too big: "));
 			Serial.print(error);
 			Serial.println(F(" us."));
@@ -264,6 +290,18 @@ private:
 			}
 		}
 		DeviationError = deviationSum / CLOCK_SYNC_SAMPLE_COUNT;
+
+		const uint8_t errorQuality = GetErrorQuality();
+		const uint8_t deviationQuality = GetDeviationQuality();
+
+		if (deviationQuality > errorQuality)
+		{
+			QualityFilter.Step(deviationQuality);
+		}
+		else
+		{
+			QualityFilter.Step(errorQuality);
+		}
 	}
 
 	void ReplaceAverageWithBest()
@@ -285,6 +323,37 @@ private:
 
 		AverageError = ((int32_t)bestError * CLOCK_FILTER_SCALE) / 2;
 	}
+
+	const uint8_t GetErrorQuality()
+	{
+		int16_t absError = GetResultCorrection();
+		if (absError < 0)
+		{
+			absError = -absError;
+		}
+
+		if (absError >= LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
+		{
+			return 0;
+		}
+		else
+		{
+			return UINT8_MAX - (((uint32_t)absError * UINT8_MAX) / LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE);
+		}
+	}
+
+	const uint8_t GetDeviationQuality()
+	{
+		if (DeviationError >= DEVIATION_REFERENCE)
+		{
+			return 0;
+		}
+		else
+		{
+			return UINT8_MAX - (((uint32_t)DeviationError * UINT8_MAX) / DEVIATION_REFERENCE);
+		}
+	}
+
 
 #if defined(LOLA_DEBUG_LINK_CLOCK)
 public:

@@ -52,7 +52,7 @@ protected:
 	/// <returns>True if a clock sync update is due or pending to send.</returns>
 	virtual const bool CheckForClockSyncUpdate() { return false; }
 
-	virtual const uint8_t GetSyncClockQuality() { return 0; }
+	virtual const uint8_t GetClockSyncQuality() { return 0; }
 
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
@@ -94,7 +94,7 @@ public:
 		linkStatus.Quality.RxDrop = QualityTracker.GetRxDropQuality();
 		linkStatus.Quality.TxDrop = QualityTracker.GetTxDropQuality();
 		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
-		linkStatus.Quality.ClockSync = GetSyncClockQuality();
+		linkStatus.Quality.ClockSync = GetClockSyncQuality();
 
 		linkStatus.RxDropRate = QualityTracker.GetRxDropRate();
 		linkStatus.TxDropRate = QualityTracker.GetTxDropRate();
