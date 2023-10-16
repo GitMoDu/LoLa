@@ -15,10 +15,11 @@ private:
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 190;
 
 private:
-	int32_t ReplyError = 0;
-	bool ReplyPending = false;
-
 	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
+
+	int32_t ReplyError = 0;
+
+	bool ReplyPending = false;
 
 public:
 	void Reset()
@@ -100,17 +101,17 @@ private:
 private:
 	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
 
-	int32_t TuneError = 0;
-	uint16_t DeviationError = 0;
+	int16_t ErrorSamples[CLOCK_SYNC_SAMPLE_COUNT]{};
 
-	int32_t AverageError = 0;
-
-	uint32_t LastClockSync = 0;
 	uint32_t LastClockSent = 0;
+	uint32_t LastClockSync = 0;
 
 	uint32_t RequestSendDuration = 0;
 
-	int16_t ErrorSamples[CLOCK_SYNC_SAMPLE_COUNT]{};
+	int32_t TuneError = 0;
+	int32_t AverageError = 0;
+	uint16_t DeviationError = 0;
+
 	uint8_t SampleCount = 0;
 
 public:
