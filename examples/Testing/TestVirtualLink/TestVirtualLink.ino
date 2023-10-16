@@ -10,6 +10,7 @@
 
 #if defined(DEBUG)
 #define DEBUG_LOLA
+//#define LOLA_DEBUG_LINK_CLOCK
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
@@ -62,7 +63,7 @@
 #define PRINT_CHANNEL_HOP false
 #define PRINT_LINK_HEARBEAT 1
 
-#define LINK_USE_CHANNEL_HOP true
+#define LINK_USE_CHANNEL_HOP
 //#define LINK_USE_TIMER_AND_RTC
 
 #define _TASK_OO_CALLBACKS
@@ -263,8 +264,10 @@ void setup()
 	if (Server.Start() &&
 		Client.Start())
 	{
+#ifdef DEBUG_LOLA
 		Serial.print(millis());
 		Serial.println(F("\tLoLa Links have started."));
+#endif
 	}
 	else
 	{

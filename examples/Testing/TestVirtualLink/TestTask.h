@@ -97,10 +97,8 @@ public:
 			LastRan = timestamp;
 			Serial.println(F("# Link Clock"));
 			Serial.print(F("Server: "));
-			PrintDuration(ServerStatus.DurationSeconds);
 			ServerStatus.Log(Serial);
 			Serial.print(F("Client: "));
-			PrintDuration(ClientStatus.DurationSeconds);
 			ClientStatus.Log(Serial);
 		}
 #endif
@@ -205,52 +203,6 @@ public:
 		//}
 		Serial.println();
 #endif
-	}
-
-	void PrintDuration(const uint32_t durationSeconds)
-	{
-		const uint32_t durationMinutes = durationSeconds / 60;
-		const uint32_t durationHours = durationMinutes / 60;
-		const uint32_t durationDays = durationHours / 24;
-		const uint32_t durationYears = durationDays / 365;
-
-		const uint32_t durationDaysRemainder = durationDays % 365;
-		const uint32_t durationHoursRemainder = durationHours % 24;
-		const uint32_t durationMinutesRemainder = durationMinutes % 60;
-		const uint32_t durationSecondsRemainder = durationSeconds % 60;
-
-		if (durationYears > 0)
-		{
-			Serial.print(durationYears);
-			Serial.print(F(" years "));
-
-			Serial.print(durationDaysRemainder);
-			Serial.print(F(" days "));
-		}
-		else if (durationDays > 0)
-		{
-			Serial.print(durationDays);
-			Serial.print(F(" days "));
-		}
-
-		if (durationHoursRemainder < 10)
-		{
-			Serial.print(0);
-		}
-		Serial.print(durationHoursRemainder);
-		Serial.print(':');
-		if (durationMinutesRemainder < 10)
-		{
-			Serial.print(0);
-		}
-		Serial.print(durationMinutesRemainder);
-		Serial.print(':');
-		if (durationSecondsRemainder < 10)
-		{
-			Serial.print(0);
-		}
-		Serial.print(durationSecondsRemainder);
-		Serial.println();
 	}
 };
 #endif
