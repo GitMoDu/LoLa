@@ -186,7 +186,6 @@ public:
 	virtual const bool Start() final
 	{
 		if (Listener != nullptr
-			&& RadioInterrupt != nullptr
 			&& LoLaSi4463Config::ValidateConfig(MODEM_2_1))
 		{
 			Si446x_init();
