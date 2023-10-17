@@ -12,16 +12,13 @@
 #include "Si4463Support.h"
 
 
-
 /// <summary>
 /// 
 /// </summary>
 /// <typeparam name="CsPin"></typeparam>
 /// <typeparam name="SdnPin"></typeparam>
-/// <typeparam name="InterruptPin"></typeparam>
 template<const uint8_t CsPin,
-	const uint8_t SdnPin,
-	const uint8_t InterruptPin>
+	const uint8_t SdnPin>
 class Si446xTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
@@ -97,6 +94,9 @@ public:
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
+		pinMode(CsPin, INPUT);
+		pinMode(SdnPin, INPUT);
+
 #ifdef RX_TEST_PIN
 		digitalWrite(RX_TEST_PIN, LOW);
 		pinMode(RX_TEST_PIN, OUTPUT);
@@ -303,7 +303,6 @@ public:
 public:
 	virtual bool Callback() final
 	{
-
 		if (TxEvent.Pending)
 		{
 			if (TxEvent.Double)
