@@ -38,20 +38,6 @@ private:
 	static constexpr uint16_t DIA_SHORT = 987;
 
 private:
-	// TODO: Only InterruptEvent should need volatile members.
-	struct InterruptEventStruct
-	{
-		volatile uint32_t Timestamp = 0;
-		volatile bool Pending = false;
-		volatile bool Double = false;
-
-		void Clear()
-		{
-			Pending = false;
-			Double = false;
-		}
-	};
-
 	struct TxEventStruct
 	{
 		volatile uint32_t Timestamp = 0;
@@ -91,12 +77,8 @@ private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
 private:
-	void (*RadioInterrupt)(void) = nullptr;
-
-private:
 	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
-	InterruptEventStruct RadioEvent{};
 	TxEventStruct TxEvent{};
 	RxEventStruct RxEvent{};
 
@@ -115,41 +97,17 @@ public:
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
-		pinMode(InterruptPin, INPUT);
-		pinMode(CsPin, INPUT);
-		pinMode(SdnPin, INPUT);
-
 #ifdef RX_TEST_PIN
 		digitalWrite(RX_TEST_PIN, LOW);
 		pinMode(RX_TEST_PIN, OUTPUT);
 #endif
-
 #ifdef TX_TEST_PIN
 		digitalWrite(TX_TEST_PIN, LOW);
 		pinMode(TX_TEST_PIN, OUTPUT);
 #endif
 	}
 
-	void SetupInterrupt(void (*onRadioInterrupt)(void))
-	{
-		RadioInterrupt = onRadioInterrupt;
-	}
-
 public:
-	void OnRadioInterrupt()
-	{
-		if (RadioEvent.Pending)
-		{
-			RadioEvent.Double = true;
-		}
-		else
-		{
-			RadioEvent.Timestamp = micros();
-			RadioEvent.Pending = true;
-		}
-		Task::enable();
-	}
-
 	void OnTxInterrupt()
 	{
 #ifdef TX_TEST_PIN
@@ -231,12 +189,6 @@ public:
 			&& RadioInterrupt != nullptr
 			&& LoLaSi4463Config::ValidateConfig(MODEM_2_1))
 		{
-			// Set pins again, in case Transceiver has been reset.
-			DisableInterrupt();
-			pinMode(InterruptPin, INPUT_PULLUP);
-			pinMode(CsPin, OUTPUT);
-			pinMode(SdnPin, OUTPUT);
-
 			Si446x_init();
 
 			// Enable packet RX begin and packet sent callbacks
@@ -252,9 +204,6 @@ public:
 
 			// Set random channel to start with.
 			CurrentChannel = UINT8_MAX;
-
-			// Start listening to IRQ.
-			EnableInterrupt();
 
 			Task::enable();
 
@@ -273,7 +222,7 @@ public:
 
 	virtual const bool TxAvailable() final
 	{
-		return !RadioEvent.Pending && !TxPending && !TxEvent.Pending && !RxEvent.Pending();
+		return !TxPending && !TxEvent.Pending && !RxEvent.Pending() && Si446x_getState() == si446x_state_t::SI446X_STATE_RX;
 	}
 
 	virtual const uint32_t GetTransceiverCode()
@@ -306,6 +255,10 @@ public:
 
 			return 1 == Si446x_TX((uint8_t*)data, packetSize, CurrentChannel, si446x_state_t::SI446X_STATE_RX);
 		}
+
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, LOW);
+#endif
 
 		return false;
 	}
@@ -351,24 +304,6 @@ public:
 public:
 	virtual bool Callback() final
 	{
-		// Process pending Radio events.
-		Si446x_SERVICE();
-
-		if (RadioEvent.Pending)
-		{
-			if (RadioEvent.Double)
-			{
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Si446x Double Interrupt Event"));
-#endif
-			}
-			else
-			{
-				//TODO: Ask Radio what event triggered and OnRxEvent/OnTxEvent
-			}
-
-			RadioEvent.Clear();
-		}
 
 		if (TxEvent.Pending)
 		{
@@ -407,7 +342,7 @@ public:
 			if (RxEvent.Double)
 			{
 #if defined(DEBUG_LOLA)
-				Serial.print(F("Si446x Double RxEvent."));
+				Serial.println(F("Si446x Double RxEvent."));
 #endif
 				// TODO: Replace with clear Rx FIFO.
 				Si446x_read(InBuffer, RxEvent.Size);
@@ -439,9 +374,10 @@ public:
 		if (TxPending
 			&& (millis() - TxStartTimestamp > TX_TIMEOUT_MILLIS))
 		{
+			Listener->OnTx();
 			TxPending = false;
 #if defined(DEBUG_LOLA)
-			Serial.print(F("Si446x TxPending timeout."));
+			Serial.println(F("Si446x TxPending timeout."));
 #endif
 		}
 
@@ -451,7 +387,7 @@ public:
 #if defined(DEBUG_LOLA)
 			if (CurrentChannel == UINT8_MAX)
 			{
-				Serial.print(F("Si446x Missed Rx channel on hop."));
+				Serial.println(F("Si446x Missed Rx channel on hop."));
 				CurrentChannel = 0;
 				Task::enable();
 				return true;
@@ -462,17 +398,13 @@ public:
 
 		if (RxPending > 0
 			|| RxEvent.Pending()
-			|| TxPending || RadioEvent.Pending || TxEvent.Pending)
+			|| TxPending || TxEvent.Pending)
 		{
 			Task::enable();
 		}
 		else
 		{
-#if defined(SI446X_INTERRUPTS)
 			Task::disable();
-#else
-			Task::enable();
-#endif
 		}
 
 		return true;
@@ -490,20 +422,14 @@ private:
 		return TransceiverHelper<ChannelCount>::GetRealChannel(abstractChannel);
 	}
 
+	const uint8_t GetRealPower(const uint8_t normalizedPower)
+	{
+		return ((uint16_t)normalizedPower * 20) / UINT8_MAX;
+	}
+
 	const uint8_t GetNormalizedRssi(const int16_t rssi)
 	{
 		return ((150 - rssi) * UINT8_MAX) / 90;
-	}
-
-private:
-	void EnableInterrupt()
-	{
-		//attachInterrupt(digitalPinToInterrupt(InterruptPin), RadioInterrupt, FALLING);
-	}
-
-	void DisableInterrupt()
-	{
-		//detachInterrupt(digitalPinToInterrupt(InterruptPin));
 	}
 };
 #endif
