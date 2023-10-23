@@ -97,22 +97,11 @@ public:
 		pinMode(CsPin, INPUT);
 		pinMode(SdnPin, INPUT);
 
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, LOW);
-		pinMode(RX_TEST_PIN, OUTPUT);
-#endif
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, LOW);
-		pinMode(TX_TEST_PIN, OUTPUT);
-#endif
 	}
 
 public:
 	void OnTxInterrupt()
 	{
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, LOW);
-#endif
 		if (TxEvent.Pending)
 		{
 			TxEvent.Double = true;
@@ -151,10 +140,6 @@ public:
 
 	void OnPostRxInterrupt(const uint8_t size, const int16_t rssi)
 	{
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, HIGH);
-#endif
-
 		if (RxEvent.Pending())
 		{
 			RxEvent.Double = true;
@@ -240,9 +225,6 @@ public:
 	/// <returns>True if transmission was successful.</returns> 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, HIGH);
-#endif
 		if (TxAvailable())
 		{
 			CurrentChannel = GetRealChannel(channel);
@@ -254,10 +236,6 @@ public:
 
 			return 1 == Si446x_TX((uint8_t*)data, packetSize, CurrentChannel, si446x_state_t::SI446X_STATE_RX);
 		}
-
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, LOW);
-#endif
 
 		return false;
 	}

@@ -111,17 +111,7 @@ public:
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, IO(io)
-	{
-#if defined(RX_TEST_PIN)
-		digitalWrite(RX_TEST_PIN, LOW);
-		pinMode(RX_TEST_PIN, OUTPUT);
-#endif
-
-#if defined(TX_TEST_PIN)
-		digitalWrite(TX_TEST_PIN, LOW);
-		pinMode(TX_TEST_PIN, OUTPUT);
-#endif
-	}
+	{}
 
 	void SetupInterrupt(void (*onRxInterrupt)(void))
 	{
@@ -222,9 +212,6 @@ public:
 				{
 					IO->flush();
 					TxState = TxStateEnum::TxEnd;
-#if defined(TX_TEST_PIN)
-					digitalWrite(TX_TEST_PIN, LOW);
-#endif
 				}
 				break;
 			case TxStateEnum::TxEnd:
@@ -243,6 +230,10 @@ public:
 				return true;
 			}
 		}
+
+#if defined(RX_TEST_PIN)
+		digitalWrite(RX_TEST_PIN, LOW);
+#endif
 
 		Task::disable();
 
@@ -323,9 +314,6 @@ public:
 
 			if (TxSize > 0)
 			{
-#if defined(TX_TEST_PIN)
-				digitalWrite(TX_TEST_PIN, HIGH);
-#endif
 				if (IO->write(TxBuffer, TxSize) == TxSize)
 				{
 					TxStartTimestamp = micros();
@@ -423,9 +411,6 @@ private:
 
 	void OnRxDone(const bool rxGood)
 	{
-#if defined(RX_TEST_PIN)
-		digitalWrite(RX_TEST_PIN, LOW);
-#endif
 		if (rxGood)
 		{
 			Listener->OnRx(&RxBuffer[COBS_IN_PLACE_OFFSET], RxStartTimestamp, RxSize, UINT8_MAX);

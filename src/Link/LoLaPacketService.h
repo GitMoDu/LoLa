@@ -64,7 +64,16 @@ public:
 		, RawInPacket(rawInPacket)
 		, RawOutPacket(rawOutPacket)
 		, Transceiver(transceiver)
-	{}
+	{
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, LOW);
+		pinMode(RX_TEST_PIN, OUTPUT);
+#endif
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, LOW);
+		pinMode(TX_TEST_PIN, OUTPUT);
+#endif
+	}
 
 	const bool Setup()
 	{
@@ -185,6 +194,9 @@ public:
 	/// <returns></returns>
 	const bool Send(const uint8_t size, const uint8_t channel)
 	{
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, HIGH);
+#endif
 		if (Transceiver->Tx(RawOutPacket, size, channel))
 		{
 			SendOutTimestamp = millis();
@@ -196,6 +208,9 @@ public:
 		}
 		else
 		{
+#ifdef TX_TEST_PIN
+			digitalWrite(TX_TEST_PIN, LOW);
+#endif
 			State = StateEnum::Done;
 			Task::enable();
 
@@ -274,6 +289,9 @@ public:
 
 	virtual void OnTx() final
 	{
+#ifdef TX_TEST_PIN
+		digitalWrite(TX_TEST_PIN, LOW);
+#endif
 		switch (State)
 		{
 		case StateEnum::Sending:

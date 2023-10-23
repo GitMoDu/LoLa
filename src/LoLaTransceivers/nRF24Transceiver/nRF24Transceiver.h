@@ -94,16 +94,6 @@ public:
 		pinMode(InterruptPin, INPUT);
 		pinMode(CePin, INPUT);
 		pinMode(CsPin, INPUT);
-
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, LOW);
-		pinMode(RX_TEST_PIN, OUTPUT);
-#endif
-
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, LOW);
-		pinMode(TX_TEST_PIN, OUTPUT);
-#endif
 	}
 
 	void SetupInterrupt(void (*onInterrupt)(void))
@@ -235,9 +225,6 @@ public:
 		// Process pending interrupt events to trigger aware PacketEvent.
 		if (Event.Pending && !PacketEvent.Pending())
 		{
-#ifdef RX_TEST_PIN
-			digitalWrite(RX_TEST_PIN, LOW);
-#endif
 			Radio.whatHappened(PacketEvent.TxOk, PacketEvent.TxFail, PacketEvent.RxReady);
 			if (Event.DoubleEvent)
 			{
@@ -320,9 +307,6 @@ public:
 			//|| (TxPending && PacketEvent.TxFail)
 			)
 		{
-#ifdef TX_TEST_PIN
-			digitalWrite(TX_TEST_PIN, LOW);
-#endif
 			HopPending = true;
 
 			if (TxPending)
@@ -355,9 +339,6 @@ public:
 
 		if (TxPending && ((millis() - TxStart) > EVENT_TIMEOUT_MILLIS))
 		{
-#ifdef TX_TEST_PIN
-			digitalWrite(TX_TEST_PIN, LOW);
-#endif
 #if defined(DEBUG_LOLA)
 			Serial.print(millis());
 			Serial.print(F(": "));
@@ -377,6 +358,10 @@ public:
 
 			HopPending = false;
 		}
+
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, LOW);
+#endif
 
 		if (TxPending || Event.Pending || HopPending || PacketEvent.Pending())
 		{
@@ -415,9 +400,6 @@ public:
 	/// 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, HIGH);
-#endif
 		if (TxAvailable())
 		{
 			Radio.stopListening();
