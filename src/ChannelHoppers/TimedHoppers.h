@@ -50,7 +50,6 @@ private:
 	IRollingTimestamp* RollingTimestamp = nullptr;
 
 	uint32_t LastHopIndex = 0;
-	uint32_t HopIndex = 0;
 
 	HopperStateEnum HopperState = HopperStateEnum::Disabled;
 
@@ -100,7 +99,7 @@ public:
 
 	virtual const uint32_t GetTimedHopIndex() final
 	{
-		return HopIndex;
+		return LastHopIndex;
 	}
 
 	virtual void OnLinkStarted() final
@@ -119,21 +118,21 @@ public:
 
 	virtual bool Callback() final
 	{
-		HopIndex = GetHopIndex(RollingTimestamp->GetRollingTimestamp());
+		const uint32_t hopIndex = GetHopIndex(RollingTimestamp->GetRollingTimestamp());
 
 		switch (HopperState)
 		{
 		case HopperStateEnum::StartHop:
 			// Fire first notification, to make sure we're starting on the right Rx channel.
-			LastHopIndex = HopIndex;
+			LastHopIndex = hopIndex;
 			Listener->OnChannelHopTime();
 			HopperState = HopperStateEnum::SpinLock;
 			Task::enable();
 			break;
 		case HopperStateEnum::SpinLock:
-			if (HopIndex != LastHopIndex)
+			if (hopIndex != LastHopIndex)
 			{
-				LastHopIndex = HopIndex;
+				LastHopIndex = hopIndex;
 #if defined(HOP_TEST_PIN)
 				digitalWrite(HOP_TEST_PIN, HIGH);
 				digitalWrite(HOP_TEST_PIN, LOW);
