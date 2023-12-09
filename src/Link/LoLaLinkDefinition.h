@@ -114,12 +114,12 @@ public:
 	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
-	static constexpr uint16_t LINKING_STAGE_TIMEOUT = 200;
+	static constexpr uint16_t LINKING_STAGE_TIMEOUT = 300;
 
 	/// <summary>
 	/// How long without an input message from partner before disconnect.
 	/// </summary>
-	static constexpr uint16_t LINK_STAGE_TIMEOUT = 1500;
+	static constexpr uint16_t LINK_STAGE_TIMEOUT = 750;
 
 	/// <summary>
 	/// Duplex periods over this value are too long for LoLa to work effectively.
@@ -134,7 +134,7 @@ public:
 	/// <summary>
 	/// Report target update rate. Slow value, let the main services hog the link.
 	/// </summary>
-	static constexpr uint16_t REPORT_UPDATE_PERIOD = 1000 / 5;
+	static constexpr uint16_t REPORT_UPDATE_PERIOD = 1000 / 4;
 
 	/// <summary>
 	/// How many microseconds is the client allowed to tune its clock on one tune request. 
