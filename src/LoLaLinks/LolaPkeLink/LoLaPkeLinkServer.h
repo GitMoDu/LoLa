@@ -206,7 +206,8 @@ protected:
 			}
 			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::PkeSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 
-			if (UnlinkedCanSendPacket(Unlinked::PkeSessionAvailable::PAYLOAD_SIZE))
+			if (UnlinkedDuplexCanSend(Unlinked::PkeSessionAvailable::PAYLOAD_SIZE) &&
+				PacketService.CanSendPacket())
 			{
 				PkeSessionRequested = false;
 				if (SendPacket(OutPacket.Data, Unlinked::PkeSessionAvailable::PAYLOAD_SIZE))

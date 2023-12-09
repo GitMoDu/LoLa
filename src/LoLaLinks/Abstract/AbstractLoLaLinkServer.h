@@ -4,6 +4,9 @@
 #define _ABSTRACT_LOLA_LINK_SERVER_
 
 #include "..\Abstract\AbstractLoLaLink.h"
+#include "..\..\Link\TimedStateTransition.h"
+#include "..\..\Link\LinkClockTracker.h"
+#include "..\..\Link\PreLinkDuplex.h"
 
 class AbstractLoLaLinkServer : public AbstractLoLaLink
 {
@@ -32,11 +35,6 @@ private:
 		SwitchingToLinked
 	};
 
-private:
-	const uint16_t PreLinkDuplexPeriod;
-	const uint16_t PreLinkDuplexStart;
-	const uint16_t PreLinkDuplexEnd;
-
 protected:
 	ServerTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
@@ -44,6 +42,8 @@ private:
 	Timestamp InEstimate{};
 	TimestampError EstimateErrorReply{};
 	LinkServerClockTracker ClockTracker{};
+
+	PreLinkMasterDuplex LinkingDuplex;
 
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
@@ -69,9 +69,7 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
-		, PreLinkDuplexStart(0)
-		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))
+		, LinkingDuplex(GetPreLinkDuplexPeriod(duplex, transceiver))
 	{
 	}
 
@@ -439,7 +437,8 @@ protected:
 				OutPacket.SetHeader(Linking::ServerChallengeRequest::HEADER);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
-				if (UnlinkedCanSendPacket(Linking::ServerChallengeRequest::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Linking::ServerChallengeRequest::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Linking::ServerChallengeRequest::PAYLOAD_SIZE))
 					{
@@ -459,7 +458,8 @@ protected:
 				OutPacket.SetHeader(Linking::ServerChallengeReply::HEADER);
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
-				if (UnlinkedCanSendPacket(Linking::ServerChallengeReply::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Linking::ServerChallengeReply::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Linking::ServerChallengeReply::PAYLOAD_SIZE))
 					{
@@ -530,7 +530,8 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::LinkTimedSwitchOver::HEADER);
 
-				if (UnlinkedCanSendPacket(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					SyncSequence++;
 					OutPacket.Payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
@@ -569,7 +570,7 @@ protected:
 				OutPacket.SetPort(Linked::PORT);
 				OutPacket.SetHeader(Linked::ClockTuneReply::HEADER);
 				Int32ToArray(ClockTracker.GetLinkedReplyError(), &OutPacket.Payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
-				
+
 				if (RequestSendPacket(Linked::ClockTuneReply::PAYLOAD_SIZE))
 				{
 					// Only send a time reply once.
@@ -677,7 +678,8 @@ private:
 			OutPacket.SetHeader(Unlinked::LinkingTimedSwitchOver::HEADER);
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
 
-			if (UnlinkedCanSendPacket(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE))
+			if (UnlinkedDuplexCanSend(Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE) &&
+				PacketService.CanSendPacket())
 			{
 				SyncSequence++;
 				OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
@@ -706,32 +708,13 @@ protected:
 	/// </summary>
 	/// <param name="payloadSize"></param>
 	/// <returns>True when packet can be sent.</returns>
-	const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
+	//const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
+	const bool UnlinkedDuplexCanSend(const uint8_t payloadSize)
 	{
 		SyncClock.GetTimestamp(LinkTimestamp);
 		LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
-		const uint32_t timestamp = LinkTimestamp.GetRollingMicros();
-
-		const uint_fast16_t startRemainder = timestamp % (PreLinkDuplexPeriod);
-		const uint_fast16_t endRemainder = (timestamp + GetOnAirDuration(payloadSize)) % (PreLinkDuplexPeriod);
-
-		if (endRemainder >= startRemainder
-			&& startRemainder > PreLinkDuplexStart
-			&& endRemainder < PreLinkDuplexEnd)
-		{
-			return PacketService.CanSendPacket();
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-private:
-	static const uint16_t GetPreLinkDuplexEnd(IDuplex* duplex, ILoLaTransceiver* transceiver)
-	{
-		return GetPreLinkDuplexPeriod(duplex, transceiver) / 2;
+		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
 	}
 };
 #endif

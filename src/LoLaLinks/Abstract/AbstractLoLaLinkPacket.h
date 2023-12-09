@@ -8,7 +8,6 @@
 #include <IChannelHop.h>
 
 #include "AbstractLoLaReceiver.h"
-
 #include "..\..\Link\LoLaLinkSession.h"
 
 

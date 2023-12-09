@@ -4,6 +4,9 @@
 #define _ABSTRACT_LOLA_LINK_CLIENT_
 
 #include "..\Abstract\AbstractLoLaLink.h"
+#include "..\..\Link\TimedStateTransition.h"
+#include "..\..\Link\LinkClockTracker.h"
+#include "..\..\Link\PreLinkDuplex.h"
 
 class AbstractLoLaLinkClient : public AbstractLoLaLink
 {
@@ -37,11 +40,6 @@ private:
 		SwitchingToLinked
 	};
 
-private:
-	const uint16_t PreLinkDuplexPeriod;
-	const uint16_t PreLinkDuplexStart;
-	const uint16_t PreLinkDuplexEnd;
-
 protected:
 	ClientTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
 
@@ -49,11 +47,11 @@ private:
 	TimestampError EstimateErrorReply{};
 	LinkClientClockTracker ClockTracker{};
 
+	PreLinkSlaveDuplex LinkingDuplex;
+
 #if defined(DEBUG_LOLA)
 	uint32_t LinkingStarted = 0;
 #endif
-
-	uint32_t PreLinkLastSync = 0;
 
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
@@ -80,9 +78,7 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, PreLinkDuplexPeriod(GetPreLinkDuplexPeriod(duplex, transceiver))
-		, PreLinkDuplexStart(GetPreLinkDuplexStart(duplex, transceiver))
-		, PreLinkDuplexEnd(GetPreLinkDuplexEnd(duplex, transceiver))
+		, LinkingDuplex(BaseClass::GetPreLinkDuplexPeriod(duplex, transceiver))
 	{}
 
 protected:
@@ -141,8 +137,6 @@ protected:
 				StateTransition.OnReceived(timestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
-
-				OnLinkSyncReceived(timestamp);
 #if defined(DEBUG_LOLA)
 				this->Owner();
 				Serial.print(F("Got LinkingTimedSwitchOver: "));
@@ -172,7 +166,7 @@ protected:
 				Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 				LinkingState = LinkingStateEnum::AuthenticationReply;
 				Task::enable();
-				OnLinkSyncReceived(timestamp);
+				// OnLinkSyncReceived(timestamp); // Enable maybe?
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -191,7 +185,6 @@ protected:
 #endif
 				LinkingState = LinkingStateEnum::ClockSyncing;
 				Task::enable();
-				OnLinkSyncReceived(timestamp);
 			}
 #if defined(DEBUG_LOLA)
 			else {
@@ -274,7 +267,6 @@ protected:
 				}
 
 				StateTransition.OnReceived(timestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
-				OnLinkSyncReceived(timestamp);
 				SyncSequence = payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
 
@@ -444,7 +436,8 @@ protected:
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
 
-				if (UnlinkedCanSendPacket(Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE))
 					{
@@ -465,7 +458,8 @@ protected:
 
 				LinkSendDuration = GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
 
-				if (UnlinkedCanSendPacket(Linking::ClockSyncRequest::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Linking::ClockSyncRequest::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					SyncSequence++;
 					OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
@@ -487,7 +481,8 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::StartLinkRequest::HEADER);
 
-				if (UnlinkedCanSendPacket(Linking::StartLinkRequest::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Linking::StartLinkRequest::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
 					{
@@ -685,7 +680,10 @@ private:
 protected:
 	void OnLinkSyncReceived(const uint32_t receiveTimestamp)
 	{
-		PreLinkLastSync = receiveTimestamp;
+		const uint32_t elapsed = micros() - receiveTimestamp;
+		SyncClock.GetTimestampMonotonic(LinkTimestamp);
+		LinkTimestamp.ShiftSubSeconds(-(int32_t)elapsed);
+		LinkingDuplex.OnReceivedSync(LinkTimestamp.GetRollingMicros());
 	}
 
 	/// <summary>
@@ -695,23 +693,13 @@ protected:
 	/// </summary>
 	/// <param name="payloadSize"></param>
 	/// <returns>True when packet can be sent.</returns>
-	const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
+	const bool UnlinkedDuplexCanSend(const uint8_t payloadSize)
 	{
-		const uint32_t timestamp = (micros() - PreLinkLastSync) + GetSendDuration(payloadSize);
+		SyncClock.GetTimestampMonotonic(LinkTimestamp);
+		LinkTimestamp.ShiftSubSeconds((int32_t)GetSendDuration(payloadSize)
+			+ (int32_t)LinkingDuplex.GetFollowerOffset());
 
-		const uint_fast16_t startRemainder = timestamp % PreLinkDuplexPeriod;
-		const uint_fast16_t endRemainder = (timestamp + GetOnAirDuration(payloadSize)) % PreLinkDuplexPeriod;
-
-		if (endRemainder >= startRemainder
-			&& startRemainder > PreLinkDuplexStart
-			&& endRemainder < PreLinkDuplexEnd)
-		{
-			return PacketService.CanSendPacket();
-		}
-		else
-		{
-			return false;
-		}
+		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
 	}
 
 private:

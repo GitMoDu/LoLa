@@ -91,6 +91,7 @@ protected:
 				case PkeStateEnum::RequestingSession:;
 					PkeState = PkeStateEnum::DecompressingPartnerKey;
 					Session.SetSessionId(&payload[Unlinked::PkeSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
+					OnLinkSyncReceived(timestamp);
 					ResetUnlinkedPacketThrottle();
 
 					for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
@@ -102,7 +103,6 @@ protected:
 					this->Owner();
 					Serial.println(F("Found a PKE Session."));
 #endif
-					OnLinkSyncReceived(timestamp);
 					break;
 				default:
 #if defined(DEBUG_LOLA)
@@ -138,7 +138,7 @@ protected:
 		case PkeStateEnum::RequestingSession:
 			// Wait longer because reply is big.
 			if (UnlinkedPacketThrottle()
-				&& UnlinkedCanSendPacket(Unlinked::PkeSessionRequest::PAYLOAD_SIZE))
+				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.SetHeader(Unlinked::PkeSessionRequest::HEADER);
@@ -204,7 +204,8 @@ protected:
 				}
 				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::PkeLinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
 
-				if (UnlinkedCanSendPacket(Unlinked::PkeLinkingStartRequest::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Unlinked::PkeLinkingStartRequest::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Unlinked::PkeLinkingStartRequest::PAYLOAD_SIZE))
 					{

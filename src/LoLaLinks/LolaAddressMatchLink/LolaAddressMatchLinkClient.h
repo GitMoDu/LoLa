@@ -84,13 +84,13 @@ protected:
 					AmState = AmStateEnum::ValidatingSession;
 					Session.SetSessionId(&payload[Unlinked::AmSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 					Session.SetPartnerAddressFrom(&payload[Unlinked::AmSessionAvailable::PAYLOAD_SERVER_ADDRESS_INDEX]);
+					OnLinkSyncReceived(timestamp);
 					ResetUnlinkedPacketThrottle();
 					Task::enable();
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.println(F("Found an Address Match Session."));
 #endif
-					OnLinkSyncReceived(timestamp);
 					break;
 				default:
 #if defined(DEBUG_LOLA)
@@ -127,7 +127,8 @@ protected:
 		case AmStateEnum::RequestingSession:
 			// Wait longer because reply is big.
 			if (UnlinkedPacketThrottle()
-				&& UnlinkedCanSendPacket(Unlinked::AmSessionRequest::PAYLOAD_SIZE))
+				&& UnlinkedDuplexCanSend(Unlinked::AmSessionRequest::PAYLOAD_SIZE)
+				&& PacketService.CanSendPacket())
 			{
 				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.SetHeader(Unlinked::AmSessionRequest::HEADER);
@@ -185,7 +186,8 @@ protected:
 				Session.CopyLocalAddressTo(&OutPacket.Payload[Unlinked::AmLinkingStartRequest::PAYLOAD_CLIENT_ADDRESS_INDEX]);
 				Session.CopyPartnerAddressTo(&OutPacket.Payload[Unlinked::AmLinkingStartRequest::PAYLOAD_SERVER_ADDRESS_INDEX]);
 
-				if (UnlinkedCanSendPacket(Unlinked::AmLinkingStartRequest::PAYLOAD_SIZE))
+				if (UnlinkedDuplexCanSend(Unlinked::AmLinkingStartRequest::PAYLOAD_SIZE) &&
+					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Unlinked::AmLinkingStartRequest::PAYLOAD_SIZE))
 					{

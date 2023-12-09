@@ -192,7 +192,8 @@ protected:
 			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::AmSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 			Session.CopyLocalAddressTo(&OutPacket.Payload[Unlinked::AmSessionAvailable::PAYLOAD_SERVER_ADDRESS_INDEX]);
 
-			if (UnlinkedCanSendPacket(Unlinked::AmSessionAvailable::PAYLOAD_SIZE))
+			if (UnlinkedDuplexCanSend(Unlinked::AmSessionAvailable::PAYLOAD_SIZE) &&
+				PacketService.CanSendPacket())
 			{
 				AmSessionRequested = false;
 				if (SendPacket(OutPacket.Data, Unlinked::AmSessionAvailable::PAYLOAD_SIZE))
