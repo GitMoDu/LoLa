@@ -91,15 +91,14 @@ struct TimestampError
 		{
 			Serial.print('-');
 		}
-		if (abs(SubSeconds) < 100000) Serial.print(0);
-		if (abs(SubSeconds) < 10000) Serial.print(0);
-		if (abs(SubSeconds) < 1000) Serial.print(0);
-		if (abs(SubSeconds) < 100) Serial.print(0);
-		if (abs(SubSeconds) < 10) Serial.print(0);
+		const uint32_t subSeconds = abs(SubSeconds);
+		if (subSeconds < 100000) Serial.print(0);
+		if (subSeconds < 10000) Serial.print(0);
+		if (subSeconds < 1000) Serial.print(0);
+		if (subSeconds < 100) Serial.print(0);
+		if (subSeconds < 10) Serial.print(0);
 		Serial.print(abs(SubSeconds));
 		Serial.print('\t');
-		const int32_t totalError = ((int64_t)Seconds * ONE_SECOND_MICROS) + SubSeconds;
-		Serial.print(totalError);
 	}
 #endif
 
