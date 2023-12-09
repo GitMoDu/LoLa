@@ -7,8 +7,10 @@
 
 /*
 * https://github.com/rweather/arduinolibs
+* 
+* Requires libraries Crypto and CryptoLW from repository.
 */
-#include "arduinolibs/Ascon128.h"
+#include <Ascon128.h>
 
 /// <summary>
 /// Encodes and decodes LoLa packets.
