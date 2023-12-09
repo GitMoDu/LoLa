@@ -94,7 +94,7 @@ public:
 		switch (LinkStage)
 		{
 		case LinkStageEnum::Disabled:
-			return;
+			break;
 		case LinkStageEnum::AwaitingLink:
 			// Update MAC without implicit addressing or token.
 			// Addressing must be explicit in payload.
@@ -169,7 +169,6 @@ public:
 				}
 				else
 				{
-					// Event will trigger a report request, that should synchronize counters.
 					OnEvent(PacketEventEnum::ReceiveRejectedHeader);
 				}
 			}
