@@ -354,7 +354,7 @@ private:
 			{
 				// Calibration failed.
 #if defined(DEBUG_LOLA)
-				Serial.print(F("Calibration failed on short test."));
+				Serial.println(F("Calibration failed on short test."));
 #endif
 				return false;
 			}

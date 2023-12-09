@@ -113,7 +113,7 @@ public:
 			return false;
 		}
 
-		// Copy plaintext counter.
+		// Copy plaintext counter from packet id.		
 		counter = inPacket[LoLaPacketDefinition::ID_INDEX];
 
 		// Copy plaintext content to in data.
@@ -186,7 +186,7 @@ public:
 		// Encrypt the everything but the packet id.
 		CryptoCypher.encrypt(&outPacket[LoLaPacketDefinition::DATA_INDEX], data, dataSize);
 
-		// Write encrypted counter as packet id.		
+		// Copy plaintext counter to packet id.		
 		outPacket[LoLaPacketDefinition::ID_INDEX] = counter;
 		/*****************/
 
