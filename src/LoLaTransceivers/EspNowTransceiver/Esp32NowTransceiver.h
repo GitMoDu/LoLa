@@ -22,7 +22,6 @@
 /// TODO: Remove Ack (retry count = 0).
 /// </summary>
 /// <typeparam name="DataRateCode"></typeparam>
-template<const wifi_phy_rate_t DataRateCode>
 class EspNowTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
@@ -33,7 +32,11 @@ private:
 
 	static const uint8_t CHANNEL = ChannelCount / 2;
 
+	static const wifi_phy_rate_t PhyRate = WIFI_PHY_RATE_2M_S;
+
 	ILoLaTransceiverListener* Listener = nullptr;
+
+
 
 private:
 	void (*TxInterrupt)(const uint8_t* mac_addr, esp_now_send_status_t status) = nullptr;
@@ -180,9 +183,9 @@ public:
 			esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
 
 			//esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
-			esp_wifi_set_max_tx_power(1);
+			esp_wifi_set_max_tx_power(WIFI_POWER_MINUS_1dBm);
 
-			if (esp_wifi_config_espnow_rate(slave.ifidx, DataRateCode) != ESP_OK)
+			if (esp_wifi_config_espnow_rate(slave.ifidx, PhyRate) != ESP_OK)
 			{
 				return false;
 			}
@@ -208,11 +211,12 @@ public:
 		return !TxPending;
 	}
 
-	virtual const uint32_t GetTransceiverCode()
+	virtual const uint32_t GetTransceiverCode() final
 	{
 		return (uint32_t)TRANSCEIVER_ID
-			| (uint32_t)((DataRateCode + 1) * ChannelCount) << 16
-			| (uint32_t)CHANNEL << 24;
+			| (((uint32_t)(PhyRate)
+				^ (uint32_t)(ChannelCount)
+				^ (uint32_t)(CHANNEL)) << 16);
 	}
 
 	/// <summary>
@@ -231,7 +235,7 @@ public:
 			esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
 
 			const uint8_t* peer_addr = slave.peer_addr;
-			esp_err_t result = esp_now_send(peer_addr, data, packetSize);
+			const esp_err_t result = esp_now_send(peer_addr, data, packetSize);
 
 			switch (result)
 			{
@@ -270,7 +274,6 @@ public:
 	/// <param name="channel">LoLa abstract channel [0;255].</param>
 	virtual void Rx(const uint8_t channel) final
 	{
-		//esp_wifi_set_channel(0, WIFI_SECOND_CHAN_NONE);
 		esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
 
 		Task::enable();
@@ -278,7 +281,7 @@ public:
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		return 0;
+		return 1;
 	}
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
