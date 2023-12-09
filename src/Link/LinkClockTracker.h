@@ -8,11 +8,17 @@
 
 #include "Quality\QualityFilters.h"
 
-class LinkServerClockTracker
+struct AbstractClockTracker
+{
+	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
+};
+
+class LinkServerClockTracker : public AbstractClockTracker
 {
 private:
-	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 3;
-	static constexpr uint8_t QUALITY_FILTER_SCALE = 190;
+	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS / 2;
+
+	static constexpr uint8_t QUALITY_FILTER_SCALE = 220;
 
 private:
 	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
@@ -25,7 +31,7 @@ public:
 	void Reset()
 	{
 		ReplyPending = false;
-		QualityFilter.Clear(UINT8_MAX / 2);
+		QualityFilter.Clear(0);
 	}
 
 	void OnReplySent()
@@ -76,19 +82,22 @@ private:
 	}
 };
 
-class LinkClientClockTracker
+class LinkClientClockTracker : public AbstractClockTracker
 {
 private:
-	static constexpr uint16_t CLOCK_TUNE_PERIOD = 1250;
-	static constexpr uint8_t CLOCK_TUNE_RETRY_PERIOD = 71;
+	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS / 5;
 
-	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
+	static constexpr uint16_t DEVIATION_REFERENCE = ((uint32_t)ERROR_REFERENCE) / CLOCK_SYNC_SAMPLE_COUNT;
+
+	static constexpr uint8_t CLOCK_TUNE_RETRY_PERIOD = 42;
+	static constexpr uint16_t CLOCK_TUNE_PERIOD = 1800;
+	static constexpr uint16_t CLOCK_TUNE_MIN_PERIOD = (CLOCK_TUNE_RETRY_PERIOD * CLOCK_SYNC_SAMPLE_COUNT);
+
 	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
 	static constexpr uint8_t CLOCK_TUNE_RATIO = 32;
 	static constexpr uint8_t CLOCK_REJECT_DEVIATION = 3;
 
-	static constexpr uint8_t DEVIATION_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE / 4;
-	static constexpr uint8_t QUALITY_FILTER_SCALE = 105;
+	static constexpr uint8_t QUALITY_FILTER_SCALE = 200;
 
 	enum class ClockTuneStateEnum
 	{
@@ -138,12 +147,12 @@ public:
 		AverageError = 0;
 		DeviationError = 0;
 		TuneError = 0;
-		QualityFilter.Clear(UINT8_MAX / 2);
+		QualityFilter.Clear(0);
 	}
 
 	const uint8_t GetQuality()
 	{
-		return QualityFilter.Get();;
+		return QualityFilter.Get();
 	}
 
 	const bool HasResultReady()
@@ -151,12 +160,26 @@ public:
 		return ClockTuneState == ClockTuneStateEnum::ResultReady;
 	}
 
+	const uint16_t GetSyncPeriod()
+	{
+		const uint8_t MIN_QUALITY = 180;
+
+		if (GetQuality() > MIN_QUALITY)
+		{
+			return CLOCK_TUNE_MIN_PERIOD + (((uint32_t)(CLOCK_TUNE_PERIOD - CLOCK_TUNE_MIN_PERIOD) * (GetQuality() - MIN_QUALITY)) / (UINT8_MAX - MIN_QUALITY));
+		}
+		else
+		{
+			return CLOCK_TUNE_MIN_PERIOD;
+		}
+	}
+
 	const bool HasRequestToSend(const uint32_t timestamp)
 	{
 		switch (ClockTuneState)
 		{
 		case ClockTuneStateEnum::Idling:
-			return (timestamp - LastClockSync) > CLOCK_TUNE_PERIOD;
+			return (timestamp - LastClockSync) > GetSyncPeriod();
 			break;
 		case ClockTuneStateEnum::Sending:
 		case ClockTuneStateEnum::WaitingForReply:
@@ -180,38 +203,42 @@ public:
 			break;
 		}
 
-		ClockTuneState = ClockTuneStateEnum::Sending;
-
-		if ((error >= 0 && error < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
-			|| (error < 0 && error > -(int32_t)LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS))
+		int16_t cappedError = 0;
+		if (error > LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
 		{
-			StepError(error);
-
-			if (SampleCount >= CLOCK_SYNC_SAMPLE_COUNT)
-			{
-				LastClockSync = timestamp;
-				UpdateErrorsAverage();
-
-				if (DeviationError > CLOCK_REJECT_DEVIATION)
-				{
-					ReplaceAverageWithBest();
-					UpdateTuneError();
-				}
-				else
-				{
-					UpdateTuneError();
-				}
-				ClockTuneState = ClockTuneStateEnum::ResultReady;
-			}
+			cappedError = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
 		}
-#if defined(DEBUG_LOLA)
+		else if (error < -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		{
+			cappedError = -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+		}
 		else
 		{
-			Serial.print(F("Clock Sync error too big: "));
-			Serial.print(error);
-			Serial.println(F(" us."));
+			cappedError = error;
 		}
-#endif
+
+		StepError(cappedError);
+
+		if (SampleCount >= CLOCK_SYNC_SAMPLE_COUNT)
+		{
+			LastClockSync = timestamp;
+			UpdateErrorsAverage();
+
+			if (DeviationError > CLOCK_REJECT_DEVIATION)
+			{
+				ReplaceAverageWithBest();
+				UpdateTuneError();
+			}
+			else
+			{
+				UpdateTuneError();
+			}
+			ClockTuneState = ClockTuneStateEnum::ResultReady;
+		}
+		else
+		{
+			ClockTuneState = ClockTuneStateEnum::Sending;
+		}
 	}
 
 	void OnRequestSent(const uint32_t timestamp)
@@ -333,13 +360,13 @@ private:
 			absError = -absError;
 		}
 
-		if (absError >= LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
+		if (absError >= ERROR_REFERENCE)
 		{
 			return 0;
 		}
 		else
 		{
-			return UINT8_MAX - (((uint32_t)absError * UINT8_MAX) / LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE);
+			return UINT8_MAX - (((uint32_t)absError * UINT8_MAX) / ERROR_REFERENCE);
 		}
 	}
 
