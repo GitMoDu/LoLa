@@ -16,6 +16,7 @@
 #include "LoLaTransceivers\UartTransceiver\UartTransceiver.h"
 #include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
 #include "LoLaTransceivers\Si446xTransceiver\Si446xTransceiver.h"
+#include "LoLaTransceivers\Si446xTransceiver2\Si446xTransceiver2.h"
 #if defined(ARDUINO_ARCH_ESP8266)
 #include "LoLaTransceivers\EspNowTransceiver\Esp8266NowTransceiver.h"
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -23,8 +24,6 @@
 #endif
 #if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1)
 #include "LoLaTransceivers\PimTransceiver\PimTransceiver.h"
-#else 
-#warning No Implementation available for PIM transceiver.
 #endif
 ///
 
@@ -53,7 +52,7 @@
 #include "ClockSources\ArduinoCycles.h"
 #endif
 #if defined(ARDUINO_ARCH_AVR)
-#include "TimerSources\AvrTimer1Source.h"
+//#include "TimerSources\AvrTimer1Source.h"
 #endif
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
 #include "ClockSources\Stm32TimerCycles.h"
