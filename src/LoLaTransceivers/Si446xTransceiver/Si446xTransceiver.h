@@ -8,21 +8,34 @@
 
 #include <ILoLaTransceiver.h>
 
-#include <Si446x.h>
-#include "Si4463Support.h"
 
+#include <Si446x.h>
+#if SI446X_INTERRUPTS != 0
+error("Must set SI446X_INTERRUPTS = 0 in Si446x_config.h")
+#endif
+
+#include "Support\Si4463Events.h"
+#include "Support\Si4463Config.h"
+
+/*
+* https://github.com/ZakKemble/Si446x
+*/
+#include <Si446x.h>
+#include "radio_config.h"
 
 /// <summary>
 /// 
 /// </summary>
 /// <typeparam name="CsPin"></typeparam>
 /// <typeparam name="SdnPin"></typeparam>
+/// <typeparam name="InterruptPin"></typeparam>
 template<const uint8_t CsPin,
-	const uint8_t SdnPin>
+	const uint8_t SdnPin,
+	const uint8_t InterruptPin>
 class Si446xTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
-	static constexpr uint8_t ChannelCount = LoLaSi4463Config::GetRadioConfigChannelCount(MODEM_2_1);
+	static constexpr uint8_t ChannelCount = Si4463Config::GetRadioConfigChannelCount(MODEM_2_1);
 
 	static constexpr uint16_t TRANSCEIVER_ID = 0x4463;
 
@@ -35,59 +48,26 @@ private:
 	static constexpr uint16_t DIA_SHORT = 987;
 
 private:
-	struct TxEventStruct
-	{
-		volatile uint32_t Timestamp = 0;
-		volatile bool Pending = false;
-		volatile bool Double = false;
-
-		void Clear()
-		{
-			Pending = false;
-			Double = false;
-		}
-	};
-
-	struct RxEventStruct
-	{
-		volatile uint32_t Timestamp = 0;
-		volatile uint8_t Size = 0;
-		volatile int16_t Rssi = 0;
-		volatile bool Double = false;
-
-		const bool Pending()
-		{
-			return Size > 0;
-		}
-
-		void Clear()
-		{
-			Size = 0;
-		}
-	};
+	using ErrorEnum = Si4463Events::ErrorEnum;
 
 private:
-
-	static constexpr uint8_t TX_TIMEOUT_MILLIS = 8;
-
+	void (*RadioInterrupt)(void) = nullptr;
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
 private:
 	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
-	TxEventStruct TxEvent{};
-	RxEventStruct RxEvent{};
+	Si4463Events::InterruptEventStruct RadioEvent{};
 
-	uint32_t TxStartTimestamp = 0;
-	uint32_t RxStartTimestamp = 0;
-	uint8_t CurrentChannel = 0;
+	Si4463Events::TxEventStruct TxEvent{};
+	Si4463Events::RxEventStruct RxEvent{};
+	Si4463Events::RxTriggerStruct RxTrigger{};
 
-	uint8_t RxPending = 0;
-	uint8_t RxPendingRssi = 0;
-	volatile bool TxPending = false;
+	Si4463Events::RxStruct RxPending{};
+	Si4463Events::TxStruct TxPending{};
 
-	bool HopPending = false;
+	Si4463Events::HopStruct HopPending{};
 
 public:
 	Si446xTransceiver(Scheduler& scheduler)
@@ -96,44 +76,50 @@ public:
 	{
 		pinMode(CsPin, INPUT);
 		pinMode(SdnPin, INPUT);
-
+		pinMode(InterruptPin, INPUT);
 	}
 
-public:
+	void SetupInterrupt(void (*onRadioInterrupt)(void))
+	{
+		RadioInterrupt = onRadioInterrupt;
+		DisableInterrupt();
+		pinMode(InterruptPin, INPUT);
+	}
+
+	void OnRadioInterrupt()
+	{
+		DisableInterrupt();
+		RadioEvent.Pending = true;
+		RadioEvent.Timestamp = micros();
+		Task::enable();
+	}
+
 	void OnTxInterrupt()
 	{
 		if (TxEvent.Pending)
 		{
-			TxEvent.Double = true;
+			TxEvent.Collision = true;
 		}
 		else
 		{
-			TxEvent.Timestamp = micros();
 			TxEvent.Pending = true;
 		}
 		Task::enable();
 	}
-
 
 	void OnPreRxInterrupt()
 	{
 #ifdef RX_TEST_PIN
 		digitalWrite(RX_TEST_PIN, HIGH);
 #endif
-
-		if (TxPending)
+		if (RxTrigger.Pending)
 		{
-			RxEvent.Double = true;
-			return;
-		}
-
-		if (RxEvent.Pending())
-		{
-			RxEvent.Double = true;
+			RxTrigger.Collision = true;
 		}
 		else
 		{
-			RxEvent.Timestamp = micros();
+			RxTrigger.Pending = true;
+			RxTrigger.StartTimestamp = RadioEvent.Timestamp;
 		}
 		Task::enable();
 	}
@@ -142,19 +128,12 @@ public:
 	{
 		if (RxEvent.Pending())
 		{
-			RxEvent.Double = true;
+			RxEvent.Collision = true;
 		}
 		else
 		{
-			if (size > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-			{
-				Listener->OnRxLost(RxEvent.Timestamp);
-			}
-			else
-			{
-				RxEvent.Size = size;
-				RxEvent.Rssi = rssi;
-			}
+			RxEvent.Size = size;
+			RxEvent.Rssi = rssi;
 		}
 		Task::enable();
 	}
@@ -171,7 +150,7 @@ public:
 	virtual const bool Start() final
 	{
 		if (Listener != nullptr
-			&& LoLaSi4463Config::ValidateConfig(MODEM_2_1))
+			&& Si4463Config::ValidateConfig(MODEM_2_1))
 		{
 			Si446x_init();
 
@@ -180,15 +159,16 @@ public:
 				SI446X_CBS_SENT
 				| SI446X_CBS_RXBEGIN
 				| SI446X_CBS_RXCOMPLETE
-				| SI446X_CBS_RXINVALID
 				, 1);
+
+			Si446x_setTxPower(5);
 
 			// Sleep until first command.
 			Si446x_sleep();
 
-			// Set random channel to start with.
-			CurrentChannel = UINT8_MAX;
-
+			// Start listening to IRQ.
+			pinMode(InterruptPin, INPUT_PULLUP);
+			EnableInterrupt();
 			Task::enable();
 
 			return true;
@@ -199,6 +179,8 @@ public:
 
 	virtual const bool Stop() final
 	{
+		DisableInterrupt();
+		pinMode(InterruptPin, INPUT);
 		Task::disable();
 
 		return true;
@@ -206,13 +188,19 @@ public:
 
 	virtual const bool TxAvailable() final
 	{
-		return !TxPending && !TxEvent.Pending && !RxEvent.Pending() && Si446x_getState() == si446x_state_t::SI446X_STATE_RX;
+		return !HopPending.Pending()
+			&& !RxEvent.Pending()
+			&& !RxTrigger.Pending
+			&& !RadioEvent.Pending
+			&& !TxPending.Pending
+			&& !TxEvent.Pending
+			&& Si446x_getState() == si446x_state_t::SI446X_STATE_RX;
 	}
 
 	virtual const uint32_t GetTransceiverCode()
 	{
 		return (uint32_t)TRANSCEIVER_ID
-			| (uint32_t)LoLaSi4463Config::GetConfigId(MODEM_2_1) << 16
+			| (uint32_t)Si4463Config::GetConfigId(MODEM_2_1) << 16
 			| (uint32_t)ChannelCount << 24;
 	}
 
@@ -225,16 +213,22 @@ public:
 	/// <returns>True if transmission was successful.</returns> 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-		if (TxAvailable())
+		const uint8_t realChannel = GetRealChannel(channel);
+
+		// Store Tx channel as last channel.
+		HopPending.Channel = realChannel;
+		Task::enable();
+
+		if (1 == Si446x_TX((uint8_t*)data, packetSize, realChannel, si446x_state_t::SI446X_STATE_RX))
 		{
-			CurrentChannel = GetRealChannel(channel);
+			TxPending.Pending = true;
+			TxPending.StartTimestamp = micros();
 
-			TxPending = true;
-
-			TxStartTimestamp = millis();
-			Task::enable();
-
-			return 1 == Si446x_TX((uint8_t*)data, packetSize, CurrentChannel, si446x_state_t::SI446X_STATE_RX);
+			return true;
+		}
+		else
+		{
+			HopPending.Request();
 		}
 
 		return false;
@@ -246,17 +240,13 @@ public:
 	virtual void Rx(const uint8_t channel) final
 	{
 		const uint8_t realChannel = GetRealChannel(channel);
-
-		if (CurrentChannel != realChannel) {
-			CurrentChannel = realChannel;
-			HopPending = true;
-			Task::enable();
-		}
+		HopPending.Request(realChannel);
+		Task::enable();
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
+		if (packetSize <= LoLaPacketDefinition::MIN_PACKET_SIZE)
 		{
 			return TTA_SHORT;
 		}
@@ -268,7 +258,7 @@ public:
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
-		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
+		if (packetSize <= LoLaPacketDefinition::MIN_PACKET_SIZE)
 		{
 			return DIA_SHORT;
 		}
@@ -281,100 +271,154 @@ public:
 public:
 	virtual bool Callback() final
 	{
+		if (RadioEvent.Pending)
+		{
+			// Clear the event only after servicing.
+			// consumes RadioEvent timestamp.
+			Si446x_SERVICE();
+			RadioEvent.Clear();
+			EnableInterrupt();
+
+			Task::enable();
+			return true;
+		}
+
+		uint16_t error = 0;
 		if (TxEvent.Pending)
 		{
-			if (TxEvent.Double)
-			{
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Si446x Double TxEvent"));
-#endif
-			}
-
-			if (TxPending)
+			if (TxPending.Pending)
 			{
 				Listener->OnTx();
-				TxPending = false;
+
+				if (TxPending.Collision)
+				{
+					error |= (uint16_t)ErrorEnum::TxCollision;
+				}
+				TxPending.Clear();
 			}
 			else
 			{
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Si446x Tx Unexpected TxEvent."));
-#endif
+				error |= (uint16_t)ErrorEnum::TxUnexpected;
 			}
 
 			TxEvent.Clear();
-			HopPending = true;
+			HopPending.Request();
+		}
+
+		// Check for TX timeout.
+		if (TxPending.Pending
+			&& (micros() - TxPending.StartTimestamp > Si4463Config::TX_TIMEOUT_MICROS))
+		{
+			TxPending.Clear();
+			HopPending.Request();
+			Listener->OnTx();
+			error |= (uint16_t)ErrorEnum::TxTimeout;
 		}
 
 		// Distribute any pending packets before responding to RxEvent.
-		if (RxPending > 0)
+		if (RxPending.Pending())
 		{
-			Listener->OnRx(InBuffer, RxStartTimestamp, RxPending, RxPendingRssi);
-			RxPending = 0;
+			Listener->OnRx(InBuffer, RxPending.StartTimestamp, RxPending.Size, RxPending.Rssi);
+			RxPending.Clear();
+		}
+
+		// Check for Rx timeout, after OnPreRxInterrupt.
+		if (RxTrigger.Pending
+			&& (micros() - RxTrigger.StartTimestamp > Si4463Config::RX_TIMEOUT_MICROS))
+		{
+			// Clear failed Rx.
+			RxTrigger.Clear();
+			HopPending.Request();
 		}
 
 		if (RxEvent.Pending())
 		{
-			if (RxEvent.Double)
+			if (RxTrigger.Pending)
 			{
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Si446x Double RxEvent."));
-#endif
-				// TODO: Replace with clear Rx FIFO.
-				Si446x_read(InBuffer, RxEvent.Size);
-				Listener->OnRxLost(RxEvent.Timestamp);
-			}
-			else
-			{
-				Si446x_read(InBuffer, RxEvent.Size);
-
-				if (RxEvent.Size < LoLaPacketDefinition::MIN_PACKET_SIZE)
+				if (RxTrigger.Collision)
 				{
-					// Invalid size.
-					Listener->OnRxLost(RxEvent.Timestamp);
+					error |= (uint16_t)ErrorEnum::RxTriggerCollision;
 				}
-				else
+
+				RxTrigger.Clear();
+
+				if (RxEvent.Size >= LoLaPacketDefinition::MIN_PACKET_SIZE
+					&& RxEvent.Size <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 				{
+					Si446x_read(InBuffer, RxEvent.Size);
 					// Reading the data over SPI already took some time.
 					// The buffered packet will be distributed on next run instead.
 					// Since we have to double buffer the input, might as well use it to avoid skipping packets.
-					RxPending = RxEvent.Size;
-					RxPendingRssi = GetNormalizedRssi(RxEvent.Rssi);
-					RxStartTimestamp = RxEvent.Timestamp;
+					RxPending.Size = RxEvent.Size;
+					RxPending.Rssi = GetNormalizedRssi(RxEvent.Rssi);
+					RxPending.StartTimestamp = RxTrigger.StartTimestamp;
+				}
+				else
+				{
+					// Error triggers hop. Hop clears Rx FIFO.
+					error |= (uint16_t)ErrorEnum::RxInvalidSize;
 				}
 			}
-			RxEvent.Clear();
-			HopPending = true;
-		}
-
-		if (TxPending
-			&& (millis() - TxStartTimestamp > TX_TIMEOUT_MILLIS))
-		{
-			Listener->OnTx();
-			TxPending = false;
-#if defined(DEBUG_LOLA)
-			Serial.println(F("Si446x TxPending timeout."));
-#endif
-		}
-
-		if (HopPending)
-		{
-			HopPending = false;
-#if defined(DEBUG_LOLA)
-			if (CurrentChannel == UINT8_MAX)
+			else
 			{
-				Serial.println(F("Si446x Missed Rx channel on hop."));
-				CurrentChannel = 0;
-				Task::enable();
-				return true;
+				error |= (uint16_t)ErrorEnum::RxOrphan;
+				Listener->OnRxLost(RxTrigger.StartTimestamp);
 			}
-#endif
-			Si446x_RX(CurrentChannel);
+
+			if (RxEvent.Collision)
+			{
+				error |= (uint16_t)ErrorEnum::RxPacketCollision;
+			}
+			RxEvent.Clear();
 		}
 
-		if (RxPending > 0
+		// Recover from possible event collisions.
+		if (error > 0)
+		{
+			Si446x_SERVICE();
+			Si446x_sleep();
+			HopPending.Request();
+		}
+
+		// Hop if it is time and other transactions aren't occurring.
+		if (HopPending.Pending()
+			&& !RadioEvent.Pending
+			&& !RxTrigger.Pending
+			&& !TxPending.Pending
+			&& !RxEvent.Pending())
+		{
+			if (HopPending.Requested)
+			{
+				HopPending.Requested = false;
+				HopPending.Resting = true;
+				Si446x_RX(HopPending.Channel);
+				HopPending.StartTimestamp = micros();
+			}
+			else if (micros() - HopPending.StartTimestamp > Si4463Config::HOP_DEFAULT)
+			{
+				HopPending.Clear();
+			}
+		}
+
+#if defined(DEBUG_LOLA)
+		if (error > 0)
+		{
+			Serial.println(F("Si446x Recovered from error:"));
+			LogError(error);
+		}
+#endif
+
+#ifdef RX_TEST_PIN
+		digitalWrite(RX_TEST_PIN, LOW);
+#endif
+
+		if (RadioEvent.Pending
+			|| TxEvent.Pending
+			|| TxPending.Pending
+			|| RxTrigger.Pending
 			|| RxEvent.Pending()
-			|| TxPending || TxEvent.Pending)
+			|| RxPending.Pending()
+			|| HopPending.Pending())
 		{
 			Task::enable();
 		}
@@ -385,7 +429,6 @@ public:
 
 		return true;
 	}
-
 
 private:
 	/// </summary>
@@ -407,5 +450,49 @@ private:
 	{
 		return ((150 - rssi) * UINT8_MAX) / 90;
 	}
+
+	void EnableInterrupt()
+	{
+		attachInterrupt(digitalPinToInterrupt(InterruptPin), RadioInterrupt, FALLING);
+	}
+
+	void DisableInterrupt()
+	{
+		detachInterrupt(digitalPinToInterrupt(InterruptPin));
+	}
+
+#if defined(DEBUG_LOLA)
+	void LogError(const uint16_t error)
+	{
+		if (error & (uint16_t)ErrorEnum::TxCollision)
+		{
+			Serial.println(F("\tTx Collision."));
+		}
+		if (error & (uint16_t)ErrorEnum::TxUnexpected)
+		{
+			Serial.println(F("\tTx Unexpected."));
+		}
+		if (error & (uint16_t)ErrorEnum::TxTimeout)
+		{
+			Serial.println(F("\tTx timeout."));
+		}
+		if (error & (uint16_t)ErrorEnum::RxOrphan)
+		{
+			Serial.println(F("\tRx Orphan Packet."));
+		}
+		if (error & (uint16_t)ErrorEnum::RxTriggerCollision)
+		{
+			Serial.println(F("\tRx Trigger Collision."));
+		}
+		if (error & (uint16_t)ErrorEnum::RxPacketCollision)
+		{
+			Serial.println(F("\tRx PacketCollision."));
+		}
+		if (error & (uint16_t)ErrorEnum::RxInvalidSize)
+		{
+			Serial.println(F("\tRx RxInvalid Size."));
+		}
+	}
+#endif
 };
 #endif

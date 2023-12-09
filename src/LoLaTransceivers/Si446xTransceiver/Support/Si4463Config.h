@@ -1,18 +1,23 @@
-// Si4463Support.h
+// Si4463Config.h
 
-#ifndef _LOLA_SI4463_SUPPORT_h
-#define _LOLA_SI4463_SUPPORT_h
+#ifndef _SI4463_CONFIG_h
+#define _SI4463_CONFIG_h
 
-#include <Si446x.h>
-#include "radio_config.h"
+#include <stdint.h>
 
-struct LoLaSi4463Config
+struct Si4463Config
 {
+	static constexpr uint16_t HOP_DEFAULT = 138;
+	static constexpr uint16_t HOP_FAST = 75;
+
+	static constexpr uint32_t TX_TIMEOUT_MICROS = 6000;
+	static constexpr uint32_t RX_TIMEOUT_MICROS = 4000;
+
 	static constexpr uint16_t RADIO_CONFIG_868_CENTER_FREQUENCY = 868;
 	static constexpr uint8_t RADIO_CONFIG_868_CHANNEL_COUNT = 99;
 
 	static constexpr uint16_t RADIO_CONFIG_433_CENTER_FREQUENCY = 433;
-	static constexpr uint8_t RADIO_CONFIG_433_CHANNEL_COUNT = 35;
+	static constexpr uint8_t RADIO_CONFIG_433_CHANNEL_COUNT = 70;
 
 	enum class ConfigEnum : uint8_t
 	{
