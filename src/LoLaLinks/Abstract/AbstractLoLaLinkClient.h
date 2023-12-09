@@ -395,7 +395,7 @@ protected:
 			}
 			break;
 		case WaitingStateEnum::SessionCreation:
-			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
+			if (GetStageElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
