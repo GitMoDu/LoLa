@@ -111,6 +111,10 @@ public:
 	virtual const uint32_t GetTransceiverCode() { return 0; }
 };
 
+/// <summary>
+/// 
+/// </summary>
+/// <typeparam name="ChannelCount">[1;255]</typeparam>
 template<const uint8_t ChannelCount>
 class TransceiverHelper
 {
@@ -122,7 +126,7 @@ public:
 	/// <returns>Index of real channel to use.</returns>
 	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
 	{
-		return ((uint16_t)abstractChannel * ChannelCount) / UINT8_MAX;
+		return ((uint16_t)abstractChannel * (ChannelCount - 1)) / UINT8_MAX;
 	}
 };
 #endif
