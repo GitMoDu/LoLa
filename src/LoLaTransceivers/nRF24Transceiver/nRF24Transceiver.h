@@ -71,6 +71,8 @@ private:
 private:
 	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
+	SPIClass* SpiInstance;
+
 	ILoLaTransceiverListener* Listener = nullptr;
 
 	void (*OnInterrupt)(void) = nullptr;
@@ -84,10 +86,11 @@ private:
 	uint32_t TxStart = 0;
 
 public:
-	nRF24Transceiver(Scheduler& scheduler)
+	nRF24Transceiver(Scheduler& scheduler, SPIClass* spiInstance)
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, Radio(CePin, CsPin)
+		, SpiInstance(spiInstance)
 		, Event()
 		, PacketEvent()
 	{
@@ -142,7 +145,7 @@ public:
 			pinMode(CePin, OUTPUT);
 
 			// Radio driver handles CePin and CsPin setup.
-			if (!Radio.begin(CePin, CsPin))
+			if (!Radio.begin(SpiInstance, CePin, CsPin))
 			{
 				return false;
 			}
