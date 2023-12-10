@@ -41,8 +41,11 @@ private:
 
 		void Request()
 		{
-			StartTimestamp = micros();
-			UpdatePending = true;
+			if (!UpdatePending)
+			{
+				StartTimestamp = micros();
+				UpdatePending = true;
+			}
 		}
 
 		void Clear()
@@ -226,13 +229,14 @@ public:
 			Incoming.Clear();
 		}
 
-		if (OutGoing.HasPending() || Incoming.HasPending())
+		if (OutGoing.HasPending())
 		{
 			Task::enable();
 
 			return true;
 		}
-		else if (HopRequest.HasPending())
+
+		if (HopRequest.HasPending())
 		{
 			if ((micros() - HopRequest.StartTimestamp) >= Config::HopMicros)
 			{
@@ -242,11 +246,16 @@ public:
 
 			return true;
 		}
+		else if (Incoming.HasPending())
+		{
+			Task::enable();
+
+			return true;
+		}
 		else
 		{
 			Task::disable();
-
-			return true;
+			return false;
 		}
 	}
 
