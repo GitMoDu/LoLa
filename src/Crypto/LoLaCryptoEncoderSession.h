@@ -7,7 +7,7 @@
 
 /*
 * https://github.com/rweather/arduinolibs
-* 
+*
 * Requires libraries Crypto and CryptoLW from repository.
 */
 #include <Ascon128.h>
@@ -102,7 +102,7 @@ public:
 		// Calculate MAC from content.
 		CryptoHasher.reset();
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
-		CryptoHasher.update(&inPacket[LoLaPacketDefinition::ID_INDEX], sizeof(uint8_t));
+		CryptoHasher.update(&inPacket[LoLaPacketDefinition::ID_INDEX], LoLaPacketDefinition::ID_SIZE);
 		CryptoHasher.update(&dataSize, sizeof(uint8_t));
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
@@ -146,7 +146,7 @@ public:
 		// Set HMAC without implicit addressing, key or token.
 		CryptoHasher.reset();
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
-		CryptoHasher.update(&counter, sizeof(uint8_t));
+		CryptoHasher.update(&counter, LoLaPacketDefinition::ID_SIZE);
 		CryptoHasher.update(&dataSize, sizeof(uint8_t));
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
