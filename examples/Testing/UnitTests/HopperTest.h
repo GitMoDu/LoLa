@@ -17,8 +17,7 @@ private:
 	static const bool TestHopperTypes(Scheduler& scheduler)
 	{
 		NoHopNoChannel ChannelNoHop{};
-		FixedChannelNoHop<1> ChannelFixedNoHop{};
-		NoHopDynamicChannel ChannelDynamicNoHop{};
+		NoHopFixedChannel<1> ChannelFixedNoHop{};
 		TimedChannelHopper<CHANNEL_HOP_PERIOD_MICROS> ChannelHop(scheduler);
 
 		if (ChannelNoHop.GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
@@ -30,12 +29,6 @@ private:
 		if (ChannelFixedNoHop.GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
 		{
 			Serial.println(F("FixedChannelNoHop claims to be a hopper."));
-			return false;
-		}
-
-		if (ChannelDynamicNoHop.GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
-		{
-			Serial.println(F("NoHopDynamicChannel claims to be a hopper."));
 			return false;
 		}
 
