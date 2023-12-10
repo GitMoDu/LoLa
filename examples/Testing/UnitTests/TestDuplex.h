@@ -92,7 +92,7 @@ private:
 				}
 			}
 
-			for (uint32_t i = EndIn - Duration; i <= EndIn; i++)
+			for (uint32_t i = EndIn - Duration + 1; i <= EndIn; i++)
 			{
 				if (duplex->IsInRange(i, Duration))
 				{

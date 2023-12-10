@@ -8,7 +8,6 @@
 /// <summary>
 /// Fixed full duplex, is always in slot.
 /// </summary>
-//template<const uint16_t DuplexPeriodMicros>
 class FullDuplex : public virtual IDuplex
 {
 public:
@@ -42,41 +41,43 @@ template<const uint16_t DuplexPeriodMicros,
 	const uint16_t DeadZoneMicros = 0>
 class TemplateHalfDuplex : public IDuplex
 {
+private:
+	const uint_fast16_t DuplexStart;
+	const uint_fast16_t DuplexEnd;
+
+	template<const bool IsOdd>
+	static constexpr uint16_t GetDuplexStart()
+	{
+		return (((uint8_t)IsOdd) * (SwitchOverMicros + DeadZoneMicros))
+			+ (((uint8_t)!IsOdd) * DeadZoneMicros);
+	}
+
+	template<const bool IsOdd>
+	static constexpr uint16_t GetDuplexEnd()
+	{
+		return (((uint8_t)IsOdd) * (DuplexPeriodMicros - DeadZoneMicros))
+			+ (((uint8_t)!IsOdd) * (SwitchOverMicros - DeadZoneMicros));
+	}
 public:
-	TemplateHalfDuplex() : IDuplex()
+	TemplateHalfDuplex()
+		: IDuplex()
+		, DuplexStart(GetDuplexStart<IsOddSlot>())
+		, DuplexEnd(GetDuplexEnd<IsOddSlot>())
 	{}
 
 public:
 	virtual const bool IsInRange(const uint32_t timestamp, const uint16_t duration) final
 	{
-#if defined(DEBUG_LOLA)
-		if (duration >= DuplexPeriodMicros)
-		{
-			Serial.println(F("Invalid Duplex Range."));
-			return false;
-		}
-#endif
-
 		const uint_fast16_t startRemainder = timestamp % DuplexPeriodMicros;
-		const uint_fast16_t endRemainder = (timestamp + duration) % DuplexPeriodMicros;
 
-		if (IsOddSlot)
-		{
-			return endRemainder >= startRemainder
-				&& startRemainder >= (SwitchOverMicros + DeadZoneMicros)
-				&& endRemainder < (DuplexPeriodMicros - DeadZoneMicros);
-		}
-		else
-		{
-			return endRemainder >= startRemainder
-				&& startRemainder >= DeadZoneMicros
-				&& endRemainder < (SwitchOverMicros - DeadZoneMicros);
-		}
+		return startRemainder >= DuplexStart
+			&& startRemainder <= DuplexEnd
+			&& (duration <= (DuplexEnd - startRemainder));
 	}
 
 	virtual const uint16_t GetRange() final
 	{
-		return SwitchOverMicros - (2 * DeadZoneMicros);
+		return DuplexEnd - DuplexStart;
 	}
 
 	virtual const uint16_t GetPeriod() final
