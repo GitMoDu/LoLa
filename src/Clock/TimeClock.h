@@ -16,8 +16,9 @@
 class TimeClock : public CycleClock
 {
 private:
-	static constexpr uint32_t OVER_SECONDS = 4154500390;// INT32_MAX% ONE_SECOND_MICROS;
-	static constexpr uint32_t OVER_SUB_SECONDS = 584320;// INT32_MAX / ONE_SECOND_MICROS;
+	static constexpr uint32_t OVER_SECONDS = 4154500390;// INT32_MAX / ONE_SECOND_MICROS;
+	static constexpr uint32_t OVER_SUB_SECONDS = 584320;// INT32_MAX % ONE_SECOND_MICROS;
+
 private:
 	uint32_t OverflowWrapRemainder = 0;
 	uint16_t OverflowWrapSeconds = 0;
