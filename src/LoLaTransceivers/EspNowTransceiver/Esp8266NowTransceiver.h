@@ -289,9 +289,9 @@ private:
 	/// </summary>
 	/// <param name="abstractChannel">LoLa abstract channel [0;255].</param>
 	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
-	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	static constexpr uint8_t GetRawChannel(const uint8_t abstractChannel)
 	{
-		return TransceiverHelper<ChannelCount>::GetRealChannel(abstractChannel);
+		return GetRealChannel<ChannelCount>(abstractChannel);
 	}
 };
 #endif

@@ -89,9 +89,9 @@ private:
 		}
 	};
 
-	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	static constexpr uint8_t GetRawChannel(const uint8_t abstractChannel)
 	{
-		return TransceiverHelper<Config::ChannelCount>::GetRealChannel(abstractChannel);
+		return GetRealChannel<Config::ChannelCount>(abstractChannel);
 	}
 
 private:
@@ -343,7 +343,7 @@ public:
 		OutGoing.Size = packetSize;
 		OutGoing.StartTimestamp = timestamp;
 
-		OutGoing.Channel = GetRealChannel(channel);
+		OutGoing.Channel = GetRawChannel(channel);
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
 			OutGoing.Buffer[i] = data[i];
@@ -356,15 +356,15 @@ public:
 
 	virtual void Rx(const uint8_t channel) final
 	{
-		const uint8_t realChannel = GetRealChannel(channel);
+		const uint8_t rawChannel = GetRawChannel(channel);
 
-		if (CurrentChannel != realChannel)
+		if (CurrentChannel != rawChannel)
 		{
 			HopRequest.Request();
-			LogChannel(realChannel);
+			LogChannel(rawChannel);
 		}
 
-		CurrentChannel = realChannel;
+		CurrentChannel = rawChannel;
 
 		Task::enable();
 	}

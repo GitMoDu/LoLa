@@ -343,8 +343,8 @@ public:
 				//TODO: Check if any even pending and defer Rx.
 				//TODO: Check if already on Rx State.
 				// If so, use Hop command, as it is much faster.
-				//if (CurrentChannel != realChannel) {
-				//	CurrentChannel = realChannel;
+				//if (CurrentChannel != rawChannel) {
+				//	CurrentChannel = rawChannel;
 				//	HopPending = true;
 				//	Task::enable();
 				//}

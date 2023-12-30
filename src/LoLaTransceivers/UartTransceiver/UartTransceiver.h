@@ -240,7 +240,7 @@ public:
 		return false;
 	}
 
-	// ILoLaTransceiver overrides.
+public:// ILoLaTransceiver overrides.
 	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
 	{
 		Listener = listener;

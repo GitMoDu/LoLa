@@ -143,9 +143,9 @@ public:
 #endif
 		if (TxAvailable())
 		{
-			const uint8_t realChannel = GetRealChannel(channel);
+			const uint8_t rawChannel = GetRawChannel(channel);
 
-			return BaseClass::RadioTx(data, packetSize, realChannel);
+			return BaseClass::RadioTx(data, packetSize, rawChannel);
 		}
 #ifdef TX_TEST_PIN
 		digitalWrite(TX_TEST_PIN, LOW);
@@ -158,9 +158,8 @@ public:
 	/// <param name="channel">LoLa abstract channel [0;255].</param>
 	virtual void Rx(const uint8_t channel) final
 	{
-		const uint8_t realChannel = GetRealChannel(channel);
-
-		BaseClass::RadioRx(realChannel);
+		const uint8_t rawChannel = GetRawChannel(channel);
+		BaseClass::RadioRx(rawChannel);
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
@@ -193,9 +192,9 @@ private:
 	/// </summary>
 	/// <param name="abstractChannel">LoLa abstract channel [0;255].</param>
 	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
-	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	static constexpr uint8_t GetRawChannel(const uint8_t abstractChannel)
 	{
-		return TransceiverHelper<ChannelCount>::GetRealChannel(abstractChannel);
+		return GetRealChannel<ChannelCount>(abstractChannel);
 	}
 
 	const uint8_t GetNormalizedRssi(const uint8_t rssiLatch)

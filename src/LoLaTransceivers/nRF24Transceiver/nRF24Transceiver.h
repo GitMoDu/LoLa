@@ -406,7 +406,7 @@ public:
 		if (TxAvailable())
 		{
 			Radio.stopListening();
-			CurrentChannel = GetRealChannel(channel);
+			CurrentChannel = GetRawChannel(channel);
 			Radio.setChannel(CurrentChannel);
 
 			// Sending clears interrupt flags.
@@ -437,10 +437,10 @@ public:
 	/// <param name="channel">LoLa abstract channel [0;255].</param>
 	virtual void Rx(const uint8_t channel) final
 	{
-		const uint8_t realChannel = GetRealChannel(channel);
+		const uint8_t rawChannel = GetRawChannel(channel);
 
-		if (CurrentChannel != realChannel) {
-			CurrentChannel = realChannel;
+		if (CurrentChannel != rawChannel) {
+			CurrentChannel = rawChannel;
 			HopPending = true;
 			Task::enable();
 		}
@@ -493,9 +493,9 @@ private:
 	/// </summary>
 	/// <param name="abstractChannel">LoLa abstract channel [0;255].</param>
 	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
-	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	static constexpr uint8_t GetRawChannel(const uint8_t abstractChannel)
 	{
-		return TransceiverHelper<ChannelCount>::GetRealChannel(abstractChannel);
+		return GetRealChannel<ChannelCount>(abstractChannel);
 	}
 
 	/// <summary>
@@ -518,7 +518,7 @@ private:
 	}
 
 	/// <summary>
-	/// Turns packet history of 1-bit RSSI into absctract RSSI.
+	/// Turns packet history of 1-bit RSSI into abstract RSSI.
 	/// Uses history of the latest 3 packets' RSSI to get more precision.
 	/// </summary>
 	/// <returns>Abstract RSSI [0;255].</returns>

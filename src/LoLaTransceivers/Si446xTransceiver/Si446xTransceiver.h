@@ -213,13 +213,13 @@ public:
 	/// <returns>True if transmission was successful.</returns> 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-		const uint8_t realChannel = GetRealChannel(channel);
+		const uint8_t rawChannel = GetRawChannel(channel);
 
 		// Store Tx channel as last channel.
-		HopPending.Channel = realChannel;
+		HopPending.Channel = rawChannel;
 		Task::enable();
 
-		if (1 == Si446x_TX((uint8_t*)data, packetSize, realChannel, si446x_state_t::SI446X_STATE_RX))
+		if (1 == Si446x_TX((uint8_t*)data, packetSize, rawChannel, si446x_state_t::SI446X_STATE_RX))
 		{
 			TxPending.Pending = true;
 			TxPending.StartTimestamp = micros();
@@ -239,8 +239,8 @@ public:
 	/// <param name="channel">LoLa abstract channel [0;255].</param>
 	virtual void Rx(const uint8_t channel) final
 	{
-		const uint8_t realChannel = GetRealChannel(channel);
-		HopPending.Request(realChannel);
+		const uint8_t rawChannel = GetRawChannel(channel);
+		HopPending.Request(rawChannel);
 		Task::enable();
 	}
 
@@ -436,9 +436,9 @@ private:
 	/// </summary>
 	/// <param name="abstractChannel">LoLa abstract channel [0;255].</param>
 	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
-	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	static constexpr uint8_t GetRawChannel(const uint8_t abstractChannel)
 	{
-		return TransceiverHelper<ChannelCount>::GetRealChannel(abstractChannel);
+		return GetRealChannel<ChannelCount>(abstractChannel);
 	}
 
 	const uint8_t GetRealPower(const uint8_t normalizedPower)

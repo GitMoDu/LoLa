@@ -231,7 +231,7 @@ public:
 		if (TxAvailable())
 		{
 			// Can we change this without stopping AP?
-			//esp_wifi_set_channel(GetRealChannel(channel), WIFI_SECOND_CHAN_NONE);
+			//esp_wifi_set_channel(GetRawChannel(channel), WIFI_SECOND_CHAN_NONE);
 			esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
 
 			const uint8_t* peer_addr = slave.peer_addr;
