@@ -15,20 +15,19 @@
 #define SERIAL_BAUD_RATE 115200
 #endif
 
+#define _TASK_OO_CALLBACKS
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP32)
+#define _TASK_THREAD_SAFE
+#else
+#define _TASK_SLEEP_ON_IDLE_RUN
+#endif
+
 // Selected Driver for test.
 #define USE_SERIAL_TRANSCEIVER
 //#define USE_NRF24_TRANSCEIVER
 //#define USE_ESPNOW_TRANSCEIVER
 //#define USE_SI446X_TRANSCEIVER
 //#define USE_SI446X_TRANSCEIVER2
-
-
-#define _TASK_OO_CALLBACKS
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP32)
-#define _TASK_THREAD_SAFE
-#else
-#define _TASK_SLEEP_ON_IDLE_RUN // Enable 1 ms SLEEP_IDLE powerdowns between tasks if no callback methods were invoked during the pass.
-#endif
 
 #define LINK_DUPLEX_SLOT false
 

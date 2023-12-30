@@ -14,6 +14,9 @@ template<const uint32_t SendPeriodMillis,
 	const uint8_t TxActivePin = 0>
 class TransmissionTester : private Task, public virtual ILoLaTransceiverListener
 {
+public:
+	static constexpr uint8_t TestChannel = UINT8_MAX / 2;
+
 private:
 	uint8_t TestPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
 
@@ -21,7 +24,6 @@ private:
 	ILoLaTransceiver* Transceiver;
 
 	uint32_t TxStartTimestamp = 0;
-
 
 	bool TxActive = false;
 	bool SmallBig = false;
@@ -47,7 +49,7 @@ public:
 
 		if (Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start())
 		{
-			Transceiver->Rx(UINT8_MAX / 2);
+			Transceiver->Rx(TestChannel);
 
 			return true;
 		}
@@ -79,7 +81,7 @@ public:
 		Serial.print(endTimestamp - TxStartTimestamp);
 		Serial.println(F(" us"));
 
-		Transceiver->Rx(UINT8_MAX / 2);
+		Transceiver->Rx(TestChannel);
 	}
 
 public:
@@ -105,7 +107,7 @@ public:
 				TestPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
 			}
 
-			if (Transceiver->Tx(TestPacket, TestPacketSize, UINT8_MAX / 2))
+			if (Transceiver->Tx(TestPacket, TestPacketSize, TestChannel))
 			{
 				TxActive = true;
 				SmallBig = !SmallBig;

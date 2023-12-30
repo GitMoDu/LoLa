@@ -14,8 +14,10 @@
 template<const bool TxEnabled = false>
 class TransmitReceiveTester : private Task, public virtual IPacketServiceListener
 {
+public:
+	static constexpr uint8_t TestChannel = UINT8_MAX / 2;
+
 private:
-	static constexpr uint8_t TestChannel = 123;
 	static constexpr uint8_t TestPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
 
 	// The outgoing content is encrypted and MAC'd here before being sent to the Transceiver for transmission.

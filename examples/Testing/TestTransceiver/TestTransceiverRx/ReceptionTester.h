@@ -10,6 +10,9 @@
 
 class ReceptionTester : public virtual ILoLaTransceiverListener
 {
+public:
+	static constexpr uint8_t TestChannel = UINT8_MAX / 2;
+
 private:
 	uint8_t TestPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
 
@@ -32,7 +35,7 @@ public:
 
 		if (Transceiver != nullptr && Transceiver->SetupListener(this) && Transceiver->Start())
 		{
-			Transceiver->Rx(UINT8_MAX / 2);
+			Transceiver->Rx(TestChannel);
 			return true;
 		}
 
@@ -60,7 +63,7 @@ public:
 
 	virtual void OnTx() final
 	{
-		Transceiver->Rx(UINT8_MAX / 2);
+		Transceiver->Rx(TestChannel);
 	}
 
 private:
