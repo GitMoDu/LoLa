@@ -19,33 +19,25 @@
 #define SERIAL_BAUD_RATE 115200
 #endif
 
-#if !defined(LED_BUILTIN) && defined(ARDUINO_ARCH_ESP32)
-#define LED_BUILTIN 33
-#endif // !LED_BUILTIN
-
+#define _TASK_OO_CALLBACKS
+#ifdef _TASK_SLEEP_ON_IDLE_RUN
+#undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
+#endif
 
 // Test pins for logic analyser.
 #if defined(ARDUINO_ARCH_STM32F1)
-#define TEST_PIN_0 15
-#define TEST_PIN_1 16
-#define TEST_PIN_2 17
-#define TEST_PIN_3 18
-//#define TEST_PIN_4 19
+#define TEST_PIN_0 17
+#define TEST_PIN_1 18
+#define TEST_PIN_2 19
 
 #define SCHEDULER_TEST_PIN TEST_PIN_0
-
-#define HOP_TEST_PIN TEST_PIN_3
-
 #define TX_SERVER_TEST_PIN TEST_PIN_1
 #define TX_CLIENT_TEST_PIN TEST_PIN_2
-#else
-#define HOP_TEST_PIN 0
-#define TX_SERVER_TEST_PIN 0
-#define TX_CLIENT_TEST_PIN 0
 #endif
 
-
-//#define LINK_USE_PKE_LINK
+// Enable for Public-Key Exchange Link.
+// Disable for Address Match Link.
+#define LINK_USE_PKE_LINK
 
 // Medium Simulation error chances, out 255, for every call.
 //#define DROP_CHANCE 70
@@ -65,11 +57,6 @@
 
 #define LINK_USE_CHANNEL_HOP
 //#define LINK_USE_TIMER_AND_RTC
-
-#define _TASK_OO_CALLBACKS
-#ifdef _TASK_SLEEP_ON_IDLE_RUN
-#undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
-#endif
 
 #include <TaskScheduler.h>
 
@@ -103,22 +90,26 @@ using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 160, 2000, 500, 
 using FastMultiChannel = IVirtualTransceiver::Configuration<160, 40, 500, 40, 2000, 10>;
 
 // Used Virtual Driver Configuration.
-using TestRadioConfig = FastMultiChannel;
+using TestRadioConfig = SlowMultiChannel;
 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 5000;
-static const uint16_t DuplexDeadZone = DuplexPeriod / 20;
+static const uint16_t DuplexDeadZone = 200;
 static const uint32_t ChannelHopPeriod = DuplexPeriod / 2;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32Entropy EntropySource{};
+Stm32Entropy ServerEntropySource{};
+Stm32Entropy ClientEntropySource{};
 #elif defined(ARDUINO_ARCH_ESP8266)
-Esp8266Entropy EntropySource{};
+Esp8266Entropy ServerEntropySource{};
+Esp8266Entropy ClientEntropySource{};
 #else 
-ArduinoEntropy EntropySource{};
+ArduinoEntropy ServerEntropySource{};
+ArduinoEntropy ClientEntropySource{};
 #endif
 
+// Use best source only if specified by LINK_USE_TIMER_AND_RTC.
 #if !defined(LINK_USE_TIMER_AND_RTC)
 ArduinoCycles ServerCyclesSource{};
 ArduinoCycles ClientCyclesSource{};

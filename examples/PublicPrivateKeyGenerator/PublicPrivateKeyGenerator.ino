@@ -11,9 +11,11 @@
 #define SERIAL_BAUD_RATE 115200
 
 
-
 #include <uECC.h>
 #include <ILoLaInclude.h>
+
+#define LINK_DUPLEX_SLOT false
+#include "Testing\ExampleTransceiverDefinitions.h"
 
 uint8_t Private1[21];
 uint8_t Private2[21];
@@ -35,14 +37,6 @@ const struct uECC_Curve_t* ECC_CURVE = uECC_secp160r1();
 
 // Use best available sources.
 static const uint8_t EntropyPin = PA1;
-
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32EntropySource EntropySource;
-#elif defined(ARDUINO_ARCH_ESP8266)
-Esp8266EntropySource EntropySource;
-#else 
-ArduinoEntropySource EntropySource;
-#endif
 
 void setup()
 {
