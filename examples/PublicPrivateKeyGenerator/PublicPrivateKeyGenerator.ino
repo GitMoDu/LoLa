@@ -143,6 +143,8 @@ static int RNG(uint8_t* dest, unsigned size)
 	{
 		dest[i] = EntropySource.GetNoise() % UINT8_MAX;
 	}
+
+	return 1;
 }
 
 const bool ArrayMatches(uint8_t* a, uint8_t* b, const size_t size)
