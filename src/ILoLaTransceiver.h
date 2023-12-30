@@ -34,16 +34,29 @@ class ILoLaTransceiver
 {
 public:
 	/// <summary>
+	/// Maps the abstract channel to the limited physical channels.
+	/// </summary>
+	/// <typeparam name="ChannelCount">[1;255]</typeparam>
+	/// <param name="abstractChannel">[0;UINT8_MAX</param>
+	/// <returns>Index of real channel to use.</returns>
+	template<const uint8_t ChannelCount>
+	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
+	{
+		return ((uint16_t)abstractChannel * (ChannelCount - 1)) / UINT8_MAX;
+	}
+
+public:
+	/// <summary>
 	/// Set up the transceiver listener that will handle all packet events.
 	/// </summary>
 	/// <param name="listener"></param>
-	/// <returns></returns>
+	/// <returns>True on success.</returns>
 	virtual const bool SetupListener(ILoLaTransceiverListener* listener) { return false; }
 
 	/// <summary>
 	/// Boot up the device and start in working mode.
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>True on success.</returns>
 	virtual const bool Start() { return false; }
 
 	/// <summary>
@@ -77,7 +90,7 @@ public:
 	/// If the transceiver has a fast RX_HOP mode, do a fast hop to new channel,
 	///  otherwise set new channel in RX mode.
 	/// </summary>
-	/// <param name="channel">Abstract channel [0:255]. Must be ranged to actual number of available channels: channel % (channel_count+1).</param>
+	/// <param name="channel">Abstract channel [0:255].</param>
 	virtual void Rx(const uint8_t channel) { }
 
 	/// <summary>
@@ -111,22 +124,9 @@ public:
 	virtual const uint32_t GetTransceiverCode() { return 0; }
 };
 
-/// <summary>
-/// 
-/// </summary>
-/// <typeparam name="ChannelCount">[1;255]</typeparam>
-template<const uint8_t ChannelCount>
 class TransceiverHelper
 {
 public:
-	/// <summary>
-	/// Maps the abstract channel to the limited physical channels.
-	/// </summary>
-	/// <param name="abstractChannel">[0;UINT8_MAX]</param>
-	/// <returns>Index of real channel to use.</returns>
-	static constexpr uint8_t GetRealChannel(const uint8_t abstractChannel)
-	{
-		return ((uint16_t)abstractChannel * (ChannelCount - 1)) / UINT8_MAX;
-	}
+
 };
 #endif
