@@ -5,8 +5,6 @@
 
 #include "AbstractLoLaLinkPacket.h"
 #include "..\..\Link\ReportTracker.h"
-#include "..\..\Link\TimedStateTransition.h"
-#include "..\..\Link\LinkClockTracker.h"
 
 /// <summary>
 /// 
@@ -100,7 +98,7 @@ public:
 		linkStatus.TxDropRate = QualityTracker.GetTxDropRate();
 	}
 
-	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result)
+	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result) final
 	{
 		switch (LinkStage)
 		{
