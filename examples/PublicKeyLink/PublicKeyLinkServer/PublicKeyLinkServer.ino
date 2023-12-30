@@ -1,11 +1,15 @@
 /*
-* Publick Key Link Server
+* Publick Key Link Server example.
+* Enable LINK_USE_PKE_LINK for Public-Key Exchange Link,
+* disable for Address Match Link.
+* Link objects and definitions in TransceiverDefinitions.
 */
 
 #define DEBUG
 
 #if defined(DEBUG)
 #define DEBUG_LOLA
+//#define LOLA_DEBUG_LINK_CLOCK
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)

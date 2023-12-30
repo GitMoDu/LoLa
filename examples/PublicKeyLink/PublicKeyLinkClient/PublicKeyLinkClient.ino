@@ -1,5 +1,8 @@
 /*
-*
+* Publick Key Link Client example.
+* Enable LINK_USE_PKE_LINK for Public-Key Exchange Link,
+* disable for Address Match Link.
+* Link objects and definitions in TransceiverDefinitions.
 */
 
 #define DEBUG
