@@ -1,5 +1,5 @@
 /*
-* Publick Key Link Client example.
+* Link Server example.
 * Enable LINK_USE_PKE_LINK for Public-Key Exchange Link,
 * disable for Address Match Link.
 * Link objects and definitions in TransceiverDefinitions.
@@ -37,10 +37,9 @@
 //#define USE_NRF24_TRANSCEIVER
 //#define USE_ESPNOW_TRANSCEIVER
 //#define USE_SI446X_TRANSCEIVER
-#define USE_SI446X_TRANSCEIVER
 //#define USE_SI446X_TRANSCEIVER2
 
-#define LINK_DUPLEX_SLOT true
+#define LINK_DUPLEX_SLOT false
 
 #include <TaskScheduler.h>
 #include <ILoLaInclude.h>
@@ -62,7 +61,7 @@ nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANS
 #if defined(ARDUINO_ARCH_ESP8266)
 EspNowTransceiver TransceiverDriver(SchedulerBase);
 #else
-EspNowTransceiver<ESPNOW_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase);
+EspNowTransceiver TransceiverDriver(SchedulerBase);
 #endif
 #elif defined(USE_SI446X_TRANSCEIVER)
 Si446xTransceiver<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase);
@@ -79,36 +78,37 @@ static const uint8_t Password[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] 
 //
 
 // Created offline using PublicPrivateKeyGenerator example project.
-static const uint8_t ClientPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x21,0x9B,0xA6,0x2A,0xF0,0x14,0x8A,0x62,0xEB,0x2A,0xF0,0xD1,0xAC,0xB4,0x6E,0x15,0x1B,0x63,0xA7,0xEA,0x99,0xFD,0x1E,0xDD,0x74,0x2F,0xD4,0xB0,0xE1,0x04,0xC5,0x96,0x09,0x65,0x1F,0xAB,0x4F,0xDC,0x75,0x0C };
-static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x9E,0x78,0xBA,0x67,0xEA,0x57,0xA9,0xBD,0x4E,0x1A,0x35,0xFB,0xD3,0xA7,0x19,0x29,0x55,0xB9,0xA1,0x3A };
+static const uint8_t ServerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x88,0x64,0x9C,0xFE,0x38,0xFA,0xFE,0xB9,0x41,0xA8,0xD1,0xB7,0xAC,0xA0,0x23,0x82,0x97,0xFB,0x5B,0xD1,0xC4,0x75,0x94,0x68,0x41,0x6D,0xEE,0x57,0x6B,0x07,0xF5,0xC0,0x95,0x78,0x10,0xCC,0xEA,0x08,0x0D,0x8F };
+static const uint8_t ServerPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x2E,0xBD,0x81,0x6E,0x56,0x59,0xDF,0x1D,0x77,0x83,0x0D,0x85,0xCE,0x59,0x61,0xE8,0x74,0x52,0xD7,0x98 };
 //
 
 #if defined(LINK_USE_PKE_LINK)
-LoLaPkeLinkClient<> Client(SchedulerBase,
+LoLaPkeLinkServer<> Server(SchedulerBase,
 	&TransceiverDriver,
 	&CyclesSource,
 	&EntropySource,
 	&Duplex,
 	&ChannelHop,
 	Password,
-	ClientPublicKey,
-	ClientPrivateKey);
+	ServerPublicKey,
+	ServerPrivateKey);
 #else
-LoLaAddressMatchLinkClient<> Client(SchedulerBase,
+LoLaAddressMatchLinkServer<> Server(SchedulerBase,
 	&TransceiverDriver,
 	&CyclesSource,
 	&EntropySource,
 	&Duplex,
 	&ChannelHop,
 	Password,
-	ClientPublicKey);
+	ServerPublicKey);
 #endif
+
 
 void BootError()
 {
 #ifdef DEBUG
 	Serial.println("Critical Error");
-#endif  
+#endif 
 	delay(1000);
 	while (1);;
 }
@@ -142,26 +142,24 @@ void setup()
 #endif
 
 	// Setup Link instance.
-	if (!Client.Setup())
+	if (!Server.Setup())
 	{
 #ifdef DEBUG
-		Serial.println(F("LoLa Link Client Setup Failed."));
+		Serial.println(F("LoLa Link Server Setup Failed."));
 #endif
 		BootError();
 	}
 
 	// Start Link instance.
-	if (Client.Start())
+	if (Server.Start())
 	{
-#if !defined(LOLA_DEBUG_LINK_CLOCK)
 		Serial.print(millis());
-		Serial.println(F("\tLoLa Link Client Started."));
-#endif
+		Serial.println(F("\tLoLa Link Server Started."));
 	}
 	else
 	{
 #ifdef DEBUG
-		Serial.println(F("LoLa Link Client Start Failed."));
+		Serial.println(F("LoLa Link Server Start Failed."));
 #endif
 		BootError();
 	}
