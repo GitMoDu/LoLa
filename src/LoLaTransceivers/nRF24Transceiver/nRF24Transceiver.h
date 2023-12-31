@@ -53,25 +53,31 @@ private:
 
 	// The used timings' constants, based on baudrate.
 	// Used to estimate Tx duration and Rx compensation.
-	const uint16_t TX_DELAY_MIN = NRF_TIMINGS[DataRate].TxDelayMin;
-	const uint16_t TX_DELAY_RANGE = NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
-	const uint16_t RX_DELAY_MIN = NRF_TIMINGS[DataRate].RxDelayMin;
-	const uint16_t RX_DELAY_RANGE = NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
+	const uint16_t TX_DELAY_MIN = nRF24::NRF_TIMINGS[DataRate].TxDelayMin;
+	const uint16_t TX_DELAY_RANGE = nRF24::NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
+	const uint16_t RX_DELAY_MIN = nRF24::NRF_TIMINGS[DataRate].RxDelayMin;
+	const uint16_t RX_DELAY_RANGE = nRF24::NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
 	const uint16_t RX_HOP_DURATION = TX_DELAY_MIN;
 
+	//The SPI interface is designed to operate at a maximum of 10 MHz.
+#if defined(ARDUINO_ARCH_AVR)
+	static const uint32_t NRF24_SPI_SPEED = 8000000;
+#elif defined(ARDUINO_ARCH_STM32F1)
+	static const uint32_t NRF24_SPI_SPEED = 16000000;
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+	static const uint32_t NRF24_SPI_SPEED = 16000000;
+#else
+	static const uint32_t NRF24_SPI_SPEED = RF24_SPI_SPEED;
+#endif
+
 private:
-	RF24 Radio;
+	nRF24::EventStruct Event{};
+	nRF24::PacketEventStruct PacketEvent{};
 
-	EventStruct Event;
-	PacketEventStruct PacketEvent;
-
-	//static constexpr uint8_t NO_CHANNEL = UINT8_MAX;
 	uint8_t CurrentChannel = 0;
 
 private:
 	uint8_t InBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
-
-	SPIClass* SpiInstance;
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
@@ -85,14 +91,16 @@ private:
 	bool TxPending = false;
 	uint32_t TxStart = 0;
 
+private:
+	SPIClass* SpiInstance;
+	RF24 Radio;
+
 public:
 	nRF24Transceiver(Scheduler& scheduler, SPIClass* spiInstance)
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, Radio(CePin, CsPin)
 		, SpiInstance(spiInstance)
-		, Event()
-		, PacketEvent()
+		, Radio((rf24_gpio_pin_t)CePin, (rf24_gpio_pin_t)CsPin, NRF24_SPI_SPEED)
 	{
 		pinMode(InterruptPin, INPUT);
 		pinMode(CePin, INPUT);
