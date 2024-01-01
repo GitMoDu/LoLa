@@ -123,10 +123,4 @@ public:
 	/// <returns>32 Bit unique id.</returns>
 	virtual const uint32_t GetTransceiverCode() { return 0; }
 };
-
-class TransceiverHelper
-{
-public:
-
-};
 #endif
