@@ -30,7 +30,7 @@
 template<const uint8_t CePin,
 	const uint8_t CsPin,
 	const uint8_t InterruptPin,
-	const rf24_datarate_e DataRate = RF24_250KBPS>
+	const rf24_datarate_e DataRate = RF24_1MBPS>
 class nRF24Transceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
@@ -39,36 +39,12 @@ private:
 
 	static constexpr uint32_t EVENT_TIMEOUT_MILLIS = 10;
 
-	// 126 RF channels, 1 MHz steps.
-	static constexpr uint8_t ChannelCount = 126;
-
-	// 130us according to datasheet.
-	static constexpr uint16_t RxHopDelay = 130;
-
-	// Only one pipe for protocol.
-	static constexpr uint8_t AddressPipe = 0;
-
-	// Fixed addressing identifies protocol.
-	static constexpr uint8_t AddressSize = 3;
-
 	// The used timings' constants, based on baudrate.
 	// Used to estimate Tx duration and Rx compensation.
 	const uint16_t TX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMin;
 	const uint16_t TX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
 	const uint16_t RX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMin;
 	const uint16_t RX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
-	const uint16_t RX_HOP_DURATION = TX_DELAY_MIN;
-
-	//The SPI interface is designed to operate at a maximum of 10 MHz.
-#if defined(ARDUINO_ARCH_AVR)
-	static const uint32_t NRF24_SPI_SPEED = 8000000;
-#elif defined(ARDUINO_ARCH_STM32F1)
-	static const uint32_t NRF24_SPI_SPEED = 16000000;
-#elif defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-	static const uint32_t NRF24_SPI_SPEED = 16000000;
-#else
-	static const uint32_t NRF24_SPI_SPEED = RF24_SPI_SPEED;
-#endif
 
 private:
 	nRF24Support::EventStruct Event{};
@@ -100,7 +76,7 @@ public:
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, SpiInstance(spiInstance)
-		, Radio((rf24_gpio_pin_t)CePin, (rf24_gpio_pin_t)CsPin, NRF24_SPI_SPEED)
+		, Radio((rf24_gpio_pin_t)CePin, (rf24_gpio_pin_t)CsPin, nRF24Support::NRF24_SPI_SPEED)
 	{
 		pinMode(InterruptPin, INPUT);
 		pinMode(CePin, INPUT);
@@ -196,7 +172,7 @@ public:	// ILoLaTransceiver overrides.
 			Radio.enableDynamicPayloads();
 
 			// Set address witdh to minimum, as it is not required to distinguish between devices.
-			Radio.setAddressWidth(AddressSize);
+			Radio.setAddressWidth(nRF24Support::AddressSize);
 
 			// Interrupt approach requires no delays.
 			Radio.csDelay = 0;
@@ -206,7 +182,7 @@ public:	// ILoLaTransceiver overrides.
 			Radio.maskIRQ(false, true, false);
 
 			// Open radio pipes.
-			Radio.openReadingPipe(AddressPipe, nRF24Support::HighEntropyShortAddress);
+			Radio.openReadingPipe(nRF24Support::AddressPipe, nRF24Support::HighEntropyShortAddress);
 			Radio.openWritingPipe(nRF24Support::HighEntropyShortAddress);
 
 			// Initialize with low power level, let power manager adjust it after boot.
@@ -246,7 +222,7 @@ public:	// ILoLaTransceiver overrides.
 	virtual const bool Stop() final
 	{
 		Radio.stopListening();
-		Radio.closeReadingPipe(AddressPipe);
+		Radio.closeReadingPipe(nRF24Support::AddressPipe);
 		DisableInterrupt();
 		Task::disable();
 
@@ -482,9 +458,9 @@ public:
 		default:
 			break;
 		}
-		return ((uint32_t)TRANSCEIVER_ID ^ AddressPipe ^ ((uint32_t)AddressSize << 8))
+		return ((uint32_t)TRANSCEIVER_ID ^ nRF24Support::AddressPipe ^ ((uint32_t)nRF24Support::AddressSize << 8))
 			| (uint32_t)dataRateCode << 16
-			| (uint32_t)ChannelCount << 24;
+			| (uint32_t)nRF24Support::ChannelCount << 24;
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
@@ -524,7 +500,7 @@ private:
 	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
 	static constexpr uint8_t GetRawChannel(const uint8_t abstractChannel)
 	{
-		return GetRealChannel<ChannelCount>(abstractChannel);
+		return GetRealChannel<nRF24Support::ChannelCount>(abstractChannel);
 	}
 
 	/// <summary>

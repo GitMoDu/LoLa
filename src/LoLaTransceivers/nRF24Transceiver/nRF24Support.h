@@ -5,9 +5,51 @@
 
 #include <stdint.h>
 
-
 namespace nRF24Support
 {
+
+	//The SPI interface is designed to operate at a maximum of 10 MHz.
+#if defined(ARDUINO_ARCH_AVR)
+	static const uint32_t NRF24_SPI_SPEED = 8000000;
+#elif defined(ARDUINO_ARCH_STM32F1)
+	static const uint32_t NRF24_SPI_SPEED = 16000000;
+#elif defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+	static const uint32_t NRF24_SPI_SPEED = 16000000;
+#else
+	static const uint32_t NRF24_SPI_SPEED = RF24_SPI_SPEED;
+#endif
+
+	
+	struct nRF24Timing
+	{
+		uint16_t RxDelayMin;
+		uint16_t RxDelayMax;
+		uint16_t TxDelayMin;
+		uint16_t TxDelayMax;
+	};
+
+	/// <summary>
+	/// Approximate values measured on real hardware.
+	/// Timings ordered by Baudarate enum value.
+	/// [RF24_1MBPS|RF24_2MBPS|RF24_250KBPS] 
+	/// </summary>
+	static const nRF24Timing NRF_TIMINGS[3] = { {220, 470, 60, 116}, {190, 310, 60, 116}, {400, 1390, 60, 120} };
+
+	// Fixed addressing identifies protocol.
+	static constexpr uint8_t AddressSize = 3;
+
+	// On addresses with less than 5 bytes, LSByte will be repeated.
+	static const uint8_t HighEntropyShortAddress[AddressSize] = { 0b00110011, 0b01010101, 0b01100101 };
+
+	// 126 RF channels, 1 MHz steps.
+	static constexpr uint8_t ChannelCount = 126;
+
+	// 130us according to datasheet.
+	static constexpr uint16_t RxHopDelay = 130;
+
+	// Only one pipe for protocol.
+	static constexpr uint8_t AddressPipe = 0;
+
 	struct EventStruct
 	{
 		volatile uint32_t Timestamp = 0;
@@ -40,23 +82,5 @@ namespace nRF24Support
 			RxReady = false;
 		}
 	};
-
-	struct nRF24Timing
-	{
-		uint16_t RxDelayMin;
-		uint16_t RxDelayMax;
-		uint16_t TxDelayMin;
-		uint16_t TxDelayMax;
-	};
-
-	/// <summary>
-	/// Approximate values measured on real hardware.
-	/// Timings ordered by Baudarate enum value.
-	/// [RF24_1MBPS|RF24_2MBPS|RF24_250KBPS] 
-	/// </summary>
-	static const nRF24Timing NRF_TIMINGS[3] = { {220, 470, 60, 116}, {190, 310, 60, 116}, {400, 1390, 60, 120} };
-
-	// On addresses with less than 5 bytes, LSByte will be repeated.
-	static const uint8_t HighEntropyShortAddress[3] = { 0b00110011, 0b01010101, 0b01100101 };
 }
 #endif
