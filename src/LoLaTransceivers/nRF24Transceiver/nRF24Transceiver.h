@@ -9,19 +9,19 @@
 
 #include <SPI.h>
 
-// https://github.com/nRF24/RF24
-#define RF24_SPI_PTR
-#include <RF24.h>
-
 #include "nRF24Support.h"
 
 #include <ILoLaTransceiver.h>
+
+// https://github.com/nRF24/RF24
+#define RF24_SPI_PTR
+#include <RF24.h>
 
 /// <summary>
 /// TODO: Optimize hop by checking if already on the selected channel, before issuing command to IC.
 /// TODO: DataRate RF24_2MBPS is specified to need 2 MHz of channel separation.
 /// TODO: Make SPI speed configurable.
-/// TODO: Rx is not working if no CRC is used.
+/// TODO: nRF Reading pipe drops every 4th packet if CRC is not enabled.
 /// </summary>
 /// <typeparam name="CePin"></typeparam>
 /// <typeparam name="CsPin"></typeparam>
@@ -53,10 +53,10 @@ private:
 
 	// The used timings' constants, based on baudrate.
 	// Used to estimate Tx duration and Rx compensation.
-	const uint16_t TX_DELAY_MIN = nRF24::NRF_TIMINGS[DataRate].TxDelayMin;
-	const uint16_t TX_DELAY_RANGE = nRF24::NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
-	const uint16_t RX_DELAY_MIN = nRF24::NRF_TIMINGS[DataRate].RxDelayMin;
-	const uint16_t RX_DELAY_RANGE = nRF24::NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
+	const uint16_t TX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMin;
+	const uint16_t TX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
+	const uint16_t RX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMin;
+	const uint16_t RX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
 	const uint16_t RX_HOP_DURATION = TX_DELAY_MIN;
 
 	//The SPI interface is designed to operate at a maximum of 10 MHz.
@@ -71,8 +71,8 @@ private:
 #endif
 
 private:
-	nRF24::EventStruct Event{};
-	nRF24::PacketEventStruct PacketEvent{};
+	nRF24Support::EventStruct Event{};
+	nRF24Support::PacketEventStruct PacketEvent{};
 
 	uint8_t CurrentChannel = 0;
 
@@ -133,8 +133,13 @@ public:
 		Task::enable();
 	}
 
-public:
-	// ILoLaTransceiver overrides.
+public:	// ILoLaTransceiver overrides.
+
+	/// <summary>
+	/// Set up the transceiver listener that will handle all packet events.
+	/// </summary>
+	/// <param name="listener"></param>
+	/// <returns>True on success.</returns>
 	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
 	{
 		Listener = listener;
@@ -142,6 +147,10 @@ public:
 		return Listener != nullptr;
 	}
 
+	/// <summary>
+	/// Boot up the device and start in working mode.
+	/// </summary>
+	/// <returns>True on success.</returns>
 	virtual const bool Start() final
 	{
 		if (Listener != nullptr && OnInterrupt != nullptr)
@@ -153,14 +162,16 @@ public:
 			pinMode(CePin, OUTPUT);
 
 			// Radio driver handles CePin and CsPin setup.
-			if (!Radio.begin(SpiInstance, CePin, CsPin))
+			if (!Radio.begin(SpiInstance))
 			{
+				Serial.println("Radio.begin failed.");
 				return false;
 			}
 
 			// Ensure the IC is present.
 			if (!Radio.isChipConnected())
 			{
+				Serial.println("No chip found_2.");
 				return false;
 			}
 
@@ -185,7 +196,7 @@ public:
 			Radio.enableDynamicPayloads();
 
 			// Set address witdh to minimum, as it is not required to distinguish between devices.
-			Radio.setAddressWidth(4);
+			Radio.setAddressWidth(AddressSize);
 
 			// Interrupt approach requires no delays.
 			Radio.csDelay = 0;
@@ -195,11 +206,11 @@ public:
 			Radio.maskIRQ(false, true, false);
 
 			// Open radio pipes.
-			Radio.openReadingPipe(AddressPipe, HighEntropyShortAddress);
-			Radio.openWritingPipe(HighEntropyShortAddress);
+			Radio.openReadingPipe(AddressPipe, nRF24Support::HighEntropyShortAddress);
+			Radio.openWritingPipe(nRF24Support::HighEntropyShortAddress);
 
 			// Initialize with low power level, let power manager adjust it after boot.
-			Radio.setPALevel(RF24_PA_MIN);
+			Radio.setPALevel(RF24_PA_LOW);
 
 			// Clear RSSI history.
 			RssiHistory = 0;
@@ -212,6 +223,14 @@ public:
 			// Start listening to IRQ.
 			EnableInterrupt();
 
+			if (Radio.failureDetected)
+			{
+#if defined(DEBUG_LOLA)
+				Serial.println(F("nRF24 Failure detected."));
+#endif
+				return false;
+			}
+
 			return true;
 		}
 		else
@@ -220,6 +239,10 @@ public:
 		}
 	}
 
+	/// <summary>
+	/// Stop the device and turn off power if possible.
+	/// </summary>
+	/// <returns>True if transceiver was running.</returns>
 	virtual const bool Stop() final
 	{
 		Radio.stopListening();
@@ -255,19 +278,10 @@ public:
 		// Process Rx event.
 		if (PacketEvent.RxReady)
 		{
-			//Radio.stopListening();
-
-#if defined(DEBUG_LOLA)
-			Serial.print(millis());
-			Serial.print(F(": "));
-			Serial.println(F("Got Rx Event."));
-#endif
-			//HopPending = true;
 			if (Radio.available())
 			{
 				const int8_t packetSize = Radio.getDynamicPayloadSize();
 
-				//HopPending = true;
 				if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
 				{
 					// Store 8 packet history of 1-bit RSSI. 
@@ -294,18 +308,16 @@ public:
 #endif
 					Listener->OnRxLost(PacketEvent.Timestamp - GetRxDelay(packetSize));
 				}
-				//Radio.flush_rx();
 				PacketEvent.RxReady = false;
-				//Radio.startListening();
 				Task::enable();
 
 				return true;
 			}
 			else
 			{
+				// Invalid packet, flush.
 				Radio.flush_rx();
 				PacketEvent.RxReady = false;
-				Radio.startListening();
 #if defined(DEBUG_LOLA)
 				Serial.print(millis());
 				Serial.print(F(": "));
@@ -314,9 +326,7 @@ public:
 			}
 		}
 		// Process Tx event.
-		else if (PacketEvent.TxOk
-			//|| (TxPending && PacketEvent.TxFail)
-			)
+		else if (PacketEvent.TxOk)
 		{
 			HopPending = true;
 
@@ -362,12 +372,14 @@ public:
 
 		if (HopPending)
 		{
-			Radio.setChannel(CurrentChannel);
-			Radio.flush_tx();
-			Radio.flush_rx();
-			Radio.startListening();
+			if (!TxPending && !Event.Pending)
+			{
+				Radio.setChannel(CurrentChannel);
+				Radio.flush_rx();
+				Radio.startListening();
 
-			HopPending = false;
+				HopPending = false;
+			}
 		}
 
 #ifdef RX_TEST_PIN
@@ -388,6 +400,7 @@ public:
 
 
 	/// <summary>
+	/// Inform the caller if the transceiver can currently perform a Tx.
 	/// </summary>
 	/// <returns></returns>
 	virtual const bool TxAvailable() final
@@ -397,21 +410,22 @@ public:
 			return false;
 		}
 
-		// Check radio status.
-		return Radio.isFifo(true, true);
+		// Check radio status for incoming Rx.Tx outgoing not required as TxPending already tracks it.
+		return TxAvailableNow();
 	}
 
 	/// <summary>
-	/// Packet copy to serial buffer, and start transmission.
-	/// The first byte is the packet size, excluding the size byte.
+	/// Tx/Transmit a packet at the indicated channel.
+	/// Transceiver should auto-return to RX mode on same channel,
+	///  but Rx() will be always called after OnTx() is called from transceiver.
 	/// </summary>
-	/// <param name="data"></param>
-	/// <param name="length"></param>
-	/// <returns></returns>
-	/// 
+	/// <param name="data">Raw packet data.</param>
+	/// <param name="packetSize">Packet size.</param>
+	/// <param name="channel">Normalized channel [0:255].</param>
+	/// <returns>True if success.</returns>
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-		if (TxAvailable())
+		if (TxAvailableNow())
 		{
 			Radio.stopListening();
 			CurrentChannel = GetRawChannel(channel);
@@ -419,22 +433,20 @@ public:
 
 			// Sending clears interrupt flags.
 			// Wait for on Sent interrupt.
-
 			TxPending = true;
 
 			// Transmit packet.
-			//Radio.startFastWrite(data, packetSize, false);
-			if (Radio.startWrite(data, packetSize, false))
+			if (Radio.startWrite(data, packetSize, true))
 			{
 				TxStart = millis();
 				Task::enable();
-
-				return true;
 			}
 			else
 			{
 				TxPending = false;
 			}
+
+			return TxPending;
 		}
 
 		return false;
@@ -486,6 +498,15 @@ public:
 	}
 
 private:
+	/// <summary>
+	/// No pending Rx data, best guarantee that the nRF hasn't started a Rx.
+	/// </summary>
+	/// <returns>True if can Tx now.</returns>
+	const bool TxAvailableNow()
+	{
+		return Radio.isFifo(false, true);
+	}
+
 	void EnableInterrupt()
 	{
 		attachInterrupt(digitalPinToInterrupt(InterruptPin), OnInterrupt, FALLING);
@@ -533,56 +554,23 @@ private:
 	const uint8_t GetRxRssi()
 	{
 		// Check latest position first.
+		uint8_t rssi = 0;
 		if (RssiHistory & (1))
 		{
-			if (RssiHistory & (1 << 2))
-			{
-				if (RssiHistory & (1 << 3))
-				{
-					return ((uint16_t)UINT8_MAX * 14) / 16;
-				}
-				else
-				{
-					return ((uint16_t)UINT8_MAX * 10) / 16;
-				}
-			}
-			else
-			{
-				if (RssiHistory & (1 << 3))
-				{
-					return ((uint16_t)UINT8_MAX * 6) / 16;
-				}
-				else
-				{
-					return ((uint16_t)UINT8_MAX * 2) / 16;
-				}
-			}
+			rssi += 1 + (((uint16_t)UINT8_MAX * 10) / 16);
 		}
-		else
+
+		if (RssiHistory & (1 << 1))
 		{
-			if (RssiHistory & (1 << 2))
-			{
-				if (RssiHistory & (1 << 3))
-				{
-					return ((uint16_t)UINT8_MAX * 7) / 16;
-				}
-				else
-				{
-					return ((uint16_t)UINT8_MAX * 5) / 16;
-				}
-			}
-			else
-			{
-				if (RssiHistory & (1 << 3))
-				{
-					return ((uint16_t)UINT8_MAX * 3) / 16;
-				}
-				else
-				{
-					return ((uint16_t)UINT8_MAX * 1) / 16;
-				}
-			}
+			rssi += 1 + (((uint16_t)UINT8_MAX * 5) / 16);
 		}
+
+		if (RssiHistory & (1 << 2))
+		{
+			rssi += ((uint16_t)UINT8_MAX * 1) / 16;
+		}
+
+		return rssi;
 	}
 };
 #endif

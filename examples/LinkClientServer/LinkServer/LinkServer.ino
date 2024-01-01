@@ -130,6 +130,7 @@ void setup()
 #if defined(USE_SERIAL_TRANSCEIVER)
 	TransceiverDriver.SetupInterrupt(OnSeriaInterrupt);
 #elif defined(USE_NRF24_TRANSCEIVER)
+	SpiTransceiver.begin();
 	TransceiverDriver.SetupInterrupt(OnRxInterrupt);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)

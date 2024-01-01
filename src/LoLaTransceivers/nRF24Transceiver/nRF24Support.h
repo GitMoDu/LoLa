@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 
-namespace nRF24
+namespace nRF24Support
 {
 	struct EventStruct
 	{
