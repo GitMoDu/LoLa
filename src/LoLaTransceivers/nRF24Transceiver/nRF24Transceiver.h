@@ -316,6 +316,7 @@ public:
 					Serial.println(F("Tx Collision."));
 #endif
 				}
+				Radio.flush_tx();
 				Listener->OnTx();
 			}
 			else
@@ -404,8 +405,7 @@ public:
 		if (TxAvailableNow())
 		{
 			Radio.stopListening();
-			CurrentChannel = GetRawChannel(channel);
-			Radio.setChannel(CurrentChannel);
+			Radio.setChannel(GetRawChannel(channel));
 
 			// Sending clears interrupt flags.
 			// Wait for on Sent interrupt.
@@ -435,7 +435,8 @@ public:
 	{
 		const uint8_t rawChannel = GetRawChannel(channel);
 
-		if (CurrentChannel != rawChannel) {
+		//if (CurrentChannel != rawChannel)
+		{
 			CurrentChannel = rawChannel;
 			HopPending = true;
 			Task::enable();
@@ -480,7 +481,7 @@ private:
 	/// <returns>True if can Tx now.</returns>
 	const bool TxAvailableNow()
 	{
-		return Radio.isFifo(false, true);
+		return Radio.isFifo(false, true) && !Radio.testCarrier();
 	}
 
 	void EnableInterrupt()
