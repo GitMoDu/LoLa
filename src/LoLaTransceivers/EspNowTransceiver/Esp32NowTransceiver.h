@@ -21,7 +21,6 @@
 /// TODO: Use broadcast mode.
 /// TODO: Remove Ack (retry count = 0).
 /// </summary>
-/// <typeparam name="DataRateCode"></typeparam>
 class EspNowTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {

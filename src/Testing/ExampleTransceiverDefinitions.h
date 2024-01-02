@@ -26,11 +26,9 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 #define NRF24_TRANSCEIVER_PIN_CE			13
 #define NRF24_TRANSCEIVER_PIN_CS			12
 #define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	14
-#define NRF24_TRANSCEIVER_DATA_RATE			RF24_1MBPS
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 #elif defined(ARDUINO_ARCH_ESP32)
-#define ESPNOW_TRANSCEIVER_DATA_RATE		WIFI_PHY_RATE_1M_L
 #else
 #error "USE_ESPNOW_TRANSCEIVER Is only available for the ESP32 and ESP8266 Arduino core platforms."
 #endif
@@ -55,7 +53,6 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 #define NRF24_TRANSCEIVER_PIN_CS			10
 #define NRF24_TRANSCEIVER_PIN_CE			9
 #define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	2
-#define NRF24_TRANSCEIVER_DATA_RATE			RF24_250KBPS
 #elif defined(USE_SI446X_TRANSCEIVER)
 #define SI446X_TRANSCEIVER_PIN_CS			10
 #define SI446X_TRANSCEIVER_PIN_SDN			9
@@ -91,9 +88,7 @@ Stm32TimerCycles CyclesSource{};
 #endif
 
 // Use timed hopper when LINK_USE_CHANNEL_HOP but not on Full-Duplex.
-#if defined(LINK_USE_CHANNEL_HOP) && !defined(LINK_FULL_DUPLEX_TRANSCEIVER)
-TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
-#else
+#if !defined(LINK_USE_CHANNEL_HOP) || defined(LINK_FULL_DUPLEX_TRANSCEIVER)
 NoHopNoChannel ChannelHop{};
 #endif
 

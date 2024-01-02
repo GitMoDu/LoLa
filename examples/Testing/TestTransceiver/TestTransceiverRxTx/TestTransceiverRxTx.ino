@@ -48,12 +48,12 @@ Scheduler SchedulerBase;
 UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF24_TRANSCEIVER)
 SPIClass SpiTransceiver(NRF24_TRANSCEIVER_SPI_CHANNEL);
-nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_RX_INTERRUPT_PIN, NRF24_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase, &SpiTransceiver);
+nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 EspNowTransceiver TransceiverDriver(SchedulerBase);
 #else
-EspNowTransceiver<ESPNOW_TRANSCEIVER_DATA_RATE> TransceiverDriver(SchedulerBase);
+EspNowTransceiver TransceiverDriver(SchedulerBase);
 #endif
 #elif defined(USE_SI446X_TRANSCEIVER)
 Si446xTransceiver<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase);
