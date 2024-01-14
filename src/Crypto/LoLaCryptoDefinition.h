@@ -56,18 +56,6 @@ public:
 	/// </summary>
 
 	/// <summary>
-	/// SMBus 1.1 (Fast Hash function) - non-cryptographic, fast 8-bit pseudo-hasher.
-	/// Alias: CRC-8
-	/// Single byte output.
-	/// CRC-8
-	///		polynomial = 0x07
-	///		init = 0x00
-	///		check = 0xf4
-	/// Expired patent.
-	/// </summary>
-	static constexpr uint8_t FAST_HASH_SIZE = 1;
-
-	/// <summary>
 	/// Size of time-based token.
 	/// 32 bits cover 1 Unix epoch, since token is updated every second.
 	/// </summary>

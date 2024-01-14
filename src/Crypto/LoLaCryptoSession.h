@@ -100,7 +100,8 @@ public:
 	/// <param name="duplexPeriod">Result from IDuplex.</param>
 	/// <param name="hopperPeriod">Result from IHop.</param>
 	/// <param name="transceiverCode">Result from ILoLaTransceiver.</param>
-	void GenerateProtocolId(const uint16_t duplexPeriod,
+	void GenerateProtocolId(
+		const uint16_t duplexPeriod,
 		const uint32_t hopperPeriod,
 		const uint32_t transceiverCode)
 	{

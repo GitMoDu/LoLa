@@ -20,10 +20,12 @@ class ILinkPacketListener
 {
 public:
 	/// <summary>
+	/// Notifies the listener of a received packet.
 	/// </summary>
 	/// <param name="timestamp"></param>
-	/// <param name="port"></param>
+	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
+	/// <param name="port">Which registered port was packet sent to.</param>
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 };
 

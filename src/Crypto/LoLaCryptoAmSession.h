@@ -38,7 +38,6 @@ private:
 public:
 	/// <summary>
 	/// </summary>
-	/// <param name="expandedKey">sizeof = LoLaLinkDefinition::HKDFSize</param>
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	/// <param name="localAddress">sizeof = LoLaCryptoDefinition::PUBLIC_KEY_SIZE</param>
 	LoLaCryptoAmSession(const uint8_t* accessPassword, const uint8_t* localAddress)

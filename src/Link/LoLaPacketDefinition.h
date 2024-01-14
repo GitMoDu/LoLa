@@ -14,7 +14,6 @@
 /// MAC3
 /// ________	Content start.
 /// ID				Id rolling counter 1 Byte.
-/// 
 /// ________	Data Start.
 /// PORT			Endpoint port 1 Byte.
 /// 
