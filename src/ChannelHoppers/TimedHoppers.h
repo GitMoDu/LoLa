@@ -13,11 +13,11 @@ template<const uint32_t HopPeriodMicros>
 class TimedChannelHopper final : private Task, public virtual IChannelHop
 {
 private:
-	enum HopperStateEnum
+	enum class HopperStateEnum
 	{
 		Disabled,
 		StartHop,
-		SpinLock
+		TimedHop
 	};
 
 	static constexpr uint32_t MARGIN_MILLIS = 1;
@@ -27,9 +27,9 @@ private:
 		return HopPeriodMicros / 1000;
 	}
 
-	static constexpr bool PeriodOverZero()
+	static constexpr bool PeriodBiggerThanMargin()
 	{
-		return HopPeriodMillis() > 0;
+		return HopPeriodMillis() > MARGIN_MILLIS;
 	}
 
 #if defined(LOLA_UNIT_TESTING)
@@ -40,8 +40,7 @@ private:
 	static constexpr uint32_t GetDelayPeriod()
 	{
 		// Constexpr workaround for conditional.
-		return (PeriodOverZero() * (HopPeriodMillis() - MARGIN_MILLIS))
-			+ (!PeriodOverZero() * HopPeriodMillis());
+		return (PeriodBiggerThanMargin() * (HopPeriodMillis() - MARGIN_MILLIS));
 	}
 
 private:
@@ -50,6 +49,7 @@ private:
 	IRollingTimestamp* RollingTimestamp = nullptr;
 
 	uint32_t LastHopIndex = 0;
+	uint32_t LastHop = 0;
 
 	HopperStateEnum HopperState = HopperStateEnum::Disabled;
 
@@ -104,7 +104,10 @@ public:
 
 	virtual void OnLinkStarted() final
 	{
-		// Set first hop index.
+		// Set first hop index, so GetTimedHopIndex() is accurate before first hop.
+		LastHopIndex = GetHopIndex(RollingTimestamp->GetRollingTimestamp());
+
+		// Run task to start hop.
 		HopperState = HopperStateEnum::StartHop;
 		Task::enable();
 	}
@@ -118,35 +121,27 @@ public:
 
 	virtual bool Callback() final
 	{
-		const uint32_t hopIndex = GetHopIndex(RollingTimestamp->GetRollingTimestamp());
+		const uint32_t rollingTimestamp = RollingTimestamp->GetRollingTimestamp();
+		const uint32_t hopIndex = GetHopIndex(rollingTimestamp);
 
 		switch (HopperState)
 		{
 		case HopperStateEnum::StartHop:
-			// Fire first notification, to make sure we're starting on the right Rx channel.
 			LastHopIndex = hopIndex;
+			LastHop = millis();
+			// Fire first notification, to make sure we're starting on the right Rx channel.
 			Listener->OnChannelHopTime();
-			HopperState = HopperStateEnum::SpinLock;
+			HopperState = HopperStateEnum::TimedHop;
 			Task::enable();
 			break;
-		case HopperStateEnum::SpinLock:
-			if (hopIndex != LastHopIndex)
+		case HopperStateEnum::TimedHop:
+			if (HopSync(hopIndex))
 			{
-				LastHopIndex = hopIndex;
 #if defined(HOP_TEST_PIN)
-				digitalWrite(HOP_TEST_PIN, HIGH);
-				digitalWrite(HOP_TEST_PIN, LOW);
+				digitalWrite(HOP_TEST_PIN, hopIndex & 0x01);
 #endif
+				LastHop = millis();
 				Listener->OnChannelHopTime();
-
-				Task::delay(GetDelayPeriod());
-
-				// We've just hopped index, we can sleep for the estimated delay with margin.
-				return false;
-			}
-			else
-			{
-				Task::enable();
 			}
 			break;
 		case HopperStateEnum::Disabled:
@@ -156,6 +151,59 @@ public:
 		}
 
 		return true;
+	}
+
+private:
+	/// <summary>
+	/// </summary>
+	/// <param name="hopIndex"></param>
+	/// <returns>True if it's time to hop.</returns>
+	const bool HopSync(const uint32_t hopIndex)
+	{
+		const uint32_t monotonicHopIndex = MonotonizeHopIndex(hopIndex);
+
+		if (monotonicHopIndex != LastHopIndex)
+		{
+			const uint32_t elapsed = millis() - LastHop;
+			LastHopIndex = monotonicHopIndex;
+
+			if ((elapsed >= HopPeriodMillis())
+				&& (elapsed <= HopPeriodMillis() + 1))
+			{
+				// We've just hopped index in the expected time.
+				// So, we can sleep for the estimated delay.
+				Task::delay(GetDelayPeriod());
+			}
+			else
+			{
+				// Out of sync, keep in spin lock.
+				Task::enable();
+			}
+
+			return true;
+		}
+		else
+		{
+			Task::enable();
+		}
+
+		return false;
+	}
+
+	const uint32_t MonotonizeHopIndex(const uint32_t hopIndex)
+	{
+		const uint32_t delta = hopIndex - LastHopIndex;
+
+		if (delta > INT32_MAX)
+		{
+			// Detected counter rollback.
+			Serial.println(F("Detected counter rollback."));
+			return LastHopIndex;
+		}
+		else
+		{
+			return hopIndex;
+		}
 	}
 };
 #endif
