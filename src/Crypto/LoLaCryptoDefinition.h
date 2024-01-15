@@ -4,6 +4,7 @@
 #define _LOLA_CRYPTO_DEFINITION_h
 
 #include <stdint.h>
+#include "..\Link\LoLaPacketDefinition.h"
 
 class LoLaCryptoDefinition
 {
@@ -62,12 +63,6 @@ public:
 	static constexpr uint8_t TIME_TOKEN_KEY_SIZE = 4;
 
 	/// <summary>
-	/// Size of encoded rolling counter.
-	/// 8 bit rolling token.
-	/// </summary>
-	static constexpr uint8_t PACKET_ID_SIZE = 1;
-
-	/// <summary>
 	/// Random challenge to be solved by the partner,
 	/// before granting access to next Linking Step..
 	/// Uses a simple hash with the Challenge and ACCESS_CONTROL_PASSWORD,
@@ -81,9 +76,8 @@ public:
 	/// Cypher Tag (Nonce) content indexes.
 	/// </summary>
 	static constexpr uint8_t CYPHER_TAG_TIMESTAMP_INDEX = 0;
-
 	static constexpr uint8_t CYPHER_TAG_ID_INDEX = CYPHER_TAG_TIMESTAMP_INDEX + TIME_TOKEN_KEY_SIZE;
-	static constexpr uint8_t CYPHER_TAG_SIZE_INDEX = CYPHER_TAG_ID_INDEX + PACKET_ID_SIZE;
+	static constexpr uint8_t CYPHER_TAG_SIZE_INDEX = CYPHER_TAG_ID_INDEX + LoLaPacketDefinition::ID_SIZE;
 	static constexpr uint8_t CYPHER_TAG_SIZE = CYPHER_TAG_SIZE_INDEX + 1;
 };
 #endif

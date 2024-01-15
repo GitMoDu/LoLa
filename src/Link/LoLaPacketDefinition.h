@@ -8,10 +8,10 @@
 /// <summary>
 /// LoLa Packet Frame
 /// ________	Frame Start.
-/// MAC0			MAC 4 Bytes.
-/// MAC1
-/// MAC2
-/// MAC3
+/// MAC_0			MAC 4 Bytes.
+/// MAC_1
+/// MAC_2
+/// MAC_3
 /// ________	Content start.
 /// ID				Id rolling counter 1 Byte.
 /// ________	Data Start.
