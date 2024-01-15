@@ -82,7 +82,7 @@ public:
 		const uint32_t overflows = GetCycleOverflows(cyclestamp);
 
 		// Start with duration from cycle clock and consolidate.
-		// This enableds the full range of UINT32_MAX us.
+		// This enables the full range of UINT32_MAX us.
 		timestamp.Seconds = 0;
 		timestamp.SubSeconds = GetElapsedDuration(cyclestamp);
 		timestamp.ConsolidateSubSeconds();
@@ -119,7 +119,7 @@ public:
 		if (OffsetSubSeconds >= ONE_SECOND_MICROS)
 		{
 			OffsetSeconds += OffsetSubSeconds / ONE_SECOND_MICROS;
-			OffsetSubSeconds %= ONE_SECOND_MICROS;
+			OffsetSubSeconds = OffsetSubSeconds % ONE_SECOND_MICROS;
 		}
 	}
 };
