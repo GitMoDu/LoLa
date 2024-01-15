@@ -96,10 +96,17 @@ public:
 					RequestPending = false;
 					Task::enable();
 				}
+				else if (millis() - RequestStart > SendRequestTimeout)
+				{
+					// Send timed out.
+					RequestPending = false;
+					Task::enable();
+					OnSendRequestTimeout();
+				}
 				else
 				{
-					// Unable to transmit, wait for 1ms and try again.
-					Task::enableDelayed(1);
+					// Unable to transmit, try again.
+					Task::enable();
 				}
 			}
 			else if (millis() - RequestStart > SendRequestTimeout)
