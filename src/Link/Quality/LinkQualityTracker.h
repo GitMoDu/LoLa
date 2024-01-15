@@ -28,9 +28,12 @@ protected:
 	RssiAccumulator<RX_RSSI_FILTER_WEIGHT> RxRssi{};
 	EmaFilter8<TX_RSSI_FILTER_WEIGHT> TxRssi{};
 
+	uint16_t RxDropCount = 0;
+
 public:
 	void ResetQuality(const uint32_t timestamp)
 	{
+		RxDropCount = 0;
 		LastConsume = timestamp;
 		LastValidReceived = timestamp;
 		RxDropRate.Clear();
@@ -49,6 +52,7 @@ public:
 		LastValidReceived = validTimestamp;
 		RxRssi.Accumulate(rssi);
 		RxDropRate.Accumulate(rxLostCount);
+		RxDropCount += rxLostCount;
 	}
 
 	/// <summary>
@@ -90,6 +94,11 @@ public:
 	const uint16_t GetRxDropRate()
 	{
 		return RxDropRate.GetDropRate();
+	}	
+	
+	const uint16_t GetRxDropCount()
+	{
+		return RxDropCount;
 	}
 
 	const uint16_t GetTxDropRate()

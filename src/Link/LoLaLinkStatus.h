@@ -7,18 +7,22 @@ struct LoLaLinkStatus
 {
 	struct QualityStruct
 	{
-		uint8_t RxRssi;
-		uint8_t TxRssi;
-		uint8_t RxDrop;
-		uint8_t TxDrop;
-		uint8_t ClockSync;
-		uint8_t Age;
+		uint8_t RxRssi = 0;
+		uint8_t TxRssi = 0;
+		uint8_t RxDrop = 0;
+		uint8_t TxDrop = 0;
+		uint8_t ClockSync = 0;
+		uint8_t Age = 0;
 	} Quality;
 
-	uint32_t DurationSeconds;
+	uint32_t DurationSeconds = 0;
 
-	uint16_t RxDropRate;
-	uint16_t TxDropRate;
+	uint16_t RxCount = 0;
+	uint16_t TxCount = 0;
+
+	uint16_t RxDropCount = 0;
+	uint16_t RxDropRate = 0;
+	uint16_t TxDropRate = 0;
 
 
 #if defined(DEBUG_LOLA)
@@ -30,11 +34,17 @@ struct LoLaLinkStatus
 		stream.print(F("\tRSSI -> "));
 		stream.println(Quality.TxRssi);
 
+		stream.print(F("\tTx: "));
+		stream.println(TxCount);
 		stream.print(F("\tRx: "));
+		stream.println(RxCount);
+		stream.print(F("\tLost: "));
+		stream.println(RxDropCount);
+		stream.print(F("\tQuality Rx: "));
 		stream.println(Quality.RxDrop);
 		stream.print(F("\tRx Drop Rate: "));
 		stream.println(RxDropRate);
-		stream.print(F("\tTx: "));
+		stream.print(F("\tQuality Tx: "));
 		stream.println(Quality.TxDrop);
 		stream.print(F("\tTx Drop Rate: "));
 		stream.println(TxDropRate);

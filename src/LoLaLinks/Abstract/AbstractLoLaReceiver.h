@@ -18,15 +18,16 @@ private:
 	// The incoming plaintext content is decrypted to here, from the RawInPacket.
 	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
+private:
+	Timestamp ReceiveTimestamp{};
+
 protected:
 	/// <summary>
 	/// Rolling packet counter.
 	/// </summary>
-	uint8_t LastValidReceivedCounter = 0;
+	uint16_t LastValidReceivedCounter = 0;
 
-private:
-	Timestamp ReceiveTimestamp{};
-
+	uint16_t ReceivedCounter = 0;
 
 protected:
 	/// <summary>
@@ -159,6 +160,7 @@ public:
 				{
 					// Counter accepted, update local tracker.
 					LastValidReceivedCounter = receivingCounter;
+					ReceivedCounter++;
 
 					Registry->NotifyPacketListener(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],

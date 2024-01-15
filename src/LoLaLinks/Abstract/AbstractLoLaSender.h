@@ -20,8 +20,9 @@ private:
 
 protected:
 	// Rolling counter.
-	uint8_t SendCounter = 0;
+	uint16_t SendCounter = 0;
 
+	uint16_t SentCounter = 0;
 
 protected:
 	virtual const uint8_t GetTxChannel(const uint32_t rollingMicros) { return 0; }
@@ -69,6 +70,7 @@ public:
 			GetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
 			SendCounter++;
+			SentCounter++;
 
 			return true;
 		}

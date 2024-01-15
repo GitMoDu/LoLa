@@ -84,18 +84,18 @@ public:
 	virtual void GetLinkStatus(LoLaLinkStatus& linkStatus) final
 	{
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
-
 		linkStatus.DurationSeconds = LinkTimestamp.Seconds - LinkStartSeconds;
-
+		linkStatus.RxDropCount = QualityTracker.GetRxDropCount();
+		linkStatus.TxCount = SentCounter;
+		linkStatus.RxCount = ReceivedCounter;
+		linkStatus.RxDropRate = QualityTracker.GetRxDropRate();
+		linkStatus.TxDropRate = QualityTracker.GetTxDropRate();
 		linkStatus.Quality.RxRssi = QualityTracker.GetRxRssiQuality();
 		linkStatus.Quality.TxRssi = QualityTracker.GetTxRssiQuality();
 		linkStatus.Quality.RxDrop = QualityTracker.GetRxDropQuality();
 		linkStatus.Quality.TxDrop = QualityTracker.GetTxDropQuality();
 		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
 		linkStatus.Quality.ClockSync = GetClockSyncQuality();
-
-		linkStatus.RxDropRate = QualityTracker.GetRxDropRate();
-		linkStatus.TxDropRate = QualityTracker.GetTxDropRate();
 	}
 
 	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result) final
