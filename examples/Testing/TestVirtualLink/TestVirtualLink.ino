@@ -84,10 +84,10 @@ static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = 
 
 // Virtual Transceiver configurations.
 // <ChannelCount, TxBaseMicros, TxByteNanos, AirBaseMicros, AirByteNanos, HopMicros>
-using SlowSingleChannel = IVirtualTransceiver::Configuration<1, 160, 2000, 500, 20000, 50>;
-using FastSingleChannel = IVirtualTransceiver::Configuration<1, 40, 500, 40, 2000, 10>;
-using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 160, 2000, 500, 20000, 50>;
-using FastMultiChannel = IVirtualTransceiver::Configuration<160, 40, 500, 40, 2000, 10>;
+using SlowSingleChannel = IVirtualTransceiver::Configuration<1, 50, 2000, 500, 20000, 50>;
+using FastSingleChannel = IVirtualTransceiver::Configuration<1, 5, 500, 40, 2000, 10>;
+using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 50, 2000, 500, 20000, 50>;
+using FastMultiChannel = IVirtualTransceiver::Configuration<160, 5, 500, 40, 2000, 10>;
 
 // Used Virtual Driver Configuration.
 using TestRadioConfig = SlowMultiChannel;

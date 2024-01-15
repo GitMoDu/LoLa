@@ -29,6 +29,8 @@ class VirtualTransceiver final
 private:
 	static constexpr uint32_t TRANSCEIVER_ID = 0x00FFFFFF;
 
+	static constexpr uint32_t PAUSE_AFTER_TX_MICROS = Config::HopMicros;
+
 	struct HopRequestStruct
 	{
 		uint32_t StartTimestamp = 0;
@@ -107,6 +109,8 @@ private:
 
 	HopRequestStruct HopRequest{};
 
+	uint32_t LastOut = 0;
+
 	uint8_t CurrentChannel = 0;
 
 	bool DriverEnabled = false;
@@ -171,13 +175,7 @@ public:
 						Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, CurrentChannel);
 					}
 #endif
-					if (!Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, OutGoing.Channel))
-					{
-#if defined(DEBUG_LOLA)
-						PrintName();
-						Serial.println(F("Tx Collision. Driver rejected."));
-#endif
-					}
+					Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, OutGoing.Channel);
 
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
@@ -199,6 +197,7 @@ public:
 				// After TX, TX channel is the current internal channel.
 				Task::enable();
 				OutGoing.Clear();
+				LastOut = micros();
 			}
 		}
 
@@ -273,6 +272,7 @@ public:
 		OutGoing.Clear();
 		HopRequest.Clear();
 
+		LastOut = micros() - PAUSE_AFTER_TX_MICROS;
 		CurrentChannel = 0;
 		DriverEnabled = true;
 
@@ -299,11 +299,11 @@ public:
 	{
 		const uint32_t timestamp = micros();
 
-		if (!DriverEnabled)
+		if (!TxAvailable())
 		{
 #if defined(DEBUG_LOLA)
 			PrintName();
-			Serial.println(F("Tx failed. Driver disabled."));
+			Serial.println(F("Tx failed. Tx not available."));
 #endif
 			return false;
 		}
@@ -381,7 +381,7 @@ public:
 
 	virtual const bool TxAvailable() final
 	{
-		return DriverEnabled && !OutGoing.HasPending() && !Incoming.HasPending();
+		return DriverEnabled && !OutGoing.HasPending() && !Incoming.HasPending() && (micros() - LastOut >= PAUSE_AFTER_TX_MICROS);
 	}
 
 public:
@@ -390,7 +390,7 @@ public:
 		Partner = partner;
 	}
 
-	virtual const bool ReceivePacket(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
+	virtual void ReceivePacket(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		const uint32_t timestamp = micros();
 
@@ -403,7 +403,7 @@ public:
 			Serial.print(F(" Tx:"));
 			Serial.println(channel);
 #endif
-			return false;
+			return;
 		}
 
 		if (Incoming.HasPending())
@@ -414,9 +414,9 @@ public:
 			}
 #if defined(DEBUG_LOLA)
 			PrintName();
-			Serial.println(F("Virtual Rx Collision."));
+			Serial.println(F("Rx Collision, Rx was pending."));
 #endif
-			return false;
+			return;
 		}
 
 		if (OutGoing.HasPending())
@@ -425,7 +425,7 @@ public:
 			PrintName();
 			Serial.println(F("Rx failed. Tx was pending."));
 #endif
-			return false;
+			return;
 		}
 
 		if (HopRequest.HasPending() && ((timestamp - HopRequest.StartTimestamp) < Config::HopMicros))
@@ -434,7 +434,7 @@ public:
 			PrintName();
 			Serial.println(F("Rx failed. Rx was hopping."));
 #endif
-			return false;
+			return;
 		}
 
 		Incoming.Size = packetSize;
@@ -455,8 +455,6 @@ public:
 		}
 #endif
 		Task::enable();
-
-		return true;
 	}
 
 private:
