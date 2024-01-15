@@ -247,12 +247,16 @@ protected:
 				break;
 			case LinkStageEnum::AwaitingLink:
 				SendCounter = RandomSource.GetRandomShort();
+				LastValidReceivedCounter = RandomSource.GetRandomShort();
 				PacketService.RefreshChannel();
 				break;
 			case LinkStageEnum::Linking:
 				Task::enable();
 				break;
 			case LinkStageEnum::Linked:
+				ReceivedCounter = 0;
+				SentCounter = 0;
+
 				// Set startup channel and start hopper.
 				ChannelHopper->SetChannel(GetRxChannel());
 				ChannelHopper->OnLinkStarted();
