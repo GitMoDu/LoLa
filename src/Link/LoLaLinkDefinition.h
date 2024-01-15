@@ -161,18 +161,10 @@ public:
 	static const uint8_t GetAdvertisingChannel(const uint8_t abstractChannel)
 	{
 		// Mod the channel to get the selected pipe.
-		const uint8_t advertisingPipe = abstractChannel % LINKING_ADVERTISING_PIPE_COUNT;
+		const uint_fast16_t advertisingPipe = abstractChannel % LINKING_ADVERTISING_PIPE_COUNT;
 
 		// Scale the pipe back to an abstract channel.
-		switch (advertisingPipe)
-		{
-		case 0:
-			return 0;
-		case (LINKING_ADVERTISING_PIPE_COUNT - 1):
-			return UINT8_MAX;
-		default:
-			return ((uint_least16_t)advertisingPipe * UINT8_MAX) / (LINKING_ADVERTISING_PIPE_COUNT - 1);
-		}
+		return (advertisingPipe * UINT8_MAX) / (LINKING_ADVERTISING_PIPE_COUNT - 1);
 	}
 
 private:
