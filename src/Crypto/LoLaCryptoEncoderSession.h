@@ -47,12 +47,12 @@ public:
 	const bool DecodeInPacket(const uint8_t* inPacket, uint8_t* data, const uint32_t timestamp, uint8_t& counter, const uint8_t dataSize)
 	{
 		// Set packet authentication tag.
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = (timestamp) ^ InputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (timestamp >> 8) ^ InputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (timestamp >> 16) ^ InputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (timestamp >> 24) ^ InputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[LoLaPacketDefinition::ID_INDEX] ^ InputKey[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize ^ InputKey[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX];
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = timestamp;
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (timestamp >> 8);
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (timestamp >> 16);
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (timestamp >> 24);
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[LoLaPacketDefinition::ID_INDEX];
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
 		for (uint_fast8_t i = LoLaCryptoDefinition::CYPHER_TAG_SIZE; i < LoLaCryptoDefinition::CYPHER_IV_SIZE; i++)
 		{
 			Nonce[i] = InputKey[i - LoLaCryptoDefinition::CYPHER_TAG_SIZE];
@@ -62,7 +62,7 @@ public:
 		CryptoHasher.reset();
 
 		// Nonce.
-		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_TAG_SIZE);
+		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
 		// Data.
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::DATA_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
@@ -165,12 +165,12 @@ public:
 	void EncodeOutPacket(const uint8_t* data, uint8_t* outPacket, const uint32_t timestamp, const uint8_t counter, const uint8_t dataSize)
 	{
 		//// Set packet authentication tag.
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = timestamp ^ OutputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (timestamp >> 8) ^ OutputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (timestamp >> 16) ^ OutputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (timestamp >> 24) ^ OutputKey[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = counter ^ OutputKey[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize ^ OutputKey[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX];
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = timestamp;
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = (timestamp >> 8);
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = (timestamp >> 16);
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = (timestamp >> 24);
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = counter;
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE_INDEX] = dataSize;
 		for (uint_fast8_t i = LoLaCryptoDefinition::CYPHER_TAG_SIZE; i < LoLaCryptoDefinition::CYPHER_IV_SIZE; i++)
 		{
 			Nonce[i] = OutputKey[i - LoLaCryptoDefinition::CYPHER_TAG_SIZE];
@@ -180,10 +180,10 @@ public:
 		// Reset Key entropy.
 		CryptoCypher.setKey(ExpandedKey.CypherKey, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
 
-		// Set cypher IV with mixed nonce as authentication data.
+		// Set cypher IV with nonce as authentication data.
 		CryptoCypher.setIV(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
-		// Encrypt the everything but the packet id.
+		// Encrypt data to packet.
 		CryptoCypher.encrypt(&outPacket[LoLaPacketDefinition::DATA_INDEX], data, dataSize);
 
 		// Copy plaintext counter to packet id.		
@@ -195,7 +195,7 @@ public:
 		CryptoHasher.reset();
 
 		// Nonce.
-		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_TAG_SIZE);
+		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
 		// Data.
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::DATA_INDEX],
