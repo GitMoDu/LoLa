@@ -14,10 +14,10 @@ class LoLaCryptoAmSession final : public LoLaCryptoEncoderSession
 private:
 	enum class AmEnum
 	{
+		CalculatingLinkingToken,
 		CalculatingMatch,
 		CalculatingExpandedKey,
 		CalculatingAddressing,
-		CalculatingLinkingToken,
 		AmCached
 	};
 
@@ -27,10 +27,11 @@ private:
 	/// <summary>
 	/// Shared key.
 	/// </summary>
-	uint8_t MatchKey[LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE]{};
+	uint8_t MatchKey[LoLaLinkDefinition::SECRET_KEY_SIZE]{};
 
 private:
-	const uint8_t* LocalAddress = nullptr;
+	const uint8_t* SecretKey;
+	const uint8_t* LocalAddress;
 
 	AmEnum AmState = AmEnum::CalculatingMatch;
 
@@ -38,10 +39,15 @@ private:
 public:
 	/// <summary>
 	/// </summary>
+	/// <param name="secretKey">sizeof = LoLaLinkDefinition::SECRET_KEY_SIZE</param>
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	/// <param name="localAddress">sizeof = LoLaCryptoDefinition::PUBLIC_KEY_SIZE</param>
-	LoLaCryptoAmSession(const uint8_t* accessPassword, const uint8_t* localAddress)
+	LoLaCryptoAmSession(
+		const uint8_t secretKey[LoLaLinkDefinition::SECRET_KEY_SIZE],
+		const uint8_t accessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE],
+		const uint8_t localAddress[LoLaCryptoDefinition::PUBLIC_KEY_SIZE])
 		: LoLaCryptoEncoderSession(accessPassword)
+		, SecretKey(secretKey)
 		, LocalAddress(localAddress)
 	{}
 
@@ -54,8 +60,9 @@ protected:
 public:
 	virtual const bool Setup() final
 	{
-		return LoLaCryptoEncoderSession::Setup() &&
-			LocalAddress != nullptr;
+		return LoLaCryptoEncoderSession::Setup()
+			&& SecretKey != nullptr
+			&& LocalAddress != nullptr;
 	}
 
 public:
@@ -66,7 +73,7 @@ public:
 
 	void ResetAm()
 	{
-		AmState = AmEnum::CalculatingMatch;
+		AmState = AmEnum::CalculatingLinkingToken;
 	}
 
 	void CopyLocalAddressTo(uint8_t* target)
@@ -115,23 +122,21 @@ public:
 	{
 		switch (AmState)
 		{
+		case AmEnum::CalculatingLinkingToken:
+			CalculateLinkingToken(LocalAddress, PartnerAddress, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE);
+			AmState = AmEnum::CalculatingMatch;
+			break;
 		case AmEnum::CalculatingMatch:
 			CalculateMatchKey();
 			AmState = AmEnum::CalculatingExpandedKey;
 			break;
 		case AmEnum::CalculatingExpandedKey:
-			CalculateExpandedKey(MatchKey, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE);
+			CalculateExpandedKey(MatchKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+			ClearMatchKey();
 			AmState = AmEnum::CalculatingAddressing;
 			break;
 		case AmEnum::CalculatingAddressing:
-			CalculateSessionAddressing(
-				LocalAddress,
-				PartnerAddress,
-				LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE);
-			AmState = AmEnum::CalculatingLinkingToken;
-			break;
-		case AmEnum::CalculatingLinkingToken:
-			CalculateLinkingToken();
+			CalculateSessionAddressing(LocalAddress, PartnerAddress, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE);
 			AmState = AmEnum::AmCached;
 			break;
 		case AmEnum::AmCached:
@@ -156,12 +161,22 @@ public:
 	}
 
 private:
+	void ClearMatchKey()
+	{
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::SECRET_KEY_SIZE; i++)
+		{
+			MatchKey[i] = 0;
+		}
+	}
+
 	void CalculateMatchKey()
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
-		{
-			MatchKey[i] = LocalAddress[i] ^ PartnerAddress[i];
-		}
+		CryptoHasher.reset();
+
+		CryptoHasher.update(SecretKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+		CryptoHasher.update(LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+		CryptoHasher.finalize(MatchKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+		CryptoHasher.clear();
 	}
 };
 #endif

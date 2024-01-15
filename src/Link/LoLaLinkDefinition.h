@@ -38,7 +38,7 @@ public:
 	/// <summary>
 	/// Implicit addressing key size.
 	/// </summary>
-	static constexpr uint8_t ADDRESS_KEY_SIZE = LoLaCryptoDefinition::CYPHER_IV_SIZE;
+	static constexpr uint8_t ADDRESS_KEY_SIZE = LoLaCryptoDefinition::CYPHER_IV_SIZE - LoLaCryptoDefinition::CYPHER_TAG_SIZE;
 
 	/// <summary>
 	/// Channel PRNG entropy/key size.
@@ -60,6 +60,16 @@ public:
 	/// </summary>
 	static constexpr uint8_t TIME_SIZE = 4;
 
+	/// <summary>
+	/// Public key equivalent.
+	/// </summary>
+	static constexpr uint8_t PUBLIC_ADDRESS_SIZE = ACCESS_CONTROL_PASSWORD_SIZE;
+
+	/// <summary>
+	/// Shared secret key equivalent. 
+	/// </summary>
+	static constexpr uint8_t SECRET_KEY_SIZE = ACCESS_CONTROL_PASSWORD_SIZE;
+
 public:
 	/// <summary>
 	/// The raw keys that are used during runtime encryption.
@@ -75,17 +85,12 @@ public:
 		/// <summary>
 		/// Cypher Iv.
 		/// </summary>
-		uint8_t CypherIvSeed[LoLaCryptoDefinition::CYPHER_IV_SIZE];
+		uint8_t CypherIvSeed[ADDRESS_KEY_SIZE];
 
 		/// <summary>
 		/// Channel PRNG seed.
 		/// </summary>
 		uint8_t ChannelSeed[CHANNEL_KEY_SIZE];
-
-		///// <summary>
-		///// Ephemeral session linking start token.
-		///// </summary>
-		uint8_t LinkingSeed[LINKING_TOKEN_SIZE];
 	};
 
 	static constexpr uint8_t HKDFSize = sizeof(ExpandedKeyStruct);

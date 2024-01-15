@@ -138,7 +138,9 @@ public:
 			PkeState = PkeEnum::CalculatingLinkingToken;
 			break;
 		case PkeEnum::CalculatingLinkingToken:
-			CalculateLinkingToken();
+			CalculateLinkingToken(LocalPublicKey,
+				PartnerPublicKey,
+				LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 			PkeState = PkeEnum::CalculatingSessionToken;
 			break;
 		case PkeEnum::CalculatingSessionToken:

@@ -25,6 +25,12 @@ public:
 		xoodyak_hash_init(&State);
 	}
 
+	void update(const uint8_t value)
+	{
+		Match[0] = value;
+		xoodyak_hash_absorb(&State, Match, sizeof(uint8_t));
+	}
+
 	void update(const uint8_t* source, const uint8_t size)
 	{
 		xoodyak_hash_absorb(&State, source, size);

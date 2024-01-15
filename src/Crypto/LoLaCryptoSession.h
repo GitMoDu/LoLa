@@ -64,8 +64,8 @@ protected:
 	/// </summary>
 	const uint8_t* AccessPassword;
 
-private:
 	uint8_t LinkingToken[LoLaLinkDefinition::LINKING_TOKEN_SIZE]{};
+private:
 	uint8_t LocalChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE]{};
 	uint8_t PartnerChallengeCode[LoLaCryptoDefinition::CHALLENGE_CODE_SIZE]{};
 	uint8_t PartnerChallengeSignature[LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE]{};
@@ -208,13 +208,13 @@ public:
 	void CalculateSessionAddressing(const uint8_t* localKey, const uint8_t* partnerKey, const uint8_t keySize)
 	{
 		CryptoHasher.reset();
-		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaCryptoDefinition::CYPHER_IV_SIZE);
+		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.update(partnerKey, keySize);
 		CryptoHasher.update(localKey, keySize);
 		CryptoHasher.finalize(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
 		CryptoHasher.reset();
-		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaCryptoDefinition::CYPHER_IV_SIZE);
+		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.update(localKey, keySize);
 		CryptoHasher.update(partnerKey, keySize);
 		CryptoHasher.finalize(OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
@@ -222,13 +222,17 @@ public:
 	}
 
 	/// <summary>
-	/// Hash the linking seed to get a common linking token,
-	/// without exposing raw key data.
 	/// </summary>
-	void CalculateLinkingToken()
+	void CalculateLinkingToken(const uint8_t* localKey, const uint8_t* partnerKey, const uint8_t keySize)
 	{
 		CryptoHasher.reset();
-		CryptoHasher.update(ExpandedKey.LinkingSeed, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+
+		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
+		{
+			CryptoHasher.update(localKey[i] ^ partnerKey[i]);
+		}
+
 		CryptoHasher.finalize(LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
 		CryptoHasher.clear();
 	}
@@ -303,7 +307,6 @@ private:
 	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
 	{
 		CryptoHasher.reset();
-		CryptoHasher.update(ExpandedKey.LinkingSeed, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
 		CryptoHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 		CryptoHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
 		CryptoHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);

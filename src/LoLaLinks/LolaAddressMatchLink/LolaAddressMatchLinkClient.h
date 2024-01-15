@@ -4,7 +4,6 @@
 #define _LOLA_ADDRESS_MATCH_LINK_CLIENT_
 
 #include "..\Abstract\AbstractLoLaLinkClient.h"
-
 #include "..\..\Crypto\LoLaCryptoAmSession.h"
 
 /// <summary>
@@ -47,10 +46,11 @@ public:
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop,
+		const uint8_t* secretKey,
 		const uint8_t* accessPassword,
 		const uint8_t* localAddress)
 		: BaseClass(scheduler, &RegistryInstance, &Session, transceiver, cycles, entropy, duplex, hop)
-		, Session(accessPassword, localAddress)
+		, Session(secretKey, accessPassword, localAddress)
 	{}
 
 	const bool Setup()
