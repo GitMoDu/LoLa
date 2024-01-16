@@ -65,8 +65,8 @@ public:
 		// Nonce.
 		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
-		// Data.
-		CryptoHasher.update(&inPacket[LoLaPacketDefinition::DATA_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
+		// Content.
+		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 		if (!CryptoHasher.macMatches(&inPacket[LoLaPacketDefinition::MAC_INDEX]))
@@ -196,9 +196,8 @@ public:
 		// Nonce.
 		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
-		// Data.
-		CryptoHasher.update(&outPacket[LoLaPacketDefinition::DATA_INDEX],
-			LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
+		// Content.
+		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// HMAC finalized and copied to packet.
 		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX],
