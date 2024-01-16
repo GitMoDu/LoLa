@@ -35,6 +35,7 @@ private:
 	uint32_t LastUnlinkedSent = 0;
 
 	uint32_t LinkStartSeconds = 0;
+	uint16_t LinkSentAtStart = 0;
 
 protected:
 	/// <summary>
@@ -86,7 +87,7 @@ public:
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
 		linkStatus.DurationSeconds = LinkTimestamp.Seconds - LinkStartSeconds;
 		linkStatus.RxDropCount = QualityTracker.GetRxDropCount();
-		linkStatus.TxCount = SentCounter;
+		linkStatus.TxCount = SendCounter - LinkSentAtStart;
 		linkStatus.RxCount = ReceivedCounter;
 		linkStatus.RxDropRate = QualityTracker.GetRxDropRate();
 		linkStatus.TxDropRate = QualityTracker.GetTxDropRate();
@@ -216,6 +217,7 @@ protected:
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestampMonotonic(LinkTimestamp);
 			LinkStartSeconds = LinkTimestamp.Seconds;
+			LinkSentAtStart = SendCounter;
 			QualityTracker.Reset(millis());
 			PacketService.RefreshChannel();
 			break;
