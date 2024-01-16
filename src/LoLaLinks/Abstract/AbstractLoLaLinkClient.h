@@ -107,6 +107,7 @@ protected:
 			{
 				WaitingState = WaitingStateEnum::SessionCreation;
 				ResetSessionCreation();
+				ResetStageStartTime();
 				Task::enable();
 #if defined(DEBUG_LOLA)
 				LinkingStarted = millis();
@@ -369,6 +370,7 @@ protected:
 		switch (WaitingState)
 		{
 		case WaitingStateEnum::Sleeping:
+			ResetStageStartTime();
 			Task::disable();
 			break;
 		case WaitingStateEnum::SearchingLink:
@@ -387,11 +389,11 @@ protected:
 			}
 			break;
 		case WaitingStateEnum::SessionCreation:
-			if (GetStageElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
+			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
-				Serial.println(F("SessionCreation timed out. Going back to search for link."));
+				Serial.println(F("SessionCreation timed out. Going back to sleep."));
 #endif
 				WaitingState = WaitingStateEnum::SearchingLink;
 				Task::enable();

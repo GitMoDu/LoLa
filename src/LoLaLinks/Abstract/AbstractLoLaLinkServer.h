@@ -409,7 +409,7 @@ protected:
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
-				Serial.println(F("OnAwaitingLink timed out. Going to sleep."));
+				Serial.println(F("SessionCreation timed out. Going to sleep."));
 #endif
 				ServerSleep();
 			}
