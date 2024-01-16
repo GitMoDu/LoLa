@@ -427,19 +427,29 @@ private:
 		Serial.print(rejectionLongDuration);
 		Serial.println(F(" us"));
 
-		// Measure PRNG Hop calculation time.
-		uint8_t target = 0;
-		uint32_t source = UINT32_MAX / 4;
+		// Measure Timestamping time.
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			target = Encoder->GetPrngHopChannel(source);
+			SyncClock.GetTimestampMonotonic(LinkTimestamp);
 		}
-		uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
-		calculationDuration += target;
+		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
+
+		Serial.println(F("Timestamping duration: "));
+		Serial.print(timestampingDuration);
+		Serial.println(F(" ns."));
+
+		// Measure PRNG Hop calculation time.
+		volatile bool dummy = 0;
+		start = micros();
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			dummy ^= Encoder->GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
+		}
+		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 
 		Serial.println(F("PRNG Hop calculation: "));
-		Serial.print(calculationDuration - target);
+		Serial.print(calculationDuration);
 		Serial.println(F(" ns."));
 #endif
 
