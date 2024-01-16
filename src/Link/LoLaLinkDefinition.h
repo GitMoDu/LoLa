@@ -102,10 +102,11 @@ public:
 	static constexpr uint8_t ROLLING_COUNTER_ERROR = 51;
 
 	/// <summary>
-	/// Link switch over will tolerate +-0.5% error (us) at the start.
+	/// Period in microseconds.
+	/// Link switch over will tolerate a small error at the start.
 	/// During link time, clock will be continously tuned for higher accuracy.
 	/// </summary>
-	static constexpr int8_t LINKING_CLOCK_TOLERANCE = 50;
+	static constexpr int8_t LINKING_CLOCK_TOLERANCE = 25;
 
 	/// <summary>
 	/// Pre-link channels are spread over the pipe count.
