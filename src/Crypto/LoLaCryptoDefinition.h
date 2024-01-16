@@ -77,7 +77,6 @@ public:
 	/// </summary>
 	static constexpr uint8_t CYPHER_TAG_TIMESTAMP_INDEX = 0;
 	static constexpr uint8_t CYPHER_TAG_ID_INDEX = CYPHER_TAG_TIMESTAMP_INDEX + TIME_TOKEN_KEY_SIZE;
-	static constexpr uint8_t CYPHER_TAG_SIZE_INDEX = CYPHER_TAG_ID_INDEX + LoLaPacketDefinition::ID_SIZE;
-	static constexpr uint8_t CYPHER_TAG_SIZE = CYPHER_TAG_SIZE_INDEX + 1;
+	static constexpr uint8_t CYPHER_TAG_SIZE = CYPHER_TAG_ID_INDEX + LoLaPacketDefinition::ID_SIZE;
 };
 #endif

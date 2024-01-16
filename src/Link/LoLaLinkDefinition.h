@@ -97,9 +97,9 @@ public:
 
 public:
 	/// <summary>
-	/// Link will tolerate up to ~20% dropped packets without any correction.
+	/// Link will tolerate some dropped packets by forwarding the rolling counter.
 	/// </summary>
-	static constexpr uint8_t ROLLING_COUNTER_ERROR = 51;
+	static constexpr uint16_t ROLLING_COUNTER_ERROR = 500;
 
 	/// <summary>
 	/// Period in microseconds.

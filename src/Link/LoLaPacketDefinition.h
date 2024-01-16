@@ -13,7 +13,8 @@
 /// MAC_2
 /// MAC_3
 /// ________	Content start.
-/// ID				Id rolling counter 1 Byte.
+/// ID_0			Id rolling counter 2 Bytes.
+/// ID_1
 /// ________	Data Start.
 /// PORT			Endpoint port 1 Byte.
 /// 
@@ -28,7 +29,7 @@ struct LoLaPacketDefinition
 	static constexpr uint8_t MAC_INDEX = 0;
 	static constexpr uint8_t MAC_SIZE = 4;
 	static constexpr uint8_t ID_INDEX = (MAC_INDEX + MAC_SIZE);
-	static constexpr uint8_t ID_SIZE = 1;
+	static constexpr uint8_t ID_SIZE = 2;
 	static constexpr uint8_t PORT_INDEX = ID_INDEX + ID_SIZE;
 	static constexpr uint8_t PORT_SIZE = 1;
 	static constexpr uint8_t PAYLOAD_INDEX = PORT_INDEX + PORT_SIZE;

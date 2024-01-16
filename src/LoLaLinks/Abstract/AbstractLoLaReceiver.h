@@ -89,7 +89,7 @@ public:
 	{
 		const uint8_t receivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
 
-		uint8_t receivingCounter = 0;
+		uint16_t receivingCounter = 0;
 		uint8_t receivingLost = 0;
 
 		switch (LinkStage)
@@ -189,7 +189,7 @@ protected:
 	{
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
-		uint8_t receivingCounter = 0;
+		uint16_t receivingCounter = 0;
 
 		SyncClock.GetTimestamp(ReceiveTimestamp);
 		ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
@@ -199,11 +199,10 @@ protected:
 	}
 
 private:
-	const bool ValidateCounter(const uint8_t counter, uint8_t& receiveLost)
+	const bool ValidateCounter(const uint16_t counter, uint8_t& receiveLost)
 	{
-		const uint8_t counterRoll = counter - LastValidReceivedCounter;
-		if (counterRoll > 0
-			&& counterRoll < LoLaLinkDefinition::ROLLING_COUNTER_ERROR)
+		const uint16_t counterRoll = counter - LastValidReceivedCounter;
+		if (counterRoll < LoLaLinkDefinition::ROLLING_COUNTER_ERROR)
 		{
 			receiveLost = counterRoll - 1;
 			return true;
