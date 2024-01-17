@@ -33,6 +33,15 @@ public:
 	{
 		if (EntropySource != nullptr)
 		{
+			if (EntropySource->GetNoise() == 0
+				&& EntropySource->GetNoise() == 0)
+			{
+#if defined(DEBUG_LOLA)
+				Serial.println(F("Entropy source not providing entropy."));
+#endif
+				return false;
+			}
+
 			RandomSeed();
 
 			return true;
@@ -64,6 +73,14 @@ public:
 	/// <returns>Random value [0 ; maxValue].</returns>
 	const uint32_t GetRandomLong(const uint32_t maxValue)
 	{
+		if (maxValue == UINT32_MAX)
+		{
+			return GetNextRandom();
+		}
+		else
+		{
+			return GetNextRandom() % (maxValue + 1);
+		}
 		const uint64_t bounded = ((uint64_t)GetNextRandom() * maxValue);
 
 		return bounded >> 32;
@@ -84,6 +101,7 @@ public:
 
 	void RandomReseed()
 	{
+		Rng.inc += EntropySource->GetNoise();
 		GetNextRandom();
 	}
 
