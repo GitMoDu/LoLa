@@ -141,7 +141,7 @@ static int RNG(uint8_t* dest, unsigned size)
 {
 	for (size_t i = 0; i < size; i++)
 	{
-		dest[i] = EntropySource.GetNoise() % UINT8_MAX;
+		dest[i] = EntropySource.GetNoise();
 	}
 
 	return 1;
