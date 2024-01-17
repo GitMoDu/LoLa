@@ -68,7 +68,9 @@ public:
 		, ECC_CURVE(uECC_secp160r1())
 		, LocalPublicKey(publicKey)
 		, LocalPrivateKey(privateKey)
-	{}
+	{
+		uECC_set_rng(0);
+	}
 
 public:
 	const bool SessionIsCached()
