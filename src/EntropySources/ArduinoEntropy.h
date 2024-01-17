@@ -6,7 +6,7 @@
 #include <Arduino.h>
 
 /// <summary>
-/// Low quality entropy, but it gets the job done anyways.
+/// Low quality entropy, based on fixed "noise" and Arduino Random implementation.
 /// </summary>
 class ArduinoEntropy final : public virtual IEntropy
 {
@@ -29,33 +29,50 @@ public:
 
 		return &ExtraNoise;
 	}
+};
 
-	//static int RNG(uint8_t* dest, unsigned size) {
-	//	// Use the least-significant bits from the ADC for an unconnected pin (or connected to a source of 
-	//	// random noise). This can take a long time to generate random data if the result of analogRead(0) 
-	//	// doesn't change very frequently.
-	//	while (size) {
-	//		uint8_t val = 0;
-	//		for (unsigned i = 0; i < 8; ++i) {
-	//			int init = analogRead(EntropyPin);
-	//			int count = 0;
-	//			while (analogRead(EntropyPin) == init) {
-	//				++count;
-	//			}
-	//
-	//			if (count == 0) {
-	//				val = (val << 1) | (init & 0x01);
-	//			}
-	//			else {
-	//				val = (val << 1) | (count & 0x01);
-	//			}
-	//		}
-	//		*dest = val;
-	//		++dest;
-	//		--size;
-	//	}
-	//	// NOTE: it would be a good idea to hash the resulting random data using SHA-256 or similar.
-	//	return 1;
-	//}
+
+/// <summary>
+/// Uses a (disconnected) Pin as an analog entropy source.
+/// </summary>
+/// <typeparam name="EntropyPin">Analog input pin number.</typeparam>
+template<const uint8_t EntropyPin>
+class ArduinoPinEntropy final : public virtual IEntropy
+{
+private:
+	static constexpr uint8_t NOISE_CAPTURE_STEPS = sizeof(uint32_t) * 8;
+
+private:
+	const uint8_t ExtraNoise;
+
+public:
+	ArduinoPinEntropy(const uint8_t extraNoise = 0) : IEntropy()
+		, ExtraNoise(extraNoise)
+	{}
+
+	/// <summary>
+	/// The ADCs least significant bit is the source of entropy.
+	/// </summary>
+	/// <returns>32 bits of entropy.</returns>
+	virtual const uint32_t GetNoise() final
+	{
+		pinMode(EntropyPin, INPUT_ANALOG);
+
+		uint32_t noise = 0;
+
+		for (uint_least8_t i = 0; i < NOISE_CAPTURE_STEPS; i++)
+		{
+			noise |= (analogRead(EntropyPin) & 0b00000001) << i;
+		}
+
+		return noise;
+	}
+
+	virtual const uint8_t* GetUniqueId(uint8_t& idSize) final
+	{
+		idSize = sizeof(uint8_t);
+
+		return &ExtraNoise;
+	}
 };
 #endif
