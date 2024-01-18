@@ -17,13 +17,12 @@ public:
 	static constexpr uint8_t PKE_CURVE_SIZE = 160;
 
 	/// <summary>
-	/// Shared secret key size.
+	/// Shared secret key size in bytes.
 	/// </summary>
 	static constexpr uint8_t SHARED_KEY_SIZE = PKE_CURVE_SIZE / 8;
 
 	/// <summary>
-	/// Public key.
-	/// Uncompressed size is 40 bytes.
+	/// Public key, uncompressed.
 	/// </summary>
 	static constexpr uint8_t PUBLIC_KEY_SIZE = SHARED_KEY_SIZE * 2;
 
