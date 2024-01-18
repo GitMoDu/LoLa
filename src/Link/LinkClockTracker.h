@@ -79,12 +79,12 @@ private:
 class LinkClientClockTracker
 {
 private:
-	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
-	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 3;
-	static constexpr uint16_t DEVIATION_REFERENCE = ERROR_REFERENCE / 2;
+	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 2;
+	static constexpr uint8_t DEVIATION_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE / 4;
 
 	static constexpr uint16_t CLOCK_TUNE_PERIOD = 1800;
 	static constexpr uint8_t CLOCK_TUNE_RETRY_PERIOD = 42;
+	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
 	static constexpr uint16_t CLOCK_TUNE_MIN_PERIOD = (CLOCK_TUNE_RETRY_PERIOD * CLOCK_SYNC_SAMPLE_COUNT);
 
 	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
