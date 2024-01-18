@@ -18,8 +18,8 @@ public:
 	static constexpr uint8_t LOLA_VERSION = 0;
 
 	// <summary>
+	/// When unlinked, top 2 ports are used.
 	/// When linked, top port is reserved.
-	/// When unlinked, only top 2 ports are used.
 	/// </summary>
 	static constexpr uint8_t LINK_PORT_ALLOCATION = 1;
 	static constexpr uint8_t UN_LINKED_PORT_ALLOCATION = 2;
@@ -106,7 +106,7 @@ public:
 	/// Link switch over will tolerate a small error at the start.
 	/// During link time, clock will be continously tuned for higher accuracy.
 	/// </summary>
-	static constexpr int8_t LINKING_CLOCK_TOLERANCE = 25;
+	static constexpr uint8_t LINKING_CLOCK_TOLERANCE = 25;
 
 	/// <summary>
 	/// Pre-link channels are spread over the pipe count.
@@ -141,11 +141,6 @@ public:
 	/// Report target update rate. Slow value, let the main services hog the link.
 	/// </summary>
 	static constexpr uint16_t REPORT_UPDATE_PERIOD = 1000 / 4;
-
-	/// <summary>
-	/// How many microseconds is the client allowed to tune its clock on one tune request. 
-	/// </summary>
-	static constexpr int16_t CLOCK_TUNE_RANGE_MICROS = 250;
 
 	enum class LinkType : uint8_t
 	{

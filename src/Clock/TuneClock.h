@@ -42,13 +42,13 @@ public:
 		{
 			const int_fast16_t preTune = TuneMicros;
 
-			if (ppm > LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+			if (ppm > LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 			{
-				TuneMicros = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+				TuneMicros = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 			}
-			else if (ppm < -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+			else if (ppm < -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 			{
-				TuneMicros = -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+				TuneMicros = -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 			}
 			else
 			{
@@ -77,24 +77,24 @@ public:
 			const int_fast16_t preTune = TuneMicros;
 			if (offsetMicros > 0)
 			{
-				if ((int32_t)TuneMicros + offsetMicros < LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+				if ((int32_t)TuneMicros + offsetMicros < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 				{
 					TuneMicros += offsetMicros;
 				}
 				else
 				{
-					TuneMicros = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+					TuneMicros = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 				}
 			}
 			else if (offsetMicros < 0)
 			{
-				if ((int32_t)TuneMicros + offsetMicros > -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+				if ((int32_t)TuneMicros + offsetMicros > -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 				{
 					TuneMicros += offsetMicros;
 				}
 				else
 				{
-					TuneMicros = -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+					TuneMicros = -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 				}
 			}
 
@@ -130,13 +130,13 @@ protected:
 private:
 	const uint32_t GetAdaptiveSmearPeriod()
 	{
-		if (TuneMicros >= LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		if (TuneMicros >= LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 		{
-			return ONE_SECOND_MILLIS / LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+			return ONE_SECOND_MILLIS / LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 		}
-		else if (TuneMicros <= -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		else if (TuneMicros <= -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 		{
-			return ONE_SECOND_MILLIS / LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+			return ONE_SECOND_MILLIS / LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 		}
 		else if (TuneMicros > 0)
 		{

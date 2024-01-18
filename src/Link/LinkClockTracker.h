@@ -8,16 +8,10 @@
 
 #include "Quality\QualityFilters.h"
 
-struct AbstractClockTracker
-{
-	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
-};
-
-class LinkServerClockTracker : public AbstractClockTracker
+class LinkServerClockTracker
 {
 private:
-	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS / 2;
-
+	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 5;
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 220;
 
 private:
@@ -82,15 +76,15 @@ private:
 	}
 };
 
-class LinkClientClockTracker : public AbstractClockTracker
+class LinkClientClockTracker
 {
 private:
-	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS / 5;
+	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
+	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 3;
+	static constexpr uint16_t DEVIATION_REFERENCE = ERROR_REFERENCE / 2;
 
-	static constexpr uint16_t DEVIATION_REFERENCE = ((uint32_t)ERROR_REFERENCE) / CLOCK_SYNC_SAMPLE_COUNT;
-
-	static constexpr uint8_t CLOCK_TUNE_RETRY_PERIOD = 42;
 	static constexpr uint16_t CLOCK_TUNE_PERIOD = 1800;
+	static constexpr uint8_t CLOCK_TUNE_RETRY_PERIOD = 42;
 	static constexpr uint16_t CLOCK_TUNE_MIN_PERIOD = (CLOCK_TUNE_RETRY_PERIOD * CLOCK_SYNC_SAMPLE_COUNT);
 
 	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
@@ -204,13 +198,13 @@ public:
 		}
 
 		int16_t cappedError = 0;
-		if (error > LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		if (error > LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 		{
-			cappedError = LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+			cappedError = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 		}
-		else if (error < -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS)
+		else if (error < -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 		{
-			cappedError = -LoLaLinkDefinition::CLOCK_TUNE_RANGE_MICROS;
+			cappedError = -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
 		}
 		else
 		{
