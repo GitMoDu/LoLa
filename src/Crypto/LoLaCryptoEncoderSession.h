@@ -47,7 +47,7 @@ public:
 	/// <returns>True if packet was accepted.</returns>
 	const bool DecodeInPacket(const uint8_t* inPacket, uint8_t* data, const uint32_t timestamp, uint16_t& counter, const uint8_t dataSize)
 	{
-		// Set packet authentication tag.
+		// Set Nonce.
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = timestamp;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = timestamp >> 8;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = timestamp >> 16;
@@ -162,7 +162,7 @@ public:
 	/// <param name="dataSize"></param>
 	void EncodeOutPacket(const uint8_t* data, uint8_t* outPacket, const uint32_t timestamp, const uint16_t counter, const uint8_t dataSize)
 	{
-		//// Set packet authentication tag.
+		//// Set Nonce.
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX] = timestamp;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = timestamp >> 8;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = timestamp >> 16;

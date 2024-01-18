@@ -28,7 +28,7 @@ public:
 	/// <summary>
 	/// 32 bit session id.
 	/// </summary>
-	static constexpr uint8_t SESSION_ID_SIZE = 4;
+	static constexpr uint8_t SESSION_ID_SIZE = 3;
 
 	/// <summary>
 	/// 32 bit protocol id.
