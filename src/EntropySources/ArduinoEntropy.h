@@ -14,7 +14,8 @@ private:
 	const uint8_t ExtraNoise;
 
 public:
-	ArduinoEntropy(const uint8_t extraNoise = 0) : IEntropy()
+	ArduinoEntropy(const uint8_t extraNoise = 0)
+		: IEntropy()
 		, ExtraNoise(extraNoise)
 	{}
 
@@ -31,13 +32,12 @@ public:
 	}
 };
 
-
 /// <summary>
 /// Uses a (disconnected) Pin as an analog entropy source.
 /// </summary>
 /// <typeparam name="EntropyPin">Analog input pin number.</typeparam>
 template<const uint8_t EntropyPin>
-class ArduinoPinEntropy final : public virtual IEntropy
+class ArduinoPinEntropy final : public Abstract1BitEntropy
 {
 private:
 	static constexpr uint8_t NOISE_CAPTURE_STEPS = sizeof(uint32_t) * 8;
@@ -46,33 +46,34 @@ private:
 	const uint8_t ExtraNoise;
 
 public:
-	ArduinoPinEntropy(const uint8_t extraNoise = 0) : IEntropy()
+	ArduinoPinEntropy(const uint8_t extraNoise = 0)
+		: Abstract1BitEntropy()
 		, ExtraNoise(extraNoise)
 	{}
-
-	/// <summary>
-	/// The ADCs least significant bit is the source of entropy.
-	/// </summary>
-	/// <returns>32 bits of entropy.</returns>
-	virtual const uint32_t GetNoise() final
-	{
-		pinMode(EntropyPin, INPUT_ANALOG);
-
-		uint32_t noise = 0;
-
-		for (uint_least8_t i = 0; i < NOISE_CAPTURE_STEPS; i++)
-		{
-			noise |= (analogRead(EntropyPin) & 0b00000001) << i;
-		}
-
-		return noise;
-	}
 
 	virtual const uint8_t* GetUniqueId(uint8_t& idSize) final
 	{
 		idSize = sizeof(uint8_t);
 
 		return &ExtraNoise;
+	}
+
+protected:
+	virtual void OpenEntropy() final
+	{
+		pinMode(EntropyPin, INPUT_ANALOG);
+	}
+
+	virtual void CloseEntropy() final
+	{}
+
+	/// <summary>
+	/// The ADC's least significant bit is the source of entropy.
+	/// </summary>
+	/// <returns>1 bit of entropy.</returns>
+	virtual bool Get1BitEntropy() final
+	{
+		return (analogRead(EntropyPin) & 0x01) > 0;
 	}
 };
 #endif
