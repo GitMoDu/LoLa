@@ -14,18 +14,24 @@ public:
 	/// Elliptic-curve Diffie–Hellman public key exchange.
 	/// SECP 160 R1
 	/// </summary>
+	static constexpr uint8_t PKE_CURVE_SIZE = 160;
+
+	/// <summary>
+	/// Shared secret key size.
+	/// </summary>
+	static constexpr uint8_t SHARED_KEY_SIZE = PKE_CURVE_SIZE / 8;
 
 	/// <summary>
 	/// Public key.
 	/// Uncompressed size is 40 bytes.
 	/// </summary>
-	static constexpr uint8_t PUBLIC_KEY_SIZE = 40;
+	static constexpr uint8_t PUBLIC_KEY_SIZE = SHARED_KEY_SIZE * 2;
 
 	/// <summary>
 	/// Compressed Public key to be exchanged.
 	/// 161 bits take 21 bytes.
 	/// </summary>
-	static constexpr uint8_t COMPRESSED_KEY_SIZE = 21;
+	static constexpr uint8_t COMPRESSED_KEY_SIZE = SHARED_KEY_SIZE + 1;
 
 	/// <summary>
 	/// Private key size.

@@ -28,8 +28,6 @@ private:
 
 	static constexpr uint8_t MATCHING_TOKEN_SIZE = 4;
 
-	static constexpr uint8_t ECC_KEY_SIZE = 20;
-
 private:
 	const uECC_Curve_t* ECC_CURVE; // uECC_secp160r1
 
@@ -48,7 +46,7 @@ private:
 	/// <summary>
 	/// Shared secret key.
 	/// </summary>
-	uint8_t SecretKey[ECC_KEY_SIZE]{};
+	uint8_t SecretKey[LoLaCryptoDefinition::SHARED_KEY_SIZE]{};
 
 private:
 	const uint8_t* LocalPublicKey = nullptr;
@@ -128,7 +126,7 @@ public:
 			PkeState = PkeEnum::CalculatingExpandedKey;
 			break;
 		case PkeEnum::CalculatingExpandedKey:
-			CalculateExpandedKey(SecretKey, ECC_KEY_SIZE);
+			CalculateExpandedKey(SecretKey, LoLaCryptoDefinition::SHARED_KEY_SIZE);
 			PkeState = PkeEnum::CalculatingAddressing;
 			break;
 		case PkeEnum::CalculatingAddressing:
