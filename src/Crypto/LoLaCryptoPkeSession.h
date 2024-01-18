@@ -89,8 +89,7 @@ public:
 	{
 		return LoLaCryptoEncoderSession::Setup() &&
 			LocalPublicKey != nullptr
-			&& LocalPrivateKey != nullptr
-			&& MATCHING_TOKEN_SIZE == LoLaPacketDefinition::MAC_SIZE;
+			&& LocalPrivateKey != nullptr;
 	}
 
 	virtual void SetSessionId(const uint8_t* sessionId)
