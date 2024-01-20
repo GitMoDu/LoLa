@@ -18,6 +18,8 @@ public:
 		return listener != nullptr && rollingTimestamp != nullptr;
 	}
 
+	virtual void SetHopTimestampOffset(const uint16_t offset) final { }
+
 	virtual const uint8_t GetChannel() final
 	{
 		return PermanentChannel;

@@ -26,7 +26,15 @@ class AbstractLoLaLinkPacket
 private:
 	using BaseClass = AbstractLoLaReceiver;
 
-	static constexpr uint_least16_t CALIBRATION_ROUNDS = F_CPU / 1500000L;
+	/// <summary>
+	/// Faster MCUs need more rounds for an accurate calibration.
+	/// </summary>
+	static constexpr uint16_t CALIBRATION_ROUNDS = F_CPU / 1500000L;
+
+	/// <summary>
+	/// Slower MCUs need a bigger look ahead to counter scheduler latency.
+	/// </summary>
+	static constexpr uint16_t HOPPER_OFFSET = 1500000000 / F_CPU;
 
 protected:
 	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
@@ -246,6 +254,7 @@ protected:
 				Task::disable();
 				break;
 			case LinkStageEnum::AwaitingLink:
+				ChannelHopper->OnLinkStopped();
 				SendCounter = RandomSource.GetRandomShort();
 				LastValidReceivedCounter = RandomSource.GetRandomShort();
 				PacketService.RefreshChannel();
@@ -382,6 +391,40 @@ private:
 			longDuration = shortDuration + 1;
 		}
 
+		// Measure Timestamping time.
+		start = micros();
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			SyncClock.GetTimestampMonotonic(LinkTimestamp);
+		}
+		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
+
+		Serial.println(F("Timestamping duration: "));
+		Serial.print(timestampingDuration);
+		Serial.println(F(" ns."));
+
+		// Measure PRNG Hop calculation time.
+		volatile bool dummy = 0;
+		start = micros();
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			dummy ^= Encoder->GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
+		}
+		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
+
+		const uint32_t prngHopDuration = (timestampingDuration + calculationDuration) / 1000;
+
+		if (prngHopDuration > (UINT16_MAX - HOPPER_OFFSET))
+		{
+#if defined(DEBUG_LOLA)
+			Serial.println(F("Hopper duration too long: "));
+			Serial.print(prngHopDuration);
+			Serial.println(F(" us."));
+#endif
+			return false;
+		}
+
+
 #if defined(DEBUG_LOLA)
 		const uint32_t calibrationDuration = micros() - calibrationStart;
 		Serial.print(F("Calibration done. ("));
@@ -425,32 +468,18 @@ private:
 		Serial.print('\t');
 		Serial.print(rejectionLongDuration);
 		Serial.println(F(" us"));
-
-		// Measure Timestamping time.
-		start = micros();
-		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
-		{
-			SyncClock.GetTimestampMonotonic(LinkTimestamp);
-		}
-		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
-
-		Serial.println(F("Timestamping duration: "));
-		Serial.print(timestampingDuration);
-		Serial.println(F(" ns."));
-
-		// Measure PRNG Hop calculation time.
-		volatile bool dummy = 0;
-		start = micros();
-		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
-		{
-			dummy ^= Encoder->GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
-		}
-		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
-
 		Serial.println(F("PRNG Hop calculation: "));
 		Serial.print(calculationDuration);
 		Serial.println(F(" ns."));
+		Serial.println(F("Hopper offset: "));
+		Serial.print(HOPPER_OFFSET);
+		Serial.println(F(" us."));
+		Serial.println(F("Hopper look forward: "));
+		Serial.print(prngHopDuration + HOPPER_OFFSET);
+		Serial.println(F(" us."));
 #endif
+
+		ChannelHopper->SetHopTimestampOffset(prngHopDuration + HOPPER_OFFSET);
 
 		return SetSendCalibration(shortDuration, longDuration);
 	}

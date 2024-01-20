@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <ITimestamp.h>
 
+/// <summary>
+/// Interface for generic channel hopper/manager.
+/// </summary>
 class IChannelHop
 {
 public:
@@ -40,8 +43,9 @@ public:
 	virtual const uint32_t GetTimedHopIndex() { return 0; }
 
 	virtual void OnLinkStarted() { }
-
 	virtual void OnLinkStopped() { }
+
+	virtual void SetHopTimestampOffset(const uint16_t offset) { }
 	///
 };
 

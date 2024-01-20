@@ -51,6 +51,8 @@ private:
 	uint32_t LastHopIndex = 0;
 	uint32_t LastHop = 0;
 
+	uint16_t HopTimestampOffset = 0;
+
 	HopperStateEnum HopperState = HopperStateEnum::Disabled;
 
 	uint8_t FixedChannel = 0;
@@ -72,6 +74,11 @@ public:
 		RollingTimestamp = rollingTimestamp;
 
 		return RollingTimestamp != nullptr && Listener != nullptr && HopPeriodMicros > 1;
+	}
+
+	virtual void SetHopTimestampOffset(const uint16_t offset) final
+	{
+		HopTimestampOffset = offset;
 	}
 
 	// General Channel Interfaces //
@@ -122,12 +129,11 @@ public:
 	virtual bool Callback() final
 	{
 		const uint32_t rollingTimestamp = RollingTimestamp->GetRollingTimestamp();
-		const uint32_t hopIndex = GetHopIndex(rollingTimestamp);
 
 		switch (HopperState)
 		{
 		case HopperStateEnum::StartHop:
-			LastHopIndex = hopIndex;
+			LastHopIndex = GetHopIndex(rollingTimestamp);
 			LastHop = millis();
 			// Fire first notification, to make sure we're starting on the right Rx channel.
 			Listener->OnChannelHopTime();
@@ -135,7 +141,7 @@ public:
 			Task::enable();
 			break;
 		case HopperStateEnum::TimedHop:
-			if (HopSync(hopIndex))
+			if (HopSync(GetHopIndex(rollingTimestamp + HopTimestampOffset)))
 			{
 #if defined(HOP_TEST_PIN)
 				digitalWrite(HOP_TEST_PIN, hopIndex & 0x01);
@@ -160,12 +166,12 @@ private:
 	/// <returns>True if it's time to hop.</returns>
 	const bool HopSync(const uint32_t hopIndex)
 	{
-		const uint32_t monotonicHopIndex = MonotonizeHopIndex(hopIndex);
+		const uint32_t delta = hopIndex - LastHopIndex;
 
-		if (monotonicHopIndex != LastHopIndex)
+		if (delta < INT32_MAX)
 		{
+			LastHopIndex += delta;
 			const uint32_t elapsed = millis() - LastHop;
-			LastHopIndex = monotonicHopIndex;
 
 			if ((elapsed >= HopPeriodMillis())
 				&& (elapsed <= HopPeriodMillis() + 1))
@@ -184,26 +190,17 @@ private:
 		}
 		else
 		{
+			// Detected counter rollback.
+#if defined(DEBUG_LOLA)
+			Serial.print(F("Counter rollback "));
+			Serial.print(LastHopIndex);
+			Serial.print(F("->"));
+			Serial.println(hopIndex);
+#endif
 			Task::enable();
 		}
 
 		return false;
-	}
-
-	const uint32_t MonotonizeHopIndex(const uint32_t hopIndex)
-	{
-		const uint32_t delta = hopIndex - LastHopIndex;
-
-		if (delta > INT32_MAX)
-		{
-			// Detected counter rollback.
-			Serial.println(F("Detected counter rollback."));
-			return LastHopIndex;
-		}
-		else
-		{
-			return hopIndex;
-		}
 	}
 };
 #endif
