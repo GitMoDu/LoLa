@@ -543,7 +543,7 @@ protected:
 #if defined(DEBUG_LOLA)
 						this->Owner();
 						Serial.print(F("Sent LinkTimedSwitchOver, "));
-						Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
+						Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)));
 						Serial.println(F("us remaining."));
 #endif
 					}
@@ -668,6 +668,10 @@ private:
 			else
 			{
 				// No Ack before time out.
+#if defined(DEBUG_LOLA)
+				this->Owner();
+				Serial.println(F("StateTransition time out."));
+#endif
 				WaitingState = WaitingStateEnum::SearchingLink;
 			}
 		}
@@ -691,7 +695,7 @@ private:
 #if defined(DEBUG_LOLA)
 					this->Owner();
 					Serial.print(F("Sent LinkingTimedSwitchOver, "));
-					Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
+					Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp + GetSendDuration(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)));
 					Serial.println(F("us remaining."));
 #endif
 				}
