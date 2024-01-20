@@ -361,10 +361,9 @@ public:
 		if (CurrentChannel != rawChannel)
 		{
 			HopRequest.Request();
+			CurrentChannel = rawChannel;
 			LogChannel(rawChannel);
 		}
-
-		CurrentChannel = rawChannel;
 
 		Task::enable();
 	}
