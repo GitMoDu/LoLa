@@ -17,6 +17,7 @@
 #include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
 #include "LoLaTransceivers\Si446xTransceiver\Si446xTransceiver.h"
 #include "LoLaTransceivers\Si446xTransceiver2\Si446xTransceiver2.h"
+#include "LoLaTransceivers\Sx12Transceiver\Sx12Transceiver.h"
 #if defined(ARDUINO_ARCH_ESP8266)
 #include "LoLaTransceivers\EspNowTransceiver\Esp8266NowTransceiver.h"
 #elif defined(ARDUINO_ARCH_ESP32)
