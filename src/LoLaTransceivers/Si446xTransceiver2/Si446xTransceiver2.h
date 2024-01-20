@@ -72,7 +72,7 @@ protected:
 	virtual void OnRxReady(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssiLatch) final
 	{
 		if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE
-			|| packetSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+			&& packetSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
 			Listener->OnRx(data, timestamp, packetSize, GetNormalizedRssi(rssiLatch));
 		}
