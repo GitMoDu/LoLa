@@ -94,8 +94,8 @@ public:
 		linkStatus.Quality.TxRssi = QualityTracker.GetTxRssiQuality();
 		linkStatus.Quality.RxDrop = QualityTracker.GetRxDropQuality();
 		linkStatus.Quality.TxDrop = QualityTracker.GetTxDropQuality();
-		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
 		linkStatus.Quality.ClockSync = GetClockSyncQuality();
+		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
 	}
 
 	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result) final
