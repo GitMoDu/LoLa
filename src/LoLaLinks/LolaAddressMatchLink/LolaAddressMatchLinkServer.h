@@ -213,8 +213,6 @@ protected:
 		switch (AmState)
 		{
 		case AmStateEnum::NoMatch:
-			Task::enable();
-			break;
 		case AmStateEnum::SessionCached:
 			Task::enable();
 			break;

@@ -227,8 +227,6 @@ protected:
 		switch (PkeState)
 		{
 		case PkeStateEnum::NoPke:
-			Task::enable();
-			break;
 		case PkeStateEnum::SessionCached:
 			Task::enable();
 			break;
