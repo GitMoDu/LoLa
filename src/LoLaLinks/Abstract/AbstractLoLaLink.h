@@ -24,8 +24,6 @@ private:
 	/// </summary>
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
-
-
 protected:
 	int32_t LinkSendDuration = 0;
 
@@ -34,6 +32,7 @@ private:
 
 	uint32_t LastUnlinkedSent = 0;
 
+	uint32_t LinkingStartMillis = 0;
 	uint32_t LinkStartSeconds = 0;
 	uint16_t LinkSentAtStart = 0;
 
@@ -170,6 +169,11 @@ protected:
 	}
 
 protected:
+	const uint32_t GetElapsedMillisSinceLinkingStart()
+	{
+		return millis() - LinkingStartMillis;
+	}
+
 	void ResetUnlinkedPacketThrottle()
 	{
 		LastUnlinkedSent -= GetPacketThrottlePeriod() * 2;
@@ -213,6 +217,7 @@ protected:
 			QualityTracker.ResetRssiQuality();
 			break;
 		case LinkStageEnum::Linking:
+			LinkingStartMillis = millis();
 			break;
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestampMonotonic(LinkTimestamp);
@@ -274,7 +279,7 @@ protected:
 			OnServiceAwaitingLink();
 			break;
 		case LinkStageEnum::Linking:
-			if (GetStageElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
+			if (GetElapsedMillisSinceLinkingStart() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();

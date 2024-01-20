@@ -49,10 +49,6 @@ private:
 
 	PreLinkSlaveDuplex LinkingDuplex;
 
-#if defined(DEBUG_LOLA)
-	uint32_t LinkingStarted = 0;
-#endif
-
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
 	LinkingStateEnum LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
@@ -110,7 +106,6 @@ protected:
 				ResetStageStartTime();
 				Task::enable();
 #if defined(DEBUG_LOLA)
-				LinkingStarted = millis();
 				this->Owner();
 				Serial.println(F("Found a server!"));
 #endif
@@ -344,21 +339,11 @@ protected:
 			break;
 		case LinkStageEnum::Linked:
 #if defined(DEBUG_LOLA)
-			Serial.print(millis() - LinkingStarted);
+			Serial.print(GetElapsedMillisSinceLinkingStart());
 			Serial.println(F(" ms to Link."));
 #endif
 			WaitingForClockReply = false;
 			ClockTracker.Reset(millis());
-
-#if defined(LOLA_DEBUG_LINK_CLOCK)
-			Serial.println();
-			Serial.println();
-			Serial.println(F("Avg\tDev\tTune"));
-			ClockTracker.DebugClockError();
-			Serial.print('\t');
-			Serial.print((int32_t)SyncClock.GetTune());
-			Serial.println();
-#endif
 			break;
 		default:
 			break;
