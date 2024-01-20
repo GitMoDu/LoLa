@@ -11,8 +11,8 @@
 
 
 template<const uint8_t Port,
-	const uint8_t MaxSendPayloadSize = 3,
-	const uint32_t NoDiscoveryTimeOut = 30000>
+	const uint8_t MaxSendPayloadSize,
+	const uint32_t NoDiscoveryTimeOut>
 class AbstractSyncSurface
 	: public AbstractLoLaDiscoveryService<Port, MaxSendPayloadSize, NoDiscoveryTimeOut>
 {
