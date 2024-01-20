@@ -47,7 +47,7 @@ protected:
 	/// </summary>
 	virtual void OnDiscoveryFailed() final
 	{
-#if defined(PRINT_DISCOVERY)
+#if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.println(F("Test Discovery Failed."));
 #endif
@@ -59,7 +59,7 @@ protected:
 	/// </summary>
 	virtual void OnServiceEnded()
 	{
-#if defined(PRINT_DISCOVERY)
+#if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.println(F("Test Discovery Service Ended."));
 #endif
@@ -81,7 +81,7 @@ protected:
 	/// </summary>
 	virtual void OnLinkedSendRequestFail()
 	{
-#if defined(PRINT_DISCOVERY)
+#if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.println(F("Test Discovery OnLinkedSendRequestFail."));
 #endif
@@ -95,7 +95,7 @@ protected:
 	/// <param name="payloadSize"></param>
 	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize)
 	{
-#if defined(PRINT_DISCOVERY)
+#if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.print(F("Test Discovery OnLinkedPacketReceived ("));
 		Serial.print(F("0x"));
