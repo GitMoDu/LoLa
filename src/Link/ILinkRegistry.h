@@ -40,15 +40,16 @@ private:
 		uint8_t Port = 0;
 	};
 
+private:
 	PacketListenerWrapper LinkPacketListeners[MaxPacketReceiveListeners];
+	ILinkListener* LinkListeners[MaxLinkListeners];
 	uint8_t PacketListenersCount = 0;
-
-	ILinkListener* LinkListeners[MaxLinkListeners]{};
 	uint8_t LinkListenersCount = 0;
 
 public:
 	LinkRegistry()
 		: LinkPacketListeners()
+		, LinkListeners()
 	{
 	}
 
