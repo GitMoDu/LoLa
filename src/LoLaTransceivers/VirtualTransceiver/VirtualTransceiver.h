@@ -134,7 +134,12 @@ public:
 		: IVirtualTransceiver()
 		, ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-	{}
+	{
+		if (PinTestTx != UINT8_MAX)
+		{
+			pinMode(PinTestTx, OUTPUT);
+		}
+	}
 
 public:
 	virtual bool Callback() final
@@ -198,6 +203,11 @@ public:
 				Task::enable();
 				OutGoing.Clear();
 				LastOut = micros();
+
+				if (PinTestTx != UINT8_MAX)
+				{
+					digitalWrite(PinTestTx, LOW);
+				}
 			}
 		}
 
@@ -335,6 +345,11 @@ public:
 			Serial.println(F("Tx failed. Rx collision."));
 #endif
 			return false;
+		}
+
+		if (PinTestTx != UINT8_MAX)
+		{
+			digitalWrite(PinTestTx, HIGH);
 		}
 
 		// Copy packet to temporary output buffer.
