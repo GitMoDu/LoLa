@@ -114,8 +114,9 @@ public:
 	static constexpr uint8_t LINKING_ADVERTISING_PIPE_COUNT = 4;
 
 	/// <summary>
+	/// Link state transition durations in microseconds.
 	/// </summary>
-	static constexpr uint16_t LINKING_TRANSITION_PERIOD_MICROS = 33333;
+	static constexpr uint16_t LINKING_TRANSITION_PERIOD_MICROS = 35000;
 
 	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
