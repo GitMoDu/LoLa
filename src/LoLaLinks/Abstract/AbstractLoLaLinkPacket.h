@@ -255,7 +255,7 @@ protected:
 				break;
 			case LinkStageEnum::AwaitingLink:
 				ChannelHopper->OnLinkStopped();
-				SendCounter = RandomSource.GetRandomShort();
+				SendCounter = RandomSource.GetRandomLong();
 				LastValidReceivedCounter = RandomSource.GetRandomShort();
 				PacketService.RefreshChannel();
 				break;
