@@ -165,7 +165,7 @@ private:
 		const uint8_t index = payload[WriterUpdateBlockDefinition::INDEX_OFFSET];
 		const uint8_t indexOffset = index * ITrackedSurface::BytesPerBlock;
 
-		for (uint_least8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
+		for (uint_fast8_t i = 0; i < ITrackedSurface::BytesPerBlock; i++)
 		{
 			SurfaceData[indexOffset + i] = payload[WriterUpdateBlockDefinition::BLOCKS_OFFSET + i];
 		}
@@ -173,9 +173,5 @@ private:
 		TrackedSurface.ClearBlockPending(index);
 		TrackedSurface.NotifyUpdated();
 	}
-	/*void UpdateBlockData(const uint8_t* blockData, const uint8_t blockIndex)
-	{
-
-	}*/
 };
 #endif
