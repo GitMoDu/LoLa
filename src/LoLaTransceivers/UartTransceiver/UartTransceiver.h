@@ -100,7 +100,6 @@ private:
 
 	uint8_t ByteBuffer = 0;
 	uint8_t RxSize = 0;
-	uint8_t TxSize = 0;
 
 private:
 	void (*OnRxInterrupt)(void) = nullptr;
@@ -310,11 +309,11 @@ public:// ILoLaTransceiver overrides.
 	{
 		if (TxAvailable())
 		{
-			TxSize = CobsEncode(data, packetSize);
+			const uint8_t txSize = CobsEncode(data, packetSize);
 
-			if (TxSize > 0)
+			if (txSize > 0)
 			{
-				if (IO->write(TxBuffer, TxSize) == TxSize)
+				if (IO->write(TxBuffer, txSize) == txSize)
 				{
 					TxStartTimestamp = micros();
 					TxState = TxStateEnum::TxStart;
