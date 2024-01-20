@@ -573,9 +573,10 @@ protected:
 			ClockTracker.OnResultRead();
 
 #if defined(LOLA_DEBUG_LINK_CLOCK)
+			Serial.println(F("Clock Tune:"));
 			ClockTracker.DebugClockError();
-			Serial.print('\t');
-			Serial.print((int32_t)SyncClock.GetTune());
+			Serial.print(F(" TunePPM "));
+			Serial.println((int32_t)SyncClock.GetTune());
 			Serial.println();
 #endif
 			return true;

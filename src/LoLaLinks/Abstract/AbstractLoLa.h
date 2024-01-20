@@ -68,8 +68,16 @@ protected:
 	virtual void OnEvent(const PacketEventEnum packetEvent) {}
 
 #if defined(DEBUG_LOLA)
+protected:
 	virtual void Owner() {}
+
+public:
+	TuneClock* GetInternalClock()
+	{
+		return &SyncClock;
+	}
 #endif
+
 
 public:
 	AbstractLoLa(Scheduler& scheduler,

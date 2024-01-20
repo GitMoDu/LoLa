@@ -21,9 +21,9 @@ private:
 	uint32_t LastRan = 0;
 	uint32_t LastPing = 0;
 	static const uint8_t Port = 0x42;
-	static const uint8_t PayloadSize = 0;
+	static const uint8_t PayloadSize = 1;
 	static const uint32_t HearBeatPeriod = 1000;
-	static const uint32_t PingPeriod = 321;
+	static const uint32_t PingPeriod = 1234;
 
 	ILoLaLink* Server;
 	ILoLaLink* Client;
@@ -95,6 +95,7 @@ public:
 		{
 			workDone = true;
 			LastRan = timestamp;
+			Serial.println();
 			Serial.println(F("# Link Clock"));
 			Serial.print(F("Server: "));
 			ServerStatus.Log(Serial);
@@ -114,9 +115,19 @@ public:
 				LastPing = timestamp;
 #if defined(PRINT_TEST_PACKETS)
 				PrintTag('H');
-				Serial.println(F("Sending."));
+				Serial.print(F("Sending "));
+				if (PayloadSize > 0)
+				{
+					Serial.print('|');
+					for (uint8_t i = 0; i < PayloadSize; i++)
+					{
+						Serial.print(OutData.Payload[i]);
+						Serial.print('|');
+					}
+				}
+				Serial.println();
 #endif
-				if (Server->SendPacket(OutData.Data, LoLaPacketDefinition::GetDataSizeFromPayloadSize(PayloadSize)))
+				if (Server->SendPacket(OutData.Data, PayloadSize))
 				{
 					LastPing = timestamp;
 				}
@@ -137,6 +148,7 @@ private:
 		Serial.print('[');
 		Serial.print(tag);
 		Serial.print(']');
+		Serial.print(' ');
 		Serial.print(micros());
 		Serial.print('-');
 	}
@@ -174,33 +186,18 @@ public:
 	virtual void OnPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 #if defined(PRINT_TEST_PACKETS)
-		const uint32_t timestamp = micros();
 		PrintTag('C');
-		//Serial.print(port);
-		//Serial.print(payloadSize);
+		Serial.print(F("Received "));
 
-
-		Serial.print(F("Received ("));
-		Serial.print(startTimestamp);
-		Serial.print(')');
-		//Serial.print('|');
-		//Serial.print(payloadSize);
-		//Serial.print('|');
-
-
-		//Serial.print('|');
-		//if (payloadSize > 0)
-		//{
-		//	for (uint8_t i = 0; i < payloadSize; i++)
-		//	{
-		//		Serial.print(payload[0]);
-		//		Serial.print('|');
-		//	}
-		//}
-		//else
-		//{
-		//	Serial.print('|');
-		//}
+		if (payloadSize > 0)
+		{
+			Serial.print('|');
+			for (uint8_t i = 0; i < payloadSize; i++)
+			{
+				Serial.print(payload[i]);
+				Serial.print('|');
+			}
+		}
 		Serial.println();
 #endif
 	}

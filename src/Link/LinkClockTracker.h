@@ -376,14 +376,14 @@ private:
 		}
 	}
 
-
 #if defined(LOLA_DEBUG_LINK_CLOCK)
 public:
 	void DebugClockError()
 	{
-		Serial.print(AverageError / CLOCK_FILTER_SCALE);
-		Serial.print('\t');
-		Serial.print(DeviationError);
+		Serial.print(F(" AverageError "));
+		Serial.println(AverageError / CLOCK_FILTER_SCALE);
+		Serial.print(F(" Deviation "));
+		Serial.println(DeviationError);
 	}
 #endif
 };
