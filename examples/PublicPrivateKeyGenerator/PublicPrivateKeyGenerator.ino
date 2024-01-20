@@ -1,42 +1,49 @@
 /* LoLa Link Key generator.
-* Generate a one time pair of private/public keys for ECC Public-Key Exchange.
-* This means the secret key between 2 devices will be constant,
-* so there is no need to calculate it every session (> 10 ms operation).
-*
-* The sketch also benchmarks commons operations.
+* Generate a one time pair of private/public keys for ECC Public-Key Exchange.*
+* The sketch also benchmarks PKE operations.
 */
 
 
 #define WAIT_FOR_LOGGER
+#define DEBUG_ENTROPY_SOURCE
 #define SERIAL_BAUD_RATE 115200
 
 
 #include <uECC.h>
 #include <ILoLaInclude.h>
 
+
+
 #define LINK_DUPLEX_SLOT false
 #include "Testing\ExampleTransceiverDefinitions.h"
 
-uint8_t Private1[21];
-uint8_t Private2[21];
+LoLaRandom RandomSource(&EntropySource);
 
-uint8_t Public1[40];
-uint8_t Public2[40];
+uint8_t Private1[LoLaCryptoDefinition::PRIVATE_KEY_SIZE];
+uint8_t Private2[LoLaCryptoDefinition::PRIVATE_KEY_SIZE];
 
-uint8_t Secret1[20];
-uint8_t Secret2[20];
+uint8_t Public1[LoLaCryptoDefinition::PUBLIC_KEY_SIZE];
+uint8_t Public2[LoLaCryptoDefinition::PUBLIC_KEY_SIZE];
 
-uint8_t Public1Compressed[21];
-uint8_t Public2Compressed[21];
+uint8_t Secret1[LoLaCryptoDefinition::SHARED_KEY_SIZE];
+uint8_t Secret2[LoLaCryptoDefinition::SHARED_KEY_SIZE];
 
-uint8_t Public1Decompressed[40];
-uint8_t Public2Decompressed[40];
+uint8_t Public1Compressed[LoLaCryptoDefinition::COMPRESSED_KEY_SIZE];
+uint8_t Public2Compressed[LoLaCryptoDefinition::COMPRESSED_KEY_SIZE];
+
+uint8_t Public1Decompressed[LoLaCryptoDefinition::PUBLIC_KEY_SIZE];
+uint8_t Public2Decompressed[LoLaCryptoDefinition::PUBLIC_KEY_SIZE];
 
 
 const struct uECC_Curve_t* ECC_CURVE = uECC_secp160r1();
 
-// Use best available sources.
-static const uint8_t EntropyPin = PA1;
+
+void Halt()
+{
+	Serial.println("Critical Error");
+	delay(1000);
+	while (1);;
+}
 
 void setup()
 {
@@ -47,6 +54,11 @@ void setup()
 	delay(1000);
 #endif
 
+	if (!RandomSource.Setup())
+	{
+		Serial.println(F("RandomSource setup failed."));
+		Halt();
+	}
 	uECC_set_rng(&RNG);
 
 	Serial.println(F("LoLa Link Key Generator Start!"));
@@ -85,10 +97,10 @@ void loop()
 	Serial.println(F((" us.")));
 
 	Serial.print(F(("Public Key ")));
-	PrintKey(Public1, 40);
+	PrintKey(Public1, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 
 	Serial.print(F(("Private Key ")));
-	PrintKey(Private1, 21);
+	PrintKey(Private1, LoLaCryptoDefinition::PRIVATE_KEY_SIZE);
 
 	bool success = false;
 	start = micros();
@@ -96,7 +108,7 @@ void loop()
 	success &= uECC_shared_secret(Public1, Private2, Secret2, ECC_CURVE);
 	end = micros();
 
-	if (success && ArrayMatches(Secret1, Secret2, 20))
+	if (success && ArrayMatches(Secret1, Secret2, LoLaCryptoDefinition::SHARED_KEY_SIZE))
 	{
 		Serial.print(F("Secret Key calculation took "));
 		Serial.print((end - start) / 2);
@@ -122,8 +134,8 @@ void loop()
 	end = micros();
 
 	if (success
-		&& ArrayMatches(Public1, Public1Decompressed, 40)
-		&& ArrayMatches(Public2, Public2Decompressed, 40))
+		&& ArrayMatches(Public1, Public1Decompressed, LoLaCryptoDefinition::PUBLIC_KEY_SIZE)
+		&& ArrayMatches(Public2, Public2Decompressed, LoLaCryptoDefinition::PUBLIC_KEY_SIZE))
 	{
 		Serial.print(F("Public Key decompression took "));
 		Serial.print((end - start) / 2);
@@ -135,14 +147,17 @@ void loop()
 	}
 
 	delay(5000);
+	RandomSource.RandomReseed();
 }
 
 static int RNG(uint8_t* dest, unsigned size)
 {
-	for (size_t i = 0; i < size; i++)
+	if (size > UINT8_MAX)
 	{
-		dest[i] = EntropySource.GetNoise();
+		Serial.println(F("LoLaRandom::GetRandomStreamCrypto cannot fill a stream longer than UINT8_MAX bytes."));
+		Halt();
 	}
+	RandomSource.GetRandomStreamCrypto(dest, size);
 
 	return 1;
 }
