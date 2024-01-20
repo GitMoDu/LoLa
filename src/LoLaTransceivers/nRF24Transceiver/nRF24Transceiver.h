@@ -308,14 +308,6 @@ public:
 
 			if (TxPending)
 			{
-				if (!PacketEvent.TxOk)
-				{
-#if defined(DEBUG_LOLA)
-					Serial.print(millis());
-					Serial.print(F(": "));
-					Serial.println(F("Tx Collision."));
-#endif
-				}
 				Radio.flush_tx();
 				Listener->OnTx();
 			}
