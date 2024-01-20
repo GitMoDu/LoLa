@@ -283,7 +283,7 @@ protected:
 				LinkingState = LinkingStateEnum::SwitchingToLinked;
 				StateTransition.OnStart(micros());
 				ResetUnlinkedPacketThrottle();
-				Task::enableIfNot();
+				Task::enable();
 			}
 #if defined(DEBUG_LOLA)
 			else {
