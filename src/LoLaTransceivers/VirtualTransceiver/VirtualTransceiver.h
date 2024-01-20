@@ -185,21 +185,20 @@ public:
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
-					if (CurrentChannel != OutGoing.Channel)
-					{
-						CurrentChannel = OutGoing.Channel;
-						LogChannel(CurrentChannel);
-					}
-
-					if (Listener != nullptr)
-					{
-						Listener->OnTx();
-					}
 				}
 			}
 			else if ((micros() - OutGoing.StartTimestamp) > GetDurationInAir(OutGoing.Size))
 			{
 				// After TX, TX channel is the current internal channel.
+				if (CurrentChannel != OutGoing.Channel)
+				{
+					CurrentChannel = OutGoing.Channel;
+					LogChannel(CurrentChannel);
+				}
+				if (Listener != nullptr)
+				{
+					Listener->OnTx();
+				}
 				Task::enable();
 				OutGoing.Clear();
 				LastOut = micros();
