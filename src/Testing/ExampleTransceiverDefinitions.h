@@ -82,7 +82,7 @@ Stm32Entropy EntropySource{};
 #elif defined(ARDUINO_ARCH_ESP8266)
 Esp8266Entropy EntropySource{};
 #else 
-ArduinoEntropy EntropySource{};
+ArduinoLowEntropy EntropySource{};
 #endif
 
 // Use best source only if specified by LINK_USE_TIMER_AND_RTC.
