@@ -152,7 +152,7 @@ public:
 			break;
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestamp(ReceiveTimestamp);
-			ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
+			ReceiveTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
 			if (Encoder->DecodeInPacket(RawInPacket, InData, ReceiveTimestamp.Seconds, receivingCounter, receivingDataSize))
 			{
 				// Validate counter and check for valid port.
@@ -192,7 +192,7 @@ protected:
 		uint16_t receivingCounter = 0;
 
 		SyncClock.GetTimestamp(ReceiveTimestamp);
-		ReceiveTimestamp.ShiftSubSeconds(-(micros() - receiveTimestamp));
+		ReceiveTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
 
 		// (Fail to) Decrypt packet with token based on time.
 		return Encoder->DecodeInPacket(data, RawInPacket, ReceiveTimestamp.Seconds, receivingCounter, LoLaPacketDefinition::GetDataSize(packetSize));
