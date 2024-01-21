@@ -37,10 +37,14 @@ private:
 	static constexpr uint16_t HOPPER_OFFSET = 1500000000 / F_CPU;
 
 protected:
-	LoLaRandom RandomSource; // Cryptographic Secure(ish) Random Number Generator.
+	/// <summary>
+	/// Cryptographic Secure(ish) Random Number Generator.
+	/// </summary>
+	LoLaRandom RandomSource;
 
-protected:
-	// Collision avoidance time slotting.
+	/// <summary>
+	/// Collision avoidance time slotting.
+	/// </summary>
 	IDuplex* Duplex;
 
 	/// <summary>
@@ -48,7 +52,9 @@ protected:
 	/// </summary>
 	IChannelHop* ChannelHopper;
 
-	// Sync clock helper.
+	/// <summary>
+	/// Sync clock helper.
+	/// </summary>
 	Timestamp LinkTimestamp{};
 
 private:

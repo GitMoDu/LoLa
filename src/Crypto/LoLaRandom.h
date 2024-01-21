@@ -13,21 +13,25 @@
 
 /// <summary>
 /// LoLa Random number generator.
-/// Re-uses crypto hasher from LoLaEncoder, hence the template and constructor parameter.
+/// Cryptographic Secure(ish) Random Number Generator.
 /// </summary>
 class LoLaRandom
 {
 private:
-	IEntropy* EntropySource; // Entropy source for CSPRNG.
+	/// <summary>
+	/// Random stream generator.
+	/// </summary>
+	PCG::pcg32_random_t Rng{};
 
-	PCG::pcg32_random_t Rng;
+	/// <summary>
+	/// Entropy source for CSPRNG.
+	/// </summary>
+	IEntropy* EntropySource;
 
 public:
 	LoLaRandom(IEntropy* entropy)
 		: EntropySource(entropy)
-		, Rng()
-	{
-	}
+	{}
 
 	const bool Setup()
 	{
