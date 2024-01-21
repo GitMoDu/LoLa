@@ -91,7 +91,7 @@ public:
 	/// <summary>
 	/// To be called on nRF interrupt.
 	/// </summary>
-	void OnRfInterrupt()
+	void OnRadioInterrupt()
 	{
 #ifdef RX_TEST_PIN
 		digitalWrite(RX_TEST_PIN, HIGH);

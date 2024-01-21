@@ -54,8 +54,7 @@ private:
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
-	void (*OnRxInterrupt)(void) = nullptr;
-	void (*OnTxInterrupt)(void) = nullptr;
+	void (*OnInterrupt)(void) = nullptr;
 
 private:
 	bool HopPending = false;
@@ -82,20 +81,14 @@ public:
 		pinMode(ResetPin, INPUT);
 	}
 
-	void OnRadioRxInterrupt()
+	void OnRadioInterrupt()
 	{
 		Task::enable();
 	}
 
-	void OnRadioTxInterrupt()
+	void SetupInterrupt(void (*onRadioInterrupt)(void))
 	{
-		Task::enable();
-	}
-
-	void SetupInterrupt(void (*onRxInterrupt)(void), void (*onTxInterrupt)(void))
-	{
-		OnRxInterrupt = onRxInterrupt;
-		OnTxInterrupt = onTxInterrupt;
+		OnInterrupt = onRadioInterrupt;
 	}
 
 	//	/// <summary>
@@ -140,9 +133,7 @@ public:	// ILoLaTransceiver overrides.
 	virtual const bool Start() final
 	{
 		if (Listener != nullptr
-			&& OnRxInterrupt != nullptr
-			&& OnTxInterrupt != nullptr
-			)
+			&& OnInterrupt != nullptr)
 		{
 			// Set pins again, in case Transceiver has been reset.
 			DisableInterrupt();
@@ -185,8 +176,8 @@ public:	// ILoLaTransceiver overrides.
 			Radio.setFskSyncWord((uint8_t*)&Sx12::SYNC_WORD, 1);
 
 			// Initialize the Radio callbacks
-			Radio.onReceive(*OnRxInterrupt);
-			Radio.onTransmit(*OnTxInterrupt);
+			Radio.onReceive(*OnInterrupt);
+			Radio.onTransmit(*OnInterrupt);
 
 			// Initialize with low power level, let power manager adjust it after boot.
 			Radio.setTxPower(0, SX126X_TX_POWER_SX1262);

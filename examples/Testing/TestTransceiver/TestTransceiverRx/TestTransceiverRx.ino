@@ -10,7 +10,7 @@
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-#define SERIAL_BAUD_RATE 2000000 // ESP Serial with low bitrate stalls the scheduler loop.
+#define SERIAL_BAUD_RATE 921600 // ESP Serial with low bitrate stalls the scheduler loop.
 #else
 #define SERIAL_BAUD_RATE 115200
 #endif
@@ -24,10 +24,6 @@
 
 // Selected Driver for test.
 #define USE_SERIAL_TRANSCEIVER
-//#define USE_NRF24_TRANSCEIVER
-//#define USE_ESPNOW_TRANSCEIVER
-//#define USE_SI446X_TRANSCEIVER
-//#define USE_SI446X_TRANSCEIVER2
 
 #define LINK_DUPLEX_SLOT false
 
@@ -47,6 +43,7 @@ Scheduler SchedulerBase;
 #if defined(USE_SERIAL_TRANSCEIVER)
 UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF24_TRANSCEIVER)
+#define TRANSCEIVER_SPI_INIT
 SPIClass SpiTransceiver(NRF24_TRANSCEIVER_SPI_CHANNEL);
 nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
@@ -58,8 +55,13 @@ EspNowTransceiver TransceiverDriver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER)
 Si446xTransceiver<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER2)
+#define TRANSCEIVER_SPI_INIT
 SPIClass SpiTransceiver(SI446X_TRANSCEIVER_SPI_CHANNEL);
 Si446xTransceiver2<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
+#elif defined(USE_SX12_TRANSCEIVER)
+#define TRANSCEIVER_SPI_INIT
+SPIClass SpiTransceiver(SX12_TRANSCEIVER_SPI_CHANNEL);
+Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
 #else
 #error No Transceiver.
 #endif
@@ -91,19 +93,23 @@ void setup()
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
 #endif
 
+#if defined(TRANSCEIVER_SPI_INIT)
+#if defined(ARDUINO_ARCH_ESP32)
+	SpiTransceiver.begin(9, 11, 10, 8);
+#else
+	SpiTransceiver.begin();
+#endif
+#endif
 #if defined(USE_SERIAL_TRANSCEIVER)
 	TransceiverDriver.SetupInterrupt(OnSeriaInterrupt);
-#elif defined(USE_NRF24_TRANSCEIVER)
-	SpiTransceiver.begin();
-	TransceiverDriver.SetupInterrupt(OnRxInterrupt);
+#elif defined(USE_SI446X_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER2) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
+	TransceiverDriver.SetupInterrupt(OnRadioInterrupt);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 	TransceiverDriver.SetupInterrupts(OnRxInterrupt);
 #else
 	TransceiverDriver.SetupInterrupts(OnRxInterrupt, OnTxInterrupt);
 #endif
-#elif defined(USE_SI446X_TRANSCEIVER)
-	TransceiverDriver.SetupInterrupt(OnRadioInterrupt);
 #endif
 
 	if (!TestTask.Setup())
@@ -130,10 +136,10 @@ void OnSeriaInterrupt()
 {
 	TransceiverDriver.OnSeriaInterrupt();
 }
-#elif defined(USE_NRF24_TRANSCEIVER)
-void OnRxInterrupt()
+#elif defined(USE_NRF24_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER2) || defined(USE_SX12_TRANSCEIVER)
+void OnRadioInterrupt()
 {
-	TransceiverDriver.OnRfInterrupt();
+	TransceiverDriver.OnRadioInterrupt();
 }
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -151,13 +157,8 @@ void OnTxInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
 	TransceiverDriver.OnTxInterrupt(status);
 }
 #endif
-#elif defined(USE_SI446X_TRANSCEIVER)
-// Actual interrupt.
-void OnRadioInterrupt()
-{
-	TransceiverDriver.OnRadioInterrupt();
-}
-
+#endif
+#if defined(USE_SI446X_TRANSCEIVER)
 // Global calls fired in event loop.
 void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
 {
@@ -170,10 +171,5 @@ void SI446X_CB_RXBEGIN(int16_t rssi)
 void SI446X_CB_SENT(void)
 {
 	TransceiverDriver.OnTxInterrupt();
-}
-#elif defined(USE_SI446X_TRANSCEIVER2)
-void OnRadioInterrupt()
-{
-	TransceiverDriver.OnRadioInterrupt();
 }
 #endif
