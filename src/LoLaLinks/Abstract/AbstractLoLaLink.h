@@ -24,9 +24,6 @@ private:
 	/// </summary>
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
-protected:
-	int32_t LinkSendDuration = 0;
-
 private:
 	ReportTracker QualityTracker{};
 

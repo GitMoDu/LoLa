@@ -443,15 +443,13 @@ protected:
 				OutPacket.SetPort(Linking::PORT);
 				OutPacket.SetHeader(Linking::ClockSyncRequest::HEADER);
 
-				LinkSendDuration = GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE);
-
 				if (UnlinkedDuplexCanSend(Linking::ClockSyncRequest::PAYLOAD_SIZE) &&
 					PacketService.CanSendPacket())
 				{
 					SyncSequence++;
 					OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 					SyncClock.GetTimestamp(LinkTimestamp);
-					LinkTimestamp.ShiftSubSeconds(LinkSendDuration);
+					LinkTimestamp.ShiftSubSeconds(GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE));
 
 					UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
 					UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
