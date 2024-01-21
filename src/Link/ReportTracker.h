@@ -12,6 +12,7 @@ class ReportTracker : public LinkQualityTracker
 {
 private:
 	static constexpr uint8_t REPORT_RESEND_PERIOD = LoLaLinkDefinition::REPORT_UPDATE_PERIOD / 4;
+	static constexpr uint8_t REPORT_SEND_BALANCING_DELAY = 7;
 	static constexpr uint8_t REPORT_RESEND_URGENT_PERIOD = REPORT_RESEND_PERIOD / 3;
 	static constexpr uint8_t PARTNER_SILENCE_WORST_QUALITY = 127;
 
@@ -21,6 +22,7 @@ private:
 
 	bool ReplyRequested = false;
 	bool SendRequested = false;
+	bool BalancingDelay = false;
 
 public:
 	ReportTracker()
@@ -50,6 +52,9 @@ public:
 				|| GetLastValidReceivedAgeQuality() < PARTNER_SILENCE_WORST_QUALITY)
 			{
 				SendRequested = true;
+
+				// Shuffle balancing delay on and off.
+				BalancingDelay = !BalancingDelay;
 			}
 		}
 	}
@@ -86,6 +91,10 @@ public:
 		if (IsBackReportNeeded(timestamp))
 		{
 			return (timestamp - LastSent) > REPORT_RESEND_URGENT_PERIOD;
+		}
+		else if (BalancingDelay)
+		{
+			return (timestamp - LastSent) > REPORT_RESEND_PERIOD + REPORT_SEND_BALANCING_DELAY;
 		}
 		else
 		{
