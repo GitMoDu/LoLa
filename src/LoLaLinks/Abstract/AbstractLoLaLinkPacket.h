@@ -113,7 +113,8 @@ public:
 			return false;
 		}
 
-		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL && GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
+		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL
+			&& GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
 		{
 #if defined(DEBUG_LOLA)
 			Serial.print(F("Estimated Time-On-Air ( is longer than the duplex slot duration."));
@@ -125,7 +126,8 @@ public:
 			return false;
 		}
 
-		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL && Duplex->GetPeriod() > LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS)
+		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL
+			&& Duplex->GetPeriod() > LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS)
 		{
 #if defined(DEBUG_LOLA)
 			Serial.println(F("Duplex Period is too long for LoLa Link."));
@@ -299,12 +301,12 @@ protected:
 		}
 	}
 
-	///// <summary>
-	///// During Link, if the configured channel management is a hopper,
-	///// every N us the channel switches.
-	///// </summary>
-	///// <param name="rollingMicros">[0;UINT32_MAX]</param>
-	///// <returns>Normalized Tx Chanel.</returns>
+	/// <summary>
+	/// During Link, if the configured channel management is a hopper,
+	/// every N us the channel switches.
+	/// </summary>
+	/// <param name="rollingMicros">[0;UINT32_MAX]</param>
+	/// <returns>Normalized Tx Chanel.</returns>
 	virtual const uint8_t GetTxChannel(const uint32_t rollingMicros) final
 	{
 		switch (LinkStage)
@@ -429,7 +431,6 @@ private:
 #endif
 			return false;
 		}
-
 
 #if defined(DEBUG_LOLA)
 		const uint32_t calibrationDuration = micros() - calibrationStart;
