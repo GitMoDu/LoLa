@@ -672,7 +672,10 @@ private:
 				this->Owner();
 				Serial.println(F("StateTransition time out."));
 #endif
+				NewSession();
 				WaitingState = WaitingStateEnum::SearchingLink;
+				SearchReplyPending = false;
+				ResetSessionCreation();
 			}
 		}
 		else if (StateTransition.IsSendRequested(micros())

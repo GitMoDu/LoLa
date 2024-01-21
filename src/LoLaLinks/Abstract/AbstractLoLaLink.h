@@ -169,7 +169,7 @@ protected:
 	}
 
 protected:
-	const uint32_t GetElapsedMillisSinceLinkingStart()
+	const uint32_t GetLinkingElapsedMillis()
 	{
 		return millis() - LinkingStartMillis;
 	}
@@ -279,7 +279,7 @@ protected:
 			OnServiceAwaitingLink();
 			break;
 		case LinkStageEnum::Linking:
-			if (GetElapsedMillisSinceLinkingStart() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
+			if (GetLinkingElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();

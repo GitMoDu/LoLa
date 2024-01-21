@@ -339,7 +339,7 @@ protected:
 			break;
 		case LinkStageEnum::Linked:
 #if defined(DEBUG_LOLA)
-			Serial.print(GetElapsedMillisSinceLinkingStart());
+			Serial.print(GetLinkingElapsedMillis());
 			Serial.println(F(" ms to Link."));
 #endif
 			WaitingForClockReply = false;
@@ -374,7 +374,7 @@ protected:
 			}
 			break;
 		case WaitingStateEnum::SessionCreation:
-			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
+			if (GetLinkingElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
