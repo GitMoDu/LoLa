@@ -61,7 +61,11 @@ public:
 protected:
 	virtual void OpenEntropy() final
 	{
+#if defined(INPUT_ANALOG)
 		pinMode(EntropyPin, INPUT_ANALOG);
+#else
+		pinMode(EntropyPin, INPUT);
+#endif
 	}
 
 	virtual void CloseEntropy() final
