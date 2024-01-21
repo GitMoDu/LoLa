@@ -29,7 +29,7 @@ class VirtualTransceiver final
 private:
 	static constexpr uint32_t TRANSCEIVER_ID = 0x00FFFFFF;
 
-	static constexpr uint32_t PAUSE_AFTER_TX_MICROS = Config::HopMicros;
+	static constexpr uint32_t PAUSE_AFTER_TX_MICROS = 20 + Config::HopMicros;
 
 	struct HopRequestStruct
 	{
@@ -145,7 +145,7 @@ public:
 	virtual bool Callback() final
 	{
 		// Simulate transmit delay, from request to on-air start.
-		if (OutGoing.HasPending() && ((micros() - OutGoing.StartTimestamp) >= GetTimeToAir(OutGoing.Size)))
+		if (OutGoing.HasPending())
 		{
 			if (CurrentChannel != OutGoing.Channel)
 			{
@@ -153,9 +153,9 @@ public:
 				LogChannel(CurrentChannel);
 			}
 
-			if (!OutGoing.AirStarted)
+			if (((micros() - OutGoing.StartTimestamp) >= GetTimeToAir(OutGoing.Size)))
 			{
-				if ((micros() - OutGoing.StartTimestamp) > GetTimeToAir(OutGoing.Size))
+				if (!OutGoing.AirStarted)
 				{
 					OutGoing.AirStarted = true;
 
@@ -181,37 +181,31 @@ public:
 					}
 #endif
 					Partner->ReceivePacket(OutGoing.Buffer, OutGoing.Size, OutGoing.Channel);
-
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
 				}
-			}
-			else if ((micros() - OutGoing.StartTimestamp) > GetDurationInAir(OutGoing.Size))
-			{
-				// After TX, TX channel is the current internal channel.
-				if (CurrentChannel != OutGoing.Channel)
+				else if ((micros() - OutGoing.StartTimestamp) > GetTimeToAir(OutGoing.Size) + GetDurationInAir(OutGoing.Size))
 				{
-					CurrentChannel = OutGoing.Channel;
-					LogChannel(CurrentChannel);
-				}
-				if (Listener != nullptr)
-				{
-					Listener->OnTx();
-				}
-				Task::enable();
-				OutGoing.Clear();
-				LastOut = micros();
+					// After TX, TX channel is the current internal channel.
+					if (Listener != nullptr)
+					{
+						Listener->OnTx();
+					}
+					Task::enable();
+					OutGoing.Clear();
+					LastOut = micros();
 
-				if (PinTestTx != UINT8_MAX)
-				{
-					digitalWrite(PinTestTx, LOW);
+					if (PinTestTx != UINT8_MAX)
+					{
+						digitalWrite(PinTestTx, LOW);
+					}
 				}
 			}
 		}
 
 		// Simulate delay from start event to received packet buffer.
-		if (Incoming.HasPending() && ((micros() - Incoming.StartTimestamp) >= GetDurationInAir(Incoming.Size)))
+		else if (Incoming.HasPending() && ((micros() - Incoming.StartTimestamp) >= GetDurationInAir(Incoming.Size)))
 		{
 			// Rx duration has elapsed since the packet incoming start triggered.
 			if (Listener != nullptr)
@@ -384,12 +378,12 @@ public:
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		return Config::TxBaseMicros + ((Config::TxByteNanos * packetSize) / 1000);
+		return Config::TxBaseMicros + (((uint32_t)Config::TxByteNanos * packetSize) / 1000);
 	}
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
-		return Config::AirBaseMicros + ((Config::AirByteNanos * packetSize) / 1000);
+		return Config::AirBaseMicros + (((uint32_t)Config::AirByteNanos * packetSize) / 1000);
 	}
 
 	virtual const bool TxAvailable() final
