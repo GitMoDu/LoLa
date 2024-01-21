@@ -8,13 +8,13 @@
 /// <summary>
 /// Low quality entropy, based on fixed "noise" and Arduino Random implementation.
 /// </summary>
-class ArduinoEntropy final : public virtual IEntropy
+class ArduinoLowEntropy final : public virtual IEntropy
 {
 private:
 	const uint8_t ExtraNoise;
 
 public:
-	ArduinoEntropy(const uint8_t extraNoise = 0)
+	ArduinoLowEntropy(const uint8_t extraNoise = 0)
 		: IEntropy()
 		, ExtraNoise(extraNoise)
 	{}

@@ -122,8 +122,8 @@ Stm32Entropy ClientEntropySource{};
 Esp8266Entropy ServerEntropySource{};
 Esp8266Entropy ClientEntropySource{};
 #else 
-ArduinoEntropy ServerEntropySource{};
-ArduinoEntropy ClientEntropySource{};
+ArduinoLowEntropy ServerEntropySource{};
+ArduinoLowEntropy ClientEntropySource{};
 #endif
 
 #if defined(LINK_USE_CHANNEL_HOP)
