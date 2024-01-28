@@ -171,11 +171,19 @@ private:
 
 	void CalculateMatchKey()
 	{
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
-
+#endif
 		CryptoHasher.update(SecretKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
 		CryptoHasher.update(LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, MatchKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+#else
 		CryptoHasher.finalize(MatchKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+#endif
 		CryptoHasher.clear();
 	}
 };

@@ -56,10 +56,17 @@ public:
 
 	// Integrity and Authenticity
 public:
+#if defined(LOLA_USE_POLY1305)
+	/// Poly1305 (Cryptographic Hash function).
+	/// MIT licensed.
+	/// 16 byte (128 bit) bit digest.
+	/// </summary>
+#else
 	/// Xoodyak (Cryptographic Hash function).
 	/// Creative Commons Attribution 4.0 International License.
 	/// 32 byte (256 bit) bit digest.
 	/// </summary>
+#endif
 
 	/// <summary>
 	/// Size of time-based token.

@@ -11,6 +11,7 @@
 * Requires libraries Crypto and CryptoLW from repository.
 */
 #include <Ascon128.h>
+#include <Poly1305.h>
 
 /// <summary>
 /// Encodes and decodes LoLa packets.
@@ -60,16 +61,26 @@ public:
 		}
 
 		/*****************/
+#if defined(LOLA_USE_POLY1305)
+		// Start HMAC with Key.
+		CryptoHasher.reset(ExpandedKey.MacKey);
+#else
+		// Start MAC.
 		CryptoHasher.reset();
 
 		// Nonce.
 		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
+#endif
 
 		// Content.
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
+#if defined(LOLA_USE_POLY1305)
+		if (!CryptoHasher.macMatches(Nonce, &inPacket[LoLaPacketDefinition::MAC_INDEX]))
+#else
 		if (!CryptoHasher.macMatches(&inPacket[LoLaPacketDefinition::MAC_INDEX]))
+#endif
 		{
 			// Packet rejected.
 			return false;
@@ -101,12 +112,21 @@ public:
 	const bool DecodeInPacket(const uint8_t* inPacket, uint8_t* data, uint16_t& counter, const uint8_t dataSize)
 	{
 		// Calculate MAC from content.
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
+#if defined(LOLA_USE_POLY1305)
+		if (!CryptoHasher.macMatches(Nonce, &inPacket[LoLaPacketDefinition::MAC_INDEX]))
+#else
 		if (!CryptoHasher.macMatches(&inPacket[LoLaPacketDefinition::MAC_INDEX]))
+#endif
 		{
 			// Packet rejected.
 			return false;
@@ -144,12 +164,21 @@ public:
 		}
 
 		// Set HMAC without implicit addressing, key or token.
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Only the first LoLaPacketDefinition:MAC_SIZE bytes are effectively used.
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+#else
 		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+#endif
 	}
 
 	/// <summary>
@@ -190,18 +219,27 @@ public:
 		/*****************/
 
 		/*****************/
-		// Start HMAC.
+#if defined(LOLA_USE_POLY1305)
+		// Start HMAC with Key.
+		CryptoHasher.reset(ExpandedKey.MacKey);
+#else
+		// Start MAC.
 		CryptoHasher.reset();
 
 		// Nonce.
 		CryptoHasher.update(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
+#endif
 
 		// Content.
 		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
-		// HMAC finalized and copied to packet.
-		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX],
-			LoLaPacketDefinition::MAC_SIZE);
+#if defined(LOLA_USE_POLY1305)
+		// Nonce and finalize HMAC.
+		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+#else
+		// Finalize MAC.
+		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+#endif
 		/*****************/
 	}
 };

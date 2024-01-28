@@ -11,11 +11,17 @@
 #include "LoLaRandom.h"
 #include "SeedXorShifter.h"
 
+#if defined(LOLA_USE_POLY1305)
+/*
+* https://github.com/rweather/arduinolibs
+*/
+#include "Poly1305Wrapper.h"
+#else
 /*
 * https://github.com/rweather/lightweight-crypto
 */
 #include "XoodyakHashWrapper.h"
-
+#endif
 
 class LoLaCryptoSession : public LoLaLinkSession
 {
@@ -26,7 +32,12 @@ protected:
 	/// <summary>
 	/// MAC and Signature hasher.
 	/// </summary>
+#if defined(LOLA_USE_POLY1305)
+	Poly1305Wrapper CryptoHasher{};
+#else
 	XoodyakHashWrapper CryptoHasher{};
+#endif
+
 
 protected:
 	///// <summary>
@@ -105,17 +116,28 @@ public:
 		const uint32_t hopperPeriod,
 		const uint32_t transceiverCode)
 	{
-		const uint8_t lolaVersion = LoLaLinkDefinition::LOLA_VERSION;
-		const uint8_t linkType = (uint8_t)GetLinkType();
-
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
-		CryptoHasher.update((const uint8_t*)&lolaVersion, sizeof(uint8_t));
-		CryptoHasher.update((const uint8_t*)&linkType, sizeof(uint8_t));
-		CryptoHasher.update((const uint8_t*)&duplexPeriod, sizeof(uint16_t));
-		CryptoHasher.update((const uint8_t*)&hopperPeriod, sizeof(uint32_t));
-		CryptoHasher.update((const uint8_t*)&transceiverCode, sizeof(uint32_t));
+#endif
+		CryptoHasher.update(LoLaLinkDefinition::LOLA_VERSION);
+		CryptoHasher.update((uint8_t)GetLinkType());
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.update((uint8_t)LoLaLinkDefinition::MacType::Poly1305);
+#else
+		CryptoHasher.update((uint8_t)LoLaLinkDefinition::MacType::Xoodyak);
+#endif
+		CryptoHasher.update(duplexPeriod);
+		CryptoHasher.update(hopperPeriod);
+		CryptoHasher.update(transceiverCode);
 
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
+#else
 		CryptoHasher.finalize(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
+#endif
 		CryptoHasher.clear();
 
 #if defined(DEBUG_LOLA)
@@ -172,11 +194,18 @@ public:
 	/// <param name="keySize"></param>
 	void CalculateExpandedKey(const uint8_t* key, const uint8_t keySize)
 	{
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+#endif
 		uint8_t index = 0;
 		while (index < LoLaLinkDefinition::HKDFSize)
 		{
+#if defined(LOLA_USE_POLY1305)
+			CryptoHasher.reset(Nonce);
+#else
 			CryptoHasher.reset();
-			CryptoHasher.update(&index, sizeof(uint8_t));
+#endif
+			CryptoHasher.update(index);
 			CryptoHasher.update(key, keySize);
 			CryptoHasher.update(AccessPassword, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 			CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
@@ -184,12 +213,20 @@ public:
 
 			if (LoLaLinkDefinition::HKDFSize - index > CryptoHasher.DIGEST_LENGTH)
 			{
+#if defined(LOLA_USE_POLY1305)
+				CryptoHasher.finalize(Nonce, &((uint8_t*)&ExpandedKey)[index], CryptoHasher.DIGEST_LENGTH);
+#else
 				CryptoHasher.finalize(&((uint8_t*)&ExpandedKey)[index], CryptoHasher.DIGEST_LENGTH);
+#endif
 				index += CryptoHasher.DIGEST_LENGTH;
 			}
 			else
 			{
+#if defined(LOLA_USE_POLY1305)
+				CryptoHasher.finalize(Nonce, &((uint8_t*)&ExpandedKey)[index], LoLaLinkDefinition::HKDFSize - index);
+#else
 				CryptoHasher.finalize(&((uint8_t*)&ExpandedKey)[index], LoLaLinkDefinition::HKDFSize - index);
+#endif
 				index += (LoLaLinkDefinition::HKDFSize - index);
 			}
 		}
@@ -207,17 +244,32 @@ public:
 	/// <param name="keySize">[0;UINT8_MAX]</param>
 	void CalculateSessionAddressing(const uint8_t* localKey, const uint8_t* partnerKey, const uint8_t keySize)
 	{
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.update(partnerKey, keySize);
 		CryptoHasher.update(localKey, keySize);
-		CryptoHasher.finalize(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
+		CryptoHasher.finalize(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.update(localKey, keySize);
 		CryptoHasher.update(partnerKey, keySize);
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+#else
 		CryptoHasher.finalize(OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+#endif
 		CryptoHasher.clear();
 	}
 
@@ -225,15 +277,24 @@ public:
 	/// </summary>
 	void CalculateLinkingToken(const uint8_t* localKey, const uint8_t* partnerKey, const uint8_t keySize)
 	{
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 
 		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
 		{
-			CryptoHasher.update(localKey[i] ^ partnerKey[i]);
+			CryptoHasher.update((uint8_t)(localKey[i] ^ partnerKey[i]));
 		}
 
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+#else
 		CryptoHasher.finalize(LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+#endif
 		CryptoHasher.clear();
 	}
 
@@ -303,13 +364,31 @@ public:
 		randomSource->GetRandomStreamCrypto(LocalChallengeCode, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
 	}
 
+protected:
+	void ClearNonce()
+	{
+		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::CYPHER_IV_SIZE; i++)
+		{
+			Nonce[i] = 0xFF;
+		}
+	}
+
 private:
 	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
 	{
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
 		CryptoHasher.update(challenge, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE);
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
+#else
 		CryptoHasher.finalize(signatureTarget, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE);
+#endif
 		CryptoHasher.clear();
 	}
 };

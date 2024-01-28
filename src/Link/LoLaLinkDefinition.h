@@ -87,6 +87,13 @@ public:
 		/// </summary>
 		uint8_t CypherIvSeed[ADDRESS_KEY_SIZE];
 
+#if defined(LOLA_USE_POLY1305)
+		/// <summary>
+		/// MAC key for Poly1305 (16 bytes).
+		/// </summary>
+		uint8_t MacKey[LoLaCryptoDefinition::CYPHER_IV_SIZE];
+#endif
+
 		/// <summary>
 		/// Channel PRNG seed.
 		/// </summary>
@@ -147,6 +154,12 @@ public:
 	{
 		PublicKeyExchange = 0xBE,
 		AddressMatch = 0xAE
+	};
+
+	enum class MacType : uint8_t
+	{
+		Xoodyak = 0x88,
+		Poly1305 = 0x13
 	};
 
 	/// <summary>

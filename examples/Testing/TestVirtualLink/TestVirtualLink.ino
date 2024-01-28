@@ -35,7 +35,8 @@
 #endif
 
 // Enable for Public-Key Exchange Link. Disable for Address Match Link.
-#define LINK_USE_PKE_LINK
+//#define LINK_USE_PKE_LINK
+//#define LOLA_USE_POLY1305
 
 // Enable to use channel hop. Disable for fixed channel.
 #define LINK_USE_CHANNEL_HOP

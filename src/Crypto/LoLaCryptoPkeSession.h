@@ -194,10 +194,19 @@ private:
 	/// <param name="token"></param>
 	void CalculateSessionToken(const uint8_t* partnerPublicKey, uint8_t* token)
 	{
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+#if defined(LOLA_USE_POLY1305)
+		CryptoHasher.finalize(Nonce, token, MATCHING_TOKEN_SIZE);
+#else
 		CryptoHasher.finalize(token, MATCHING_TOKEN_SIZE);
+#endif
 		CryptoHasher.clear();
 	}
 
@@ -208,11 +217,20 @@ private:
 	/// <returns>True if the calculated secrets are already set for this SessionId and PublicKey</returns>
 	const bool SessionTokenMatches(const uint8_t* partnerPublicKey)
 	{
+#if defined(LOLA_USE_POLY1305)
+		ClearNonce();
+		CryptoHasher.reset(Nonce);
+#else
 		CryptoHasher.reset();
+#endif
 		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
 
+#if defined(LOLA_USE_POLY1305)
+		const bool match = CryptoHasher.macMatches(Nonce, CachedToken);
+#else
 		const bool match = CryptoHasher.macMatches(CachedToken);
+#endif
 		CryptoHasher.clear();
 
 		return match;
