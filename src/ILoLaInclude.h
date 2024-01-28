@@ -56,7 +56,7 @@
 //#include "TimerSources\AvrTimer1Source.h"
 #endif
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-#include "ClockSources\Stm32TimerCycles.h"
+#include "ClockSources\Stm32SystemCycles.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP8266)
 #endif
