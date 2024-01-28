@@ -503,17 +503,7 @@ private:
 		Serial.print('|');
 		Serial.print('|');
 
-		uint32_t mac = data[0];
-		mac |= data[1] << 8;
-		mac |= (uint32_t)data[2] << 16;
-		mac |= (uint32_t)data[3] << 24;
-		Serial.print(mac);
-		Serial.print('|');
-
-		Serial.print(data[4]);
-		Serial.print('|');
-
-		for (uint8_t i = 5; i < size; i++)
+		for (uint8_t i = 0; i < size; i++)
 		{
 			Serial.print('0');
 			Serial.print('x');
