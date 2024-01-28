@@ -12,10 +12,10 @@ class Esp8266Entropy final : public virtual IEntropy
 private:
 	static constexpr uint8_t MAC_LENGTH = WL_MAC_ADDR_LENGTH;
 
-	uint8_t PseudoMac[MAC_LENGTH];
+	uint8_t PseudoMac[MAC_LENGTH]{};
 
 public:
-	Esp8266Entropy() : IEntropy(), PseudoMac()
+	Esp8266Entropy() : IEntropy()
 	{
 		FillPseudoMac();
 	}

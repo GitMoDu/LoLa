@@ -17,7 +17,7 @@ private:
 public:
 	void SetSeedArray(const uint8_t seed[sizeof(uint32_t)])
 	{
-		Seed = seed[0] | ((uint32_t)seed[1] << 8) | ((uint32_t)seed[2] << 16) | ((uint32_t)seed[3] << 24);
+		Seed = seed[0] | (((uint32_t)seed[1]) << 8) | (((uint32_t)seed[2]) << 16) | (((uint32_t)seed[3]) << 24);
 	}
 
 	void SetSeed(const uint32_t seed)

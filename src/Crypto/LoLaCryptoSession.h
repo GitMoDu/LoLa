@@ -26,7 +26,10 @@
 class LoLaCryptoSession : public LoLaLinkSession
 {
 private:
-	SeedXorShifter ChannelHasher{}; // 8 bit fast hasher for deterministic pseudo-random channel.
+	/// <summary>
+	/// 8 bit fast hasher for deterministic pseudo-random channel.
+	/// </summary>
+	SeedXorShifter ChannelHasher{};
 
 protected:
 	/// <summary>
