@@ -407,9 +407,11 @@ private:
 		}
 		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 
+#if defined(DEBUG_LOLA)
 		Serial.println(F("Timestamping duration: "));
 		Serial.print(timestampingDuration);
 		Serial.println(F(" ns."));
+#endif
 
 		// Measure PRNG Hop calculation time.
 		volatile bool dummy = 0;
