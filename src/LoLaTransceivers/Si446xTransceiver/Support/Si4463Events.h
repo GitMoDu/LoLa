@@ -34,7 +34,6 @@ namespace Si4463Events
 	{
 		uint32_t StartTimestamp = 0;
 		uint8_t Channel = 0;
-		bool Resting = false;
 		bool Requested = false;
 
 		void Request()
@@ -54,13 +53,12 @@ namespace Si4463Events
 
 		const bool Pending()
 		{
-			return Resting || Requested;
+			return Requested;
 		}
 
 		void Clear()
 		{
 			Requested = false;
-			Resting = false;
 		}
 	};
 

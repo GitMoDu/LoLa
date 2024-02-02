@@ -9,37 +9,37 @@
 #include <ILoLaTransceiver.h>
 
 
-#include <Si446x.h>
-#if SI446X_INTERRUPTS != 0
-error("Must set SI446X_INTERRUPTS = 0 in Si446x_config.h")
-#endif
-
-#include "Support\Si4463Events.h"
-#include "Support\Si4463Config.h"
-
 /*
 * https://github.com/ZakKemble/Si446x
 */
 #include <Si446x.h>
 #include "radio_config.h"
 
+#include "Support\Si4463Events.h"
+#include "Support\Si4463Config.h"
+
+#if SI446X_INTERRUPTS != 0
+#error "Must set SI446X_INTERRUPTS = 0 in Si446x_config.h"
+#endif
+
+#if SI446X_FIXED_LENGTH != 0
+#error "Must set SI446X_FIXED_LENGTH = 0 in Si446x_config.h"
+#endif
+
 /// <summary>
-/// 
+/// Wrapper for ZakKemble Si446x driver.
 /// </summary>
-/// <typeparam name="CsPin"></typeparam>
-/// <typeparam name="SdnPin"></typeparam>
 /// <typeparam name="InterruptPin"></typeparam>
-template<const uint8_t CsPin,
-	const uint8_t SdnPin,
-	const uint8_t InterruptPin>
+template<const uint8_t InterruptPin>
 class Si446xTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
+private:
 	static constexpr uint8_t ChannelCount = Si4463Config::GetRadioConfigChannelCount(MODEM_2_1);
 
 	static constexpr uint16_t TRANSCEIVER_ID = 0x4463;
+	static constexpr uint16_t CHIP_ID = 15;
 
-private:
 	// TODO: These values might change with different SPI and CPU clock speed.
 	static constexpr uint16_t TTA_LONG = 719;
 	static constexpr uint16_t TTA_SHORT = 638;
@@ -73,11 +73,7 @@ public:
 	Si446xTransceiver(Scheduler& scheduler)
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-	{
-		pinMode(CsPin, INPUT);
-		pinMode(SdnPin, INPUT);
-		pinMode(InterruptPin, INPUT);
-	}
+	{}
 
 	void SetupInterrupt(void (*onRadioInterrupt)(void))
 	{
@@ -149,16 +145,30 @@ public:
 
 	virtual const bool Start() final
 	{
-		if (Listener != nullptr
-			&& Si4463Config::ValidateConfig(MODEM_2_1))
+		if (Si4463Config::ValidateConfig(MODEM_2_1))
 		{
 			Si446x_init();
+
+			si446x_info_t info{};
+
+			Si446x_getInfo(&info);
+
+#if defined(DEBUG_LOLA)
+			if (info.id == 0)
+				Serial.println(F("Device not responding."));
+			if (info.id == UINT16_MAX)
+				Serial.println(F("No device on SPI."));
+#endif
+			if (info.id != CHIP_ID)
+			{
+				return false;
+			}
 
 			// Enable packet RX begin and packet sent callbacks
 			Si446x_setupCallback(
 				SI446X_CBS_SENT
 				| SI446X_CBS_RXBEGIN
-				| SI446X_CBS_RXCOMPLETE
+				//| SI446X_CBS_RXCOMPLETE
 				, 1);
 
 			Si446x_setTxPower(5);
@@ -170,6 +180,9 @@ public:
 			pinMode(InterruptPin, INPUT_PULLUP);
 			EnableInterrupt();
 			Task::enable();
+
+			// Start Rx on any channel.
+			Si446x_RX(0);
 
 			return true;
 		}
@@ -390,7 +403,6 @@ public:
 			if (HopPending.Requested)
 			{
 				HopPending.Requested = false;
-				HopPending.Resting = true;
 				Si446x_RX(HopPending.Channel);
 				HopPending.StartTimestamp = micros();
 			}
