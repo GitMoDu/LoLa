@@ -48,10 +48,11 @@ private:
 
 	IRollingTimestamp* RollingTimestamp = nullptr;
 
+	uint32_t LastTimestamp = 0;
 	uint32_t LastHopIndex = 0;
 	uint32_t LastHop = 0;
 
-	uint16_t HopTimestampOffset = 0;
+	uint16_t LookForwardOffset = 0;
 
 	HopperStateEnum HopperState = HopperStateEnum::Disabled;
 
@@ -78,7 +79,7 @@ public:
 
 	virtual void SetHopTimestampOffset(const uint16_t offset) final
 	{
-		HopTimestampOffset = offset;
+		LookForwardOffset = offset;
 	}
 
 	// General Channel Interfaces //
@@ -134,6 +135,7 @@ public:
 		{
 		case HopperStateEnum::StartHop:
 			LastHopIndex = GetHopIndex(rollingTimestamp);
+			LastTimestamp = rollingTimestamp;
 			LastHop = millis();
 			// Fire first notification, to make sure we're starting on the right Rx channel.
 			Listener->OnChannelHopTime();
@@ -141,12 +143,13 @@ public:
 			Task::enable();
 			break;
 		case HopperStateEnum::TimedHop:
-			if (HopSync(GetHopIndex(rollingTimestamp + HopTimestampOffset)))
+			//Check if it's time to hop, with forward look compensation.
+			if (HopSync(rollingTimestamp + LookForwardOffset))
 			{
 #if defined(HOP_TEST_PIN)
-				digitalWrite(HOP_TEST_PIN, hopIndex & 0x01);
+				digitalWrite(HOP_TEST_PIN, LOW);
+				digitalWrite(HOP_TEST_PIN, HIGH);
 #endif
-				LastHop = millis();
 				Listener->OnChannelHopTime();
 			}
 			break;
@@ -161,44 +164,55 @@ public:
 
 private:
 	/// <summary>
+	/// Synchronized Hop Index update.
+	/// Throttles the task sleep according to scheduler overrun/delay.
+	/// Skips update if timestamp rollback is detected.
 	/// </summary>
 	/// <param name="hopIndex"></param>
 	/// <returns>True if it's time to hop.</returns>
-	const bool HopSync(const uint32_t hopIndex)
+	const bool HopSync(const uint32_t rollingTimestamp)
 	{
-		const uint32_t delta = hopIndex - LastHopIndex;
-
-		if (delta < INT32_MAX)
+		if (rollingTimestamp - LastTimestamp < ((uint32_t)INT32_MAX))
 		{
-			LastHopIndex += delta;
-			const uint32_t elapsed = millis() - LastHop;
+			LastTimestamp = rollingTimestamp;
 
-			if ((elapsed >= HopPeriodMillis())
-				&& (elapsed <= HopPeriodMillis() + 1))
-			{
-				// We've just hopped index in the expected time.
-				// So, we can sleep for the estimated delay.
-				Task::delay(GetDelayPeriod());
-			}
-			else
-			{
-				// Out of sync, keep in spin lock.
-				Task::enable();
-			}
+			const uint32_t now = millis();
+			const uint32_t hopIndex = GetHopIndex(rollingTimestamp);
 
-			return true;
+			if (LastHopIndex != hopIndex)
+			{
+				LastHop = now;
+				LastHopIndex = hopIndex;
+
+				const uint32_t elapsed = now - LastHop;
+
+				if ((elapsed >= HopPeriodMillis())
+					&& (elapsed <= HopPeriodMillis() + 1))
+				{
+					// We've just hopped index in the expected time.
+					// So, we can sleep for the estimated delay.
+					Task::delay(GetDelayPeriod());
+				}
+				else
+				{
+					// Out of sync, keep in spin lock.
+					Task::enable();
+				}
+
+				return true;
+			}
 		}
 		else
 		{
-			// Detected counter rollback.
 #if defined(DEBUG_LOLA)
-			Serial.print(F("Counter rollback "));
-			Serial.print(LastHopIndex);
+			Serial.print(F("Timestamp Rollback: "));
+			Serial.print(LastTimestamp);
 			Serial.print(F("->"));
-			Serial.println(hopIndex);
+			Serial.println(rollingTimestamp);
 #endif
-			Task::enable();
 		}
+
+		Task::enable();
 
 		return false;
 	}
