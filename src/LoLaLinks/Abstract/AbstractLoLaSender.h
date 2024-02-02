@@ -39,6 +39,9 @@ public:
 	{
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
+#if defined(ARDUINO_ARCH_ESP32)
+		vTaskSuspendAll();
+#endif
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
@@ -69,8 +72,15 @@ public:
 		{
 			SendCounter++;
 
+#if defined(ARDUINO_ARCH_ESP32)
+			xTaskResumeAll();
+#endif
 			return true;
 		}
+
+#if defined(ARDUINO_ARCH_ESP32)
+		xTaskResumeAll();
+#endif
 
 		return false;
 
@@ -128,6 +138,9 @@ protected:
 	/// <returns></returns>
 	const bool MockSendPacket(const uint8_t* data, const uint8_t payloadSize)
 	{
+#if defined(ARDUINO_ARCH_ESP32)
+		vTaskSuspendAll();
+#endif
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		SyncClock.GetTimestamp(SendTimestamp);
@@ -140,9 +153,15 @@ protected:
 		if (PacketService.MockSend(packetSize,
 			MockGetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
+#if defined(ARDUINO_ARCH_ESP32)
+			xTaskResumeAll();
+#endif
 			return true;
 		}
 
+#if defined(ARDUINO_ARCH_ESP32)
+		xTaskResumeAll();
+#endif
 		return false;
 	}
 };
