@@ -236,7 +236,7 @@ public:
 		CryptoHasher.clear();
 
 		// Set Hasher with Channel Hop Seed.
-		ChannelHasher.SetSeedArray(ExpandedKey.ChannelSeed);
+		ChannelHasher.SetSeed(ExpandedKey.ChannelSeed);
 	}
 
 	/// <summary>
