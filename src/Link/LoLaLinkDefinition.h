@@ -26,7 +26,7 @@ public:
 	static constexpr uint8_t MAX_DEFINITION_PORT = UINT8_MAX - LINK_PORT_ALLOCATION;
 
 	/// <summary>
-	/// 32 bit session id.
+	/// 24 bit session id.
 	/// </summary>
 	static constexpr uint8_t SESSION_ID_SIZE = 3;
 
