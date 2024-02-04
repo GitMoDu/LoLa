@@ -34,11 +34,11 @@ struct LoLaLinkStatus
 		stream.print(F("\tRSSI -> "));
 		stream.println(Quality.TxRssi);
 
-		stream.print(F("\tTx: "));
+		stream.print(F("\tTx Count: "));
 		stream.println(TxCount);
-		stream.print(F("\tRx: "));
+		stream.print(F("\tRx Count: "));
 		stream.println(RxCount);
-		stream.print(F("\tLost: "));
+		stream.print(F("\tRx Lost: "));
 		stream.println(RxDropCount);
 		stream.print(F("\tQuality Rx: "));
 		stream.println(Quality.RxDrop);
@@ -74,12 +74,26 @@ struct LoLaLinkStatus
 			stream.print(F(" years "));
 
 			stream.print(durationDaysRemainder);
-			stream.print(F(" days "));
+			if (durationDaysRemainder > 1) {
+
+				stream.print(F(" days "));
+			}
+			else
+			{
+				stream.print(F(" day "));
+			}
 		}
 		else if (durationDays > 0)
 		{
 			stream.print(durationDays);
-			stream.print(F(" days "));
+			if (durationDays > 1) {
+
+				stream.print(F(" days "));
+			}
+			else
+			{
+				stream.print(F(" day "));
+			}
 		}
 
 		if (durationHoursRemainder < 10)

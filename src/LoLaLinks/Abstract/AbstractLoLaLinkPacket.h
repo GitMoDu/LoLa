@@ -410,12 +410,6 @@ private:
 		}
 		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 
-#if defined(DEBUG_LOLA)
-		Serial.println(F("Timestamping duration: "));
-		Serial.print(timestampingDuration);
-		Serial.println(F(" ns."));
-#endif
-
 		// Measure PRNG Hop calculation time.
 		volatile bool dummy = 0;
 		start = micros();
@@ -439,17 +433,6 @@ private:
 
 #if defined(DEBUG_LOLA)
 		const uint32_t calibrationDuration = micros() - calibrationStart;
-		Serial.print(F("Calibration done. ("));
-		Serial.print(CALIBRATION_ROUNDS);
-		Serial.print(F(" rounds took "));
-		Serial.print(calibrationDuration);
-		Serial.println(F(" us)"));
-
-		Serial.println(F("Short\tLong"));
-		Serial.print(shortDuration);
-		Serial.print('\t');
-		Serial.print(longDuration);
-		Serial.println(F(" us"));
 
 		// Measure rejection time.
 		start = micros();
@@ -474,6 +457,18 @@ private:
 		}
 		const uint32_t rejectionLongDuration = (micros() - start) / CALIBRATION_ROUNDS;
 
+		Serial.print(F("Calibration done. ("));
+		Serial.print(CALIBRATION_ROUNDS);
+		Serial.print(F(" rounds took "));
+		Serial.print(calibrationDuration);
+		Serial.println(F(" us)"));
+
+		Serial.println(F("Short\tLong"));
+		Serial.print(shortDuration);
+		Serial.print('\t');
+		Serial.print(longDuration);
+		Serial.println(F(" us"));
+
 		Serial.println(F("Rejection duration: "));
 		Serial.println(F("Short\tLong"));
 		Serial.print(rejectionShortDuration);
@@ -482,6 +477,9 @@ private:
 		Serial.println(F(" us"));
 		Serial.println(F("PRNG Hop calculation: "));
 		Serial.print(calculationDuration);
+		Serial.println(F(" ns."));
+		Serial.println(F("Timestamping duration: "));
+		Serial.print(timestampingDuration);
 		Serial.println(F(" ns."));
 		Serial.println(F("Hopper offset: "));
 		Serial.print(HOPPER_OFFSET);
