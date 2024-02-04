@@ -83,7 +83,7 @@ protected:
 	using BaseClass::LoopingCounter;
 
 public:
-	void Accumulate(const uint8_t dropCount)
+	void Accumulate(const uint16_t dropCount)
 	{
 		if (UINT16_MAX - Accumulator > dropCount)
 		{

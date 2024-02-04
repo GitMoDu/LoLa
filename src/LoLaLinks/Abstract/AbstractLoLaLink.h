@@ -31,7 +31,6 @@ private:
 
 	uint32_t LinkingStartMillis = 0;
 	uint32_t LinkStartSeconds = 0;
-	uint16_t LinkSentAtStart = 0;
 
 protected:
 	/// <summary>
@@ -83,7 +82,7 @@ public:
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
 		linkStatus.DurationSeconds = LinkTimestamp.Seconds - LinkStartSeconds;
 		linkStatus.RxDropCount = QualityTracker.GetRxDropCount();
-		linkStatus.TxCount = SendCounter - LinkSentAtStart;
+		linkStatus.TxCount = SentCounter;
 		linkStatus.RxCount = ReceivedCounter;
 		linkStatus.RxDropRate = QualityTracker.GetRxDropRate();
 		linkStatus.TxDropRate = QualityTracker.GetTxDropRate();
@@ -160,7 +159,7 @@ public:
 	}
 
 protected:
-	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint8_t lostCount) final
+	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint16_t lostCount) final
 	{
 		QualityTracker.OnRxComplete(millis(), rssi, lostCount);
 	}
@@ -219,7 +218,6 @@ protected:
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestampMonotonic(LinkTimestamp);
 			LinkStartSeconds = LinkTimestamp.Seconds;
-			LinkSentAtStart = SendCounter;
 			QualityTracker.Reset(millis());
 			PacketService.RefreshChannel();
 			break;

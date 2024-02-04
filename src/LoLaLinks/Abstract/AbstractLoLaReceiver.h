@@ -21,12 +21,13 @@ private:
 private:
 	Timestamp ReceiveTimestamp{};
 
-protected:
+private:
 	/// <summary>
 	/// Rolling packet counter.
 	/// </summary>
-	uint16_t LastValidReceivedCounter = 0;
+	uint16_t ReceiveCounter = 0;
 
+protected:
 	uint16_t ReceivedCounter = 0;
 
 protected:
@@ -53,7 +54,7 @@ protected:
 	/// </summary>
 	/// <param name="rssi"></param>
 	/// <param name="lostCount"></param>
-	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint8_t lostCount) {}
+	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint16_t lostCount) {}
 
 public:
 	AbstractLoLaReceiver(Scheduler& scheduler,
@@ -90,7 +91,7 @@ public:
 		const uint8_t receivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
 
 		uint16_t receivingCounter = 0;
-		uint8_t receivingLost = 0;
+		uint16_t receivingLost = 0;
 
 		switch (LinkStage)
 		{
@@ -102,7 +103,7 @@ public:
 			if (Encoder->DecodeInPacket(RawInPacket, InData, receivingCounter, receivingDataSize))
 			{
 				// Save last received counter, ready for switch for next stage.
-				LastValidReceivedCounter = receivingCounter;
+				ReceiveCounter = receivingCounter;
 
 				// Check for valid port.
 				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == Unlinked::PORT)
@@ -131,7 +132,7 @@ public:
 					&& InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == Linking::PORT)
 				{
 					// Counter accepted, update local tracker.
-					LastValidReceivedCounter = receivingCounter;
+					ReceiveCounter = receivingCounter;
 
 					OnLinkingPacketReceived(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
@@ -159,14 +160,14 @@ public:
 				if (ValidateCounter(receivingCounter, receivingLost))
 				{
 					// Counter accepted, update local tracker.
-					LastValidReceivedCounter = receivingCounter;
-					ReceivedCounter++;
+					ReceiveCounter = receivingCounter;
 
 					Registry->NotifyPacketListener(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
 						LoLaPacketDefinition::GetPayloadSize(packetSize),
 						InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX]);
 
+					ReceivedCounter++;
 					OnPacketReceivedOk(rssi, receivingLost);
 				}
 				else
@@ -185,6 +186,11 @@ public:
 	}
 
 protected:
+	void SetReceiveCounter(const uint16_t counter)
+	{
+		ReceiveCounter = counter;
+	}
+
 	const bool MockReceiveFailPacket(const uint32_t receiveTimestamp, const uint8_t* data, const uint8_t payloadSize)
 	{
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
@@ -199,9 +205,9 @@ protected:
 	}
 
 private:
-	const bool ValidateCounter(const uint16_t counter, uint8_t& receiveLost)
+	const bool ValidateCounter(const uint16_t counter, uint16_t& receiveLost)
 	{
-		const uint16_t counterRoll = counter - LastValidReceivedCounter;
+		const uint16_t counterRoll = counter - ReceiveCounter;
 		if (counterRoll < LoLaLinkDefinition::ROLLING_COUNTER_ERROR)
 		{
 			receiveLost = counterRoll - 1;

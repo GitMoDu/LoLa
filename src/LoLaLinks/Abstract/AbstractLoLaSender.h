@@ -18,9 +18,11 @@ private:
 	uint_fast16_t SendShortDurationMicros = 0;
 	uint_fast16_t SendVariableDurationMicros = 0;
 
-protected:
 	// Rolling counter.
 	uint16_t SendCounter = 0;
+
+protected:
+	uint16_t SentCounter = 0;
 
 protected:
 	virtual const uint8_t GetTxChannel(const uint32_t rollingMicros) { return 0; }
@@ -71,6 +73,7 @@ public:
 			GetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
 			SendCounter++;
+			SentCounter++;
 
 #if defined(ARDUINO_ARCH_ESP32)
 			xTaskResumeAll();
@@ -129,6 +132,11 @@ protected:
 	}
 
 protected:
+	void SetSendCounter(const uint16_t counter)
+	{
+		SendCounter = counter;
+	}
+
 	/// <summary>
 	/// Mock internal "SendPacket", 
 	/// for calibration/testing purposes.
@@ -138,10 +146,11 @@ protected:
 	/// <returns></returns>
 	const bool MockSendPacket(const uint8_t* data, const uint8_t payloadSize)
 	{
+		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
+
 #if defined(ARDUINO_ARCH_ESP32)
 		vTaskSuspendAll();
 #endif
-		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));

@@ -47,7 +47,7 @@ public:
 		RxRssi.Clear();
 	}
 
-	void OnRxComplete(const uint32_t validTimestamp, const uint8_t rssi, const uint8_t rxLostCount)
+	void OnRxComplete(const uint32_t validTimestamp, const uint8_t rssi, const uint16_t rxLostCount)
 	{
 		LastValidReceived = validTimestamp;
 		RxRssi.Accumulate(rssi);
