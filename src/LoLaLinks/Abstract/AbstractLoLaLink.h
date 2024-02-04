@@ -197,8 +197,6 @@ protected:
 protected:
 	virtual void UpdateLinkStage(const LinkStageEnum linkStage)
 	{
-		BaseClass::UpdateLinkStage(linkStage);
-
 		switch (linkStage)
 		{
 		case LinkStageEnum::Disabled:
@@ -209,7 +207,6 @@ protected:
 			break;
 		case LinkStageEnum::AwaitingLink:
 			RandomSource.RandomReseed();
-			PacketService.RefreshChannel();
 			QualityTracker.ResetRssiQuality();
 			break;
 		case LinkStageEnum::Linking:
@@ -219,11 +216,12 @@ protected:
 			SyncClock.GetTimestampMonotonic(LinkTimestamp);
 			LinkStartSeconds = LinkTimestamp.Seconds;
 			QualityTracker.Reset(millis());
-			PacketService.RefreshChannel();
 			break;
 		default:
 			break;
 		}
+
+		BaseClass::UpdateLinkStage(linkStage);
 
 #if defined(DEBUG_LOLA)
 		this->Owner();

@@ -278,6 +278,7 @@ protected:
 				// Set startup channel and start hopper.
 				ChannelHopper->SetChannel(GetRxChannel());
 				ChannelHopper->OnLinkStarted();
+				PacketService.RefreshChannel();
 
 				// Notify services that link is ready.
 				Registry->NotifyLinkListeners(true);
