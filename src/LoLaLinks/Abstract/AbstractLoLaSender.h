@@ -92,18 +92,19 @@ public:
 protected:
 	const bool SetSendCalibration(const uint32_t shortDuration, const uint32_t longDuration)
 	{
-		const uint32_t fullSendDuration = SendShortDurationMicros
-			+ ((SendVariableDurationMicros * LoLaPacketDefinition::MAX_PAYLOAD_SIZE) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE)
-			+ Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+		const uint16_t airShort = Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(0));
+		const uint16_t airLong = Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+
+		const uint32_t longestSend = longDuration + airLong;
 
 		if (shortDuration > 0
 			&& longDuration >= shortDuration
 			&& shortDuration < UINT16_MAX
 			&& longDuration < UINT16_MAX
-			&& fullSendDuration < UINT16_MAX)
+			&& longestSend < UINT16_MAX)
 		{
-			SendShortDurationMicros = shortDuration;
-			SendVariableDurationMicros = longDuration - shortDuration;
+			SendShortDurationMicros = shortDuration + airShort;
+			SendVariableDurationMicros = (longDuration - shortDuration) + (airLong - airShort);
 
 #if defined(DEBUG_LOLA)
 			Serial.println(F("Time-to-Air estimation"));
@@ -122,8 +123,7 @@ protected:
 	const uint16_t GetSendDuration(const uint8_t payloadSize)
 	{
 		return SendShortDurationMicros
-			+ ((((uint32_t)SendVariableDurationMicros) * payloadSize) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE)
-			+ Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(payloadSize));
+			+ ((((uint32_t)SendVariableDurationMicros) * payloadSize) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
 	}
 
 	const uint16_t GetOnAirDuration(const uint8_t payloadSize)

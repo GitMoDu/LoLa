@@ -34,7 +34,7 @@ private:
 	/// <summary>
 	/// Slower MCUs need a bigger look ahead to counter scheduler latency.
 	/// </summary>
-	static constexpr uint16_t HOPPER_OFFSET = 1500000000 / F_CPU;
+	static constexpr uint16_t HOPPER_OFFSET = 500000000 / F_CPU;
 
 protected:
 	/// <summary>
