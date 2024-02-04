@@ -152,10 +152,16 @@ public:
 			}
 			break;
 		case LinkStageEnum::Linked:
+#if defined(ARDUINO_ARCH_ESP32)
+			vTaskSuspendAll();
+#endif
 			SyncClock.GetTimestamp(ReceiveTimestamp);
 			ReceiveTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
 			if (Encoder->DecodeInPacket(RawInPacket, InData, ReceiveTimestamp.Seconds, receivingCounter, receivingDataSize))
 			{
+#if defined(ARDUINO_ARCH_ESP32)
+				xTaskResumeAll();
+#endif
 				// Validate counter and check for valid port.
 				if (ValidateCounter(receivingCounter, receivingLost))
 				{
@@ -177,6 +183,9 @@ public:
 			}
 			else
 			{
+#if defined(ARDUINO_ARCH_ESP32)
+				xTaskResumeAll();
+#endif
 				OnEvent(PacketEventEnum::ReceiveRejectedMac);
 			}
 			break;
