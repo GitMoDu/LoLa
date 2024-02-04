@@ -19,7 +19,7 @@ class CycleCounter : protected Task
 private:
 	static constexpr uint32_t MIN_OVERFLOW_COUNT = UINT16_MAX - 1;
 	static constexpr uint32_t MAX_SECONDS_COUNT = ((uint32_t)1000 * ONE_MILLI_MICROS);
-	static constexpr uint16_t MIN_ROLLOVER_PERIOD = UINT16_MAX;
+	static constexpr uint16_t MIN_ROLLOVER_PERIOD = INT16_MAX;
 
 private:
 	ICycles* CyclesSource;
@@ -29,8 +29,6 @@ private:
 	uint16_t CyclesMilli = ONE_MILLI_MICROS;
 
 	uint32_t CyclesOverflow = UINT32_MAX;
-
-protected:
 	uint32_t RolloverPeriod = UINT32_MAX;
 
 private:

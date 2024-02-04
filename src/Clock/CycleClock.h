@@ -64,10 +64,6 @@ private:
 			Overflows++;
 			LastCyclestamp = cyclestamp;
 
-#if defined(DEBUG_LOLA)
-			Serial.println(F("\tCyclestamp overflow detected."));
-#endif
-
 			return true;
 		}
 		else
