@@ -12,7 +12,7 @@
 class XoodyakHashWrapper final
 {
 public:
-	static const uint8_t DIGEST_LENGTH = XOODYAK_HASH_SIZE;
+	static constexpr uint8_t DIGEST_LENGTH = XOODYAK_HASH_SIZE;
 
 private:
 	xoodyak_hash_state_t State;

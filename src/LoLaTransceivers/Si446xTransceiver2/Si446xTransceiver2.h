@@ -197,7 +197,7 @@ private:
 		return GetRealChannel<ChannelCount>(abstractChannel);
 	}
 
-	const uint8_t GetNormalizedRssi(const uint8_t rssiLatch)
+	static constexpr uint8_t GetNormalizedRssi(const uint8_t rssiLatch)
 	{
 		return (UINT8_MAX - rssiLatch);
 	}

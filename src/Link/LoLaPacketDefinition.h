@@ -91,8 +91,8 @@ struct TemplateDefinition
 
 struct HeaderDefinition
 {
-	static const uint8_t HEADER_INDEX = 0;
-	static const uint8_t SUB_PAYLOAD_INDEX = 1;
+	static constexpr uint8_t HEADER_INDEX = 0;
+	static constexpr uint8_t SUB_PAYLOAD_INDEX = 1;
 };
 
 /// <summary>
@@ -102,13 +102,13 @@ template<const uint8_t Header,
 	const uint8_t SubPayloadSize>
 struct TemplateHeaderDefinition : public HeaderDefinition
 {
-	static const uint8_t HEADER = Header;
+	static constexpr uint8_t HEADER = Header;
 
-	static const uint8_t SUB_PAYLOAD_SIZE = SubPayloadSize;
+	static constexpr uint8_t SUB_PAYLOAD_SIZE = SubPayloadSize;
 
-	static const uint8_t PAYLOAD_SIZE = SUB_PAYLOAD_SIZE + 1;
+	static constexpr uint8_t PAYLOAD_SIZE = SUB_PAYLOAD_SIZE + 1;
 
-	static const uint8_t PACKET_SIZE = LoLaPacketDefinition::GetTotalSize(PAYLOAD_SIZE);
+	static constexpr uint8_t PACKET_SIZE = LoLaPacketDefinition::GetTotalSize(PAYLOAD_SIZE);
 };
 
 template<const uint8_t MaxPayloadSize>

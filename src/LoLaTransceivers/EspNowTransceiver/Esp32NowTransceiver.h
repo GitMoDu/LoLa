@@ -27,11 +27,11 @@ class EspNowTransceiver final
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x3403;
 
-	static const uint8_t ChannelCount = 15;
+	static constexpr uint8_t ChannelCount = 15;
 
-	static const uint8_t CHANNEL = ChannelCount / 2;
+	static constexpr uint8_t CHANNEL = ChannelCount / 2;
 
-	static const wifi_phy_rate_t PhyRate = WIFI_PHY_RATE_2M_S;
+	static constexpr wifi_phy_rate_t PhyRate = WIFI_PHY_RATE_2M_S;
 
 	ILoLaTransceiverListener* Listener = nullptr;
 

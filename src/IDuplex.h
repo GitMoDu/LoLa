@@ -11,7 +11,7 @@
 class IDuplex
 {
 public:
-	static const uint16_t DUPLEX_FULL = 0;
+	static constexpr uint16_t DUPLEX_FULL = 0;
 
 public:
 	/// <summary>

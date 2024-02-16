@@ -41,10 +41,10 @@ private:
 
 	// The used timings' constants, based on baudrate.
 	// Used to estimate Tx duration and Rx compensation.
-	const uint16_t TX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMin;
-	const uint16_t TX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
-	const uint16_t RX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMin;
-	const uint16_t RX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
+	static constexpr uint16_t TX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMin;
+	static constexpr uint16_t TX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].TxDelayMax - TX_DELAY_MIN;
+	static constexpr uint16_t RX_DELAY_MIN = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMin;
+	static constexpr uint16_t RX_DELAY_RANGE = nRF24Support::NRF_TIMINGS[DataRate].RxDelayMax - RX_DELAY_MIN;
 
 private:
 	nRF24Support::EventStruct Event{};
@@ -500,7 +500,7 @@ private:
 	/// </summary>
 	/// <param name="packetSize"></param>
 	/// <returns></returns>
-	const uint_least16_t GetRxDelay(const uint8_t packetSize)
+	static constexpr uint16_t GetRxDelay(const uint8_t packetSize)
 	{
 		return RX_DELAY_MIN + ((((uint32_t)RX_DELAY_RANGE) * packetSize) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 	}
@@ -510,7 +510,7 @@ private:
 	/// </summary>
 	/// <param name="packetSize"></param>
 	/// <returns></returns>
-	const uint_least16_t GetTxDelay(const uint8_t packetSize)
+	static constexpr uint16_t GetTxDelay(const uint8_t packetSize)
 	{
 		return TX_DELAY_MIN + ((((uint32_t)TX_DELAY_RANGE) * packetSize) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 	}

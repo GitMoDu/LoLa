@@ -28,8 +28,8 @@ class EspNowTransceiver final
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x3403;
 
-	static const uint8_t CHANNEL = 0;
-	static const uint8_t ChannelCount = 13;
+	static constexpr uint8_t CHANNEL = 0;
+	static constexpr uint8_t ChannelCount = 13;
 
 	ILoLaTransceiverListener* Listener = nullptr;
 

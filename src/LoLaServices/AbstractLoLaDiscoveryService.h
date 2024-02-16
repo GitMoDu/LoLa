@@ -9,11 +9,10 @@
 /// Discovery sub header definition.
 /// User classes should extend sub-headers starting from 0, up to UINT8_MAX-1.
 /// </summary>
-class DiscoveryDefinition : public TemplateHeaderDefinition<UINT8_MAX, 1 + 4>
+struct DiscoveryDefinition : public TemplateHeaderDefinition<UINT8_MAX, 1 + 4>
 {
-public:
-	static const uint8_t PAYLOAD_ACK_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
-	static const uint8_t PAYLOAD_ID_INDEX = PAYLOAD_ACK_INDEX + 1;
+	static constexpr uint8_t PAYLOAD_ACK_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+	static constexpr uint8_t PAYLOAD_ID_INDEX = PAYLOAD_ACK_INDEX + 1;
 };
 
 /// <summary>
@@ -32,8 +31,8 @@ class AbstractLoLaDiscoveryService
 private:
 	using BaseClass = TemplateLoLaService<MaxSendPayloadSize>;
 
-	static const uint32_t RetryPeriod = 2;
-	static const uint32_t NoDiscoveryTimeOut = 1000;
+	static constexpr uint32_t RetryPeriod = 20;
+	static constexpr uint32_t NoDiscoveryTimeOut = 5000;
 
 	enum DiscoveryStateEnum
 	{

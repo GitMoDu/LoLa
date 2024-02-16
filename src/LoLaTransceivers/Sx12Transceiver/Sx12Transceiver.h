@@ -36,13 +36,13 @@ private:
 
 	//The SPI interface is designed to operate at a maximum of 10 MHz.
 #if defined(ARDUINO_ARCH_AVR)
-	static const uint32_t SX1_SPI_SPEED = 8000000;
+	static constexpr uint32_t SX1_SPI_SPEED = 8000000;
 #elif defined(ARDUINO_ARCH_STM32F1)
-	static const uint32_t SX1_SPI_SPEED = 16000000;
+	static constexpr uint32_t SX1_SPI_SPEED = 16000000;
 #elif defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-	static const uint32_t SX1_SPI_SPEED = 16000000;
+	static constexpr uint32_t SX1_SPI_SPEED = 16000000;
 #else
-	static const uint32_t SX1_SPI_SPEED = 8000000;
+	static constexpr uint32_t SX1_SPI_SPEED = 8000000;
 #endif
 
 private:

@@ -12,7 +12,7 @@
 class IChannelHop
 {
 public:
-	static const uint16_t NOT_A_HOPPER = 0;
+	static constexpr uint16_t NOT_A_HOPPER = 0;
 
 public:
 	class IHopListener

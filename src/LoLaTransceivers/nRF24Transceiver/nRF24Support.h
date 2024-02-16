@@ -7,19 +7,19 @@
 
 namespace nRF24Support
 {
-
-	//The SPI interface is designed to operate at a maximum of 10 MHz.
+	// The SPI interface is designed to operate at a maximum of 10 MHz.
+	// Most modules support 16-18 MHz.
 #if defined(ARDUINO_ARCH_AVR)
-	static const uint32_t NRF24_SPI_SPEED = 8000000;
+	static constexpr uint32_t NRF24_SPI_SPEED = 8000000;
 #elif defined(ARDUINO_ARCH_STM32F1)
-	static const uint32_t NRF24_SPI_SPEED = 16000000;
+	static constexpr uint32_t NRF24_SPI_SPEED = 16000000;
 #elif defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-	static const uint32_t NRF24_SPI_SPEED = 16000000;
+	static constexpr uint32_t NRF24_SPI_SPEED = 16000000;
 #else
-	static const uint32_t NRF24_SPI_SPEED = RF24_SPI_SPEED;
+	static constexpr uint32_t NRF24_SPI_SPEED = RF24_SPI_SPEED;
 #endif
 
-	
+
 	struct nRF24Timing
 	{
 		uint16_t RxDelayMin;
@@ -33,7 +33,9 @@ namespace nRF24Support
 	/// Timings ordered by Baudarate enum value.
 	/// [RF24_1MBPS|RF24_2MBPS|RF24_250KBPS] 
 	/// </summary>
-	static const nRF24Timing NRF_TIMINGS[3] = { {220, 470, 60, 116}, {190, 310, 60, 116}, {400, 1390, 60, 120} };
+	static constexpr nRF24Timing NRF_TIMINGS[3] = { {.RxDelayMin = 220, .RxDelayMax = 470, .TxDelayMin = 60, .TxDelayMax = 116},
+												{.RxDelayMin = 190, .RxDelayMax = 310, .TxDelayMin = 60, .TxDelayMax = 116},
+												{.RxDelayMin = 400, .RxDelayMax = 1390, .TxDelayMin = 60, .TxDelayMax = 120} };
 
 	// Fixed addressing identifies protocol.
 	static constexpr uint8_t AddressSize = 3;

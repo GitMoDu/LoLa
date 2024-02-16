@@ -13,9 +13,9 @@
 class Poly1305Wrapper final
 {
 public:
-	static const uint8_t DIGEST_LENGTH = 16;
-	static const uint8_t KEY_SIZE = 16;
-	static const uint8_t NONCE_SIZE = 16;
+	static constexpr uint8_t DIGEST_LENGTH = 16;
+	static constexpr uint8_t KEY_SIZE = 16;
+	static constexpr uint8_t NONCE_SIZE = 16;
 
 private:
 	Poly1305 Hasher{};
