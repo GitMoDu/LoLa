@@ -7,20 +7,14 @@
 
 #if defined(DEBUG)
 #define DEBUG_LOLA
-#endif
-
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-#define SERIAL_BAUD_RATE 921600 // ESP Serial with low bitrate stalls the scheduler loop.
-#else
 #define SERIAL_BAUD_RATE 115200
 #endif
 
 #define _TASK_OO_CALLBACKS
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP32)
-#define _TASK_THREAD_SAFE
-#else
-#define _TASK_SLEEP_ON_IDLE_RUN
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+#define _TASK_THREAD_SAFE	// Enable additional checking for thread safety
 #endif
+#define _TASK_SLEEP_ON_IDLE_RUN
 
 // Selected Driver for test.
 #define USE_SERIAL_TRANSCEIVER
