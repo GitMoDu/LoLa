@@ -24,7 +24,6 @@ struct LoLaLinkStatus
 	uint16_t RxDropRate = 0;
 	uint16_t TxDropRate = 0;
 
-
 #if defined(DEBUG_LOLA)
 	void Log(Stream& stream)
 	{
@@ -113,6 +112,99 @@ struct LoLaLinkStatus
 			stream.print(0);
 		}
 		stream.print(durationSecondsRemainder);
+		stream.println();
+	}
+#endif
+};
+
+class LoLaLinkExtendedStatus : public LoLaLinkStatus
+{
+private:
+	uint16_t LastTxCount = 0;
+	uint16_t LastRxCount = 0;
+	uint16_t LastRxDropCount = 0;
+
+	uint32_t LoopsTxCount = 0;
+	uint32_t LoopsRxCount = 0;
+	uint32_t LoopsRxDropCount = 0;
+
+public:
+	const uint64_t GetLongTxCount()
+	{
+		return (((uint64_t)LoopsTxCount) * UINT16_MAX) + TxCount;
+	}
+
+	const uint64_t GetLongRxCount()
+	{
+		return (((uint64_t)LoopsRxCount) * UINT16_MAX) + RxCount;
+	}
+
+	const uint64_t GetLongRxDropCount()
+	{
+		return (((uint64_t)LoopsRxDropCount) * UINT16_MAX) + RxDropCount;
+	}
+
+public:
+	void OnStart()
+	{
+		LoopsRxDropCount = 0;
+		LoopsTxCount = 0;
+		LoopsRxCount = 0;
+
+		LastTxCount = TxCount;
+		LastRxCount = RxCount;
+		LastRxDropCount = RxDropCount;
+	}
+
+	void OnUpdate()
+	{
+		if (TxCount < LastTxCount)
+		{
+			LoopsTxCount++;
+		}
+		LastTxCount = TxCount;
+
+		if (RxCount < LastRxCount)
+		{
+			LoopsRxCount++;
+		}
+		LastRxCount = RxCount;
+
+		if (RxDropCount < LastRxDropCount)
+		{
+			LoopsRxDropCount++;
+		}
+		LastRxDropCount = RxDropCount;
+	}
+
+#if defined(DEBUG_LOLA)
+	void LogLong(Stream& stream)
+	{
+		PrintDuration(stream, DurationSeconds);
+		stream.print(F("\tRSSI <- "));
+		stream.println(Quality.RxRssi);
+		stream.print(F("\tRSSI -> "));
+		stream.println(Quality.TxRssi);
+
+		stream.print(F("\tTx Count: "));
+		stream.println(GetLongTxCount());
+		stream.print(F("\tRx Count: "));
+		stream.println(GetLongRxCount());
+		stream.print(F("\tRx Lost: "));
+		stream.println(GetLongRxDropCount());
+		stream.print(F("\tQuality Rx: "));
+		stream.println(Quality.RxDrop);
+		stream.print(F("\tRx Drop Rate: "));
+		stream.println(RxDropRate);
+		stream.print(F("\tQuality Tx: "));
+		stream.println(Quality.TxDrop);
+		stream.print(F("\tTx Drop Rate: "));
+		stream.println(TxDropRate);
+		stream.print(F("\tRx Youth: "));
+		stream.println(Quality.Age);
+		stream.print(F("\tSync Clock: "));
+		stream.println(Quality.ClockSync);
+
 		stream.println();
 	}
 #endif
