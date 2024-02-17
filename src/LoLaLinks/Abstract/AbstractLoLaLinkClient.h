@@ -374,7 +374,7 @@ protected:
 			}
 			break;
 		case WaitingStateEnum::SessionCreation:
-			if (GetLinkingElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
+			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA)
 				this->Owner();
@@ -453,9 +453,7 @@ protected:
 
 					UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
 					UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
-					if (SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE))
-					{
-					}
+					SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE);
 				}
 			}
 			Task::enable();
