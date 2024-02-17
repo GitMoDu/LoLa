@@ -9,15 +9,24 @@
 #include "lightweight-crypto\xoodyak.h"
 #include <stdint.h>
 
+template<const uint8_t MacSize>
 class XoodyakHashWrapper final
 {
 public:
 	static constexpr uint8_t DIGEST_LENGTH = XOODYAK_HASH_SIZE;
 
 private:
+	static constexpr uint8_t MATCH_MIN_SIZE = sizeof(uint32_t);
+
+private:
 	xoodyak_hash_state_t State;
 
-	uint8_t Match[LoLaPacketDefinition::MAC_SIZE]{};
+	static constexpr uint8_t GetMatchSize()
+	{
+		return ((MacSize >= MATCH_MIN_SIZE) * MacSize) + ((MacSize < MATCH_MIN_SIZE) * MATCH_MIN_SIZE);
+	}
+
+	uint8_t Match[GetMatchSize()]{};
 
 public:
 	void reset()
@@ -69,8 +78,8 @@ public:
 
 	const bool macMatches(const uint8_t* source)
 	{
-		xoodyak_hash_squeeze(&State, Match, LoLaPacketDefinition::MAC_SIZE);
-		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAC_SIZE; i++)
+		xoodyak_hash_squeeze(&State, Match, MacSize);
+		for (uint_fast8_t i = 0; i < MacSize; i++)
 		{
 			if (Match[i] != source[i])
 			{

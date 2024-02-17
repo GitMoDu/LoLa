@@ -38,7 +38,7 @@ protected:
 #if defined(LOLA_USE_POLY1305)
 	Poly1305Wrapper CryptoHasher{};
 #else
-	XoodyakHashWrapper CryptoHasher{};
+	XoodyakHashWrapper<LoLaPacketDefinition::MAC_SIZE> CryptoHasher{};
 #endif
 
 
