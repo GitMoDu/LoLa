@@ -139,8 +139,8 @@ protected:
 			// Wait longer because reply is big.
 			if (UnlinkedPacketThrottle()
 				&& PacketService.CanSendPacket())
+			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			{
-				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.SetHeader(Unlinked::PkeSessionRequest::HEADER);
 				if (SendPacket(OutPacket.Data, Unlinked::PkeSessionRequest::PAYLOAD_SIZE))
 				{
@@ -196,7 +196,7 @@ protected:
 		case PkeStateEnum::SessionCached:
 			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Unlinked::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Unlinked::PkeLinkingStartRequest::HEADER);
 				for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 				{

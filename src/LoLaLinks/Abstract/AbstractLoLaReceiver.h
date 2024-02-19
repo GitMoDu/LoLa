@@ -106,7 +106,7 @@ public:
 				ReceiveCounter = receivingCounter;
 
 				// Check for valid port.
-				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == Unlinked::PORT)
+				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT)
 				{
 					OnUnlinkedPacketReceived(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
@@ -127,8 +127,8 @@ public:
 			if (Encoder->DecodeInPacket(RawInPacket, InData, 0, receivingCounter, receivingDataSize))
 			{
 				// Validate counter and check for valid port.
-				if (ValidateCounter(receivingCounter, receivingLost)
-					&& InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == Linking::PORT)
+				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT
+					&& ValidateCounter(receivingCounter, receivingLost))
 				{
 					// Counter accepted, update local tracker.
 					ReceiveCounter = receivingCounter;

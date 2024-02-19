@@ -325,7 +325,7 @@ protected:
 
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
-		if (port == Linked::PORT)
+		if (port == LoLaLinkDefinition::LINK_PORT)
 		{
 			switch (payload[HeaderDefinition::HEADER_INDEX])
 			{
@@ -433,7 +433,7 @@ protected:
 		case LinkingStateEnum::AuthenticationRequest:
 			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::ServerChallengeRequest::HEADER);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 
@@ -454,7 +454,7 @@ protected:
 		case LinkingStateEnum::AuthenticationReply:
 			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::ServerChallengeReply::HEADER);
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]);
 
@@ -478,7 +478,7 @@ protected:
 				// Only send a time reply once.
 				ClockReplyPending = false;
 
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::ClockSyncReply::HEADER);
 				OutPacket.Payload[Linking::ClockSyncReply::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 
@@ -527,7 +527,7 @@ protected:
 			else if (StateTransition.IsSendRequested(micros())
 				&& UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::LinkTimedSwitchOver::HEADER);
 
 				if (UnlinkedDuplexCanSend(Linking::LinkTimedSwitchOver::PAYLOAD_SIZE) &&
@@ -567,7 +567,7 @@ protected:
 		{
 			if (CanRequestSend())
 			{
-				OutPacket.SetPort(Linked::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linked::ClockTuneReply::HEADER);
 				Int32ToArray(ClockTracker.GetLinkedReplyError(), &OutPacket.Payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
 
@@ -626,7 +626,7 @@ private:
 		case WaitingStateEnum::SearchingLink:
 			if (SearchReplyPending)
 			{
-				OutPacket.SetPort(Unlinked::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Unlinked::SearchReply::HEADER);
 
 				if (PacketService.CanSendPacket())
@@ -681,7 +681,7 @@ private:
 		else if (StateTransition.IsSendRequested(micros())
 			&& UnlinkedPacketThrottle())
 		{
-			OutPacket.SetPort(Unlinked::PORT);
+			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Unlinked::LinkingTimedSwitchOver::HEADER);
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]);
 

@@ -17,12 +17,11 @@ class LoLaLinkDefinition
 public:
 	static constexpr uint8_t LOLA_VERSION = 0;
 
-	// <summary>
-	/// When unlinked, top 2 ports are used.
-	/// When linked, top port is reserved.
+	/// <summary>
+	/// Top port is reserved for Link.
 	/// </summary>
 	static constexpr uint8_t LINK_PORT_ALLOCATION = 1;
-	static constexpr uint8_t UN_LINKED_PORT_ALLOCATION = 2;
+	static constexpr uint8_t UN_LINKED_PORT_ALLOCATION = 1;
 	static constexpr uint8_t MAX_DEFINITION_PORT = UINT8_MAX - LINK_PORT_ALLOCATION;
 
 	/// <summary>
@@ -223,11 +222,11 @@ private:
 	};
 
 public:
+	static constexpr uint8_t LINK_PORT = UINT8_MAX;
+
 	struct Unlinked
 	{
 	public:
-		static constexpr uint8_t PORT = UINT8_MAX;
-
 		/// <summary>
 		/// ||||
 		/// Broadcast to search for available partners.
@@ -312,8 +311,6 @@ public:
 
 	struct Linking
 	{
-		static constexpr uint8_t PORT = Unlinked::PORT - 1;
-
 		/// <summary>
 		/// ||ChallengeCode||
 		/// </summary>
@@ -384,15 +381,9 @@ public:
 	{
 	public:
 		/// <summary>
-		/// </summary>
-		static constexpr uint8_t PORT = UINT8_MAX;
-
-		static constexpr uint8_t COUNTER_SIZE = 2;
-
-		/// <summary>
 		/// ||ReplyRequested|RxRssiQuality|RxCounter||
 		/// </summary>
-		struct ReportUpdate : public TemplateHeaderDefinition<0, 1 + 1 + COUNTER_SIZE>
+		struct ReportUpdate : public TemplateHeaderDefinition<0, 1 + 1 + LoLaPacketDefinition::ID_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_REQUEST_INDEX = SUB_PAYLOAD_INDEX;
 			static constexpr uint8_t PAYLOAD_RSSI_INDEX = PAYLOAD_REQUEST_INDEX + 1;
@@ -417,7 +408,7 @@ public:
 	};
 
 	/// <summary>
-	/// Largest Link Packets will be the Broadcast packets, that contain the SessionId+PublicKey(compressed).
+	/// Largest payload in a single packet.
 	/// </summary>
 	static constexpr uint8_t LARGEST_PAYLOAD = PkeDefinition<0>::PAYLOAD_SIZE;
 };

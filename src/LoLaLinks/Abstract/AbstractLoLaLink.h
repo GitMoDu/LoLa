@@ -62,7 +62,7 @@ public:
 
 	virtual const bool Setup()
 	{
-		if (Registry->RegisterPacketListener(this, Linked::PORT))
+		if (Registry->RegisterPacketListener(this, LoLaLinkDefinition::LINK_PORT))
 		{
 			return BaseClass::Setup();
 		}
@@ -112,7 +112,7 @@ public:
 
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port)
 	{
-		if (port == Linked::PORT
+		if (port == LoLaLinkDefinition::LINK_PORT
 			&& payload[HeaderDefinition::HEADER_INDEX] == Linked::ReportUpdate::HEADER
 			&& payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
 		{
@@ -361,7 +361,7 @@ private:
 			if (QualityTracker.IsTimeToSendReport(timestamp)
 				&& CanRequestSend())
 			{
-				OutPacket.SetPort(Linked::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 
 				const uint16_t rxLoopingDropCounter = QualityTracker.GetRxLoopingDropCount();
 

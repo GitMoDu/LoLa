@@ -198,7 +198,7 @@ protected:
 	{
 		if (PkeSessionRequested)
 		{
-			OutPacket.SetPort(Unlinked::PORT);
+			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Unlinked::PkeSessionAvailable::HEADER);
 			for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::COMPRESSED_KEY_SIZE; i++)
 			{

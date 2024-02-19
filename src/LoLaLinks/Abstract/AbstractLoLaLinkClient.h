@@ -286,7 +286,7 @@ protected:
 
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
-		if (port == Linked::PORT)
+		if (port == LoLaLinkDefinition::LINK_PORT)
 		{
 			switch (payload[HeaderDefinition::HEADER_INDEX])
 			{
@@ -418,7 +418,7 @@ protected:
 		case LinkingStateEnum::AuthenticationReply:
 			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::ClientChallengeReplyRequest::HEADER);
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
@@ -440,7 +440,7 @@ protected:
 		case LinkingStateEnum::ClockSyncing:
 			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::ClockSyncRequest::HEADER);
 
 				if (UnlinkedDuplexCanSend(Linking::ClockSyncRequest::PAYLOAD_SIZE) &&
@@ -461,7 +461,7 @@ protected:
 		case LinkingStateEnum::RequestingLinkStart:
 			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::StartLinkRequest::HEADER);
 
 				if (UnlinkedDuplexCanSend(Linking::StartLinkRequest::PAYLOAD_SIZE) &&
@@ -500,7 +500,7 @@ protected:
 			}
 			else if (StateTransition.IsSendRequested(micros()))
 			{
-				OutPacket.SetPort(Linking::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::LinkTimedSwitchOverAck::HEADER);
 				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 
@@ -525,7 +525,7 @@ protected:
 
 	virtual void OnPreSend() final
 	{
-		if (OutPacket.GetPort() == Linked::PORT &&
+		if (OutPacket.GetPort() == LoLaLinkDefinition::LINK_PORT &&
 			OutPacket.GetHeader() == Linked::ClockTuneRequest::HEADER)
 		{
 			SyncClock.GetTimestamp(LinkTimestamp);
@@ -564,7 +564,7 @@ protected:
 		}
 		else if (ClockTracker.HasRequestToSend(millis()) && CanRequestSend())
 		{
-			OutPacket.SetPort(Linked::PORT);
+			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Linked::ClockTuneRequest::HEADER);
 			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE))
 			{
@@ -598,7 +598,7 @@ private:
 
 				if (PacketService.CanSendPacket())
 				{
-					OutPacket.SetPort(Unlinked::PORT);
+					OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 					OutPacket.SetHeader(Unlinked::SearchRequest::HEADER);
 					if (SendPacket(OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
@@ -641,7 +641,7 @@ private:
 		}
 		else if (StateTransition.IsSendRequested(micros()))
 		{
-			OutPacket.SetPort(Unlinked::PORT);
+			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Unlinked::LinkingTimedSwitchOverAck::HEADER);
 			OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);

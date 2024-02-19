@@ -180,10 +180,6 @@ protected:
 		return true;
 	}
 
-	const bool RegisterPort(const uint8_t port)
-	{
-		return LoLaLink->RegisterPacketListener(this, port);
-	}
 
 	void SetSendRequestTimeout(const uint32_t sendRequestTimeout)
 	{

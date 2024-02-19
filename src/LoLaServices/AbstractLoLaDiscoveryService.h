@@ -105,9 +105,9 @@ public:
 	{
 		DiscoveryState = DiscoveryStateEnum::WaitingForLink;
 
-		return BaseClass::Setup() &&
-			LoLaLink->RegisterLinkListener(this) &&
-			RegisterPort(Port);
+		return BaseClass::Setup()
+			&& LoLaLink->RegisterLinkListener(this)
+			&& LoLaLink->RegisterPacketListener(this, Port);
 	}
 
 	virtual void OnLinkStateUpdated(const bool hasLink) final

@@ -187,7 +187,7 @@ protected:
 	{
 		if (AmSessionRequested)
 		{
-			OutPacket.SetPort(Unlinked::PORT);
+			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Unlinked::AmSessionAvailable::HEADER);
 			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::AmSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 			Session.CopyLocalAddressTo(&OutPacket.Payload[Unlinked::AmSessionAvailable::PAYLOAD_SERVER_ADDRESS_INDEX]);

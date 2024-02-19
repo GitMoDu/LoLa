@@ -129,8 +129,8 @@ protected:
 			if (UnlinkedPacketThrottle()
 				&& UnlinkedDuplexCanSend(Unlinked::AmSessionRequest::PAYLOAD_SIZE)
 				&& PacketService.CanSendPacket())
+			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			{
-				OutPacket.SetPort(Unlinked::PORT);
 				OutPacket.SetHeader(Unlinked::AmSessionRequest::HEADER);
 				if (SendPacket(OutPacket.Data, Unlinked::AmSessionRequest::PAYLOAD_SIZE))
 				{
@@ -180,7 +180,7 @@ protected:
 		case AmStateEnum::SessionCached:
 			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetPort(Unlinked::PORT);
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Unlinked::AmLinkingStartRequest::HEADER);
 				Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::AmLinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]);
 				Session.CopyLocalAddressTo(&OutPacket.Payload[Unlinked::AmLinkingStartRequest::PAYLOAD_CLIENT_ADDRESS_INDEX]);
