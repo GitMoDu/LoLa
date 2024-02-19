@@ -78,7 +78,6 @@ public:
 	}
 #endif
 
-
 public:
 	AbstractLoLa(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,

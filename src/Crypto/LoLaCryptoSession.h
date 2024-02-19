@@ -276,8 +276,6 @@ public:
 		CryptoHasher.clear();
 	}
 
-	/// <summary>
-	/// </summary>
 	void CalculateLinkingToken(const uint8_t* localKey, const uint8_t* partnerKey, const uint8_t keySize)
 	{
 #if defined(LOLA_USE_POLY1305)
