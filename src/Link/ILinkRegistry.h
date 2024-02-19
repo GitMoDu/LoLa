@@ -23,9 +23,19 @@ public:
 	/// <returns>True if success. False if no more slots are available or port is reserved.</returns>
 	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) { return false; }
 
-
+	/// <summary>
+	/// Notify services that link is ready/lost.
+	/// </summary>
+	/// <param name="hasLink"></param>
 	virtual void NotifyLinkListeners(const bool hasLink) { }
 
+	/// <summary>
+	/// Notify the port-registered service of incoming packet.
+	/// </summary>
+	/// <param name="timestamp"></param>
+	/// <param name="payload"></param>
+	/// <param name="payloadSize"></param>
+	/// <param name="port"></param>
 	virtual void NotifyPacketListener(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) { }
 };
 
