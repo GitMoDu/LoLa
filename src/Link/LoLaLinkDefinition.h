@@ -60,6 +60,11 @@ public:
 	static constexpr uint8_t TIME_SIZE = 4;
 
 	/// <summary>
+	/// Full timestamps have 32 bit UTC seconds and 32 bit microseconds.
+	/// </summary>
+	static constexpr uint8_t TIME_FULL_SIZE = TIME_SIZE * 2;
+
+	/// <summary>
 	/// Public key equivalent.
 	/// </summary>
 	static constexpr uint8_t PUBLIC_ADDRESS_SIZE = ACCESS_CONTROL_PASSWORD_SIZE;
@@ -214,7 +219,7 @@ private:
 	/// ||RequestId|Seconds|SubSeconds|||
 	/// </summary>
 	template<const uint8_t Header, const uint8_t ExtraSize = 0>
-	struct ClockSyncDefinition : public TemplateHeaderDefinition<Header, 1 + (TIME_SIZE * 2) + ExtraSize>
+	struct ClockSyncDefinition : public TemplateHeaderDefinition<Header, 1 + TIME_FULL_SIZE + ExtraSize>
 	{
 		static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		static constexpr uint8_t PAYLOAD_SECONDS_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
