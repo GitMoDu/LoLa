@@ -70,7 +70,9 @@ protected:
 #if defined(DEBUG_LOLA)
 protected:
 	virtual void Owner() {}
+#endif
 
+#if defined(LINK_TEST_DETUNE)
 public:
 	TuneClock* GetInternalClock()
 	{
