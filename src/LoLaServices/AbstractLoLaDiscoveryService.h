@@ -13,6 +13,16 @@ struct DiscoveryDefinition : public TemplateHeaderDefinition<UINT8_MAX, 1 + 4>
 {
 	static constexpr uint8_t PAYLOAD_ACK_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 	static constexpr uint8_t PAYLOAD_ID_INDEX = PAYLOAD_ACK_INDEX + 1;
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="payloadSize"></param>
+	/// <returns>The largest required payload size.</returns>
+	static constexpr uint8_t MaxPayloadSize(const uint8_t payloadSize)
+	{
+		return ((payloadSize >= PAYLOAD_SIZE) * payloadSize) + ((payloadSize < PAYLOAD_SIZE) * PAYLOAD_SIZE);
+	}
 };
 
 /// <summary>
@@ -20,16 +30,16 @@ struct DiscoveryDefinition : public TemplateHeaderDefinition<UINT8_MAX, 1 + 4>
 /// </summary>
 /// <typeparam name="Port">The port registered for this service.</typeparam>
 /// <typeparam name="ServiceId">Unique service identifier.</typeparam>
-/// <typeparam name="MaxSendPayloadSize">Size of shared out packet buffer. Must be at least DiscoveryDefinition::PAYLOAD_SIZE bytes.</typeparam>
+/// <typeparam name="MaxSendPayloadSize">Size of shared out packet buffer.</typeparam>
 template<const uint8_t Port,
 	const uint32_t ServiceId,
-	const uint8_t MaxSendPayloadSize = DiscoveryDefinition::PAYLOAD_SIZE>
+	const uint8_t MaxSendPayloadSize = 0>
 class AbstractLoLaDiscoveryService
-	: public TemplateLoLaService<MaxSendPayloadSize>
+	: public TemplateLoLaService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>
 	, public virtual ILinkListener
 {
 private:
-	using BaseClass = TemplateLoLaService<MaxSendPayloadSize>;
+	using BaseClass = TemplateLoLaService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>;
 
 	static constexpr uint32_t RetryPeriod = 20;
 	static constexpr uint32_t NoDiscoveryTimeOut = 5000;
@@ -45,11 +55,9 @@ private:
 
 protected:
 	using BaseClass::LoLaLink;
-	using BaseClass::RegisterPort;
 	using BaseClass::RequestSendCancel;
 	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
-	using BaseClass::ResetPacketThrottle;
 	using BaseClass::PacketThrottle;
 	using BaseClass::OutPacket;
 
@@ -146,33 +154,30 @@ public:
 				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX] == (uint8_t)(ServiceId)
 				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 1] == (uint8_t)(ServiceId >> 8)
 				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 2] == (uint8_t)(ServiceId >> 16)
-				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 3] == (uint8_t)(ServiceId >> 24)
-				)
+				&& payload[DiscoveryDefinition::PAYLOAD_ID_INDEX + 3] == (uint8_t)(ServiceId >> 24))
 			{
 				switch (DiscoveryState)
 				{
 				case DiscoveryStateEnum::Discovering:
 					DiscoveryState = DiscoveryStateEnum::Acknowledging;
 					Acknowledged |= payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0;
-					ResetPacketThrottle();
 					break;
 				case DiscoveryStateEnum::Acknowledging:
 					if (Acknowledged && payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0)
 					{
 						// We have been acknowledged and we know it, discovery is finished.
 						DiscoveryState = DiscoveryStateEnum::Running;
-						OnServiceStarted();
 						Task::enableIfNot();
+						OnServiceStarted();
 					}
 					else
 					{
 						Acknowledged |= payload[DiscoveryDefinition::PAYLOAD_ACK_INDEX] > 0;
 					}
-					ResetPacketThrottle();
 					break;
 				case DiscoveryStateEnum::Running:
 					DiscoveryState = DiscoveryStateEnum::RunningAck;
-					Task::enable();
+					Task::enableDelayed(0);
 					break;
 				default:
 					// Received packet at an unexpected state.
@@ -237,7 +242,7 @@ protected:
 				if (RequestSendDiscovery(true))
 				{
 					DiscoveryState = DiscoveryStateEnum::Running;
-					Task::enable();
+					Task::enableDelayed(0);
 				}
 				else
 				{
@@ -257,6 +262,7 @@ protected:
 	{
 		switch (DiscoveryState)
 		{
+		case DiscoveryStateEnum::RunningAck:
 		case DiscoveryStateEnum::Running:
 			OnLinkedSendRequestFail();
 			break;
