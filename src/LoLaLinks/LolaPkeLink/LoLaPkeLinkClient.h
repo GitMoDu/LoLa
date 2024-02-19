@@ -112,9 +112,7 @@ protected:
 				}
 			}
 #if defined(DEBUG_LOLA_LINK)
-			else {
-				this->Skipped(F("SessionAvailable"));
-			}
+			else { this->Skipped(F("SessionAvailable")); }
 #endif
 			break;
 		default:

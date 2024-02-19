@@ -131,6 +131,7 @@ protected:
 				StateTransition.OnReceived(timestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
+				OnLinkSyncReceived(timestamp);
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.print(F("Got LinkingTimedSwitchOver: "));
@@ -158,7 +159,7 @@ protected:
 				Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 				LinkingState = LinkingStateEnum::AuthenticationReply;
 				Task::enable();
-				// OnLinkSyncReceived(timestamp); // Enable maybe?
+				OnLinkSyncReceived(timestamp);
 			}
 #if defined(DEBUG_LOLA_LINK)
 			else { this->Skipped(F("ServerChallengeRequest.")); }
@@ -175,6 +176,7 @@ protected:
 #endif
 				LinkingState = LinkingStateEnum::ClockSyncing;
 				Task::enable();
+				OnLinkSyncReceived(timestamp);
 			}
 #if defined(DEBUG_LOLA_LINK)
 			else {
