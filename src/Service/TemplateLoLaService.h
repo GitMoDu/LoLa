@@ -21,7 +21,7 @@ protected:
 	/// <summary>
 	/// Output packet payload, to be used by service to send packets.
 	/// </summary>
-	TemplateLoLaOutDataPacket<MaxSendPayloadSize> OutPacket;
+	TemplateLoLaOutDataPacket<MaxSendPayloadSize> OutPacket{};
 
 	/// <summary>
 	/// Link source.
@@ -131,22 +131,49 @@ public:
 	}
 
 protected:
+	/// <summary>
+	/// Throttles sends based on last send and link's expected response time.
+	/// </summary>
+	/// <returns>True if enough time has elapsed since the last send, for the partner to respond.</returns>
 	const bool PacketThrottle()
 	{
-		return micros() - LastSent > LoLaLink->GetPacketThrottlePeriod();
+		return CanRequestSend()
+			&& ((micros() - LastSent) > LoLaLink->GetPacketThrottlePeriod());
 	}
 
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="minPeriodMicros"></param>
+	/// <returns></returns>
+	const bool PacketThrottle(const uint32_t minPeriodMicros)
+	{
+		const uint32_t elapsed = micros() - LastSent;
+
+		return elapsed > LoLaLink->GetPacketThrottlePeriod()
+			&& elapsed > minPeriodMicros;
+	}
+
+	/// <summary>
+	/// Reset the thottle to this moment.
+	/// </summary>
 	void ResetPacketThrottle()
 	{
 		LastSent = micros() - SendRequestTimeout;
 	}
 
+	/// <summary>
+	/// Cancel send request if pending and unlock service.
+	/// </summary>
 	void RequestSendCancel()
 	{
 		RequestPending = false;
 		Task::enableIfNot();
 	}
 
+	/// <summary>
+	/// </summary>
+	/// <returns>True if no request is pending.</returns>
 	const bool CanRequestSend()
 	{
 		return !RequestPending;
@@ -181,6 +208,10 @@ protected:
 	}
 
 
+	/// <summary>
+	/// Set how long to try to send for, before timing out.
+	/// </summary>
+	/// <param name="sendRequestTimeout">Duration of send timeout in milliseconds.</param>
 	void SetSendRequestTimeout(const uint32_t sendRequestTimeout)
 	{
 		if (sendRequestTimeout > 1)
