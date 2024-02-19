@@ -365,9 +365,7 @@ private:
 			OutPacket.Payload[i] = i + 1;
 		}
 
-#if defined(ARDUINO_ARCH_ESP32)
-		vTaskSuspendAll();
-#endif
+		LOLA_RTOS_PAUSE();
 #if defined(DEBUG_LOLA)
 		const uint32_t calibrationStart = micros();
 #endif
@@ -377,9 +375,7 @@ private:
 			if (!BaseClass::MockSendPacket(OutPacket.Data, 0))
 			{
 				// Calibration failed.
-#if defined(ARDUINO_ARCH_ESP32)
-				xTaskResumeAll();
-#endif
+				LOLA_RTOS_RESUME();
 #if defined(DEBUG_LOLA)
 				Serial.println(F("Calibration failed on short test."));
 #endif
@@ -387,37 +383,29 @@ private:
 			}
 		}
 		const uint32_t shortDuration = (micros() - start) / CALIBRATION_ROUNDS;
-#if defined(ARDUINO_ARCH_ESP32)
-		xTaskResumeAll();
-		vTaskSuspendAll();
-#endif
+		LOLA_RTOS_RESUME();
+		LOLA_RTOS_PAUSE();
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
 			if (!BaseClass::MockSendPacket(OutPacket.Data, LoLaPacketDefinition::MAX_PAYLOAD_SIZE))
 			{
 				// Calibration failed.
+				LOLA_RTOS_RESUME();
 #if defined(DEBUG_LOLA)
 				Serial.print(F("Calibration failed on long test."));
-#endif
-#if defined(ARDUINO_ARCH_ESP32)
-				xTaskResumeAll();
 #endif
 				return false;
 			}
 		}
 		uint32_t longDuration = (micros() - start) / CALIBRATION_ROUNDS;
-#if defined(ARDUINO_ARCH_ESP32)
-		xTaskResumeAll();
-#endif
+		LOLA_RTOS_RESUME();
 		if (longDuration <= shortDuration)
 		{
 			longDuration = shortDuration + 1;
 		}
 
-#if defined(ARDUINO_ARCH_ESP32)
-		vTaskSuspendAll();
-#endif
+		LOLA_RTOS_PAUSE();
 		// Measure Timestamping time.
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
@@ -425,10 +413,8 @@ private:
 			SyncClock.GetTimestampMonotonic(LinkTimestamp);
 		}
 		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
-#if defined(ARDUINO_ARCH_ESP32)
-		xTaskResumeAll();
-		vTaskSuspendAll();
-#endif
+		LOLA_RTOS_RESUME();
+		LOLA_RTOS_PAUSE();
 		// Measure PRNG Hop calculation time.
 		volatile bool dummy = 0;
 		start = micros();
@@ -437,9 +423,7 @@ private:
 			dummy ^= Encoder->GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
 		}
 		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
-#if defined(ARDUINO_ARCH_ESP32)
-		xTaskResumeAll();
-#endif
+		LOLA_RTOS_RESUME();
 		const uint32_t prngHopDuration = (timestampingDuration + calculationDuration) / 1000;
 
 		if (prngHopDuration > (UINT16_MAX - HOPPER_OFFSET))
@@ -453,9 +437,7 @@ private:
 		}
 
 #if defined(DEBUG_LOLA)
-#if defined(ARDUINO_ARCH_ESP32)
-		vTaskSuspendAll();
-#endif
+		LOLA_RTOS_PAUSE();
 		const uint32_t calibrationDuration = micros() - calibrationStart;
 
 		// Measure rejection time.
@@ -465,15 +447,13 @@ private:
 			if (BaseClass::MockReceiveFailPacket(micros(), OutPacket.Data, 0))
 			{
 				// Calibration failed.
-				Serial.print(F("Decrypt succeeded. It shouldn\'t."));
-#if defined(ARDUINO_ARCH_ESP32)
-				xTaskResumeAll();
-#endif
+				LOLA_RTOS_RESUME();
 				return false;
 			}
 		}
 		const uint32_t rejectionShortDuration = (micros() - start) / CALIBRATION_ROUNDS;
-
+		LOLA_RTOS_RESUME();
+		LOLA_RTOS_PAUSE();
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
@@ -481,16 +461,12 @@ private:
 			{
 				// Calibration failed.
 				Serial.print(F("Decrypt succeeded. It shouldn\'t."));
-#if defined(ARDUINO_ARCH_ESP32)
-				xTaskResumeAll();
-#endif
+				LOLA_RTOS_RESUME();
 				return false;
 			}
 		}
 		const uint32_t rejectionLongDuration = (micros() - start) / CALIBRATION_ROUNDS;
-#if defined(ARDUINO_ARCH_ESP32)
-		xTaskResumeAll();
-#endif
+		LOLA_RTOS_RESUME();
 
 		Serial.print(F("Calibration done. ("));
 		Serial.print(CALIBRATION_ROUNDS);

@@ -3,6 +3,9 @@
 #ifndef _LOLA_LINK_STATUS_h
 #define _LOLA_LINK_STATUS_h
 
+#include <stdint.h>
+#include <LoLaDefinitions.h>
+
 struct LoLaLinkStatus
 {
 	struct QualityStruct
@@ -24,7 +27,7 @@ struct LoLaLinkStatus
 	uint16_t RxDropRate = 0;
 	uint16_t TxDropRate = 0;
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 	void Log(Stream& stream)
 	{
 		PrintDuration(stream, DurationSeconds);
@@ -177,7 +180,7 @@ public:
 		LastRxDropCount = RxDropCount;
 	}
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 	void LogLong(Stream& stream)
 	{
 		PrintDuration(stream, DurationSeconds);

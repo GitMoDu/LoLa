@@ -105,15 +105,13 @@ protected:
 				ResetSessionCreation();
 				ResetStageStartTime();
 				Task::enable();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Found a server!"));
 #endif
 			}
-#if defined(DEBUG_LOLA)
-			else {
-				this->Skipped(F("SearchReply"));
-			}
+#if defined(DEBUG_LOLA_LINK)
+			else { this->Skipped(F("SearchReply")); }
 #endif
 			break;
 		case Unlinked::LinkingTimedSwitchOver::HEADER:
@@ -133,17 +131,15 @@ protected:
 				StateTransition.OnReceived(timestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.print(F("Got LinkingTimedSwitchOver: "));
 				Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
 				Serial.println(F("us remaining."));
 #endif
 			}
-#if defined(DEBUG_LOLA)
-			else {
-				this->Skipped(F("LinkingTimedSwitchOver"));
-			}
+#if defined(DEBUG_LOLA_LINK)
+			else { this->Skipped(F("LinkingTimedSwitchOver")); }
 #endif
 			break;
 		default:
@@ -164,10 +160,8 @@ protected:
 				Task::enable();
 				// OnLinkSyncReceived(timestamp); // Enable maybe?
 			}
-#if defined(DEBUG_LOLA)
-			else {
-				this->Skipped(F("ServerChallengeRequest."));
-			}
+#if defined(DEBUG_LOLA_LINK)
+			else { this->Skipped(F("ServerChallengeRequest.")); }
 #endif
 			break;
 		case Linking::ServerChallengeReply::HEADER:
@@ -175,14 +169,14 @@ protected:
 				&& LinkingState == LinkingStateEnum::AuthenticationReply
 				&& Encoder->VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Link Access Control granted."));
 #endif
 				LinkingState = LinkingStateEnum::ClockSyncing;
 				Task::enable();
 			}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			else {
 				this->Skipped(F("ServerChallengeReply"));
 			}
@@ -194,7 +188,7 @@ protected:
 			{
 				if (SyncSequence != payload[Linking::ClockSyncReply::PAYLOAD_REQUEST_ID_INDEX])
 				{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Skipped(F("ClockSyncReply Bad SyncSequence."));
 #endif
 					return;
@@ -211,7 +205,7 @@ protected:
 
 					if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Clock Accepted, starting final step."));
 #endif
@@ -219,14 +213,14 @@ protected:
 						LinkingState = LinkingStateEnum::RequestingLinkStart;
 						ResetUnlinkedPacketThrottle();
 					}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					else {
 						this->Owner();
 						Serial.println(F("Clock Rejected, trying again."));
 					}
 #endif
 				}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				else {
 					// Invalid estimate, sub-seconds should never match one second.
 					this->Owner();
@@ -237,10 +231,8 @@ protected:
 #endif
 				Task::enable();
 			}
-#if defined(DEBUG_LOLA)
-			else {
-				this->Skipped(F("ClockSyncReply"));
-			}
+#if defined(DEBUG_LOLA_LINK)
+			else { this->Skipped(F("ClockSyncReply")); }
 #endif
 			break;
 		case Linking::LinkTimedSwitchOver::HEADER:
@@ -254,7 +246,7 @@ protected:
 				case LinkingStateEnum::SwitchingToLinked:
 					break;
 				default:
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("LinkSwitchOver rejected."));
 #endif
@@ -266,17 +258,15 @@ protected:
 				SyncSequence = payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
 				Task::enable();
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.print(F("Got LinkTimedSwitchOver: "));
 				Serial.print(StateTransition.GetDurationUntilTimeOut(timestamp));
 				Serial.println(F("us remaining."));
 #endif
 			}
-#if defined(DEBUG_LOLA)
-			else {
-				this->Skipped(F("LinkSwitchOver"));
-			}
+#if defined(DEBUG_LOLA_LINK)
+			else { this->Skipped(F("LinkSwitchOver")); }
 #endif
 			break;
 		default:
@@ -296,7 +286,7 @@ protected:
 				{
 					ClockTracker.OnReplyReceived(millis(), ArrayToInt32(&payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]));
 				}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				else {
 					this->Skipped(F("ClockTuneReply"));
 				}
@@ -338,7 +328,7 @@ protected:
 			LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
 			break;
 		case LinkStageEnum::Linked:
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			Serial.print(GetLinkingElapsedMillis());
 			Serial.println(F(" ms to Link."));
 #endif
@@ -361,7 +351,7 @@ protected:
 		case WaitingStateEnum::SearchingLink:
 			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("SearchingLink time out."));
 #endif
@@ -376,7 +366,7 @@ protected:
 		case WaitingStateEnum::SessionCreation:
 			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("SessionCreation timed out. Going back to sleep."));
 #endif
@@ -403,7 +393,7 @@ protected:
 		case LinkingStateEnum::WaitingForAuthenticationRequest:
 			if (GetStageElapsedMillis() > CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS)
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("WaitingForAuthenticationRequest timed out!"));
 #endif
@@ -423,17 +413,19 @@ protected:
 				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
 				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
 
+				LOLA_RTOS_PAUSE();
 				if (UnlinkedDuplexCanSend(Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE) &&
 					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE))
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Sent ClientChallengeReplyRequest."));
 #endif
 					}
 				}
+				LOLA_RTOS_RESUME();
 			}
 			Task::enable();
 			break;
@@ -443,6 +435,7 @@ protected:
 				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::ClockSyncRequest::HEADER);
 
+				LOLA_RTOS_PAUSE();
 				if (UnlinkedDuplexCanSend(Linking::ClockSyncRequest::PAYLOAD_SIZE) &&
 					PacketService.CanSendPacket())
 				{
@@ -455,6 +448,7 @@ protected:
 					UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
 					SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE);
 				}
+				LOLA_RTOS_RESUME();
 			}
 			Task::enable();
 			break;
@@ -464,17 +458,19 @@ protected:
 				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::StartLinkRequest::HEADER);
 
+				LOLA_RTOS_PAUSE();
 				if (UnlinkedDuplexCanSend(Linking::StartLinkRequest::PAYLOAD_SIZE) &&
 					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Linking::StartLinkRequest::PAYLOAD_SIZE))
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Sent RequestingLinkStart."));
 #endif
 					}
 				}
+				LOLA_RTOS_RESUME();
 			}
 			Task::enable();
 			break;
@@ -483,7 +479,7 @@ protected:
 			{
 				if (StateTransition.HasAcknowledge())
 				{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("StateTransition success."));
 #endif
@@ -491,7 +487,7 @@ protected:
 				}
 				else
 				{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("StateTransition timed out."));
 #endif
@@ -504,17 +500,19 @@ protected:
 				OutPacket.SetHeader(Linking::LinkTimedSwitchOverAck::HEADER);
 				OutPacket.Payload[Linking::LinkTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 
+				LOLA_RTOS_PAUSE();
 				if (PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Sent StateTransition Ack."));
 #endif
 					}
 					StateTransition.OnSent();
 				}
+				LOLA_RTOS_RESUME();
 			}
 			Task::enable();
 			break;
@@ -596,19 +594,21 @@ private:
 					SearchChannelTryCount = 0;
 				}
 
+				LOLA_RTOS_PAUSE();
 				if (PacketService.CanSendPacket())
 				{
 					OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 					OutPacket.SetHeader(Unlinked::SearchRequest::HEADER);
 					if (SendPacket(OutPacket.Data, Unlinked::SearchRequest::PAYLOAD_SIZE))
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Sent Broadcast Search."));
 #endif
 					}
 					SearchChannelTryCount++;
 				}
+				LOLA_RTOS_RESUME();
 			}
 			Task::enable();
 			break;
@@ -623,7 +623,7 @@ private:
 		{
 			if (StateTransition.HasAcknowledge())
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("StateTransition success."));
 #endif
@@ -631,7 +631,7 @@ private:
 			}
 			else
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("StateTransition timed out."));
 				// No Ack before time out.
@@ -646,17 +646,19 @@ private:
 			OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
 			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
 
+			LOLA_RTOS_PAUSE();
 			if (PacketService.CanSendPacket())
 			{
 				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("Sent StateTransition Ack."));
 #endif
 				}
 			}
+			LOLA_RTOS_RESUME();
 		}
 		Task::enable();
 	}
@@ -664,8 +666,10 @@ private:
 protected:
 	void OnLinkSyncReceived(const uint32_t receiveTimestamp)
 	{
+		LOLA_RTOS_PAUSE();
 		const uint32_t elapsed = micros() - receiveTimestamp;
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
+		LOLA_RTOS_RESUME();
 		LinkTimestamp.ShiftSubSeconds(-(int32_t)elapsed);
 		LinkingDuplex.OnReceivedSync(LinkTimestamp.GetRollingMicros());
 	}

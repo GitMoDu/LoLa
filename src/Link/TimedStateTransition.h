@@ -142,7 +142,7 @@ public:
 		return State == ClientTransitionStateEnum::TransitionAcknowledged || State == ClientTransitionStateEnum::TransitionAcknowledging;
 	}
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 	void Debug(const uint32_t timestamp)
 	{
 		Serial.print(F("State"));
@@ -157,7 +157,7 @@ public:
 	}
 #endif
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 	const uint32_t GetDurationUntilTimeOut(const uint32_t timestamp)
 	{
 		if (TransitionEnd - timestamp >= TransitionTimeout)

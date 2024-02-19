@@ -4,20 +4,19 @@
 #define _ABSTRACT_LOLA_
 
 
-#include "..\..\Service\TemplateLoLaService.h"
-
-#include "..\..\Link\LinkStageEnum.h"
-#include "..\..\Link\PacketEventEnum.h"
-
-#include "..\..\Link\LoLaPacketService.h"
-
-#include "..\..\Clock\LinkClock.h"
-
 #include "..\..\Link\ILoLaLink.h"
 #include "..\..\Link\ILinkRegistry.h"
 #include "..\..\Link\LoLaPacketDefinition.h"
 #include "..\..\Link\LoLaLinkDefinition.h"
+
+#include "..\..\Link\LinkStageEnum.h"
+#include "..\..\Link\PacketEventEnum.h"
+#include "..\..\Link\LoLaPacketService.h"
+
+#include "..\..\Clock\LinkClock.h"
 #include "..\..\Crypto\LoLaCryptoEncoderSession.h"
+
+#include "..\..\Service\TemplateLoLaService.h"
 
 /// <summary>
 /// LoLa Link base (AbstractLoLa) is a special case of a TemplateLoLaService,
@@ -67,7 +66,7 @@ protected:
 protected:
 	virtual void OnEvent(const PacketEventEnum packetEvent) {}
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 protected:
 	virtual void Owner() {}
 #endif
@@ -175,7 +174,7 @@ protected:
 		return (int32_t)ArrayToUInt32(source);
 	}
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 protected:
 	void Skipped(const __FlashStringHelper* ifsh)
 	{

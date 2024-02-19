@@ -86,7 +86,7 @@ protected:
 				{
 					AmSessionRequested = true;
 					Task::enable();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("Session request received."));
 #endif
@@ -100,32 +100,21 @@ protected:
 						StartSearching();
 						AmSessionRequested = true;
 						Task::enable();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Session request overrode state back to search."));
 #endif
 					}
-#if defined(DEBUG_LOLA)
-					else
-					{
-						this->Skipped(F("SessionRequest1"));
-						return;
-					}
+#if defined(DEBUG_LOLA_LINK)
+					else { this->Skipped(F("SessionRequest1")); }
 #endif
 				}
-#if defined(DEBUG_LOLA)
-				else
-				{
-
-					this->Skipped(F("SessionRequest2"));
-					return;
-				}
+#if defined(DEBUG_LOLA_LINK)
+				else { this->Skipped(F("SessionRequest2")); }
 #endif
 			}
-#if defined(DEBUG_LOLA)
-			else {
-				this->Skipped(F("SessionRequest3"));
-			}
+#if defined(DEBUG_LOLA_LINK)
+			else { this->Skipped(F("SessionRequest3")); }
 #endif
 			break;
 		case Unlinked::AmLinkingStartRequest::HEADER:
@@ -147,7 +136,7 @@ protected:
 						Task::enable();
 						break;
 					default:
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Skipped(F("LinkingStartRequest1"));
 #endif
 						return;
@@ -155,7 +144,7 @@ protected:
 				}
 				else
 				{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Skipped(F("LinkingStartRequest2"));
 #endif
 					return;
@@ -164,7 +153,7 @@ protected:
 				Session.SetPartnerAddressFrom(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_CLIENT_ADDRESS_INDEX]);
 				AmState = AmStateEnum::ValidatingSession;
 			}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			else {
 				this->Skipped(F("LinkingStartRequest3"));
 			}
@@ -192,18 +181,20 @@ protected:
 			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::AmSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 			Session.CopyLocalAddressTo(&OutPacket.Payload[Unlinked::AmSessionAvailable::PAYLOAD_SERVER_ADDRESS_INDEX]);
 
+			LOLA_RTOS_PAUSE();
 			if (UnlinkedDuplexCanSend(Unlinked::AmSessionAvailable::PAYLOAD_SIZE) &&
 				PacketService.CanSendPacket())
 			{
 				AmSessionRequested = false;
 				if (SendPacket(OutPacket.Data, Unlinked::AmSessionAvailable::PAYLOAD_SIZE))
 				{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("Sent Address Match Session."));
 #endif
 				}
 			}
+			LOLA_RTOS_RESUME();
 		}
 		Task::enable();
 	}
@@ -219,7 +210,7 @@ protected:
 		case AmStateEnum::ValidatingSession:
 			if (Session.AddressCollision())
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Local and Partner addresses match, link is impossible."));
 #endif
@@ -227,7 +218,7 @@ protected:
 			}
 			else if (Session.SessionIsCached())
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Session secrets are cached, let's start linking."));
 #endif
@@ -235,7 +226,7 @@ protected:
 			}
 			else
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Session secrets invalidated, caching..."));
 #endif

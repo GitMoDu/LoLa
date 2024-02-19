@@ -4,6 +4,7 @@
 #define _I_LOLA_LINK_h
 
 #include <stdint.h>
+#include <LoLaDefinitions.h>
 #include "LoLaLinkStatus.h"
 
 class ILinkListener

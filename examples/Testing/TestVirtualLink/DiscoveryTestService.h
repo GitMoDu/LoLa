@@ -20,15 +20,15 @@ public:
 	{}
 
 private:
+#ifdef DEBUG_LOLA
 	void PrintName()
 	{
-#ifdef DEBUG_LOLA
 		Serial.print('{');
 		Serial.print(OnwerName);
 		Serial.print('}');
 		Serial.print('\t');
-#endif
 	}
+#endif
 
 protected:
 	/// <summary>
@@ -36,7 +36,7 @@ protected:
 	/// </summary>
 	virtual void OnServiceStarted()
 	{
-#if defined(PRINT_DISCOVERY)
+#if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.println(F("Test Discovery Service Started."));
 #endif

@@ -125,7 +125,7 @@ public:
 				payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX],
 				payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX]);
 		}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 		else
 		{
 			// This is the top-most class to parse incoming packets as a consumer.
@@ -223,7 +223,7 @@ protected:
 
 		BaseClass::UpdateLinkStage(linkStage);
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 		this->Owner();
 
 		switch (linkStage)
@@ -274,7 +274,7 @@ protected:
 		case LinkStageEnum::Linking:
 			if (GetLinkingElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Linking timed out!"));
 #endif
@@ -311,7 +311,7 @@ protected:
 		}
 	}
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 	virtual void OnEvent(const PacketEventEnum packetEvent)
 	{
 		this->Owner();
@@ -361,10 +361,8 @@ private:
 			if (QualityTracker.IsTimeToSendReport(timestamp)
 				&& CanRequestSend())
 			{
-				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
-
 				const uint16_t rxLoopingDropCounter = QualityTracker.GetRxLoopingDropCount();
-
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.Payload[Linked::ReportUpdate::HEADER_INDEX] = Linked::ReportUpdate::HEADER;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = QualityTracker.IsBackReportNeeded(timestamp);
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = QualityTracker.GetRxRssiQuality();

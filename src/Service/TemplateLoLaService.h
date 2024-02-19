@@ -84,13 +84,17 @@ public:
 		// Busy loop waiting for send availability.
 		if (RequestPending)
 		{
+			LOLA_RTOS_PAUSE();
 			if (LoLaLink->CanSendPacket(RequestPayloadSize))
 			{
 				// Send is available, last moment callback before transmission.
 				OnPreSend();
 
 				// Transmit packet.
-				if (LoLaLink->SendPacket(OutPacket.Data, RequestPayloadSize))
+				const bool sent = LoLaLink->SendPacket(OutPacket.Data, RequestPayloadSize);
+				LOLA_RTOS_RESUME();
+
+				if (sent)
 				{
 					LastSent = micros();
 					RequestPending = false;
@@ -109,17 +113,21 @@ public:
 					Task::enable();
 				}
 			}
-			else if (millis() - RequestStart > SendRequestTimeout)
-			{
-				// Send timed out.
-				RequestPending = false;
-				Task::enable();
-				OnSendRequestTimeout();
-			}
 			else
 			{
-				// Can't send now, try again until timeout.
-				Task::enableIfNot();
+				LOLA_RTOS_RESUME();
+				if (millis() - RequestStart > SendRequestTimeout)
+				{
+					// Send timed out.
+					RequestPending = false;
+					Task::enable();
+					OnSendRequestTimeout();
+				}
+				else
+				{
+					// Can't send now, try again until timeout.
+					Task::enableIfNot();
+				}
 			}
 		}
 		else

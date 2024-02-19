@@ -87,19 +87,19 @@ protected:
 					OnLinkSyncReceived(timestamp);
 					ResetUnlinkedPacketThrottle();
 					Task::enable();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("Found an Address Match Session."));
 #endif
 					break;
 				default:
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Skipped(F("SessionAvailable"));
 #endif
 					break;
 				}
 			}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			else {
 				this->Skipped(F("SessionAvailable"));
 			}
@@ -126,26 +126,30 @@ protected:
 		{
 		case AmStateEnum::RequestingSession:
 			// Wait longer because reply is big.
-			if (UnlinkedPacketThrottle()
-				&& UnlinkedDuplexCanSend(Unlinked::AmSessionRequest::PAYLOAD_SIZE)
-				&& PacketService.CanSendPacket())
-			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
+			if (UnlinkedPacketThrottle())
 			{
-				OutPacket.SetHeader(Unlinked::AmSessionRequest::HEADER);
-				if (SendPacket(OutPacket.Data, Unlinked::AmSessionRequest::PAYLOAD_SIZE))
+				LOLA_RTOS_PAUSE();
+				if (UnlinkedDuplexCanSend(Unlinked::AmSessionRequest::PAYLOAD_SIZE)
+					&& PacketService.CanSendPacket())
 				{
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent Session Start Request."));
+					OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
+					OutPacket.SetHeader(Unlinked::AmSessionRequest::HEADER);
+					if (SendPacket(OutPacket.Data, Unlinked::AmSessionRequest::PAYLOAD_SIZE))
+					{
+#if defined(DEBUG_LOLA_LINK)
+						this->Owner();
+						Serial.println(F("Sent Session Start Request."));
 #endif
+					}
 				}
+				LOLA_RTOS_RESUME();
 			}
 			Task::enable();
 			break;
 		case AmStateEnum::ValidatingSession:
 			if (Session.AddressCollision())
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Local and Partner addresses match, link is impossible."));
 #endif
@@ -153,7 +157,7 @@ protected:
 			}
 			else if (Session.SessionIsCached())
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Session token is cached, Linking."));
 #endif
@@ -161,7 +165,7 @@ protected:
 			}
 			else
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Session token needs refreshing."));
 #endif
@@ -186,17 +190,19 @@ protected:
 				Session.CopyLocalAddressTo(&OutPacket.Payload[Unlinked::AmLinkingStartRequest::PAYLOAD_CLIENT_ADDRESS_INDEX]);
 				Session.CopyPartnerAddressTo(&OutPacket.Payload[Unlinked::AmLinkingStartRequest::PAYLOAD_SERVER_ADDRESS_INDEX]);
 
+				LOLA_RTOS_PAUSE();
 				if (UnlinkedDuplexCanSend(Unlinked::AmLinkingStartRequest::PAYLOAD_SIZE) &&
 					PacketService.CanSendPacket())
 				{
 					if (SendPacket(OutPacket.Data, Unlinked::AmLinkingStartRequest::PAYLOAD_SIZE))
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Sent Linking Start Request."));
 #endif
 					}
 				}
+				LOLA_RTOS_RESUME();
 			}
 			Task::enable();
 			break;

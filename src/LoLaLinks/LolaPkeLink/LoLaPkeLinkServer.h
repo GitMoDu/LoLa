@@ -95,7 +95,7 @@ protected:
 				{
 					PkeSessionRequested = true;
 					Task::enable();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("Session request received."));
 #endif
@@ -109,12 +109,12 @@ protected:
 						StartSearching();
 						PkeSessionRequested = true;
 						Task::enable();
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Session request overrode state back to search."));
 #endif
 					}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					else
 					{
 						this->Skipped(F("SessionRequest1"));
@@ -122,7 +122,7 @@ protected:
 					}
 #endif
 				}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				else
 				{
 
@@ -131,7 +131,7 @@ protected:
 				}
 #endif
 			}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			else {
 				this->Skipped(F("SessionRequest3"));
 			}
@@ -155,7 +155,7 @@ protected:
 						Task::enable();
 						break;
 					default:
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						this->Skipped(F("LinkingStartRequest1"));
 #endif
 						return;
@@ -163,7 +163,7 @@ protected:
 				}
 				else
 				{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					this->Skipped(F("LinkingStartRequest2"));
 #endif
 					return;
@@ -175,7 +175,7 @@ protected:
 				}
 				PkeState = PkeStateEnum::DecompressingPartnerKey;
 			}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			else {
 				this->Skipped(F("LinkingStartRequest3"));
 			}
@@ -206,17 +206,21 @@ protected:
 			}
 			Session.CopySessionIdTo(&OutPacket.Payload[Unlinked::PkeSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 
-			if (UnlinkedDuplexCanSend(Unlinked::PkeSessionAvailable::PAYLOAD_SIZE) &&
-				PacketService.CanSendPacket())
+			if (UnlinkedDuplexCanSend(Unlinked::PkeSessionAvailable::PAYLOAD_SIZE))
 			{
-				PkeSessionRequested = false;
-				if (SendPacket(OutPacket.Data, Unlinked::PkeSessionAvailable::PAYLOAD_SIZE))
+				LOLA_RTOS_PAUSE();
+				if (PacketService.CanSendPacket())
 				{
-#if defined(DEBUG_LOLA)
-					this->Owner();
-					Serial.println(F("Sent PKE Session."));
+					PkeSessionRequested = false;
+					if (SendPacket(OutPacket.Data, Unlinked::PkeSessionAvailable::PAYLOAD_SIZE))
+					{
+#if defined(DEBUG_LOLA_LINK)
+						this->Owner();
+						Serial.println(F("Sent PKE Session."));
 #endif
+					}
 				}
+				LOLA_RTOS_RESUME();
 			}
 		}
 		Task::enable();
@@ -238,7 +242,7 @@ protected:
 		case PkeStateEnum::ValidatingSession:
 			if (Session.PublicKeyCollision())
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Local and Partner public keys match, link is impossible."));
 #endif
@@ -246,7 +250,7 @@ protected:
 			}
 			else if (Session.SessionIsCached())
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Session secrets are cached, let's start linking."));
 #endif
@@ -254,7 +258,7 @@ protected:
 			}
 			else
 			{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Session secrets invalidated, caching..."));
 #endif

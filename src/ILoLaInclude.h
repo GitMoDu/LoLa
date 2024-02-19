@@ -3,9 +3,7 @@
 #ifndef _I_LOLA_INCLUDE_h
 #define _I_LOLA_INCLUDE_h
 
-#if !defined(ARDUINO)
-#error Arduino Required for LoLa Library
-#endif
+#include <LoLaDefinitions.h>
 
 #include "Link\ILoLaLink.h"
 #include "Link\LoLaLinkDefinition.h"

@@ -59,7 +59,7 @@ struct Timestamp
 		return (Seconds * ONE_SECOND_MICROS) + SubSeconds;
 	}
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 	void print()
 	{
 		Serial.print(Seconds);
@@ -82,7 +82,7 @@ struct TimestampError
 	int32_t Seconds;
 	int32_t SubSeconds;
 
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 	void print()
 	{
 		Serial.print(Seconds);
