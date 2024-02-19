@@ -65,8 +65,8 @@
 
 #include "LoLaServices\AbstractLoLaDiscoveryService.h"
 
-#include "LoLaServices\SyncSurface\SyncSurfaceReader.h"
-#include "LoLaServices\SyncSurface\SyncSurfaceWriter.h"
+#include "LoLaServices\Surface\SurfaceReader.h"
+#include "LoLaServices\Surface\SurfaceWriter.h"
 
 //#include "Services\BinaryDelivery\BinaryDeliveryService.h"
 //#include "Services\Stream\ForwardCorrectedLossyStream.h"
