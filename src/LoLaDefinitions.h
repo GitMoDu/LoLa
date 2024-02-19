@@ -24,14 +24,14 @@
 #define LOLA_RTOS_PAUSE()
 #define LOLA_RTOS_RESUME()
 #elif defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_ESP32)
-//#define _TASK_THREAD_SAFE
+#define LOLA_RTOS_PLATFORM
 #define LOLA_RTOS_PAUSE() vTaskSuspendAll()
 #define LOLA_RTOS_RESUME() xTaskResumeAll()
 #else
 #error Platform not suported.
 #endif
 
-#if defined(DEBUG_LOLA_LINK) && defined(LOLA_RTOS_PAUSE)
+#if defined(DEBUG_LOLA_LINK) && defined(LOLA_RTOS_PLATFORM)
 #error  Link debug cannot be enabled on a RTOS platform.
 #endif
 
