@@ -19,7 +19,7 @@ private:
 	static constexpr uint8_t MATCH_MIN_SIZE = sizeof(uint32_t);
 
 private:
-	xoodyak_hash_state_t State;
+	xoodyak_hash_state_t State{};
 
 	static constexpr uint8_t GetMatchSize()
 	{
