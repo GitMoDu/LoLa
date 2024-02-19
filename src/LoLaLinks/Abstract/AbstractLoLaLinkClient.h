@@ -93,7 +93,7 @@ protected:
 	}
 
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter)
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize)
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -151,7 +151,7 @@ protected:
 		}
 	}
 
-	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) final
+	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
 	{
 		switch (payload[Linking::ServerChallengeRequest::HEADER_INDEX])
 		{

@@ -38,7 +38,7 @@ protected:
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
 	/// <param name="port"></param>
-	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) {}
 
 	/// <summary>
 	/// Packet parser for Link implementation classes. Only fires when linking is active.
@@ -47,7 +47,7 @@ protected:
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
 	/// <param name="counter"></param>
-	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t counter) {}
+	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) {}
 
 	/// <summary>
 	/// Inform any Link class of RSSI quality and packet loss.
@@ -110,8 +110,7 @@ public:
 				{
 					OnUnlinkedPacketReceived(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
-						LoLaPacketDefinition::GetPayloadSize(packetSize),
-						receivingCounter);
+						LoLaPacketDefinition::GetPayloadSize(packetSize));
 				}
 				else
 				{
@@ -136,8 +135,7 @@ public:
 
 					OnLinkingPacketReceived(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
-						LoLaPacketDefinition::GetPayloadSize(packetSize),
-						receivingCounter);
+						LoLaPacketDefinition::GetPayloadSize(packetSize));
 
 					OnPacketReceivedOk(rssi, receivingLost);
 				}
