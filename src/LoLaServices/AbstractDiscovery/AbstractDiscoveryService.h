@@ -1,29 +1,12 @@
-// AbstractLoLaDiscoveryService.h
+// AbstractDiscoveryService.h
 
-#ifndef _ABSTRACT_LOLA_DISCOVERY_SERVICE_
-#define _ABSTRACT_LOLA_DISCOVERY_SERVICE_
+#ifndef _ABSTRACT_DISCOVERY_SERVICE_
+#define _ABSTRACT_DISCOVERY_SERVICE_
 
-#include "..\Service\TemplateLoLaService.h"
+#include "..\..\Service\TemplateLoLaService.h"
+#include "DiscoveryDefinitions.h"
 
-/// <summary>
-/// Discovery sub header definition.
-/// User classes should extend sub-headers starting from 0, up to UINT8_MAX-1.
-/// </summary>
-struct DiscoveryDefinition : public TemplateHeaderDefinition<UINT8_MAX, 1 + 4>
-{
-	static constexpr uint8_t PAYLOAD_ACK_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
-	static constexpr uint8_t PAYLOAD_ID_INDEX = PAYLOAD_ACK_INDEX + 1;
-
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="payloadSize"></param>
-	/// <returns>The largest required payload size.</returns>
-	static constexpr uint8_t MaxPayloadSize(const uint8_t payloadSize)
-	{
-		return ((payloadSize >= PAYLOAD_SIZE) * payloadSize) + ((payloadSize < PAYLOAD_SIZE) * PAYLOAD_SIZE);
-	}
-};
+using namespace DiscoveryDefinitions;
 
 /// <summary>
 /// Can be piggybacked on by using the first byte of the payload as a sub-header (excluding UINT8_MAX).
@@ -41,7 +24,7 @@ class AbstractLoLaDiscoveryService
 private:
 	using BaseClass = TemplateLoLaService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>;
 
-	static constexpr uint32_t RetryPeriod = 20;
+	static constexpr uint32_t RetryPeriodMicros = 30000;
 	static constexpr uint32_t NoDiscoveryTimeOut = 5000;
 
 	enum DiscoveryStateEnum
@@ -58,6 +41,7 @@ protected:
 	using BaseClass::RequestSendCancel;
 	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
+	using BaseClass::RegisterPacketListener;
 	using BaseClass::PacketThrottle;
 	using BaseClass::OutPacket;
 
@@ -115,7 +99,7 @@ public:
 
 		return BaseClass::Setup()
 			&& LoLaLink->RegisterLinkListener(this)
-			&& LoLaLink->RegisterPacketListener(this, Port);
+			&& RegisterPacketListener(Port);
 	}
 
 	virtual void OnLinkStateUpdated(const bool hasLink) final
@@ -206,16 +190,16 @@ protected:
 				// After NoDiscoveryTimeOut ms have elapsed, we give up.
 				OnDiscoveryFailed();
 			}
-			else if (PacketThrottle())
+			else if (PacketThrottle(RetryPeriodMicros))
 			{
 				if (!RequestSendDiscovery(false))
 				{
-					Task::delay(RetryPeriod);
+					Task::delay(0);
 				}
 			}
 			else
 			{
-				Task::delay(RetryPeriod);
+				Task::delay(0);
 			}
 			break;
 		case DiscoveryStateEnum::Acknowledging:
@@ -224,29 +208,25 @@ protected:
 				// After NoDiscoveryTimeOut ms have elapsed, we give up.
 				OnDiscoveryFailed();
 			}
-			else if (PacketThrottle())
+			else if (PacketThrottle(RetryPeriodMicros))
 			{
 				if (!RequestSendDiscovery(true))
 				{
-					Task::delay(RetryPeriod);
+					Task::delay(0);
 				}
 			}
 			else
 			{
-				Task::delay(RetryPeriod);
+				Task::delay(0);
 			}
 			break;
 		case DiscoveryStateEnum::RunningAck:
-			if (PacketThrottle())
+			if (PacketThrottle(RetryPeriodMicros))
 			{
+				Task::delay(0);
 				if (RequestSendDiscovery(true))
 				{
 					DiscoveryState = DiscoveryStateEnum::Running;
-					Task::enableDelayed(0);
-				}
-				else
-				{
-					Task::delay(RetryPeriod);
 				}
 			}
 			break;
