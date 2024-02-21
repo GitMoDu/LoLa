@@ -89,7 +89,7 @@ public:
 	/// 
 	/// </summary>
 	/// <param name="listener"></param>
-	/// <param name="port">Port number to register. Note that a port (upmost) may be reserved for Link.</param>
+	/// <param name="port">Port number to register [0;UINT8_MAX].</param>
 	/// <returns>True if success. False if no more slots are available or port is reserved.</returns>
 	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) { return false; }
 };

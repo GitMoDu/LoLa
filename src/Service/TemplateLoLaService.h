@@ -38,31 +38,35 @@ private:
 
 protected:
 	/// <summary>
-	/// Last second opportunity to update payload.
-	/// To be overriden by user class.
+	/// Last chance to update payload right before transmission.
 	/// </summary>
 	virtual void OnPreSend() { }
 
 	/// <summary>
 	/// The requested packet to send has failed.
-	/// To be overriden by user class.
 	/// </summary>
 	virtual void OnSendRequestTimeout() { }
 
 	/// <summary>
-	/// The user class can ride this task's callback, when no sending is being performed.
+	/// The service class can ride this task's callback, when no send is being performed.
 	/// Useful for in-line services (expected to block flow until send is complete).
 	/// </summary>
 	virtual void OnService() { }
 
-
-	/// <summary>
-	/// Exposed Link and packet callbacks.
-	/// To be overriden by user class.
-	/// </summary>
 public:
+	/// <summary>
+	/// Link state update callback.
+	/// </summary>
+	/// <param name="hasLink">True has been acquired, false if lost. Same value as ILoLaLink::HasLink()</param>
 	virtual void OnLinkStateUpdated(const bool hasLink) {}
 
+	/// <summary>
+	/// Packet receive callback.
+	/// </summary>
+	/// <param name="timestamp"></param>
+	/// <param name="payload"></param>
+	/// <param name="payloadSize"></param>
+	/// <param name="port"></param>
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 
 public:
@@ -140,6 +144,23 @@ public:
 
 protected:
 	/// <summary>
+	/// Shortcut for services to register Port listeners.
+	/// A service can register to multiple ports.
+	/// Also checks if requested port is not reserved.
+	/// </summary>
+	/// <param name="port">Port number to register [0;LoLaLinkDefinition::LINK_PORT-1].</param>
+	/// <returns>True if success. False if no more slots are available or Port was reserved.</returns>
+	const bool RegisterPacketListener(const uint8_t port)
+	{
+		if (port < LoLaLinkDefinition::LINK_PORT)
+		{
+			return LoLaLink->RegisterPacketListener(this, port);
+		}
+
+		return false;
+	}
+
+	/// <summary>
 	/// Throttles sends based on last send and link's expected response time.
 	/// </summary>
 	/// <returns>True if enough time has elapsed since the last send, for the partner to respond.</returns>
@@ -150,10 +171,10 @@ protected:
 	}
 
 	/// <summary>
-	/// 
+	/// Same as PacketThrottle() but with an extra lower bound.
 	/// </summary>
 	/// <param name="minPeriodMicros"></param>
-	/// <returns></returns>
+	/// <returns>True if enough time has elapsed since the last send, for the partner to respond.</returns>
 	const bool PacketThrottle(const uint32_t minPeriodMicros)
 	{
 		const uint32_t elapsed = micros() - LastSent;
@@ -214,7 +235,6 @@ protected:
 		Task::enable();
 		return true;
 	}
-
 
 	/// <summary>
 	/// Set how long to try to send for, before timing out.
