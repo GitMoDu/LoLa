@@ -417,11 +417,11 @@ private:
 
 		LOLA_RTOS_PAUSE();
 		// Measure PRNG Hop calculation time.
-		volatile bool dummy = 0;
+		volatile uint8_t dummy = 0;
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			dummy = Encoder->GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
+			dummy += Encoder->GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
 		}
 		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();
