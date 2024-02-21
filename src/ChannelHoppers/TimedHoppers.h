@@ -117,7 +117,7 @@ public:
 
 		// Run task to start hop.
 		HopperState = HopperStateEnum::StartHop;
-		Task::enable();
+		Task::enableDelayed(0);
 	}
 
 	virtual void OnLinkStopped() final
@@ -137,10 +137,8 @@ public:
 			LastHopIndex = GetHopIndex(rollingTimestamp);
 			LastTimestamp = rollingTimestamp;
 			LastHop = millis();
-			// Fire first notification, to make sure we're starting on the right Rx channel.
-			Listener->OnChannelHopTime();
 			HopperState = HopperStateEnum::TimedHop;
-			Task::enable();
+			Task::delay(0);
 			break;
 		case HopperStateEnum::TimedHop:
 			//Check if it's time to hop, with forward look compensation.
@@ -196,7 +194,7 @@ private:
 				else
 				{
 					// Out of sync, keep in spin lock.
-					Task::enable();
+					Task::delay(0);
 				}
 
 				return true;
@@ -212,7 +210,7 @@ private:
 #endif
 		}
 
-		Task::enable();
+		Task::delay(0);
 
 		return false;
 	}
