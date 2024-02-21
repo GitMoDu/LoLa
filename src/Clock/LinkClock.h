@@ -12,6 +12,9 @@
 /// </summary>
 class LinkClock final : public TuneClock, public virtual IRollingTimestamp
 {
+private:
+	Timestamp RollingTimestamp{};
+
 public:
 	LinkClock(Scheduler& scheduler, ICycles* cycles)
 		: TuneClock(scheduler, cycles)
@@ -20,11 +23,9 @@ public:
 public:
 	virtual const uint32_t GetRollingTimestamp() final
 	{
-		Timestamp rollingTimestamp{};
+		GetTimestamp(RollingTimestamp);
 
-		GetTimestamp(rollingTimestamp);
-
-		return rollingTimestamp.GetRollingMicros();
+		return RollingTimestamp.GetRollingMicros();
 	}
 };
 #endif
