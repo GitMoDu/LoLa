@@ -88,9 +88,6 @@ public:
 		if (SurfaceSize > 0)
 		{
 			WriterState = WriterStateEnum::Disabled;
-#if defined(DEBUG_LOLA)
-			Serial.println(F("Writer is Cold."));
-#endif
 		}
 	}
 
@@ -157,9 +154,6 @@ protected:
 				if (HashesMatch(MatchHash))
 				{
 					TrackedSurface->SetHot(true);
-#if defined(DEBUG_LOLA)
-					Serial.println(F("Writer is Hot."));
-#endif
 				}
 			}
 
@@ -226,10 +220,6 @@ protected:
 			case ReaderInvalidateDefinition::HEADER:
 				if (payloadSize == ReaderInvalidateDefinition::PAYLOAD_SIZE)
 				{
-#if defined(DEBUG_LOLA)
-					Serial.print(F("Writer Invalidated by Reader: "));
-					Serial.println((uint8_t)WriterState);
-#endif
 					SetRemoteHashArray(&payload[ReaderInvalidateDefinition::CRC_OFFSET]);
 
 					switch (WriterState)

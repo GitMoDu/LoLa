@@ -159,9 +159,6 @@ protected:
 						TrackedSurface->SetHot(true);
 						NotifyRequested = true;
 						Task::enableDelayed(0);
-#if defined(DEBUG_LOLA)
-						Serial.println(F("Reader is Hot."));
-#endif
 						if (RequestSendMeta(ReaderValidateDefinition::HEADER))
 						{
 							ReaderState = ReaderStateEnum::Sleeping;
@@ -209,9 +206,6 @@ protected:
 	{
 		BaseClass::OnServiceEnded();
 		ReaderState = ReaderStateEnum::Disabled;
-#if defined(DEBUG_LOLA)
-		Serial.println(F("Reader is Cold."));
-#endif
 	}
 
 private:
@@ -234,9 +228,6 @@ private:
 		{
 			NotifyRequested = true;
 		}
-
-		Serial.print(F("\t1x1\t"));
-		Serial.println(blockIndex);
 	}
 
 	void OnReceived2x1(const uint8_t* payload)
@@ -262,11 +253,6 @@ private:
 		{
 			NotifyRequested = true;
 		}
-
-		Serial.print(F("\t2x1\t"));
-		Serial.print(block0Index);
-		Serial.print(',');
-		Serial.println(block1Index);
 	}
 
 	void OnReceived1x2(const uint8_t* payload, const uint8_t header)
@@ -292,11 +278,6 @@ private:
 		{
 			NotifyRequested = true;
 		}
-
-		Serial.print(F("\t1x2\t"));
-		Serial.print(block0Index);
-		Serial.print(',');
-		Serial.println(block1Index);
 	}
 
 	void OnReceived1x3(const uint8_t* payload, const uint8_t header)
@@ -326,13 +307,6 @@ private:
 		{
 			NotifyRequested = true;
 		}
-
-		Serial.print(F("\t1x3\t"));
-		Serial.print(block0Index);
-		Serial.print(',');
-		Serial.print(block1Index);
-		Serial.print(',');
-		Serial.println(block2Index);
 	}
 };
 #endif
