@@ -11,7 +11,8 @@ public:
 	/// <summary>
 	/// Notifies the listener that the surface data has been updated.
 	/// </summary>
-	virtual void OnSurfaceUpdated() {}
+	/// <param name="hot">Same as ISurface::IsHot().</param>
+	virtual void OnSurfaceUpdated(const bool hot) {}
 };
 
 /// <summary>

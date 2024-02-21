@@ -131,7 +131,7 @@ public:
 	{
 		for (uint_fast8_t i = 0; i < ListenerCount; i++)
 		{
-			Listeners[i]->OnSurfaceUpdated();
+			Listeners[i]->OnSurfaceUpdated(Hot);
 		}
 	}
 

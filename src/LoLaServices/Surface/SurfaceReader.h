@@ -11,7 +11,6 @@ class SurfaceReader : public AbstractSurfaceService<Port, ServiceId, SurfaceRead
 private:
 	using BaseClass = AbstractSurfaceService<Port, ServiceId, SurfaceReaderMaxPayloadSize>;
 
-	static constexpr uint32_t START_DELAY_PERIOD_MILLIS = 100;
 	static constexpr uint32_t RECEIVE_FAILED_PERIOD_MILLIS = 50;
 	static constexpr uint32_t RESEND_PERIOD_MICROS = 30000;
 
@@ -28,8 +27,9 @@ protected:
 	using BaseClass::ResetPacketThrottle;
 	using BaseClass::PacketThrottle;
 
-	using BaseClass::TrackedSurface;
+	using BaseClass::Surface;
 	using BaseClass::SurfaceSize;
+	using BaseClass::BlockData;
 	using BaseClass::SetRemoteHashArray;
 	using BaseClass::HashesMatch;
 	using BaseClass::RequestSendMeta;
@@ -37,12 +37,11 @@ protected:
 private:
 	uint32_t LastBlockReceived = 0;
 	ReaderStateEnum ReaderState = ReaderStateEnum::Disabled;
-
 	bool NotifyRequested = false;
 
 public:
-	SurfaceReader(Scheduler& scheduler, ILoLaLink* link, ISurface* trackedSurface)
-		: BaseClass(scheduler, link, trackedSurface)
+	SurfaceReader(Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
+		: BaseClass(scheduler, link, surface)
 	{}
 
 	virtual void OnLinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
@@ -115,26 +114,21 @@ public:
 protected:
 	virtual void OnLinkedService() final
 	{
-		const uint32_t timestamp = millis();
-
 		if (NotifyRequested)
 		{
 			NotifyRequested = false;
-			Task::delay(0);
-			if (!TrackedSurface->IsHot())
-			{
-				TrackedSurface->NotifyUpdated();
-			}
+			Surface->NotifyUpdated();
 		}
-		else switch (ReaderState)
+
+		switch (ReaderState)
 		{
 		case ReaderStateEnum::Updating:
-			if (TrackedSurface->IsHot() && HashesMatch())
+			if (Surface->IsHot() && HashesMatch())
 			{
 				ReaderState = ReaderStateEnum::Sleeping;
 				Task::delay(0);
 			}
-			else if (timestamp - LastBlockReceived > RECEIVE_FAILED_PERIOD_MILLIS)
+			else if (millis() - LastBlockReceived > RECEIVE_FAILED_PERIOD_MILLIS)
 			{
 				ReaderState = ReaderStateEnum::Invalidating;
 				Task::delay(0);
@@ -142,10 +136,10 @@ protected:
 			else { Task::delay(1); }
 			break;
 		case ReaderStateEnum::Validating:
-			Task::enableDelayed(0);
+			Task::delay(0);
 			if (PacketThrottle())
 			{
-				if (TrackedSurface->IsHot())
+				if (Surface->IsHot())
 				{
 					if (RequestSendMeta(ReaderValidateDefinition::HEADER))
 					{
@@ -154,11 +148,10 @@ protected:
 				}
 				else if (HashesMatch())
 				{
-					if (!TrackedSurface->HasBlockPending())
+					if (!Surface->HasBlockPending())
 					{
-						TrackedSurface->SetHot(true);
+						Surface->SetHot(true);
 						NotifyRequested = true;
-						Task::enableDelayed(0);
 						if (RequestSendMeta(ReaderValidateDefinition::HEADER))
 						{
 							ReaderState = ReaderStateEnum::Sleeping;
@@ -193,12 +186,12 @@ protected:
 	virtual void OnServiceStarted() final
 	{
 		BaseClass::OnServiceStarted();
-		if (SurfaceSize > 0)
+		if (BlockData != nullptr)
 		{
-			ReaderState = ReaderStateEnum::Updating;
+			ReaderState = ReaderStateEnum::Sleeping;
 			NotifyRequested = false;
 			LastBlockReceived = millis();
-			Task::delay(START_DELAY_PERIOD_MILLIS);
+			Task::disable();
 		}
 	}
 
@@ -214,15 +207,14 @@ private:
 		const uint8_t blockIndex = payload[WriterDefinition1x1::INDEX_OFFSET];
 		const uint8_t indexOffset = blockIndex * ISurface::BytesPerBlock;
 
-		uint8_t* surfaceData = TrackedSurface->GetBlockData();
 		for (uint_fast8_t i = 0; i < ISurface::BytesPerBlock; i++)
 		{
-			surfaceData[indexOffset + i] = payload[WriterDefinition1x1::BLOCK_OFFSET + i];
+			BlockData[indexOffset + i] = payload[WriterDefinition1x1::BLOCK_OFFSET + i];
 		}
 
-		if (!TrackedSurface->IsHot())
+		if (!Surface->IsHot())
 		{
-			TrackedSurface->ClearBlockPending(blockIndex);
+			Surface->ClearBlockPending(blockIndex);
 		}
 		else
 		{
@@ -237,17 +229,16 @@ private:
 		const uint8_t index0Offset = block0Index * ISurface::BytesPerBlock;
 		const uint8_t index1Offset = block1Index * ISurface::BytesPerBlock;
 
-		uint8_t* surfaceData = TrackedSurface->GetBlockData();
 		for (uint_fast8_t i = 0; i < ISurface::BytesPerBlock; i++)
 		{
-			surfaceData[index0Offset + i] = payload[WriterDefinition2x1::BLOCK0_OFFSET + i];
-			surfaceData[index1Offset + i] = payload[WriterDefinition2x1::BLOCK1_OFFSET + i];
+			BlockData[index0Offset + i] = payload[WriterDefinition2x1::BLOCK0_OFFSET + i];
+			BlockData[index1Offset + i] = payload[WriterDefinition2x1::BLOCK1_OFFSET + i];
 		}
 
-		if (!TrackedSurface->IsHot())
+		if (!Surface->IsHot())
 		{
-			TrackedSurface->ClearBlockPending(block0Index);
-			TrackedSurface->ClearBlockPending(block1Index);
+			Surface->ClearBlockPending(block0Index);
+			Surface->ClearBlockPending(block1Index);
 		}
 		else
 		{
@@ -262,17 +253,16 @@ private:
 		const uint8_t index0Offset = block0Index * ISurface::BytesPerBlock;
 		const uint8_t index1Offset = index0Offset + ISurface::BytesPerBlock;
 
-		uint8_t* surfaceData = TrackedSurface->GetBlockData();
 		for (uint_fast8_t i = 0; i < ISurface::BytesPerBlock; i++)
 		{
-			surfaceData[index0Offset + i] = payload[WriterDefinition1x2::BLOCK0_OFFSET + i];
-			surfaceData[index1Offset + i] = payload[WriterDefinition1x2::BLOCK1_OFFSET + i];
+			BlockData[index0Offset + i] = payload[WriterDefinition1x2::BLOCK0_OFFSET + i];
+			BlockData[index1Offset + i] = payload[WriterDefinition1x2::BLOCK1_OFFSET + i];
 		}
 
-		if (!TrackedSurface->IsHot())
+		if (!Surface->IsHot())
 		{
-			TrackedSurface->ClearBlockPending(block0Index);
-			TrackedSurface->ClearBlockPending(block1Index);
+			Surface->ClearBlockPending(block0Index);
+			Surface->ClearBlockPending(block1Index);
 		}
 		else
 		{
@@ -289,19 +279,18 @@ private:
 		const uint8_t index1Offset = index0Offset + ISurface::BytesPerBlock;
 		const uint8_t index2Offset = index1Offset + ISurface::BytesPerBlock;
 
-		uint8_t* surfaceData = TrackedSurface->GetBlockData();
 		for (uint_fast8_t i = 0; i < ISurface::BytesPerBlock; i++)
 		{
-			surfaceData[index0Offset + i] = payload[WriterDefinition1x3::BLOCK0_OFFSET + i];
-			surfaceData[index1Offset + i] = payload[WriterDefinition1x3::BLOCK1_OFFSET + i];
-			surfaceData[index2Offset + i] = payload[WriterDefinition1x3::BLOCK2_OFFSET + i];
+			BlockData[index0Offset + i] = payload[WriterDefinition1x3::BLOCK0_OFFSET + i];
+			BlockData[index1Offset + i] = payload[WriterDefinition1x3::BLOCK1_OFFSET + i];
+			BlockData[index2Offset + i] = payload[WriterDefinition1x3::BLOCK2_OFFSET + i];
 		}
 
-		if (!TrackedSurface->IsHot())
+		if (!Surface->IsHot())
 		{
-			TrackedSurface->ClearBlockPending(block0Index);
-			TrackedSurface->ClearBlockPending(block1Index);
-			TrackedSurface->ClearBlockPending(block2Index);
+			Surface->ClearBlockPending(block0Index);
+			Surface->ClearBlockPending(block1Index);
+			Surface->ClearBlockPending(block2Index);
 		}
 		else
 		{

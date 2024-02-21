@@ -35,44 +35,55 @@ private:
 	Fletcher16 Crc{};
 
 protected:
-	ISurface* TrackedSurface;
+	ISurface* Surface;
+	uint8_t* BlockData = nullptr;
+
 private:
-	uint16_t LastRemoteHash = 0;
+	uint16_t RemoteHash = 0;
+
 protected:
 	uint8_t SurfaceSize = 0;
+
 private:
 	bool RemoteHashIsSet = false;
 
 public:
 	AbstractSurfaceService(Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
 		: BaseClass(scheduler, link)
-		, TrackedSurface(surface)
+		, Surface(surface)
 	{}
 
 	virtual const bool Setup()
 	{
-		if (TrackedSurface != nullptr
-			&& TrackedSurface->GetBlockData() != nullptr)
+		BlockData = Surface->GetBlockData();
+
+		if (Surface != nullptr
+			&& BlockData != nullptr
+			&& Surface->GetBlockCount() > 0)
 		{
-			SurfaceSize = ISurface::GetByteCount(TrackedSurface->GetBlockCount());
+			SurfaceSize = ISurface::GetByteCount(Surface->GetBlockCount());
+
+			return SurfaceSize > 0 && BaseClass::Setup();
 		}
 		else
 		{
+			BlockData = nullptr;
 			SurfaceSize = 0;
-		}
 
-		return BaseClass::Setup() && SurfaceSize > 0;
+			return false;
+		}
 	}
 
 public:
 	virtual void OnServiceStarted()
 	{
-		if (SurfaceSize > 0)
+		if (SurfaceSize > 0 && BlockData != nullptr)
 		{
 			InvalidateRemoteHash();
 			ResetPacketThrottle();
-			TrackedSurface->SetAllBlocksPending();
-			TrackedSurface->SetHot(false);
+			Surface->SetAllBlocksPending();
+			Surface->SetHot(false);
+			Surface->NotifyUpdated();
 			Task::enable();
 		}
 	}
@@ -81,8 +92,8 @@ public:
 	{
 		if (SurfaceSize > 0)
 		{
-			TrackedSurface->SetHot(false);
-			TrackedSurface->NotifyUpdated();
+			Surface->SetHot(false);
+			Surface->NotifyUpdated();
 			InvalidateRemoteHash();
 			Task::disable();
 		}
@@ -107,7 +118,7 @@ protected:
 	const uint16_t GetLocalHash()
 	{
 		Crc.begin();
-		Crc.add(TrackedSurface->GetBlockData(), SurfaceSize);
+		Crc.add(Surface->GetBlockData(), SurfaceSize);
 
 		return Crc.getFletcher();
 	}
@@ -119,7 +130,7 @@ protected:
 
 	void SetRemoteHashArray(const uint8_t* remoteHashArray)
 	{
-		LastRemoteHash = ((uint16_t)remoteHashArray[0]) | ((uint16_t)remoteHashArray[1] << 8);
+		RemoteHash = ((uint16_t)remoteHashArray[0]) | ((uint16_t)remoteHashArray[1] << 8);
 		RemoteHashIsSet = true;
 	}
 
@@ -130,12 +141,12 @@ protected:
 
 	const bool HashesMatch(const uint16_t hash)
 	{
-		return (HasRemoteHash() && hash == LastRemoteHash);
+		return (HasRemoteHash() && hash == RemoteHash);
 	}
 
 	const bool HashesMatch()
 	{
-		return (HasRemoteHash() && GetLocalHash() == LastRemoteHash);
+		return (HasRemoteHash() && GetLocalHash() == RemoteHash);
 	}
 };
 #endif
