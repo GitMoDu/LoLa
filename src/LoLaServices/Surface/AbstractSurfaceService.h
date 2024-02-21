@@ -9,7 +9,7 @@
 */
 #include <Fletcher16.h>
 
-#include "..\..\LoLaServices\AbstractLoLaDiscoveryService.h"
+#include "..\..\LoLaServices\AbstractDiscovery\AbstractDiscoveryService.h"
 #include "ISurface.h"
 #include "SurfaceDefinitions.h"
 
@@ -23,26 +23,24 @@ class AbstractSurfaceService
 {
 private:
 	using BaseClass = AbstractLoLaDiscoveryService<Port, ServiceId, MaxSendPayloadSize>;
+	using SyncMetaDefinition = SyncDefinition<0>;
 
 protected:
 	using BaseClass::OutPacket;
-
-protected:
 	using BaseClass::RequestSendPacket;
 	using BaseClass::ResetPacketThrottle;
 	using BaseClass::PacketThrottle;
-
-	static constexpr uint32_t FAST_CHECK_PERIOD_MILLIS = 1;
 
 private:
 	Fletcher16 Crc{};
 
 protected:
 	ISurface* TrackedSurface;
-	uint8_t SurfaceSize = 0;
-
 private:
 	uint16_t LastRemoteHash = 0;
+protected:
+	uint8_t SurfaceSize = 0;
+private:
 	bool RemoteHashIsSet = false;
 
 public:
@@ -81,21 +79,27 @@ public:
 
 	virtual void OnServiceEnded()
 	{
-		TrackedSurface->SetHot(false);
-		TrackedSurface->NotifyUpdated();
-		InvalidateRemoteHash();
-		Task::disable();
+		if (SurfaceSize > 0)
+		{
+			TrackedSurface->SetHot(false);
+			TrackedSurface->NotifyUpdated();
+			InvalidateRemoteHash();
+			Task::disable();
+		}
 	}
 
 protected:
 	const bool RequestSendMeta(const uint8_t header)
 	{
-		const uint16_t localHash = GetLocalHash();
+		return RequestSendMeta(GetLocalHash(), header);
+	}
 
+	const bool RequestSendMeta(const uint16_t hash, const uint8_t header)
+	{
 		OutPacket.SetPort(Port);
 		OutPacket.SetHeader(header);
-		OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET] = localHash;
-		OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET + 1] = localHash >> 8;
+		OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET] = hash;
+		OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET + 1] = hash >> 8;
 
 		return RequestSendPacket(SyncMetaDefinition::PAYLOAD_SIZE);
 	}
