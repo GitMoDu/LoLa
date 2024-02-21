@@ -11,6 +11,10 @@
 // Link debug output enabled.
 #endif
 
+#if defined(LOLA_USE_POLY1305)
+// Use Poly1305 hash, instead of Xoodyak.
+#endif
+
 #if !defined(ARDUINO)
 #error Arduino HAL is required for LoLa Library.
 #endif

@@ -3,9 +3,7 @@
 #ifndef _EXAMPLE_SURFACE_h
 #define _EXAMPLE_SURFACE_h
 
-#include <LoLaServices/Surface/TemplateSurface.h>
-#include <BitTracker.h>
-#include <stddef.h>
+#include <ISurfaceInclude.h>
 
 namespace ExampleSurfaceDefinition
 {

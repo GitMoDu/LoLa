@@ -42,7 +42,6 @@ public:
 	/// <returns>Pointer to raw block data.</returns>
 	virtual uint8_t* GetBlockData() { return nullptr; }
 
-
 	/// <summary>
 	/// Notifies the listener that the data has been updated.
 	/// </summary>
