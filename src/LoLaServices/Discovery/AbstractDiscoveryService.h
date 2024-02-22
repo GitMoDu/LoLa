@@ -3,7 +3,7 @@
 #ifndef _ABSTRACT_DISCOVERY_SERVICE_
 #define _ABSTRACT_DISCOVERY_SERVICE_
 
-#include "..\..\Service\TemplateLoLaService.h"
+#include "..\..\LoLaServices\TemplateLoLaService.h"
 #include "DiscoveryDefinitions.h"
 
 using namespace DiscoveryDefinitions;
@@ -21,7 +21,7 @@ using namespace DiscoveryDefinitions;
 template<const uint8_t Port,
 	const uint32_t ServiceId,
 	const uint8_t MaxSendPayloadSize = 0>
-class AbstractLoLaDiscoveryService
+class AbstractDiscoveryService
 	: public TemplateLoLaService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>
 	, public virtual ILinkListener
 {
@@ -92,8 +92,8 @@ private:
 	bool Acknowledged = false;
 
 public:
-	AbstractLoLaDiscoveryService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
-		: BaseClass(scheduler, loLaLink, sendRequestTimeout)
+	AbstractDiscoveryService(Scheduler& scheduler, ILoLaLink* loLaLink)
+		: BaseClass(scheduler, loLaLink)
 	{}
 
 public:

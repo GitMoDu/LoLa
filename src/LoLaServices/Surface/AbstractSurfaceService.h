@@ -8,7 +8,7 @@
 */
 #include <Fletcher16.h>
 
-#include "..\..\LoLaServices\AbstractDiscovery\AbstractDiscoveryService.h"
+#include "..\..\LoLaServices\Discovery\AbstractDiscoveryService.h"
 #include "ISurface.h"
 #include "SurfaceDefinitions.h"
 
@@ -24,10 +24,10 @@ template<const uint8_t Port,
 	const uint32_t ServiceId,
 	const uint8_t MaxSendPayloadSize>
 class AbstractSurfaceService
-	: public AbstractLoLaDiscoveryService<Port, ServiceId, MaxSendPayloadSize>
+	: public AbstractDiscoveryService<Port, ServiceId, MaxSendPayloadSize>
 {
 private:
-	using BaseClass = AbstractLoLaDiscoveryService<Port, ServiceId, MaxSendPayloadSize>;
+	using BaseClass = AbstractDiscoveryService<Port, ServiceId, MaxSendPayloadSize>;
 	using SyncMetaDefinition = SyncDefinition<0>;
 
 protected:

@@ -3,16 +3,16 @@
 #ifndef _DISCOVERY_TEST_SERVICE_h
 #define _DISCOVERY_TEST_SERVICE_h
 
-#include "LoLaServices\AbstractDiscovery\AbstractDiscoveryService.h"
+#include "LoLaServices\Discovery\AbstractDiscoveryService.h"
 
 template<const char OnwerName,
 	const uint8_t Port,
 	const uint32_t ServiceId,
 	const uint8_t MaxSendPayloadSize = 3>
-class DiscoveryTestService : public AbstractLoLaDiscoveryService<Port, ServiceId>
+class DiscoveryTestService : public AbstractDiscoveryService<Port, ServiceId>
 {
 private:
-	using BaseClass = AbstractLoLaDiscoveryService<Port, ServiceId>;
+	using BaseClass = AbstractDiscoveryService<Port, ServiceId>;
 
 public:
 	DiscoveryTestService(Scheduler& scheduler, ILoLaLink* link)

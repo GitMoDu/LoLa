@@ -17,6 +17,9 @@ template<const uint8_t MaxSendPayloadSize>
 class TemplateLoLaService : protected Task
 	, public virtual ILinkPacketListener
 {
+private:
+	static constexpr uint32_t REQUEST_TIMEOUT_MILLIS = 1000;
+
 protected:
 	/// <summary>
 	/// Output packet payload, to be used by service to send packets.
@@ -29,7 +32,6 @@ protected:
 	ILoLaLink* LoLaLink;
 
 private:
-	uint32_t SendRequestTimeout = 0;
 	uint32_t RequestStart = 0;
 	uint32_t LastSent = 0;
 
@@ -70,13 +72,11 @@ public:
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 
 public:
-	TemplateLoLaService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
+	TemplateLoLaService(Scheduler& scheduler, ILoLaLink* loLaLink)
 		: ILinkPacketListener()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, LoLaLink(loLaLink)
-	{
-		SetSendRequestTimeout(sendRequestTimeout);
-	}
+	{}
 
 	virtual const bool Setup()
 	{
@@ -85,9 +85,11 @@ public:
 
 	virtual bool Callback() final
 	{
-		// Busy loop waiting for send availability.
 		if (RequestPending)
 		{
+			// Busy loop waiting for send availability.
+			Task::delay(0);
+
 			LOLA_RTOS_PAUSE();
 			if (LoLaLink->CanSendPacket(RequestPayloadSize))
 			{
@@ -102,35 +104,23 @@ public:
 				{
 					LastSent = micros();
 					RequestPending = false;
-					Task::enable();
-				}
-				else if (millis() - RequestStart > SendRequestTimeout)
-				{
-					// Send timed out.
-					RequestPending = false;
-					Task::enable();
-					OnSendRequestTimeout();
 				}
 				else
 				{
-					// Unable to transmit, try again.
-					Task::enable();
+					// Transmit failed.
+					RequestPending = false;
+					OnSendRequestTimeout();
 				}
 			}
 			else
 			{
 				LOLA_RTOS_RESUME();
-				if (millis() - RequestStart > SendRequestTimeout)
+				// Can't send now, try again until timeout.
+				if (millis() - RequestStart > REQUEST_TIMEOUT_MILLIS)
 				{
 					// Send timed out.
 					RequestPending = false;
-					Task::enable();
 					OnSendRequestTimeout();
-				}
-				else
-				{
-					// Can't send now, try again until timeout.
-					Task::enableIfNot();
 				}
 			}
 		}
@@ -188,7 +178,7 @@ protected:
 	/// </summary>
 	void ResetPacketThrottle()
 	{
-		LastSent = micros() - SendRequestTimeout;
+		LastSent = micros() - REQUEST_TIMEOUT_MILLIS;
 	}
 
 	/// <summary>
@@ -232,24 +222,9 @@ protected:
 		RequestPayloadSize = payloadSize;
 		RequestStart = millis();
 
-		Task::enable();
+		Task::enableDelayed(0);
 		return true;
 	}
 
-	/// <summary>
-	/// Set how long to try to send for, before timing out.
-	/// </summary>
-	/// <param name="sendRequestTimeout">Duration of send timeout in milliseconds.</param>
-	void SetSendRequestTimeout(const uint32_t sendRequestTimeout)
-	{
-		if (sendRequestTimeout > 1)
-		{
-			SendRequestTimeout = sendRequestTimeout;
-		}
-		else
-		{
-			SendRequestTimeout = 1;
-		}
-	}
 };
 #endif

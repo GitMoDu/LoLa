@@ -16,7 +16,7 @@
 #include "..\..\Clock\LinkClock.h"
 #include "..\..\Crypto\LoLaCryptoEncoderSession.h"
 
-#include "..\..\Service\TemplateLoLaService.h"
+#include "..\..\LoLaServices\TemplateLoLaService.h"
 
 /// <summary>
 /// LoLa Link base (AbstractLoLa) is a special case of a TemplateLoLaService,

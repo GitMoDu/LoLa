@@ -75,7 +75,7 @@ private:
 		return true;
 	}
 
-	const uint32_t GetAdaptiveSmearPeriod()
+	const uint32_t GetAdaptiveSmearPeriod() const
 	{
 		if (DetuneMicros > 0)
 		{
