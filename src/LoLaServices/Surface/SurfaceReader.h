@@ -5,14 +5,22 @@
 
 #include "AbstractSurfaceService.h"
 
+/// <summary>
+/// Surface Reader reflects data blocks from the partner Surface Writer.
+/// Updates block data and notifies listeners of change..
+/// Surface is hot sync is active and all blocks have been reflected at least once.
+/// CRC validated with Fletcher 16.
+/// </summary>
+/// <typeparam name="Port">The port registered for this service.</typeparam>
+/// <typeparam name="ServiceId">Unique service identifier.</typeparam>
 template <const uint8_t Port, const uint32_t ServiceId>
 class SurfaceReader : public AbstractSurfaceService<Port, ServiceId, SurfaceReaderMaxPayloadSize>
 {
 private:
 	using BaseClass = AbstractSurfaceService<Port, ServiceId, SurfaceReaderMaxPayloadSize>;
 
-	static constexpr uint32_t RECEIVE_FAILED_PERIOD_MILLIS = 50;
-	static constexpr uint32_t RESEND_PERIOD_MICROS = 30000;
+	static constexpr uint8_t RECEIVE_FAILED_PERIOD_MILLIS = 50;
+	static constexpr uint8_t RESEND_PERIOD_MILLIS = RECEIVE_FAILED_PERIOD_MILLIS / 2;
 
 	enum class ReaderStateEnum : uint8_t
 	{
@@ -35,7 +43,7 @@ protected:
 	using BaseClass::RequestSendMeta;
 
 private:
-	uint32_t LastBlockReceived = 0;
+	uint32_t LastReceived = 0;
 	ReaderStateEnum ReaderState = ReaderStateEnum::Disabled;
 	bool NotifyRequested = false;
 
@@ -44,74 +52,26 @@ public:
 		: BaseClass(scheduler, link, surface)
 	{}
 
-	virtual void OnLinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
+	virtual void OnServiceStarted() final
 	{
-		if (ReaderState != ReaderStateEnum::Disabled)
+		BaseClass::OnServiceStarted();
+		if (SurfaceSize > 0)
 		{
-			const uint8_t header = payload[HeaderDefinition::HEADER_INDEX];
-			switch (header)
-			{
-			case WriterCheckHashDefinition::HEADER:
-				if (payloadSize == WriterCheckHashDefinition::PAYLOAD_SIZE)
-				{
-					switch (ReaderState)
-					{
-					case ReaderStateEnum::Sleeping:
-						Task::enableDelayed(0);
-					case ReaderStateEnum::Updating:
-					case ReaderStateEnum::Invalidating:
-						ReaderState = ReaderStateEnum::Validating;
-						break;
-					default:
-						break;
-					}
-					SetRemoteHashArray(&payload[WriterCheckHashDefinition::CRC_OFFSET]);
-					ResetPacketThrottle();
-				}
-				break;
-			case WriterDefinition1x1::HEADER:
-				if (payloadSize == WriterDefinition1x1::PAYLOAD_SIZE)
-				{
-					LastBlockReceived = millis();
-					Task::enableDelayed(0);
-					ReaderState = ReaderStateEnum::Updating;
-					OnReceived1x1(payload);
-				}
-				break;
-			case WriterDefinition2x1::HEADER:
-				if (payloadSize == WriterDefinition2x1::PAYLOAD_SIZE)
-				{
-					LastBlockReceived = millis();
-					Task::enableDelayed(0);
-					ReaderState = ReaderStateEnum::Updating;
-					OnReceived2x1(payload);
-				}
-				break;
-			default:
-				if (payloadSize == WriterDefinition1x2::PAYLOAD_SIZE
-					&& header >= WriterDefinition1x2::HEADER
-					&& header < WriterDefinition1x2::MAX_HEADER)
-				{
-					LastBlockReceived = millis();
-					Task::enableDelayed(0);
-					ReaderState = ReaderStateEnum::Updating;
-					OnReceived1x2(payload, header);
-				}
-				else if (payloadSize == WriterDefinition1x3::PAYLOAD_SIZE
-					&& header >= WriterDefinition1x3::HEADER
-					&& header < WriterDefinition1x3::MAX_HEADER)
-				{
-					LastBlockReceived = millis();
-					Task::enableDelayed(0);
-					ReaderState = ReaderStateEnum::Updating;
-					OnReceived1x3(payload, header);
-				}
-				break;
-			}
+			ReaderState = ReaderStateEnum::Sleeping;
+			NotifyRequested = false;
+			LastReceived = millis();
+			Task::disable();
+			Surface->SetHot(false);
+			Surface->NotifyUpdated();
 		}
 	}
 
-protected:
+	virtual void OnServiceEnded() final
+	{
+		BaseClass::OnServiceEnded();
+		ReaderState = ReaderStateEnum::Disabled;
+	}
+
 	virtual void OnLinkedService() final
 	{
 		if (NotifyRequested)
@@ -119,8 +79,7 @@ protected:
 			NotifyRequested = false;
 			Surface->NotifyUpdated();
 		}
-
-		switch (ReaderState)
+		else switch (ReaderState)
 		{
 		case ReaderStateEnum::Updating:
 			if (Surface->IsHot() && HashesMatch())
@@ -128,48 +87,42 @@ protected:
 				ReaderState = ReaderStateEnum::Sleeping;
 				Task::delay(0);
 			}
-			else if (millis() - LastBlockReceived > RECEIVE_FAILED_PERIOD_MILLIS)
+			else if (millis() - LastReceived > RECEIVE_FAILED_PERIOD_MILLIS)
 			{
 				ReaderState = ReaderStateEnum::Invalidating;
+				ResetPacketThrottle();
 				Task::delay(0);
 			}
 			else { Task::delay(1); }
 			break;
 		case ReaderStateEnum::Validating:
 			Task::delay(0);
-			if (PacketThrottle())
+			if (Surface->IsHot())
 			{
-				if (Surface->IsHot())
+				if (RequestSendMeta(ReaderValidateDefinition::HEADER))
 				{
-					if (RequestSendMeta(ReaderValidateDefinition::HEADER))
+					if (HashesMatch())
 					{
 						ReaderState = ReaderStateEnum::Sleeping;
 					}
-				}
-				else if (HashesMatch())
-				{
-					if (!Surface->HasBlockPending())
+					else
 					{
-						Surface->SetHot(true);
-						NotifyRequested = true;
-						if (RequestSendMeta(ReaderValidateDefinition::HEADER))
-						{
-							ReaderState = ReaderStateEnum::Sleeping;
-						}
-					}
-					else if (RequestSendMeta(ReaderInvalidateDefinition::HEADER))
-					{
-						ReaderState = ReaderStateEnum::Sleeping;
+						ReaderState = ReaderStateEnum::Updating;
 					}
 				}
-				else if (RequestSendMeta(ReaderInvalidateDefinition::HEADER))
-				{
-					ReaderState = ReaderStateEnum::Sleeping;
-				}
+			}
+			else if (Surface->HasBlockPending())
+			{
+				ReaderState = ReaderStateEnum::Invalidating;
+				ResetPacketThrottle();
+			}
+			else if (RequestSendMeta(ReaderValidateDefinition::HEADER))
+			{
+				ReaderState = ReaderStateEnum::Sleeping;
 			}
 			break;
 		case ReaderStateEnum::Invalidating:
-			if (PacketThrottle(RESEND_PERIOD_MICROS))
+			if (PacketThrottle(1000 * RESEND_PERIOD_MILLIS))
 			{
 				RequestSendMeta(ReaderInvalidateDefinition::HEADER);
 			}
@@ -183,22 +136,72 @@ protected:
 		}
 	}
 
-	virtual void OnServiceStarted() final
+	virtual void OnLinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
 	{
-		BaseClass::OnServiceStarted();
-		if (BlockData != nullptr)
+		if (ReaderState != ReaderStateEnum::Disabled)
 		{
-			ReaderState = ReaderStateEnum::Sleeping;
-			NotifyRequested = false;
-			LastBlockReceived = millis();
-			Task::disable();
+			const uint8_t header = payload[HeaderDefinition::HEADER_INDEX];
+			switch (header)
+			{
+			case WriterCheckHashDefinition::HEADER:
+				if (payloadSize == WriterCheckHashDefinition::PAYLOAD_SIZE)
+				{
+					LastReceived = millis();
+					switch (ReaderState)
+					{
+					case ReaderStateEnum::Sleeping:
+						Task::enableDelayed(0);
+					case ReaderStateEnum::Updating:
+					case ReaderStateEnum::Invalidating:
+						ReaderState = ReaderStateEnum::Validating;
+						ResetPacketThrottle();
+						break;
+					default:
+						break;
+					}
+					SetRemoteHashArray(&payload[WriterCheckHashDefinition::CRC_OFFSET]);
+				}
+				break;
+			case WriterDefinition1x1::HEADER:
+				if (payloadSize == WriterDefinition1x1::PAYLOAD_SIZE)
+				{
+					LastReceived = millis();
+					Task::enableDelayed(0);
+					ReaderState = ReaderStateEnum::Updating;
+					OnReceived1x1(payload);
+				}
+				break;
+			case WriterDefinition2x1::HEADER:
+				if (payloadSize == WriterDefinition2x1::PAYLOAD_SIZE)
+				{
+					LastReceived = millis();
+					Task::enableDelayed(0);
+					ReaderState = ReaderStateEnum::Updating;
+					OnReceived2x1(payload);
+				}
+				break;
+			default:
+				if (payloadSize == WriterDefinition1x2::PAYLOAD_SIZE
+					&& header >= WriterDefinition1x2::HEADER
+					&& header < WriterDefinition1x2::MAX_HEADER)
+				{
+					LastReceived = millis();
+					Task::enableDelayed(0);
+					ReaderState = ReaderStateEnum::Updating;
+					OnReceived1x2(payload, header);
+				}
+				else if (payloadSize == WriterDefinition1x3::PAYLOAD_SIZE
+					&& header >= WriterDefinition1x3::HEADER
+					&& header < WriterDefinition1x3::MAX_HEADER)
+				{
+					LastReceived = millis();
+					Task::enableDelayed(0);
+					ReaderState = ReaderStateEnum::Updating;
+					OnReceived1x3(payload, header);
+				}
+				break;
+			}
 		}
-	}
-
-	virtual void OnServiceEnded() final
-	{
-		BaseClass::OnServiceEnded();
-		ReaderState = ReaderStateEnum::Disabled;
 	}
 
 private:
@@ -215,6 +218,11 @@ private:
 		if (!Surface->IsHot())
 		{
 			Surface->ClearBlockPending(blockIndex);
+			if (!Surface->HasBlockPending())
+			{
+				Surface->SetHot(true);
+				NotifyRequested = true;
+			}
 		}
 		else
 		{
@@ -239,6 +247,11 @@ private:
 		{
 			Surface->ClearBlockPending(block0Index);
 			Surface->ClearBlockPending(block1Index);
+			if (!Surface->HasBlockPending())
+			{
+				Surface->SetHot(true);
+				NotifyRequested = true;
+			}
 		}
 		else
 		{
@@ -263,6 +276,11 @@ private:
 		{
 			Surface->ClearBlockPending(block0Index);
 			Surface->ClearBlockPending(block1Index);
+			if (!Surface->HasBlockPending())
+			{
+				Surface->SetHot(true);
+				NotifyRequested = true;
+			}
 		}
 		else
 		{
@@ -291,6 +309,11 @@ private:
 			Surface->ClearBlockPending(block0Index);
 			Surface->ClearBlockPending(block1Index);
 			Surface->ClearBlockPending(block2Index);
+			if (!Surface->HasBlockPending())
+			{
+				Surface->SetHot(true);
+				NotifyRequested = true;
+			}
 		}
 		else
 		{

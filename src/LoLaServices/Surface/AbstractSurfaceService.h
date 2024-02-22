@@ -3,7 +3,6 @@
 #ifndef _ABSTRACT_SURFACE_SERVICE_h
 #define _ABSTRACT_SURFACE_SERVICE_h
 
-
 /*
 * https://github.com/RobTillaart/Fletcher
 */
@@ -15,6 +14,12 @@
 
 using namespace SurfaceDefinitions;
 
+/// <summary>
+/// Base for Surface services.
+/// </summary>
+/// <typeparam name="Port">The port registered for this service.</typeparam>
+/// <typeparam name="ServiceId">Unique service identifier.</typeparam>
+/// <typeparam name="MaxSendPayloadSize">The max packet payload sent by this service.</typeparam>
 template<const uint8_t Port,
 	const uint32_t ServiceId,
 	const uint8_t MaxSendPayloadSize>
@@ -55,26 +60,24 @@ public:
 
 	virtual const bool Setup()
 	{
-		BlockData = Surface->GetBlockData();
-
-		if (Surface != nullptr
-			&& BlockData != nullptr
-			&& Surface->GetBlockCount() > 0)
+		if (Surface != nullptr)
 		{
+			BlockData = Surface->GetBlockData();
 			SurfaceSize = ISurface::GetByteCount(Surface->GetBlockCount());
 
-			return SurfaceSize > 0 && BaseClass::Setup();
+			if (Surface != nullptr && SurfaceSize > 0)
+			{
+				return BaseClass::Setup();
+			}
 		}
-		else
-		{
-			BlockData = nullptr;
-			SurfaceSize = 0;
 
-			return false;
-		}
+		BlockData = nullptr;
+		SurfaceSize = 0;
+
+		return false;
 	}
 
-public:
+protected:
 	virtual void OnServiceStarted()
 	{
 		if (SurfaceSize > 0 && BlockData != nullptr)
@@ -82,9 +85,10 @@ public:
 			InvalidateRemoteHash();
 			ResetPacketThrottle();
 			Surface->SetAllBlocksPending();
-			Surface->SetHot(false);
-			Surface->NotifyUpdated();
-			Task::enable();
+		}
+		else
+		{
+			Task::disable();
 		}
 	}
 
@@ -94,7 +98,6 @@ public:
 		{
 			Surface->SetHot(false);
 			Surface->NotifyUpdated();
-			InvalidateRemoteHash();
 			Task::disable();
 		}
 	}

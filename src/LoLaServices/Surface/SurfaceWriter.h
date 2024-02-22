@@ -5,6 +5,15 @@
 
 #include "AbstractSurfaceService.h"
 
+/// <summary>
+/// Surface Writer mirrors its data blocks on the partner Surface Reader.
+/// Listens to data updates and updates data block differentially.
+/// Surface is hot when sync is active.
+/// CRC validated with Fletcher 16.
+/// </summary>
+/// <typeparam name="Port">The port registered for this service.</typeparam>
+/// <typeparam name="ServiceId">Unique service identifier.</typeparam>
+/// <typeparam name="ThrottlePeriodMillis">Minimum update period between sync cycles, in milliseconds.</typeparam>
 template <const uint8_t Port
 	, const uint32_t ServiceId
 	, const uint16_t ThrottlePeriodMillis = 50>
@@ -45,10 +54,8 @@ protected:
 
 private:
 	uint32_t ThrottleStart = 0;
-	uint16_t MatchHash = 0;
 	WriterStateEnum WriterState = WriterStateEnum::Disabled;
 	uint8_t CurrentIndex = 0;
-	uint8_t MatchTryCount = 0;
 
 public:
 	SurfaceWriter(Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
@@ -68,6 +75,15 @@ public:
 		return false;
 	}
 
+	virtual void OnSurfaceUpdated(const bool hot) final
+	{
+		if (WriterState == WriterStateEnum::Sleeping)
+		{
+			Task::enableDelayed(0);
+		}
+	}
+
+protected:
 	virtual void OnServiceStarted() final
 	{
 		BaseClass::OnServiceStarted();
@@ -75,39 +91,26 @@ public:
 		{
 			WriterState = WriterStateEnum::Updating;
 			CurrentIndex = 0;
-			MatchTryCount = 0;
-			Task::enableDelayed(START_DELAY_PERIOD_MILLIS);
 			ThrottleStart = millis();
+			Surface->SetHot(true);
+			Surface->NotifyUpdated();
+			Task::enableDelayed(START_DELAY_PERIOD_MILLIS);
 		}
 	}
 
 	virtual void OnServiceEnded() final
 	{
 		BaseClass::OnServiceEnded();
-		if (SurfaceSize > 0)
-		{
-			WriterState = WriterStateEnum::Disabled;
-		}
+		WriterState = WriterStateEnum::Disabled;
 	}
 
-	virtual void OnSurfaceUpdated(const bool hot) final
-	{
-		if (SurfaceSize > 0
-			&& WriterState == WriterStateEnum::Sleeping)
-		{
-			Task::enableDelayed(0);
-		}
-	}
-
-protected:
 	virtual void OnLinkedService() final
 	{
 		const uint32_t timestamp = millis();
 		switch (WriterState)
 		{
 		case WriterStateEnum::Sleeping:
-			if (Surface->IsHot()
-				&& HashesMatch())
+			if (HashesMatch())
 			{
 				Surface->ClearAllBlocksPending();
 				Task::disable();
@@ -115,30 +118,18 @@ protected:
 			else
 			{
 				WriterState = WriterStateEnum::Updating;
-				Task::enableDelayed(0);
+				Task::delay(0);
 			}
 			break;
 		case WriterStateEnum::Updating:
-			Task::delay(0);
 			OnUpdating();
 			break;
 		case WriterStateEnum::Validating:
 			if (PacketThrottle())
 			{
-				if (Surface->IsHot())
+				if (RequestSendMeta(WriterCheckHashDefinition::HEADER))
 				{
-					if (!RequestSendMeta(WriterCheckHashDefinition::HEADER))
-					{
-						Task::delay(0);
-					}
-				}
-				else
-				{
-					MatchHash = GetLocalHash();
-					if (RequestSendMeta(MatchHash, WriterCheckHashDefinition::HEADER))
-					{
-						Task::delay(0);
-					}
+					Task::delay(0);
 				}
 			}
 			else
@@ -147,34 +138,28 @@ protected:
 			}
 			break;
 		case WriterStateEnum::Matching:
-			if (!Surface->IsHot())
-			{
-				if (HashesMatch(MatchHash))
-				{
-					Surface->SetHot(true);
-					Surface->NotifyUpdated();
-				}
-			}
-
 			WriterState = WriterStateEnum::Throttling;
-			MatchTryCount++;
 			Task::delay(0);
-			if (!HashesMatch()
-				&& (MatchTryCount > MAX_RETRIES_BEFORE_INVALIDATION
-					|| !Surface->HasBlockPending()))
+			if (!HashesMatch())
 			{
-				// Sync has been invalidated.
-				InvalidateRemoteHash();
+				// Invalidated: hashes don't match.
 				Surface->SetAllBlocksPending();
 			}
 			break;
 		case WriterStateEnum::Throttling:
 			if (timestamp - ThrottleStart >= ThrottlePeriodMillis)
 			{
-				Task::delay(0);
-				CurrentIndex = 0;
-				WriterState = WriterStateEnum::Sleeping;
-				ThrottleStart = millis();
+				if (PacketThrottle())
+				{
+					Task::delay(0);
+					ThrottleStart = millis();
+					CurrentIndex = 0;
+					WriterState = WriterStateEnum::Sleeping;
+				}
+				else
+				{
+					Task::delay(1);
+				}
 			}
 			else
 			{
@@ -198,7 +183,6 @@ protected:
 				if (payloadSize == ReaderValidateDefinition::PAYLOAD_SIZE)
 				{
 					SetRemoteHashArray(&payload[ReaderValidateDefinition::CRC_OFFSET]);
-
 					switch (WriterState)
 					{
 					case WriterStateEnum::Sleeping:
@@ -214,19 +198,16 @@ protected:
 			case ReaderInvalidateDefinition::HEADER:
 				if (payloadSize == ReaderInvalidateDefinition::PAYLOAD_SIZE)
 				{
-					Serial.println(F("W Inv"));
 					SetRemoteHashArray(&payload[ReaderInvalidateDefinition::CRC_OFFSET]);
-
 					switch (WriterState)
 					{
 					case WriterStateEnum::Sleeping:
 						Task::enableDelayed(0);
 					case WriterStateEnum::Matching:
 					case WriterStateEnum::Validating:
-						WriterState = WriterStateEnum::Throttling;
-					case WriterStateEnum::Updating:
 					case WriterStateEnum::Throttling:
-						CurrentIndex = 0;
+						WriterState = WriterStateEnum::Updating;
+					case WriterStateEnum::Updating:
 						Surface->SetAllBlocksPending();
 						break;
 					default:
@@ -251,13 +232,16 @@ protected:
 private:
 	void OnUpdating()
 	{
+		Task::delay(0);
+
 		const uint8_t index = Surface->GetNextBlockPendingIndex(CurrentIndex);
+
 		if (Surface->HasBlockPending()
 			&& index >= CurrentIndex)
 		{
-			// Pick the best request type, based on pending block count and indexes.
 			const uint8_t next = Surface->GetNextBlockPendingIndex(index + 1);
 
+			// Pick the best request type, based on pending block count and indexes.
 			if (next > index)
 			{
 				if (next == (index + 1))
@@ -298,7 +282,6 @@ private:
 		else
 		{
 			WriterState = WriterStateEnum::Validating;
-			MatchTryCount = 0;
 			ResetPacketThrottle();
 		}
 	}
