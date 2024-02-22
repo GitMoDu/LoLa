@@ -9,11 +9,15 @@
 using namespace DiscoveryDefinitions;
 
 /// <summary>
-/// Can be piggybacked on by using the first byte of the payload as a sub-header (excluding UINT8_MAX).
+/// Discovers and acknowledges the existance of a partner service,
+/// on the same port and using the same service id.
+/// Linked callbacks only after discovery is complete.
+/// Can be piggybacked on by using TemplateHeaderDefinitions. 
+/// Header UINT8_MAX is reserved for Discovery Service.
 /// </summary>
 /// <typeparam name="Port">The port registered for this service.</typeparam>
 /// <typeparam name="ServiceId">Unique service identifier.</typeparam>
-/// <typeparam name="MaxSendPayloadSize">Size of shared out packet buffer.</typeparam>
+/// <typeparam name="MaxSendPayloadSize">The max packet payload sent by this service.</typeparam>
 template<const uint8_t Port,
 	const uint32_t ServiceId,
 	const uint8_t MaxSendPayloadSize = 0>

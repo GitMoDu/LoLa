@@ -12,7 +12,7 @@ namespace DiscoveryDefinitions
 
 	/// <summary>
 	/// Discovery sub header definition.
-	/// User classes should extend sub-headers starting from 0, up to UINT8_MAX-1.
+	/// User classes should extend headers starting from 0, up to UINT8_MAX-1.
 	/// </summary>
 	struct DiscoveryDefinition : public TemplateHeaderDefinition<DISCOVERY_HEADER, 1 + DISCOVERY_ID_SIZE>
 	{
@@ -20,13 +20,13 @@ namespace DiscoveryDefinitions
 		static constexpr uint8_t PAYLOAD_ID_INDEX = PAYLOAD_ACK_INDEX + 1;
 
 		/// <summary>
-		/// 
+		/// Constexpr version of max(DiscoveryMaxPayload,servicePayload).
 		/// </summary>
 		/// <param name="payloadSize"></param>
 		/// <returns>The largest required payload size.</returns>
-		static constexpr uint8_t MaxPayloadSize(const uint8_t payloadSize)
+		static constexpr uint8_t MaxPayloadSize(const uint8_t servicePayloadSize)
 		{
-			return ((payloadSize >= PAYLOAD_SIZE) * payloadSize) + ((payloadSize < PAYLOAD_SIZE) * PAYLOAD_SIZE);
+			return ((servicePayloadSize >= PAYLOAD_SIZE) * servicePayloadSize) + ((servicePayloadSize < PAYLOAD_SIZE) * PAYLOAD_SIZE);
 		}
 	};
 }
