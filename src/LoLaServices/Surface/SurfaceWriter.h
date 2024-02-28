@@ -303,7 +303,7 @@ private:
 			OutPacket.Payload[WriterDefinition1x1::BLOCK_OFFSET + i] = BlockData[indexOffset + i];
 		}
 
-		return RequestSendPacket(WriterDefinition1x1::PAYLOAD_SIZE);
+		return RequestSendPacket(WriterDefinition1x1::PAYLOAD_SIZE, RequestPriority::FAST);
 	}
 
 	const bool RequestSend2x1(const uint8_t block0Index, const uint8_t block1Index)
@@ -322,7 +322,7 @@ private:
 			OutPacket.Payload[WriterDefinition2x1::BLOCK1_OFFSET + i] = BlockData[index1Offset + i];
 		}
 
-		return RequestSendPacket(WriterDefinition2x1::PAYLOAD_SIZE);
+		return RequestSendPacket(WriterDefinition2x1::PAYLOAD_SIZE, RequestPriority::FAST);
 	}
 
 	const bool RequestSend1x2(const uint8_t block0Index)
@@ -338,7 +338,7 @@ private:
 			OutPacket.Payload[WriterDefinition1x2::BLOCK1_OFFSET + i] = BlockData[index1Offset + i];
 		}
 
-		return RequestSendPacket(WriterDefinition1x2::PAYLOAD_SIZE);
+		return RequestSendPacket(WriterDefinition1x2::PAYLOAD_SIZE, RequestPriority::FAST);
 	}
 
 	const bool RequestSend1x3(const uint8_t block0Index)
@@ -356,7 +356,7 @@ private:
 			OutPacket.Payload[WriterDefinition1x3::BLOCK2_OFFSET + i] = BlockData[index2Offset + i];
 		}
 
-		return RequestSendPacket(WriterDefinition1x3::PAYLOAD_SIZE);
+		return RequestSendPacket(WriterDefinition1x3::PAYLOAD_SIZE, RequestPriority::FAST);
 	}
 };
 #endif

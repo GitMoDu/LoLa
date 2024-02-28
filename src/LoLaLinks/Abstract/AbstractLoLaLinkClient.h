@@ -566,7 +566,7 @@ protected:
 		{
 			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Linked::ClockTuneRequest::HEADER);
-			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE))
+			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE, RequestPriority::RESERVED_FOR_LINK))
 			{
 				ClockTracker.OnRequestSent(millis());
 			}

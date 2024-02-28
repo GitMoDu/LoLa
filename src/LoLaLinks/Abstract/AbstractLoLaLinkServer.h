@@ -567,7 +567,7 @@ protected:
 				OutPacket.SetHeader(Linked::ClockTuneReply::HEADER);
 				Int32ToArray(ClockTracker.GetLinkedReplyError(), &OutPacket.Payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
 
-				if (RequestSendPacket(Linked::ClockTuneReply::PAYLOAD_SIZE))
+				if (RequestSendPacket(Linked::ClockTuneReply::PAYLOAD_SIZE, RequestPriority::RESERVED_FOR_LINK))
 				{
 					// Only send a time reply once.
 					ClockTracker.OnReplySent();

@@ -119,10 +119,10 @@ protected:
 			OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET] = hash;
 			OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET + 1] = hash >> 8;
 
-			return RequestSendPacket(SyncMetaDefinition::PAYLOAD_SIZE);
+			return RequestSendPacket(SyncMetaDefinition::PAYLOAD_SIZE, RequestPriority::REGULAR);
 		}
 
-		return RequestSendPacket(SyncMetaDefinition::PAYLOAD_SIZE);
+		return false;
 	}
 
 	const uint16_t GetLocalHash()
