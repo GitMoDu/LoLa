@@ -38,6 +38,7 @@ private:
 	};
 
 protected:
+	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::ResetPacketThrottle;
 	using BaseClass::PacketThrottle;
@@ -239,44 +240,47 @@ private:
 		if (Surface->HasBlockPending()
 			&& index >= CurrentIndex)
 		{
-			const uint8_t next = Surface->GetNextBlockPendingIndex(index + 1);
-
-			// Pick the best request type, based on pending block count and indexes.
-			if (next > index)
+			if (CanRequestSend())
 			{
-				if (next == (index + 1))
-				{
-					const uint8_t afterNext = Surface->GetNextBlockPendingIndex(next + 1);
+				const uint8_t next = Surface->GetNextBlockPendingIndex(index + 1);
 
-					if (afterNext > next
-						&& afterNext == (next + 1))
+				// Pick the best request type, based on pending block count and indexes.
+				if (next > index)
+				{
+					if (next == (index + 1))
 					{
-						if (RequestSend1x3(index))
+						const uint8_t afterNext = Surface->GetNextBlockPendingIndex(next + 1);
+
+						if (afterNext > next
+							&& afterNext == (next + 1))
+						{
+							if (RequestSend1x3(index))
+							{
+								Surface->ClearBlockPending(index);
+								Surface->ClearBlockPending(next);
+								Surface->ClearBlockPending(afterNext);
+								CurrentIndex = afterNext + 1;
+							}
+						}
+						else if (RequestSend1x2(index))
 						{
 							Surface->ClearBlockPending(index);
 							Surface->ClearBlockPending(next);
-							Surface->ClearBlockPending(afterNext);
-							CurrentIndex = afterNext + 1;
+							CurrentIndex = next + 1;
 						}
 					}
-					else if (RequestSend1x2(index))
+					else if (RequestSend2x1(index, next))
 					{
 						Surface->ClearBlockPending(index);
 						Surface->ClearBlockPending(next);
 						CurrentIndex = next + 1;
 					}
 				}
-				else if (RequestSend2x1(index, next))
+				else if (RequestSend1x1(index))
 				{
 					Surface->ClearBlockPending(index);
-					Surface->ClearBlockPending(next);
-					CurrentIndex = next + 1;
+					CurrentIndex = index + 1;
 				}
-			}
-			else if (RequestSend1x1(index))
-			{
-				Surface->ClearBlockPending(index);
-				CurrentIndex = index + 1;
 			}
 		}
 		else
