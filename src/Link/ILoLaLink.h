@@ -23,10 +23,10 @@ public:
 	/// <summary>
 	/// Notifies the listener of a received packet.
 	/// </summary>
-	/// <param name="timestamp"></param>
-	/// <param name="payload"></param>
-	/// <param name="payloadSize"></param>
-	/// <param name="port">Which registered port was packet sent to.</param>
+	/// <param name="timestamp">Timestamp of the receive start.</param>
+	/// <param name="payload">Pointer to payload array.</param>
+	/// <param name="payloadSize">Received payload size.</param>
+	/// <param name="port">Which registered port was the packet sent to.</param>
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 };
 
@@ -57,6 +57,26 @@ public:
 	virtual void GetLinkStatus(LoLaLinkStatus& linkStatus) { }
 
 	/// <summary>
+	/// How long since the link started.
+	/// Non-monotonic timestamp, synchronized with Link.
+	/// Rolls over every ~71 minutes.
+	/// </summary>
+	/// <returns>Elapsed period in microseconds. Zero if link is not active.</returns>
+	virtual const uint32_t GetLinkElapsed() { return 0; }
+
+	/// <summary>
+	/// How long since last send was completed.
+	/// </summary>
+	/// <returns>Elapsed period in microseconds.</returns>
+	virtual const uint32_t GetSendElapsed() { return 0; }
+
+	/// <summary>
+	/// How long should a Link Service wait before re-sending a possibly unreplied packet.
+	/// </summary>
+	/// <returns>Throttle period in microseconds.</returns>
+	virtual const uint32_t GetPacketThrottlePeriod() { return 0; }
+
+	/// <summary>
 	/// Can a Link time packet be sent now?
 	/// Even on true result, SendPacket() might still fail afterwards.
 	/// </summary>
@@ -71,12 +91,6 @@ public:
 	/// <returns>True on successfull transmission.</returns>
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) { return false; }
 
-
-	/// <summary>
-	/// How long should a Link Service wait before re-sending a possibly unreplied packet.
-	/// </summary>
-	/// <returns>Throttle period in microseconds.</returns>
-	virtual const uint32_t GetPacketThrottlePeriod() { return 0; }
 
 	/// <summary>
 	/// Register link status listener.

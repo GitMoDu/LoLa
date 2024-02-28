@@ -30,7 +30,7 @@ private:
 	uint32_t LastUnlinkedSent = 0;
 
 	uint32_t LinkingStartMillis = 0;
-	uint32_t LinkStartSeconds = 0;
+	Timestamp LinkStartTimestamp{};
 
 protected:
 	/// <summary>
@@ -80,7 +80,7 @@ public:
 	virtual void GetLinkStatus(LoLaLinkStatus& linkStatus) final
 	{
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
-		linkStatus.DurationSeconds = LinkTimestamp.Seconds - LinkStartSeconds;
+		linkStatus.DurationSeconds = LinkTimestamp.Seconds - LinkStartTimestamp.Seconds;
 		linkStatus.RxDropCount = QualityTracker.GetRxDropCount();
 		linkStatus.TxCount = SentCounter;
 		linkStatus.RxCount = ReceivedCounter;
@@ -92,6 +92,19 @@ public:
 		linkStatus.Quality.TxDrop = QualityTracker.GetTxDropQuality();
 		linkStatus.Quality.ClockSync = GetClockSyncQuality();
 		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
+	}
+
+	virtual const uint32_t GetLinkElapsed() final
+	{
+		if (HasLink())
+		{
+			SyncClock.GetTimestampMonotonic(LinkTimestamp);
+			return LinkTimestamp.GetRollingMicros() - LinkStartTimestamp.GetRollingMicros();
+		}
+		else
+		{
+			return 0;
+		}
 	}
 
 	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result) final
@@ -213,8 +226,7 @@ protected:
 			LinkingStartMillis = millis();
 			break;
 		case LinkStageEnum::Linked:
-			SyncClock.GetTimestampMonotonic(LinkTimestamp);
-			LinkStartSeconds = LinkTimestamp.Seconds;
+			SyncClock.GetTimestampMonotonic(LinkStartTimestamp);
 			QualityTracker.Reset(millis());
 			break;
 		default:

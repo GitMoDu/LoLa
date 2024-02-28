@@ -12,6 +12,7 @@ private:
 
 private:
 	Timestamp SendTimestamp{};
+	uint32_t SentTimestamp = 0;
 
 private:
 	// Send duration estimation helpers.
@@ -36,6 +37,11 @@ public:
 		ICycles* cycles)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
 	{}
+
+	virtual const uint32_t GetSendElapsed() final
+	{
+		return micros() - SentTimestamp;
+	}
 
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
 	{
@@ -69,6 +75,7 @@ public:
 		if (PacketService.Send(packetSize,
 			GetTxChannel(SendTimestamp.GetRollingMicros())))
 		{
+			SentTimestamp = micros();
 			SendCounter++;
 			SentCounter++;
 
@@ -76,7 +83,6 @@ public:
 		}
 
 		return false;
-
 	}
 
 protected:
