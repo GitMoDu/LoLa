@@ -9,12 +9,13 @@
 using namespace DiscoveryDefinitions;
 
 /// <summary>
-/// Discovers and acknowledges the existance of a partner service,
+/// Abstract service to be extended.
+/// Discovers and acknowledges the existence of a partner service,
 /// on the same port and using the same service id.
-/// Linked callbacks only after discovery is complete.
+/// Linked callbacks only fire after discovery is complete.
 /// Can be piggybacked on by using TemplateHeaderDefinitions. 
 /// Header UINT8_MAX is reserved for Discovery Service.
-/// Rejects packets if not discovered, and requests partner to stops service.
+/// Rejects packets if not discovered, and requests partner to stop service.
 /// </summary>
 /// <typeparam name="Port">The port registered for this service.</typeparam>
 /// <typeparam name="ServiceId">Unique service identifier.</typeparam>
@@ -30,18 +31,17 @@ class AbstractDiscoveryService
 private:
 	using BaseClass = TemplateLinkService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>;
 
-	static constexpr int8_t DISCOVERY_SLOT_COUNT = 20;
+	static constexpr uint32_t DISCOVERY_SLOT_PERIOD_MICROS = 50000;
 	static constexpr uint16_t DISCOVERY_SLOT_TOLERANCE_MICROS = 3000;
-	static constexpr uint32_t DISCOVERY_SLOT_PERIOD_MICROS = ((uint32_t)LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS * 3) + DISCOVERY_SLOT_TOLERANCE_MICROS;
+	static constexpr int8_t DISCOVERY_SLOT_COUNT = 20;
 	static constexpr uint32_t DISCOVERY_INCREMENTAL_PERIOD_MICROS = (DISCOVERY_SLOT_PERIOD_MICROS / 2) - 1;
-
 	static constexpr uint32_t DISCOVERY_TIMEOUT_MICROS = DISCOVERY_SLOT_PERIOD_MICROS * DISCOVERY_SLOT_COUNT;
 
 	enum class DiscoveryStateEnum : uint8_t
 	{
 		WaitingForLink,
+		SettlingLinkClock,
 		Discovering,
-		StartingSlot,
 		MatchingSlot,
 		MatchedSlot,
 		WaitingForSlotEnd,
@@ -121,8 +121,8 @@ public:
 		{
 			if (DiscoveryState == DiscoveryStateEnum::WaitingForLink)
 			{
-				Task::enableDelayed(1);
-				DiscoveryState = DiscoveryStateEnum::Discovering;
+				Task::enableDelayed(DISCOVERY_SLOT_TOLERANCE_MICROS / 1000);
+				DiscoveryState = DiscoveryStateEnum::SettlingLinkClock;
 			}
 			else
 			{
@@ -148,9 +148,9 @@ public:
 	/// <summary>
 	/// Captures link packet event and forwards to service, if not own header.
 	/// </summary>
-	/// <param name="timestamp"></param>
-	/// <param name="payload"></param>
-	/// <param name="payloadSize"></param>
+	/// <param name="timestamp">Timestamp of the receive start.</param>
+	/// <param name="payload">Pointer to payload array.</param>
+	/// <param name="payloadSize">Received payload size.</param>
 	/// <param name="port">Which registered port was the packet sent to.</param>
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
@@ -174,7 +174,6 @@ public:
 						OnServiceEnded();
 					}
 					DiscoveryState = DiscoveryStateEnum::WaitingForLink;
-					Serial.println(F("Rx Rejection."));
 				}
 				else if (DiscoveryState != DiscoveryStateEnum::WaitingForLink)
 				{
@@ -185,8 +184,8 @@ public:
 					switch (DiscoveryState)
 					{
 					case DiscoveryStateEnum::Discovering:
-						DiscoveryState = DiscoveryStateEnum::StartingSlot;
-						LocalSlot = remoteSlot;
+						DiscoveryState = DiscoveryStateEnum::MatchingSlot;
+						LocalSlot = GetStartSlot(remoteSlot);
 						ResetPacketThrottle();
 						Task::delay(0);
 						break;
@@ -220,19 +219,15 @@ public:
 						{
 							ResetPacketThrottle();
 							DiscoveryState = DiscoveryStateEnum::MatchingSlot;
-							Serial.println(F("Retry on Rx WaitingForSlotEnd 1."));
 						}
 						else
 						{
 							ResetPacketThrottle();
 							DiscoveryState = DiscoveryStateEnum::MatchedSlot;
-							Serial.println(F("Retry on Rx WaitingForSlotEnd 2."));
 						}
 						break;
 					case DiscoveryStateEnum::Running:
 					default:
-						Serial.print(F("Unexpected Discovery packet. State = "));
-						Serial.println((uint8_t)DiscoveryState);
 						break;
 					}
 				}
@@ -246,13 +241,11 @@ public:
 		{
 			ReplyPending = true;
 			Task::enableDelayed(0);
-			Serial.println(F("Rx Rejected."));
 		}
 		else
 		{
 			ReplyPending = true;
 			Task::enableDelayed(0);
-			Serial.println(F("Discovery Rejected Packet."));
 		}
 	}
 
@@ -274,6 +267,16 @@ protected:
 				Task::disable();
 			}
 			break;
+		case DiscoveryStateEnum::SettlingLinkClock:
+			Task::delay(0);
+			if (!DiscoveryTimedOut()
+				&& LoLaLink->GetLinkElapsed() > DISCOVERY_SLOT_TOLERANCE_MICROS
+				&& LoLaLink->GetLinkElapsed() < INT32_MAX)
+			{
+				DiscoveryState = DiscoveryStateEnum::Discovering;
+				LocalSlot = GetStartSlot(0);
+			}
+			break;
 		case DiscoveryStateEnum::Discovering:
 			if (!DiscoveryTimedOut())
 			{
@@ -287,25 +290,6 @@ protected:
 					RequestSendDiscovery(false, false);
 				}
 				else { Task::delay(0); }
-			}
-			break;
-		case DiscoveryStateEnum::StartingSlot:
-			if (LoLaLink->GetLinkElapsed() < DISCOVERY_TIMEOUT_MICROS
-				&& StartSlot())
-			{
-				Task::delay(0);
-				DiscoveryState = DiscoveryStateEnum::MatchingSlot;
-				if ((LoLaLink->GetLinkElapsed() + DISCOVERY_INCREMENTAL_PERIOD_MICROS) >= GetTurnoverTimestamp(LocalSlot))
-				{
-					LocalSlot++;
-					Task::delay(0);
-				}
-			}
-			else
-			{
-				DiscoveryState = DiscoveryStateEnum::WaitingForLink;
-				RequestSendCancel();
-				OnDiscoveryFailed();
 			}
 			break;
 		case DiscoveryStateEnum::MatchingSlot:
@@ -369,10 +353,6 @@ protected:
 			else if (LoLaLink->GetLinkElapsed() >= GetTurnoverTimestamp(LocalSlot))
 			{
 				DiscoveryState = DiscoveryStateEnum::Running;
-				Serial.print(F("Slot finished with ("));
-				Serial.print(LocalSlot);
-				Serial.println(')');
-
 				OnServiceStarted();
 			}
 			break;
@@ -409,22 +389,24 @@ private:
 		return ((DISCOVERY_SLOT_PERIOD_MICROS * (slot + 1)));
 	}
 
-	const bool StartSlot()
+	const uint8_t GetStartSlot(const uint8_t startingSlot)
 	{
-		const uint32_t turnOvers = (LoLaLink->GetLinkElapsed() + DISCOVERY_SLOT_TOLERANCE_MICROS) / DISCOVERY_SLOT_PERIOD_MICROS;
-		if (turnOvers < DISCOVERY_SLOT_COUNT)
+		const uint32_t nextTurnOver = ((LoLaLink->GetLinkElapsed() + DISCOVERY_SLOT_TOLERANCE_MICROS) / DISCOVERY_SLOT_PERIOD_MICROS) + 1;
+		if (nextTurnOver < DISCOVERY_SLOT_COUNT)
 		{
-			if (LocalSlot < turnOvers + 1)
+			if (startingSlot < nextTurnOver)
 			{
-				LocalSlot = turnOvers + 1;
+				return nextTurnOver;
+			}
+			else
+			{
+				return startingSlot;
 			}
 		}
 		else
 		{
-			LocalSlot = UINT8_MAX;
+			return UINT8_MAX;
 		}
-
-		return LocalSlot < DISCOVERY_SLOT_COUNT;
 	}
 
 	const bool DiscoveryTimedOut()
@@ -459,11 +441,10 @@ private:
 		return false;
 	}
 
-
 	static const uint8_t GetNextSlot(const uint8_t slotA, const uint8_t slotB)
 	{
-		if (slotA >= (DISCOVERY_SLOT_COUNT - 1)
-			|| slotA >= (DISCOVERY_SLOT_COUNT - 1))
+		if (slotA >= DISCOVERY_SLOT_COUNT
+			|| slotB >= DISCOVERY_SLOT_COUNT)
 		{
 			return DISCOVERY_SLOT_COUNT;
 		}

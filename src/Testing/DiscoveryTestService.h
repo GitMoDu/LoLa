@@ -3,7 +3,7 @@
 #ifndef _DISCOVERY_TEST_SERVICE_h
 #define _DISCOVERY_TEST_SERVICE_h
 
-#include "LoLaServices\Discovery\AbstractDiscoveryService.h"
+#include "Services\Discovery\AbstractDiscoveryService.h"
 
 template<const char OnwerName,
 	const uint8_t Port,
