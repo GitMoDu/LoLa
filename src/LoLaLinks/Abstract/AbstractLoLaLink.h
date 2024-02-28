@@ -366,17 +366,17 @@ private:
 	{
 		const uint32_t timestamp = millis();
 
-		QualityTracker.CheckUpdate(timestamp);
-
-		if (QualityTracker.IsReportSendRequested())
+		if (QualityTracker.CheckUpdate(timestamp))
 		{
 			if (QualityTracker.IsTimeToSendReport(timestamp)
 				&& CanRequestSend())
 			{
 				const uint16_t rxLoopingDropCounter = QualityTracker.GetRxLoopingDropCount();
+				const bool isBackReportNeeded = QualityTracker.IsBackReportNeeded(timestamp);
+
 				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.Payload[Linked::ReportUpdate::HEADER_INDEX] = Linked::ReportUpdate::HEADER;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = QualityTracker.IsBackReportNeeded(timestamp);
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = isBackReportNeeded;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = QualityTracker.GetRxRssiQuality();
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX] = rxLoopingDropCounter;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX + 1] = rxLoopingDropCounter >> 8;

@@ -41,7 +41,7 @@ public:
 		RequestReportUpdate(true);
 	}
 
-	void CheckUpdate(const uint32_t timestamp)
+	const bool CheckUpdate(const uint32_t timestamp)
 	{
 		CheckUpdateQuality(timestamp);
 
@@ -57,6 +57,8 @@ public:
 				BalancingDelay = !BalancingDelay;
 			}
 		}
+
+		return SendRequested;
 	}
 
 public:
