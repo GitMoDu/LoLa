@@ -261,7 +261,7 @@ protected:
 #endif
 	}
 
-	virtual void OnService() final
+	virtual void OnServiceRun() final
 	{
 		switch (LinkStage)
 		{

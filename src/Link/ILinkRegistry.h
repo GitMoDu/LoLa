@@ -98,7 +98,6 @@ public:
 	}
 
 	/// <summary>
-	/// 
 	/// </summary>
 	/// <param name="listener"></param>
 	/// <returns>True if success. False if no more slots are available.</returns>

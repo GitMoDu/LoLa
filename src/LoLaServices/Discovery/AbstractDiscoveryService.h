@@ -181,7 +181,7 @@ public:
 	}
 
 protected:
-	virtual void OnService() final
+	virtual void OnServiceRun() final
 	{
 		switch (DiscoveryState)
 		{
