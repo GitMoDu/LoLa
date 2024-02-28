@@ -32,6 +32,7 @@ private:
 
 protected:
 	using BaseClass::OutPacket;
+	using BaseClass::CanRequestSend;
 	using BaseClass::RequestSendPacket;
 	using BaseClass::ResetPacketThrottle;
 	using BaseClass::PacketThrottle;
@@ -65,7 +66,7 @@ public:
 			BlockData = Surface->GetBlockData();
 			SurfaceSize = ISurface::GetByteCount(Surface->GetBlockCount());
 
-			if (Surface != nullptr && SurfaceSize > 0)
+			if (BlockData != nullptr && SurfaceSize > 0)
 			{
 				return BaseClass::Setup();
 			}
@@ -82,6 +83,7 @@ protected:
 	{
 		if (SurfaceSize > 0 && BlockData != nullptr)
 		{
+			Task::enableDelayed(0);
 			InvalidateRemoteHash();
 			ResetPacketThrottle();
 			Surface->SetAllBlocksPending();
@@ -110,10 +112,15 @@ protected:
 
 	const bool RequestSendMeta(const uint16_t hash, const uint8_t header)
 	{
-		OutPacket.SetPort(Port);
-		OutPacket.SetHeader(header);
-		OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET] = hash;
-		OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET + 1] = hash >> 8;
+		if (CanRequestSend())
+		{
+			OutPacket.SetPort(Port);
+			OutPacket.SetHeader(header);
+			OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET] = hash;
+			OutPacket.Payload[SyncMetaDefinition::CRC_OFFSET + 1] = hash >> 8;
+
+			return RequestSendPacket(SyncMetaDefinition::PAYLOAD_SIZE);
+		}
 
 		return RequestSendPacket(SyncMetaDefinition::PAYLOAD_SIZE);
 	}

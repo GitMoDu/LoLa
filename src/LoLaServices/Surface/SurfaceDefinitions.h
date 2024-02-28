@@ -28,7 +28,7 @@ namespace SurfaceDefinitions
 	/// Template request to update multiple blocks of data on the Reader side.
 	/// Header range includes all headers from HEADER to MAX_HEADER.
 	/// Index can be extracted from header.
-	/// SubPayload: ||B0..BytesPerBlock|B1..BytesPerBlock|B2..BytesPerBlock||
+	/// Payload: ||B0..BytesPerBlock|B1..BytesPerBlock|B2..BytesPerBlock||
 	/// </summary>
 	template<const uint8_t Header,
 		const uint8_t BlockCount>
