@@ -72,7 +72,7 @@ public:
 		ReaderState = ReaderStateEnum::Disabled;
 	}
 
-	virtual void OnLinkedService() final
+	virtual void OnLinkedServiceRun() final
 	{
 		if (NotifyRequested)
 		{
@@ -136,7 +136,7 @@ public:
 		}
 	}
 
-	virtual void OnLinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
+	virtual void OnLinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 		if (ReaderState != ReaderStateEnum::Disabled)
 		{

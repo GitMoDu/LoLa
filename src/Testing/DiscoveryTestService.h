@@ -23,63 +23,47 @@ private:
 #ifdef DEBUG_LOLA
 	void PrintName()
 	{
-		Serial.print('{');
+		Serial.print(millis());
+		Serial.print('\t');
+		Serial.print('[');
 		Serial.print(OnwerName);
-		Serial.print('}');
+		Serial.print(']');
 		Serial.print('\t');
 	}
 #endif
 
 protected:
-	/// <summary>
-	/// Fires when the the service has been discovered.
-	/// </summary>
-	virtual void OnServiceStarted()
+	virtual void OnServiceStarted() final
 	{
+		Task::enableDelayed(0);
 #if defined(DEBUG_LOLA)
 		PrintName();
-		Serial.println(F("Test Discovery Service Started."));
+		Serial.println(F("Test Discovery Active."));
 #endif
 	}
 
-	/// <summary>
-	/// Fires when the the service partner can't be found.
-	/// </summary>
 	virtual void OnDiscoveryFailed() final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.println(F("Test Discovery Failed."));
 #endif
-		Task::disable();
 	}
 
-	/// <summary>
-	/// Fires when the the service has been lost.
-	/// </summary>
-	virtual void OnServiceEnded()
+	virtual void OnServiceEnded() final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
-		Serial.println(F("Test Discovery Service Ended."));
+		Serial.println(F("Test Discovery Inactive."));
 #endif
-		Task::disable();
 	}
 
-	/// <summary>
-	/// The user class can ride this task's callback while linked,
-	/// once the discovery has been complete.
-	/// </summary>
-	virtual void OnLinkedService()
+	virtual void OnLinkedServiceRun() final
 	{
 		Task::disable();
 	}
 
-	/// <summary>
-	/// Fires when the user class's packet send request
-	///  failed after transmission request.
-	/// </summary>
-	virtual void OnLinkedSendRequestFail()
+	virtual void OnLinkedSendRequestFail() final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
@@ -87,13 +71,7 @@ protected:
 #endif
 	}
 
-	/// <summary>
-	/// After discovery is completed, any non-discovery packets will be routed to the user class.
-	/// </summary>
-	/// <param name="startTimestamp"></param>
-	/// <param name="payload"></param>
-	/// <param name="payloadSize"></param>
-	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize)
+	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
