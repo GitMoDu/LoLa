@@ -567,9 +567,8 @@ protected:
 				OutPacket.SetHeader(Linked::ClockTuneReply::HEADER);
 				Int32ToArray(ClockTracker.GetLinkedReplyError(), &OutPacket.Payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]);
 
-				if (RequestSendPacket(Linked::ClockTuneReply::PAYLOAD_SIZE, RequestPriority::RESERVED_FOR_LINK))
+				if (RequestSendPacket(Linked::ClockTuneReply::PAYLOAD_SIZE, GetClockSyncPriority(ClockTracker.GetQuality())))
 				{
-					// Only send a time reply once.
 					ClockTracker.OnReplySent();
 				}
 			}
@@ -581,6 +580,21 @@ protected:
 	}
 
 private:
+	static const RequestPriority GetClockSyncPriority(const uint8_t clockQuality)
+	{
+		uint8_t measure = UINT8_MAX - clockQuality;
+		if (measure >= (UINT8_MAX / 3))
+		{
+			measure = UINT8_MAX;
+		}
+		else
+		{
+			measure *= 3;
+		}
+
+		return GetProgressPriority<RequestPriority::REGULAR, RequestPriority::RESERVED_FOR_LINK>(measure);
+	}
+
 	const bool InEstimateWithinTolerance()
 	{
 		if (EstimateErrorReply.Seconds <= 1

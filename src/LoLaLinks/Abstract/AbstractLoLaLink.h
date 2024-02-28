@@ -372,16 +372,16 @@ private:
 				&& CanRequestSend())
 			{
 				const uint16_t rxLoopingDropCounter = QualityTracker.GetRxLoopingDropCount();
-				const bool isBackReportNeeded = QualityTracker.IsBackReportNeeded(timestamp);
-
 				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.Payload[Linked::ReportUpdate::HEADER_INDEX] = Linked::ReportUpdate::HEADER;
-				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = isBackReportNeeded;
+				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX] = QualityTracker.IsBackReportNeeded(timestamp);
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX] = QualityTracker.GetRxRssiQuality();
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX] = rxLoopingDropCounter;
 				OutPacket.Payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX + 1] = rxLoopingDropCounter >> 8;
 
-				if (RequestSendPacket(Linked::ReportUpdate::PAYLOAD_SIZE))
+				if (RequestSendPacket(
+					Linked::ReportUpdate::PAYLOAD_SIZE,
+					GetReportPriority(QualityTracker.GetRxDropQuality(), QualityTracker.GetTxDropQuality())))
 				{
 					QualityTracker.OnReportSent(timestamp);
 				}
@@ -391,6 +391,30 @@ private:
 		}
 
 		return false;
+	}
+
+	static const RequestPriority GetReportPriority(const uint8_t rxDropQuality, const uint8_t txDropQuality)
+	{
+		uint8_t measure;
+		if (rxDropQuality < txDropQuality)
+		{
+			measure = UINT8_MAX - rxDropQuality;
+		}
+		else
+		{
+			measure = UINT8_MAX - txDropQuality;
+		}
+
+		if (measure >= (UINT8_MAX / 4))
+		{
+			measure = UINT8_MAX;
+		}
+		else
+		{
+			measure *= 4;
+		}
+
+		return GetProgressPriority<RequestPriority::IRREGULAR, RequestPriority::RESERVED_FOR_LINK>(measure);
 	}
 };
 #endif

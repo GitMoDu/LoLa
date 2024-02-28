@@ -271,16 +271,30 @@ protected:
 	/// <summary>
 	/// Scales a priority range, provided a progress.
 	/// </summary>
-	/// <typeparam name="PriorityMax">Target highest priority level.</typeparam>
-	/// <typeparam name="PriorityMin">Target lowest priority level.</typeparam>
+	/// <typeparam name="PriorityMax">Target highest priority level[0;UINT8_MAX].</typeparam>
+	/// <typeparam name="PriorityMin">Target lowest priority level[0;UINT8_MAX].</typeparam>
 	/// <param name="progress">Scale how close to the max priority [0;UINT8_MAX].</param>
-	/// <returns>Progress caled priority between PriorityMin and PriorityMax.</returns>
+	/// <returns>Progress scaled priority between PriorityMin and PriorityMax [0;UINT8_MAX].</returns>
 	template<const uint8_t PriorityMin,
 		const uint8_t PriorityMax>
 	static constexpr uint8_t GetProgressPriority(const uint8_t progress)
 	{
 		return (((uint16_t)(UINT8_MAX - progress) * PriorityMin) / UINT8_MAX)
 			+ (((uint16_t)progress * PriorityMax) / UINT8_MAX);
+	}
+
+	/// <summary>
+	/// Scales a priority range, provided a progress.
+	/// </summary>
+	/// <typeparam name="PriorityMax">Target highest priority level.</typeparam>
+	/// <typeparam name="PriorityMin">Target lowest priority level.</typeparam>
+	/// <param name="progress">Scale how close to the max priority [0;UINT8_MAX].</param>
+	/// <returns>Progress scaled priority between PriorityMin and PriorityMax.</returns>
+	template<const RequestPriority PriorityMin,
+		const RequestPriority PriorityMax>
+	static constexpr RequestPriority GetProgressPriority(const uint8_t progress)
+	{
+		return (const RequestPriority)GetProgressPriority<(const uint8_t)PriorityMin, (const uint8_t)PriorityMax>(progress);
 	}
 
 private:

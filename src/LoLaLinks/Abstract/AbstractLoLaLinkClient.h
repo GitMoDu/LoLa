@@ -13,6 +13,7 @@ class AbstractLoLaLinkClient : public AbstractLoLaLink
 private:
 	using BaseClass = AbstractLoLaLink;
 
+private:
 	using Unlinked = LoLaLinkDefinition::Unlinked;
 	using Linking = LoLaLinkDefinition::Linking;
 	using Linked = LoLaLinkDefinition::Linked;
@@ -566,7 +567,8 @@ protected:
 		{
 			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Linked::ClockTuneRequest::HEADER);
-			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE, RequestPriority::RESERVED_FOR_LINK))
+
+			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE, GetClockSyncPriority(ClockTracker.GetQuality())))
 			{
 				ClockTracker.OnRequestSent(millis());
 			}
@@ -577,6 +579,21 @@ protected:
 	}
 
 private:
+	static const RequestPriority GetClockSyncPriority(const uint8_t clockQuality)
+	{
+		uint8_t measure = UINT8_MAX - clockQuality;
+		if (measure >= (UINT8_MAX / 2))
+		{
+			measure = UINT8_MAX;
+		}
+		else
+		{
+			measure *= 2;
+		}
+
+		return GetProgressPriority<RequestPriority::IRREGULAR, RequestPriority::RESERVED_FOR_LINK>(measure);
+	}
+
 	void OnServiceSearchingLink()
 	{
 		switch (WaitingState)
