@@ -10,14 +10,14 @@
 #include "Link\LoLaPacketDefinition.h"
 
 /// Base Link Services for extension.
-#include "LoLaServices\TemplateLoLaService.h"
-#include "LoLaServices\Discovery\DiscoveryDefinitions.h"
-#include "LoLaServices\Discovery\AbstractDiscoveryService.h"
+#include "Services\Template\TemplateLinkService.h"
+#include "Services\Discovery\DiscoveryDefinitions.h"
+#include "Services\Discovery\AbstractDiscoveryService.h"
 ///
 
 /// Ready-to-use Link Services
 #include <ISurfaceInclude.h>
-#include "LoLaServices\Surface\SurfaceReader.h"
-#include "LoLaServices\Surface\SurfaceWriter.h"
+#include "Services\Surface\SurfaceReader.h"
+#include "Services\Surface\SurfaceWriter.h"
 ///
 #endif

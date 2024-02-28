@@ -16,19 +16,19 @@
 #include "..\..\Clock\LinkClock.h"
 #include "..\..\Crypto\LoLaCryptoEncoderSession.h"
 
-#include "..\..\LoLaServices\TemplateLoLaService.h"
+#include "..\..\Services\Template\TemplateLinkService.h"
 
 /// <summary>
-/// LoLa Link base (AbstractLoLa) is a special case of a TemplateLoLaService,
+/// LoLa Link base (AbstractLoLa) is a special case of a TemplateLinkService,
 /// as it will handle pre-link Packet as well as use link time packets for link upkeep.
 /// As a partial abstract class, it implements ILoLaLink Listeners public register.
 /// </summary>
-class AbstractLoLa : protected TemplateLoLaService<LoLaLinkDefinition::LARGEST_PAYLOAD>
+class AbstractLoLa : protected TemplateLinkService<LoLaLinkDefinition::LARGEST_PAYLOAD>
 	, public virtual ILoLaLink
 	, public virtual IPacketServiceListener
 {
 private:
-	using BaseClass = TemplateLoLaService<LoLaLinkDefinition::LARGEST_PAYLOAD>;
+	using BaseClass = TemplateLinkService<LoLaLinkDefinition::LARGEST_PAYLOAD>;
 
 	struct PacketListenerWrapper
 	{

@@ -1,15 +1,15 @@
-// TemplateLoLaService.h
+// TemplateLinkService.h
 
-#ifndef _TEMPLATE_LOLA_SERVICE_
-#define _TEMPLATE_LOLA_SERVICE_
+#ifndef _TEMPLATE_LINK_SERVICE_
+#define _TEMPLATE_LINK_SERVICE_
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
 #include "RequestPriority.h"
 
-#include "..\Link\LoLaPacketDefinition.h"
-#include "..\Link\ILoLaLink.h"
+#include "..\..\Link\LoLaPacketDefinition.h"
+#include "..\..\Link\ILoLaLink.h"
 
 
 /// <summary>
@@ -21,7 +21,7 @@
 /// </summary>
 /// <typeparam name="MaxSendPayloadSize"></typeparam>
 template<const uint8_t MaxSendPayloadSize>
-class TemplateLoLaService : protected Task
+class TemplateLinkService : protected Task
 	, public virtual ILinkPacketListener
 {
 private:
@@ -80,7 +80,7 @@ public:
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 
 public:
-	TemplateLoLaService(Scheduler& scheduler, ILoLaLink* loLaLink)
+	TemplateLinkService(Scheduler& scheduler, ILoLaLink* loLaLink)
 		: ILinkPacketListener()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, LoLaLink(loLaLink)

@@ -8,7 +8,7 @@
 */
 #include <Fletcher16.h>
 
-#include "..\..\LoLaServices\Discovery\AbstractDiscoveryService.h"
+#include "..\..\Services\Discovery\AbstractDiscoveryService.h"
 #include "ISurface.h"
 #include "SurfaceDefinitions.h"
 

@@ -3,7 +3,7 @@
 #ifndef _ABSTRACT_DISCOVERY_SERVICE_
 #define _ABSTRACT_DISCOVERY_SERVICE_
 
-#include "..\..\LoLaServices\TemplateLoLaService.h"
+#include "..\..\Services\Template\TemplateLinkService.h"
 #include "DiscoveryDefinitions.h"
 
 using namespace DiscoveryDefinitions;
@@ -24,11 +24,11 @@ template<const uint8_t Port,
 	const uint32_t ServiceId,
 	const uint8_t MaxSendPayloadSize = 0>
 class AbstractDiscoveryService
-	: public TemplateLoLaService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>
+	: public TemplateLinkService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>
 	, public virtual ILinkListener
 {
 private:
-	using BaseClass = TemplateLoLaService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>;
+	using BaseClass = TemplateLinkService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>;
 
 	static constexpr int8_t DISCOVERY_SLOT_COUNT = 20;
 	static constexpr uint16_t DISCOVERY_SLOT_TOLERANCE_MICROS = 3000;

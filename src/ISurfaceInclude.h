@@ -4,8 +4,8 @@
 #ifndef _I_SURFACE_INCLUDE_h
 #define _I_SURFACE_INCLUDE_h
 
-#include <LoLaServices/Surface/ISurface.h>
-#include <LoLaServices/Surface/TemplateSurface.h>
+#include "Services/Surface/ISurface.h"
+#include "Services/Surface/TemplateSurface.h"
 
 #include <stddef.h>
 ///
