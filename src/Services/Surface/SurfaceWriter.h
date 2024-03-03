@@ -164,7 +164,14 @@ protected:
 			}
 			else
 			{
-				Task::delay(ThrottlePeriodMillis - (timestamp - ThrottleStart));
+				if (ThrottlePeriodMillis > 0)
+				{
+					Task::delay(ThrottlePeriodMillis - (timestamp - ThrottleStart));
+				}
+				else
+				{
+					Task::delay(0);
+				}
 			}
 			break;
 		case WriterStateEnum::Disabled:

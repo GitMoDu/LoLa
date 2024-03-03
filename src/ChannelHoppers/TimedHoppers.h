@@ -13,7 +13,7 @@ template<const uint32_t HopPeriodMicros>
 class TimedChannelHopper final : private Task, public virtual IChannelHop
 {
 private:
-	enum class HopperStateEnum
+	enum class HopperStateEnum : uint8_t
 	{
 		Disabled,
 		StartHop,
@@ -31,6 +31,11 @@ private:
 	{
 		return HopPeriodMillis() > MARGIN_MILLIS;
 	}
+
+	static constexpr bool PeriodBiggerMillisecond()
+	{
+		return HopPeriodMillis() > 0;
+}
 
 #if defined(LOLA_UNIT_TESTING)
 public:
@@ -184,7 +189,8 @@ private:
 
 				const uint32_t elapsed = now - LastHop;
 
-				if ((elapsed >= HopPeriodMillis())
+				if (PeriodBiggerMillisecond()
+					&& (elapsed >= HopPeriodMillis())
 					&& (elapsed <= HopPeriodMillis() + 1))
 				{
 					// We've just hopped index in the expected time.
@@ -193,7 +199,7 @@ private:
 				}
 				else
 				{
-					// Out of sync, keep in spin lock.
+					// Out of scheduler sync, keep in spin lock.
 					Task::delay(0);
 				}
 
