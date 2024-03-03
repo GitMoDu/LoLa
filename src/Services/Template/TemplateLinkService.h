@@ -314,8 +314,7 @@ private:
 		{
 			return UINT8_MAX;
 		}
-		else if (scoreRequest >= UINT8_MAX
-			|| scoreTx >= UINT8_MAX
+		else if (scoreTx >= UINT8_MAX
 			|| scoreTx >= ((uint32_t)UINT8_MAX - scoreRequest))
 		{
 			return UINT8_MAX;
