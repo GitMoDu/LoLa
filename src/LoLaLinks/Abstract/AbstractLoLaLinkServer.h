@@ -255,8 +255,10 @@ protected:
 					return;
 				}
 
+				LOLA_RTOS_PAUSE();
 				SyncClock.GetTimestamp(LinkTimestamp);
 				LinkTimestamp.ShiftSubSeconds((int32_t)(timestamp - micros()));
+				LOLA_RTOS_RESUME();
 				EstimateErrorReply.CalculateError(LinkTimestamp, InEstimate);
 				ClockReplyPending = true;
 				Task::enable();
@@ -323,10 +325,14 @@ protected:
 				if (payloadSize == Linked::ClockTuneRequest::PAYLOAD_SIZE
 					&& !ClockTracker.HasReplyPending())
 				{
+					LOLA_RTOS_PAUSE();
 					SyncClock.GetTimestamp(LinkTimestamp);
 					LinkTimestamp.ShiftSubSeconds((int32_t)(timestamp - micros()));
+					LOLA_RTOS_RESUME();
 
-					ClockTracker.OnLinkedEstimateReceived(ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]), LinkTimestamp.GetRollingMicros());
+					ClockTracker.OnLinkedEstimateReceived(ArrayToUInt32(
+						&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX])
+						, LinkTimestamp.GetRollingMicros());
 					Task::enable();
 				}
 #if defined(DEBUG_LOLA_LINK)

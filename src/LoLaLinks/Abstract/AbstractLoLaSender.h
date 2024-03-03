@@ -45,20 +45,21 @@ public:
 
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
 	{
-		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
-
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
+
+		const uint8_t dataSize = LoLaPacketDefinition::GetDataSizeFromPayloadSize(payloadSize);
+		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		switch (LinkStage)
 		{
 		case LinkStageEnum::AwaitingLink:
 			// Encode packet with no encryption and CRC.
-			Encoder->EncodeOutPacket(data, RawOutPacket, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+			Encoder->EncodeOutPacket(data, RawOutPacket, SendCounter, dataSize);
 			break;
 		case LinkStageEnum::Linking:
 			// Encrypt packet without token.
-			Encoder->EncodeOutPacket(data, RawOutPacket, 0, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+			Encoder->EncodeOutPacket(data, RawOutPacket, 0, SendCounter, dataSize);
 			break;
 		case LinkStageEnum::Linked:
 			// Encrypt packet with token based on time.
@@ -66,7 +67,7 @@ public:
 				RawOutPacket,
 				SendTimestamp.Seconds,
 				SendCounter,
-				LoLaPacketDefinition::GetDataSize(packetSize));
+				dataSize);
 			break;
 		default:
 			break;
@@ -142,13 +143,14 @@ protected:
 	/// <returns></returns>
 	const bool MockSendPacket(const uint8_t* data, const uint8_t payloadSize)
 	{
-		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
-
 		SyncClock.GetTimestamp(SendTimestamp);
 		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
+		const uint8_t dataSize = LoLaPacketDefinition::GetDataSizeFromPayloadSize(payloadSize);
+		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
+
 		// Encrypt packet with token based on time.
-		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp.Seconds, SendCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp.Seconds, SendCounter, dataSize);
 
 		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(packetSize,

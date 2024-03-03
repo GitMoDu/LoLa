@@ -529,10 +529,13 @@ protected:
 		if (OutPacket.GetPort() == LoLaLinkDefinition::LINK_PORT &&
 			OutPacket.GetHeader() == Linked::ClockTuneRequest::HEADER)
 		{
+			const uint32_t start = micros();
 			SyncClock.GetTimestamp(LinkTimestamp);
-			LinkTimestamp.ShiftSubSeconds(ClockTracker.GetRequestSendDuration());
+			const uint32_t estimatedTimestamp = LinkTimestamp.GetRollingMicros() + ClockTracker.GetRequestSendDuration();
+			const uint32_t duration = micros() - start;
 
-			UInt32ToArray(LinkTimestamp.GetRollingMicros(), &OutPacket.Payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
+			UInt32ToArray(estimatedTimestamp + duration
+				, &OutPacket.Payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
 		}
 	}
 
