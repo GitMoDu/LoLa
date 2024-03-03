@@ -16,7 +16,7 @@ public:
 	virtual const bool RegisterLinkListener(ILinkListener* listener) { return false; }
 
 	/// <summary>
-	/// 
+	/// Register packet receive listener.
 	/// </summary>
 	/// <param name="listener"></param>
 	/// <param name="port">Port number to register. Note that a port (upmost) may be reserved for Link.</param>
@@ -24,9 +24,9 @@ public:
 	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) { return false; }
 
 	/// <summary>
-	/// Notify services that link is ready/lost.
+	/// Notify services when link is ready/lost.
 	/// </summary>
-	/// <param name="hasLink"></param>
+	/// <param name="hasLink">True if link is active.</param>
 	virtual void NotifyLinkListeners(const bool hasLink) { }
 
 	/// <summary>
@@ -35,44 +35,34 @@ public:
 	/// <param name="timestamp"></param>
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
-	/// <param name="port"></param>
+	/// <param name="port">Port number to registered.</param>
 	virtual void NotifyPacketListener(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) { }
 };
 
-template<const uint8_t MaxPacketReceiveListeners = 10,
+template<const uint8_t MaxPacketListeners = 10,
 	const uint8_t MaxLinkListeners = 10>
 class LinkRegistry : public ILinkRegistry
 {
 private:
-	struct PacketListenerWrapper
-	{
-		ILinkPacketListener* Listener = nullptr;
-		uint8_t Port = 0;
-	};
+	ILinkPacketListener* PacketListeners[MaxPacketListeners]{};
+	ILinkListener* LinkListeners[MaxLinkListeners]{};
+	uint8_t PacketListenerPorts[MaxPacketListeners]{};
 
-private:
-	PacketListenerWrapper LinkPacketListeners[MaxPacketReceiveListeners];
-	ILinkListener* LinkListeners[MaxLinkListeners];
 	uint8_t PacketListenersCount = 0;
 	uint8_t LinkListenersCount = 0;
 
 public:
-	LinkRegistry()
-		: LinkPacketListeners()
-		, LinkListeners()
-	{
-	}
-
-	const bool Setup()
-	{
-		return MaxPacketReceiveListeners >= LoLaLinkDefinition::UN_LINKED_PORT_ALLOCATION;
-	}
+	LinkRegistry() {}
 
 	/// <summary>
-	/// Register link status listener.
+	/// Link requires at least one packet listener.
 	/// </summary>
-	/// <param name="listener"></param>
-	/// <returns>True if success. False if no more slots are available.</returns>
+	/// <returns>True if LinkRegistry is correctly setup.</returns>
+	const bool Setup()
+	{
+		return MaxPacketListeners > 0;
+	}
+
 	virtual const bool RegisterLinkListener(ILinkListener* listener) final
 	{
 		if (listener != nullptr && LinkListenersCount < MaxLinkListeners - 1)
@@ -97,18 +87,14 @@ public:
 		return false;
 	}
 
-	/// <summary>
-	/// </summary>
-	/// <param name="listener"></param>
-	/// <returns>True if success. False if no more slots are available.</returns>
 	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) final
 	{
 		if (listener != nullptr
-			&& (PacketListenersCount < MaxPacketReceiveListeners))
+			&& (PacketListenersCount < MaxPacketListeners))
 		{
 			for (uint_fast8_t i = 0; i < PacketListenersCount; i++)
 			{
-				if (LinkPacketListeners[i].Port == port)
+				if (PacketListenerPorts[i] == port)
 				{
 #if defined(DEBUG_LOLA)
 					Serial.print(F("Port "));
@@ -119,8 +105,8 @@ public:
 				}
 			}
 
-			LinkPacketListeners[PacketListenersCount].Listener = listener;
-			LinkPacketListeners[PacketListenersCount].Port = port;
+			PacketListeners[PacketListenersCount] = listener;
+			PacketListenerPorts[PacketListenersCount] = port;
 			PacketListenersCount++;
 
 			return true;
@@ -143,9 +129,9 @@ public:
 	{
 		for (uint_fast8_t i = 0; i < PacketListenersCount; i++)
 		{
-			if (port == LinkPacketListeners[i].Port)
+			if (port == PacketListenerPorts[i])
 			{
-				LinkPacketListeners[i].Listener->OnPacketReceived(
+				PacketListeners[i]->OnPacketReceived(
 					timestamp,
 					payload,
 					payloadSize,
