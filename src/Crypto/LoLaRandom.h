@@ -56,7 +56,7 @@ public:
 
 	const uint8_t GetRandomShort()
 	{
-		return (uint8_t)GetRandomLong(UINT8_MAX);
+		return (uint8_t)GetNextRandom();
 	}
 
 	const uint8_t GetRandomShort(const uint8_t maxValue)
@@ -83,11 +83,8 @@ public:
 		}
 		else
 		{
-			return GetNextRandom() % (maxValue + 1);
+			return (uint32_t)(((uint64_t)GetNextRandom() * maxValue) >> 32);
 		}
-		const uint64_t bounded = ((uint64_t)GetNextRandom() * maxValue);
-
-		return bounded >> 32;
 	}
 
 	/// <summary>
@@ -99,7 +96,7 @@ public:
 	{
 		for (uint_fast8_t i = 0; i < size; i++)
 		{
-			target[i] = GetRandomShort();
+			target[i] = (uint8_t)GetNextRandom();
 		}
 	}
 
