@@ -313,7 +313,6 @@ protected:
 			break;
 		case LinkStageEnum::Booting:
 			Encoder->SetRandomSessionId(&RandomSource);
-			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 			// Remember the estimated send duration, to avoid calculating it on every PreSend.
 			ClockTracker.SetRequestSendDuration(GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE));
 			break;
@@ -321,7 +320,6 @@ protected:
 			SearchChannel = RandomSource.GetRandomShort();
 			SetAdvertisingChannel(SearchChannel);
 			SearchChannelTryCount = 0;
-			StateTransition.Clear();
 			ResetUnlinkedPacketThrottle();
 			WaitingState = WaitingStateEnum::SearchingLink;
 			break;

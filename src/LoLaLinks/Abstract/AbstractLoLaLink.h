@@ -217,6 +217,8 @@ protected:
 			Transceiver->Stop();
 			break;
 		case LinkStageEnum::Booting:
+			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
+			SyncClock.ShiftSubSeconds(RandomSource.GetRandomLong());
 			break;
 		case LinkStageEnum::AwaitingLink:
 			RandomSource.RandomReseed();

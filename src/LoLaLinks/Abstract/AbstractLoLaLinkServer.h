@@ -626,6 +626,7 @@ private:
 	{
 		Encoder->SetRandomSessionId(&RandomSource);
 		SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
+		SyncClock.ShiftSubSeconds(RandomSource.GetRandomLong());
 	}
 
 	void OnServiceSearchingLinkInternal()
