@@ -14,16 +14,12 @@ private:
 	using BaseClass = AbstractLoLaLink;
 
 private:
-	using Unlinked = LoLaLinkDefinition::Unlinked;
-	using Linking = LoLaLinkDefinition::Linking;
-	using Linked = LoLaLinkDefinition::Linked;
-
 	static constexpr uint32_t CLIENT_SLEEP_TIMEOUT_MILLIS = 30000;
 	static constexpr uint8_t CHANNEL_SEARCH_TRY_COUNT = 3;
 
 	static constexpr uint8_t CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS = 50;
 
-	enum WaitingStateEnum
+	enum class WaitingStateEnum : uint8_t
 	{
 		Sleeping,
 		SearchingLink,
@@ -31,7 +27,7 @@ private:
 		SwitchingToLinking
 	};
 
-	enum LinkingStateEnum
+	enum class LinkingStateEnum : uint8_t
 	{
 		WaitingForAuthenticationRequest,
 		AuthenticationReply,

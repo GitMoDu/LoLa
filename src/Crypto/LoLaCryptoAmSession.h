@@ -5,7 +5,6 @@
 
 #include "LoLaCryptoEncoderSession.h"
 
-
 /// <summary>
 /// Public Address Exchange session based on magic.
 /// </summary>
@@ -22,12 +21,12 @@ private:
 	};
 
 private:
-	uint8_t PartnerAddress[LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE]{};
+	uint8_t PartnerAddress[PUBLIC_ADDRESS_SIZE]{};
 
 	/// <summary>
 	/// Shared key.
 	/// </summary>
-	uint8_t MatchKey[LoLaLinkDefinition::SECRET_KEY_SIZE]{};
+	uint8_t MatchKey[SECRET_KEY_SIZE]{};
 
 private:
 	const uint8_t* SecretKey;
@@ -43,9 +42,9 @@ public:
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	/// <param name="localAddress">sizeof = LoLaCryptoDefinition::PUBLIC_KEY_SIZE</param>
 	LoLaCryptoAmSession(
-		const uint8_t secretKey[LoLaLinkDefinition::SECRET_KEY_SIZE],
-		const uint8_t accessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE],
-		const uint8_t localAddress[LoLaCryptoDefinition::PUBLIC_KEY_SIZE])
+		const uint8_t secretKey[SECRET_KEY_SIZE],
+		const uint8_t accessPassword[ACCESS_CONTROL_PASSWORD_SIZE],
+		const uint8_t localAddress[PUBLIC_KEY_SIZE])
 		: LoLaCryptoEncoderSession(accessPassword)
 		, SecretKey(secretKey)
 		, LocalAddress(localAddress)
@@ -78,7 +77,7 @@ public:
 
 	void CopyLocalAddressTo(uint8_t* target)
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
+		for (uint_fast8_t i = 0; i < PUBLIC_ADDRESS_SIZE; i++)
 		{
 			target[i] = LocalAddress[i];
 		}
@@ -86,7 +85,7 @@ public:
 
 	void CopyPartnerAddressTo(uint8_t* target)
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
+		for (uint_fast8_t i = 0; i < PUBLIC_ADDRESS_SIZE; i++)
 		{
 			target[i] = PartnerAddress[i];
 		}
@@ -94,7 +93,7 @@ public:
 
 	void SetPartnerAddressFrom(const uint8_t* source)
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
+		for (uint_fast8_t i = 0; i < PUBLIC_ADDRESS_SIZE; i++)
 		{
 			PartnerAddress[i] = source[i];
 		}
@@ -102,7 +101,7 @@ public:
 
 	const bool LocalAddressMatchFrom(const uint8_t* source)
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
+		for (uint_fast8_t i = 0; i < PUBLIC_ADDRESS_SIZE; i++)
 		{
 			if (LocalAddress[i] != source[i])
 			{
@@ -123,7 +122,7 @@ public:
 		switch (AmState)
 		{
 		case AmEnum::CalculatingLinkingToken:
-			CalculateLinkingToken(LocalAddress, PartnerAddress, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE);
+			CalculateLinkingToken(LocalAddress, PartnerAddress, PUBLIC_ADDRESS_SIZE);
 			AmState = AmEnum::CalculatingMatch;
 			break;
 		case AmEnum::CalculatingMatch:
@@ -131,12 +130,12 @@ public:
 			AmState = AmEnum::CalculatingExpandedKey;
 			break;
 		case AmEnum::CalculatingExpandedKey:
-			CalculateExpandedKey(MatchKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+			CalculateExpandedKey(MatchKey, SECRET_KEY_SIZE);
 			ClearMatchKey();
 			AmState = AmEnum::CalculatingAddressing;
 			break;
 		case AmEnum::CalculatingAddressing:
-			CalculateSessionAddressing(LocalAddress, PartnerAddress, LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE);
+			CalculateSessionAddressing(LocalAddress, PartnerAddress, PUBLIC_ADDRESS_SIZE);
 			AmState = AmEnum::AmCached;
 			break;
 		case AmEnum::AmCached:
@@ -150,7 +149,7 @@ public:
 
 	const bool AddressCollision()
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE; i++)
+		for (uint_fast8_t i = 0; i < PUBLIC_ADDRESS_SIZE; i++)
 		{
 			if (LocalAddress[i] != PartnerAddress[i])
 			{
@@ -163,7 +162,7 @@ public:
 private:
 	void ClearMatchKey()
 	{
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::SECRET_KEY_SIZE; i++)
+		for (uint_fast8_t i = 0; i < SECRET_KEY_SIZE; i++)
 		{
 			MatchKey[i] = 0;
 		}
@@ -177,12 +176,12 @@ private:
 #else
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(SecretKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
-		CryptoHasher.update(LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
+		CryptoHasher.update(SecretKey, SECRET_KEY_SIZE);
+		CryptoHasher.update(LinkingToken, LINKING_TOKEN_SIZE);
 #if defined(LOLA_USE_POLY1305)
-		CryptoHasher.finalize(Nonce, MatchKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+		CryptoHasher.finalize(Nonce, MatchKey, SECRET_KEY_SIZE);
 #else
-		CryptoHasher.finalize(MatchKey, LoLaLinkDefinition::SECRET_KEY_SIZE);
+		CryptoHasher.finalize(MatchKey, SECRET_KEY_SIZE);
 #endif
 		CryptoHasher.clear();
 	}

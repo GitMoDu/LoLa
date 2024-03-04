@@ -6,10 +6,8 @@
 
 #include "..\..\Link\ILoLaLink.h"
 #include "..\..\Link\ILinkRegistry.h"
-#include "..\..\Link\LoLaPacketDefinition.h"
 #include "..\..\Link\LoLaLinkDefinition.h"
 
-#include "..\..\Link\LinkStageEnum.h"
 #include "..\..\Link\PacketEventEnum.h"
 #include "..\..\Link\LoLaPacketService.h"
 
@@ -23,17 +21,27 @@
 /// as it will handle pre-link Packet as well as use link time packets for link upkeep.
 /// As a partial abstract class, it implements ILoLaLink Listeners public register.
 /// </summary>
-class AbstractLoLa : protected TemplateLinkService<LoLaLinkDefinition::LARGEST_PAYLOAD>
+class AbstractLoLa : protected TemplateLinkService<LoLaPacketDefinition::MAX_PAYLOAD_SIZE>
 	, public virtual ILoLaLink
 	, public virtual IPacketServiceListener
 {
 private:
-	using BaseClass = TemplateLinkService<LoLaLinkDefinition::LARGEST_PAYLOAD>;
+	using BaseClass = TemplateLinkService<LoLaPacketDefinition::MAX_PAYLOAD_SIZE>;
 
 	struct PacketListenerWrapper
 	{
 		ILinkPacketListener* Listener = nullptr;
 		uint8_t Port = 0;
+	};
+
+protected:
+	enum class LinkStageEnum : uint8_t
+	{
+		Disabled,
+		Booting,
+		AwaitingLink,
+		Linking,
+		Linked
 	};
 
 protected:

@@ -20,11 +20,7 @@ private:
 	using BaseClass = AbstractLoLaLinkClient;
 
 private:
-	using Unlinked = LoLaLinkDefinition::Unlinked;
-	using Linking = LoLaLinkDefinition::Linking;
-	using Linked = LoLaLinkDefinition::Linked;
-
-	enum class AmStateEnum
+	enum class AmStateEnum : uint8_t
 	{
 		RequestingSession,
 		ValidatingSession,

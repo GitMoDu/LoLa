@@ -3,14 +3,11 @@
 #ifndef _ABSTRACT_LOLA_LINK_PACKET_
 #define _ABSTRACT_LOLA_LINK_PACKET_
 
-
 #include <IDuplex.h>
 #include <IChannelHop.h>
 
 #include "AbstractLoLaReceiver.h"
 #include "..\..\Link\LoLaLinkSession.h"
-
-
 
 /// <summary>
 /// Implements PacketServce functionality and leaves interfaces open for implementation.

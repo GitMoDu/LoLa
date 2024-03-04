@@ -10,10 +10,6 @@ class AbstractLoLaReceiver : public AbstractLoLaSender
 private:
 	using BaseClass = AbstractLoLaSender;
 
-	using Unlinked = LoLaLinkDefinition::Unlinked;
-	using Linking = LoLaLinkDefinition::Linking;
-	using Linked = LoLaLinkDefinition::Linking;
-
 private:
 	// The incoming plaintext content is decrypted to here, from the RawInPacket.
 	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};

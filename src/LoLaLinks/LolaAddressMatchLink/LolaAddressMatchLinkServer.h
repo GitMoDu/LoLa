@@ -23,11 +23,7 @@ public:
 	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 10000;
 
 private:
-	using Unlinked = LoLaLinkDefinition::Unlinked;
-	using Linking = LoLaLinkDefinition::Linking;
-	using Linked = LoLaLinkDefinition::Linked;
-
-	enum class AmStateEnum
+	enum class AmStateEnum : uint8_t
 	{
 		NoMatch,
 		ValidatingSession,

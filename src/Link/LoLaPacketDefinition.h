@@ -24,7 +24,7 @@
 /// PAYLOAD_N
 /// ________
 /// </summary>
-struct LoLaPacketDefinition
+namespace LoLaPacketDefinition
 {
 	static constexpr uint8_t MAC_INDEX = 0;
 	static constexpr uint8_t MAC_SIZE = 4;

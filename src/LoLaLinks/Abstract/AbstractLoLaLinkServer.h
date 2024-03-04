@@ -13,13 +13,9 @@ class AbstractLoLaLinkServer : public AbstractLoLaLink
 private:
 	using BaseClass = AbstractLoLaLink;
 
-	using Unlinked = LoLaLinkDefinition::Unlinked;
-	using Linking = LoLaLinkDefinition::Linking;
-	using Linked = LoLaLinkDefinition::Linked;
-
 	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 30000;
 
-	enum WaitingStateEnum
+	enum class WaitingStateEnum : uint8_t
 	{
 		Sleeping,
 		SearchingLink,
@@ -27,7 +23,7 @@ private:
 		SwitchingToLinking
 	};
 
-	enum LinkingStateEnum
+	enum class LinkingStateEnum : uint8_t
 	{
 		AuthenticationRequest,
 		AuthenticationReply,
@@ -344,6 +340,9 @@ protected:
 				break;
 			}
 		}
+#if defined(DEBUG_LOLA_LINK)
+		else { this->Skipped(F("Unknown")); }
+#endif
 	}
 
 protected:

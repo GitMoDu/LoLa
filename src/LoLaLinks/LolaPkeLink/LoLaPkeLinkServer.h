@@ -24,11 +24,7 @@ public:
 	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 10000;
 
 private:
-	using Unlinked = LoLaLinkDefinition::Unlinked;
-	using Linking = LoLaLinkDefinition::Linking;
-	using Linked = LoLaLinkDefinition::Linked;
-
-	enum PkeStateEnum
+	enum class PkeStateEnum : uint8_t
 	{
 		NoPke,
 		DecompressingPartnerKey,

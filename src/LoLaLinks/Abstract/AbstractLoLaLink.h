@@ -4,7 +4,10 @@
 
 
 #include "AbstractLoLaLinkPacket.h"
+#include "..\..\Link\LinkDefinitions.h"
 #include "..\..\Link\ReportTracker.h"
+
+using namespace LinkDefinitions;
 
 /// <summary>
 /// 
@@ -13,10 +16,6 @@ class AbstractLoLaLink : public AbstractLoLaLinkPacket
 {
 private:
 	using BaseClass = AbstractLoLaLinkPacket;
-
-	using Unlinked = LoLaLinkDefinition::Unlinked;
-	using Linking = LoLaLinkDefinition::Linking;
-	using Linked = LoLaLinkDefinition::Linked;
 
 private:
 	/// <summary>

@@ -41,12 +41,12 @@ private:
 	PkeEnum PkeState = PkeEnum::CalculatingSecret;
 
 private:
-	uint8_t PartnerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE]{};
+	uint8_t PartnerPublicKey[PUBLIC_KEY_SIZE]{};
 
 	/// <summary>
 	/// Shared secret key.
 	/// </summary>
-	uint8_t SecretKey[LoLaCryptoDefinition::SHARED_KEY_SIZE]{};
+	uint8_t SecretKey[SHARED_KEY_SIZE]{};
 
 private:
 	const uint8_t* LocalPublicKey = nullptr;
@@ -59,9 +59,9 @@ public:
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	/// <param name="publicKey">sizeof = LoLaCryptoDefinition::PUBLIC_KEY_SIZE</param>
 	/// <param name="privateKey">size of = LoLaCryptoDefinition::PRIVATE_KEY_SIZE</param>
-	LoLaCryptoPkeSession(const uint8_t* accessPassword,
-		const uint8_t* publicKey,
-		const uint8_t* privateKey)
+	LoLaCryptoPkeSession(const uint8_t accessPassword[ACCESS_CONTROL_PASSWORD_SIZE],
+		const uint8_t publicKey[PUBLIC_KEY_SIZE],
+		const uint8_t privateKey[PRIVATE_KEY_SIZE])
 		: LoLaCryptoEncoderSession(accessPassword)
 		, ECC_CURVE(uECC_secp160r1())
 		, LocalPublicKey(publicKey)
@@ -126,20 +126,20 @@ public:
 			PkeState = PkeEnum::CalculatingExpandedKey;
 			break;
 		case PkeEnum::CalculatingExpandedKey:
-			CalculateExpandedKey(SecretKey, LoLaCryptoDefinition::SHARED_KEY_SIZE);
+			CalculateExpandedKey(SecretKey, SHARED_KEY_SIZE);
 			PkeState = PkeEnum::CalculatingAddressing;
 			break;
 		case PkeEnum::CalculatingAddressing:
 			CalculateSessionAddressing(
 				LocalPublicKey,
 				PartnerPublicKey,
-				LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+				PUBLIC_KEY_SIZE);
 			PkeState = PkeEnum::CalculatingLinkingToken;
 			break;
 		case PkeEnum::CalculatingLinkingToken:
 			CalculateLinkingToken(LocalPublicKey,
 				PartnerPublicKey,
-				LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+				PUBLIC_KEY_SIZE);
 			PkeState = PkeEnum::CalculatingSessionToken;
 			break;
 		case PkeEnum::CalculatingSessionToken:
@@ -157,7 +157,7 @@ public:
 
 	const bool PublicKeyCollision()
 	{
-		for (uint_fast8_t i = 0; i < LoLaCryptoDefinition::PUBLIC_KEY_SIZE; i++)
+		for (uint_fast8_t i = 0; i < PUBLIC_KEY_SIZE; i++)
 		{
 			if (LocalPublicKey[i] != PartnerPublicKey[i])
 			{
@@ -200,8 +200,8 @@ private:
 #else
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.update(SessionId, SESSION_ID_SIZE);
+		CryptoHasher.update(partnerPublicKey, PUBLIC_KEY_SIZE);
 #if defined(LOLA_USE_POLY1305)
 		CryptoHasher.finalize(Nonce, token, MATCHING_TOKEN_SIZE);
 #else
@@ -223,8 +223,8 @@ private:
 #else
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
-		CryptoHasher.update(partnerPublicKey, LoLaCryptoDefinition::PUBLIC_KEY_SIZE);
+		CryptoHasher.update(SessionId, SESSION_ID_SIZE);
+		CryptoHasher.update(partnerPublicKey, PUBLIC_KEY_SIZE);
 
 #if defined(LOLA_USE_POLY1305)
 		const bool match = CryptoHasher.macMatches(Nonce, CachedToken);
