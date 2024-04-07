@@ -37,14 +37,14 @@ private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x0457;
 
 private:
-	enum TxStateEnum
+	enum class TxStateEnum : uint8_t
 	{
 		NoTx,
 		TxStart,
 		TxEnd
 	};
 
-	enum RxStateEnum
+	enum class RxStateEnum : uint8_t
 	{
 		NoRx,
 		RxStart,
