@@ -179,23 +179,14 @@ protected:
 	/// <summary>
 	/// Throttles sends based on last send and link's expected response time.
 	/// </summary>
+	/// <param name="minPeriodMicros">Lower bound period.</param>
 	/// <returns>True if enough time has elapsed since the last send, for the partner to respond.</returns>
-	const bool PacketThrottle()
-	{
-		return CanRequestSend()
-			&& ((micros() - LastSent) > LoLaLink->GetPacketThrottlePeriod());
-	}
-
-	/// <summary>
-	/// Same as PacketThrottle() but with an extra lower bound.
-	/// </summary>
-	/// <param name="minPeriodMicros"></param>
-	/// <returns>True if enough time has elapsed since the last send, for the partner to respond.</returns>
-	const bool PacketThrottle(const uint32_t minPeriodMicros)
+	const bool PacketThrottle(const uint32_t minPeriodMicros = 0)
 	{
 		const uint32_t elapsed = micros() - LastSent;
 
-		return elapsed > LoLaLink->GetPacketThrottlePeriod()
+		return CanRequestSend()
+			&& elapsed > LoLaLink->GetPacketThrottlePeriod()
 			&& elapsed > minPeriodMicros;
 	}
 
