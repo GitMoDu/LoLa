@@ -190,11 +190,11 @@ public:
 		stream.println(Quality.TxRssi);
 
 		stream.print(F("\tTx Count: "));
-		stream.println(GetLongTxCount());
+		stream.println((uint32_t)GetLongTxCount());
 		stream.print(F("\tRx Count: "));
-		stream.println(GetLongRxCount());
+		stream.println((uint32_t)GetLongRxCount());
 		stream.print(F("\tRx Lost: "));
-		stream.println(GetLongRxDropCount());
+		stream.println((uint32_t)GetLongRxDropCount());
 		stream.print(F("\tQuality Rx: "));
 		stream.println(Quality.RxDrop);
 		stream.print(F("\tRx Drop Rate: "));
