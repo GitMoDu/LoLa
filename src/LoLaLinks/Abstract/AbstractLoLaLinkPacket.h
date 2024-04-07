@@ -23,15 +23,21 @@ class AbstractLoLaLinkPacket
 private:
 	using BaseClass = AbstractLoLaReceiver;
 
+#if defined(F_CPU)
+	static constexpr uint32_t CPU_CLOCK = F_CPU;
+#elif defined(CLOCK_SPEED_HZ)
+	static constexpr uint32_t CPU_CLOCK = CLOCK_SPEED_HZ;
+#endif
+
 	/// <summary>
 	/// Faster MCUs need more rounds for an accurate calibration.
 	/// </summary>
-	static constexpr uint16_t CALIBRATION_ROUNDS = F_CPU / 1500000L;
+	static constexpr uint16_t CALIBRATION_ROUNDS = CPU_CLOCK / 1500000L;
 
 	/// <summary>
 	/// Slower MCUs need a bigger look ahead to counter scheduler latency.
 	/// </summary>
-	static constexpr uint16_t HOPPER_OFFSET = 500000000 / F_CPU;
+	static constexpr uint16_t HOPPER_OFFSET = 500000000 / CPU_CLOCK;
 
 protected:
 	/// <summary>

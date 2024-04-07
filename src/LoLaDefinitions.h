@@ -21,16 +21,14 @@
 
 #include <Arduino.h>
 
-#if defined(ARDUINO_ARCH_AVR)
-#define LOLA_RTOS_PAUSE()
-#define LOLA_RTOS_RESUME()
-#elif defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-#define LOLA_RTOS_PAUSE()
-#define LOLA_RTOS_RESUME()
+#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#define LOLA_RTOS_PAUSE()	((void)0)
+#define LOLA_RTOS_RESUME()	((void)0)
 #elif defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_ESP32)
 #define LOLA_RTOS_PLATFORM
-#define LOLA_RTOS_PAUSE() vTaskSuspendAll()
-#define LOLA_RTOS_RESUME() xTaskResumeAll()
+#define _TASK_THREAD_SAFE	// Enable additional checking for thread safety
+#define LOLA_RTOS_PAUSE()	vTaskSuspendAll()
+#define LOLA_RTOS_RESUME()	xTaskResumeAll()
 #else
 #error Platform not suported.
 #endif

@@ -48,7 +48,11 @@ public:
 	/// <returns>How many cycles in one second.</returns>
 	virtual const uint32_t GetCyclesOneSecond() final
 	{
+#if defined(F_CPU)
 		return F_CPU / COUNTER_SCALE;
+#elif defined(CLOCK_SPEED_HZ)
+		return CLOCK_SPEED_HZ / COUNTER_SCALE;
+#endif
 	}
 
 	/// <summary>
@@ -78,7 +82,11 @@ private:
 
 		do {
 			ms = systick_uptime();
+#if defined(F_CPU)
 			cycle_cnt = SYSTICK_BASE->CNT;
+#elif defined(CLOCK_SPEED_HZ)
+			cycle_cnt = SYSTICK_BASE->VAL;
+#endif
 			asm volatile("nop"); //allow interrupt to fire
 			asm volatile("nop");
 		} while (ms != systick_uptime());
