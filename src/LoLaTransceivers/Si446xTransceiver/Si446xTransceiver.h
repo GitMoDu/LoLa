@@ -228,11 +228,9 @@ public:
 	{
 		const uint8_t rawChannel = GetRawChannel(channel);
 
-		// Store Tx channel as last channel.
-		HopPending.Channel = rawChannel;
 		Task::enable();
 
-		if (1 == Si446x_TX((uint8_t*)data, packetSize, rawChannel, si446x_state_t::SI446X_STATE_RX))
+		if (1 == Si446x_TX((uint8_t*)data, packetSize, rawChannel, si446x_state_t::SI446X_STATE_READY))
 		{
 			TxPending.Pending = true;
 			TxPending.StartTimestamp = micros();
@@ -241,7 +239,7 @@ public:
 		}
 		else
 		{
-			HopPending.Request();
+			HopPending.Request(rawChannel);
 		}
 
 		return false;
