@@ -6,38 +6,42 @@
 #include "LoLaSi446x.h"
 
 #include <SPI.h>
-#include <Arduino.h>
+
+using namespace LoLaSi446x;
 
 /// <summary>
 /// </summary>
 /// <typeparam name="CsPin"></typeparam>
-template<const uint8_t CsPin>
+template<const uint8_t CsPin,
+	const uint8_t SdnPin>
 class LoLaSi446xSpiDriver
 {
 private:
-	using RadioStateEnum = LoLaSi446x::RadioStateEnum;
+	/// <summary>
+	/// Max internal get/send message length.
+	/// </summary>
+	static constexpr uint8_t MAX_MESSAGE_SIZE = 8;
+
+	// The SPI interface is designed to operate at a maximum of 10 MHz.
+	// 72 MHz / 8 = 9 MHz
+	static constexpr uint32_t SPI_CLOCK_SPEED = 9000000;
 
 private:
-	//SPI instance.
+	uint8_t Message[MAX_MESSAGE_SIZE]{};
+
+private:
 	SPIClass* SpiInstance;
 
-	//Device communication helpers.
-	static constexpr uint8_t MESSAGE_OUT_SIZE = 18; //Max internal sent message length;
-	static constexpr uint8_t MESSAGE_IN_SIZE = 8; //Max internal received message length;
-
-	uint8_t MessageIn[MESSAGE_IN_SIZE]{};
-	uint8_t MessageOut[MESSAGE_OUT_SIZE]{};
+	const SPISettings Settings;
 
 public:
 	LoLaSi446xSpiDriver(SPIClass* spiInstance)
 		: SpiInstance(spiInstance)
-	{
-		pinMode(CsPin, INPUT);
-	}
+		, Settings(SPI_CLOCK_SPEED, MSBFIRST, SPI_MODE0)
+	{}
 
 public:
-
-	virtual void Stop()
+	void Stop()
 	{
 		if (SpiInstance != nullptr)
 		{
@@ -45,265 +49,363 @@ public:
 		}
 
 		// Disable IO pins.
+		pinMode(SdnPin, INPUT);
 		CsOff();
 		pinMode(CsPin, INPUT);
 	}
 
-	virtual const bool Start()
+	const bool Start(const uint8_t* configuration, const size_t configurationSize)
 	{
-		if (SpiInstance == nullptr)
+		if (!Start())
 		{
 			return false;
 		}
 
-		// Setup IO pins.
-		CsOff();
-		pinMode(CsPin, OUTPUT);
+		LoLaSi446x::Si446xInfoStruct deviceInfo{};
+		if (!GetPartInfo(deviceInfo, 100000))
+		{
+			return false;
+		}
 
-		// Start SPI hardware.
-		SpiInstance->begin();
-		SpiInstance->setBitOrder(MSBFIRST);
-		SpiInstance->setDataMode(SPI_MODE0);
-
-		//The SPI interface is designed to operate at a maximum of 10 MHz.
-		// TODO: Adjust according to F_CPU
-#if defined(ARDUINO_ARCH_AVR)
-		// 16 MHz / 2 = 8 MHz
-		SpiInstance->setClockDivider(SPI_CLOCK_DIV2);
-#elif defined(ARDUINO_ARCH_STM32F1)
-		// 72 MHz / 8 = 9 MHz
-		SpiInstance->setClockDivider(SPI_CLOCK_DIV8);
-#elif defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-		// TODO:
-#else
-		// Default SPI speed.
+		switch (deviceInfo.PartId)
+		{
+		case (uint16_t)LoLaSi446x::PART_NUMBER::SI4463:
+			if (deviceInfo.DeviceId != (uint16_t)LoLaSi446x::DEVICE_ID::SI4463)
+			{
+#if defined(DEBUG_LOLA)
+				Serial.print(F("DeviceId: "));
+				Serial.println(deviceInfo.DeviceId);
 #endif
+				return false;
+			}
+			break;
+		default:
+#if defined(DEBUG_LOLA)
+			Serial.print(F("Si446xSpiDriver Unknown Part Number: "));
+			Serial.println(deviceInfo.PartId);
+			Serial.print(F("DeviceId: "));
+			Serial.println(deviceInfo.DeviceId);
+#endif
+			return false;
+		}
+
+		if (!ApplyConfiguration(configuration, configurationSize, 1000000))
+		{
+			return false;
+		}
+
+		if (!SetupCallbacks())
+		{
+			return false;
+		}
+
+		LoLaSi446x::RadioEventsStruct radioEvents{};
+		if (!GetRadioEvents(radioEvents, 10000))
+		{
+			return false;
+		}
+
+		if (!ClearFifo(FIFO_INFO_PROPERY::CLEAR_RX_TX, 2000))
+		{
+			return false;
+		}
+
+		// Sleep until first command.
+		if (!SetRadioState(RadioStateEnum::SLEEP, 10000))
+		{
+			return false;
+		}
+
+		if (!SpinWaitClearToSend(10000))
+		{
+			return false;
+		}
+
+		if (GetRadioStateFast() != RadioStateEnum::SLEEP)
+		{
+			return false;
+		}
+
+		if (!SpinWaitClearToSend(10000))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	const uint8_t GetLatchedRssi()
+	{
+		return GetFrr(Command::FRR_A_READ);
+	}
+
+	const bool ClearRxFifo(const uint32_t timeoutMicros = 500)
+	{
+		if (!SpinWaitClearToSend(timeoutMicros))
+		{
+			return false;
+		}
+
+		return ClearFifo(FIFO_INFO_PROPERY::CLEAR_RX);
+	}
+
+	const bool ClearTxFifo(const uint32_t timeoutMicros)
+	{
+		return ClearFifo(FIFO_INFO_PROPERY::CLEAR_TX, timeoutMicros);
+	}
+
+	const bool SetTxPower(const uint8_t txPower, const uint32_t timeoutMicros = 500)
+	{
+		return SetProperty(Property::PA_PWR_LVL, (uint16_t)txPower, timeoutMicros);
+	}
+
+	const bool SetPacketSize(const uint8_t packetSize, const uint32_t timeoutMicros = 500)
+	{
+		return SetProperty(Property::PKT_FIELD_2_LENGTH_12_8, (uint8_t)0, timeoutMicros)
+			&& SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
+	}
+
+	const bool SetupCallbacks()
+	{
+		const uint8_t phFlag = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN;
+		if (!SetProperty(Property::INT_CTL_PH_ENABLE, phFlag, 10000))
+		{
+			return false;
+		}
+
+		const uint8_t modemFlag = 0;
+		if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, modemFlag, 10000))
+		{
+			return false;
+		}
+
+		const uint8_t chipFlag = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN;
+		if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, chipFlag, 10000))
+		{
+			return false;
+		}
 
 		return true;
 	}
 
 public:
-	const bool SpinWaitClearToSend(const uint16_t timeoutMillis)
+	const bool SpinWaitClearToSend(const uint32_t timeoutMicros)
 	{
-		const uint32_t start = millis();
+		const uint32_t start = micros();
 		while (!ClearToSend())
 		{
-			if (millis() - start > timeoutMillis)
+			if (micros() - start > timeoutMicros)
 			{
 				return false;
 			}
 			else
 			{
-				delayMicroseconds(5);
+				delayMicroseconds(1);
 			}
 		}
 
 		return true;
 	}
 
-	const bool SetRadioState(const RadioStateEnum newState)
+	const bool SetRadioState(const RadioStateEnum newState, const uint32_t timeoutMicros = 10000)
 	{
-		MessageOut[0] = LoLaSi446x::COMMAND_SET_STATUS;
-		MessageOut[1] = (const uint8_t)newState;
+		Message[0] = (uint8_t)Command::CHANGE_STATE;
+		Message[1] = (const uint8_t)newState;
 
-		return SendRequest(MessageOut, 2);
+		return SendRequest(Message, 2, timeoutMicros);
 	}
 
-	RadioStateEnum GetRadioState()
+	const RadioStateEnum GetRadioState(const uint32_t timeoutMicros = 500)
 	{
-		if (!ClearToSend())
+		if (!SendRequest(Command::REQUEST_DEVICE_STATE, timeoutMicros))
 		{
 			return RadioStateEnum::NO_CHANGE;
 		}
 
-		const RadioStateEnum radioState = (RadioStateEnum)GetFrr(LoLaSi446x::COMMAND_READ_FRR_B);
-		Serial.print(F("Internal Radio State:"));
-		Serial.println((uint8_t)radioState);
+		if (!SpinWaitForResponse(Message, 1, timeoutMicros))
+		{
+			return RadioStateEnum::NO_CHANGE;
+		}
 
-		return radioState;
-		return (RadioStateEnum)GetFrr(LoLaSi446x::COMMAND_READ_FRR_B);
+		return (RadioStateEnum)Message[0];
+	}
+
+	const RadioStateEnum GetRadioStateFast(const uint32_t timeoutMicros = 50)
+	{
+		if (!SpinWaitClearToSend(timeoutMicros))
+		{
+			return RadioStateEnum::NO_CHANGE;
+		}
+
+		return (RadioStateEnum)GetFrr((uint8_t)Command::FRR_B_READ);
+	}
+
+	const bool GetRssiLatchFast(uint8_t& rssiLatch, const uint32_t timeoutMicros = 50)
+	{
+		if (!SpinWaitClearToSend(timeoutMicros))
+		{
+			rssiLatch = 0;
+			return false;
+		}
+
+		rssiLatch = GetFrr((uint8_t)Command::FRR_A_READ);
+
+		return true;
+	}
+
+	const bool TryPrepareGetRadioEvents()
+	{
+		if (ClearToSend())
+		{
+			Message[0] = (uint8_t)Command::GET_INT_STATUS;
+			Message[1] = 0;
+			Message[2] = 0;
+			Message[3] = 0xFF;
+
+			CsOn();
+			SpiInstance->transfer(Message, 4);
+			CsOff();
+
+			return true;
+		}
+		return false;
+	}
+
+	const bool TryGetRadioEvents(LoLaSi446x::RadioEventsStruct& radioEvents)
+	{
+		if (GetResponse(Message, 8))
+		{
+			radioEvents.SetFrom(Message, true);
+
+			return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>
 	/// Read pending interrupts.
 	/// Reading interrupts will also clear them.
+	/// Tipically takes ~200 us of wait time after an interrupt has occurred.
 	/// </summary>
 	/// <param name="radioEvents"></param>
-	/// <returns></returns>
-	const bool GetRadioEvents(LoLaSi446x::RadioEventStruct& radioEvents)
+	/// <returns>True on success.</returns>
+	const bool GetRadioEvents(LoLaSi446x::RadioEventsStruct& radioEvents, const uint32_t timeoutMicros = 1000)
 	{
-		if (!ClearToSend())
+		Message[0] = (uint8_t)Command::GET_INT_STATUS;
+		Message[1] = 0;
+		Message[2] = 0;
+		Message[3] = 0xFF;
+
+		if (!SpinWaitClearToSend(timeoutMicros))
 		{
 			return false;
 		}
 
-		if (!SendRequest(LoLaSi446x::COMMAND_GET_INTERRUPT_STATUS))
+		CsOn();
+		SpiInstance->transfer(Message, 4);
+		CsOff();
+
+		if (!SpinWaitForResponse(Message, 8, timeoutMicros))
 		{
 			return false;
 		}
 
-		if (!TryGetResponse(MessageIn, 8))
-		{
-			return false;
-		}
-
-		radioEvents.RxStart = MessageIn[4] & LoLaSi446x::PENDING_EVENT_SYNC_DETECT;
-		radioEvents.RxReady = MessageIn[2] & LoLaSi446x::PENDING_EVENT_RX;
-		radioEvents.RxFail = MessageIn[2] & LoLaSi446x::PENDING_EVENT_CRC_ERROR;
-		radioEvents.TxDone = MessageIn[2] & LoLaSi446x::PENDING_EVENT_SENT_OK;
-		radioEvents.WakeUp = MessageIn[2] & LoLaSi446x::PENDING_EVENT_WUT;
+		radioEvents.SetFrom(Message, false);
 
 		return true;
 	}
 
-	/// <summary>
-	/// Read events to clear.
-	/// </summary>
-	/// <returns></returns>
-	const bool ClearRadioEvents(const uint16_t timeoutMillis)
+	const bool RadioStartRx(const uint8_t channel, const uint32_t timeoutMicros = 1000)
 	{
-		if (!SpinWaitClearToSend(timeoutMillis))
-		{
-			return false;
-		}
-
-		if (!SendRequest(LoLaSi446x::COMMAND_GET_INTERRUPT_STATUS))
-		{
-			return false;
-		}
-
-		const uint32_t start = millis();
-		while (!ClearToSend())
-		{
-			if (millis() - start > timeoutMillis)
-			{
-				return false;
-			}
-			else
-			{
-				delayMicroseconds(5);
-			}
-		}
-
-		if (!TryGetResponse(MessageIn, 8))
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	const bool RadioStartRx(const uint8_t channel)
-	{
-		// Initiate Rx.
-		MessageOut[0] = LoLaSi446x::COMMAND_START_RX;
-		MessageOut[1] = channel;
-		MessageOut[2] = 0;
-		MessageOut[3] = 0;
-		MessageOut[4] = 0;
-		MessageOut[5] = (uint8_t)RadioStateEnum::NO_CHANGE;
-		MessageOut[6] = (uint8_t)RadioStateEnum::READY;
-		MessageOut[7] = (uint8_t)RadioStateEnum::SLEEP;
-
-		return SendRequest(MessageOut, 8);
-	}
-
-	const bool RadioStartTx(const uint8_t channel)
-	{
-		// Initiate Tx.
-		MessageOut[0] = LoLaSi446x::COMMAND_START_TX;
-		MessageOut[1] = channel;
-		MessageOut[2] = (uint8_t)RadioStateEnum::RX << 4; // On transmitted restore state.
-		MessageOut[3] = 0;
-		MessageOut[4] = 0;
-		MessageOut[5] = 0;
-		MessageOut[6] = 0;
-
-		//if (!SpinWaitClearToSend(50))
+		// Not need, spin send request will have the same effect.
+		//if (!SetRadioState(RadioStateEnum::SPI_ACTIVE, timeoutMicros))
 		//{
+		// #if defined(DEBUG_LOLA)
+		//	Serial.println(F("Rx failed 2"));
+		// #endif
 		//	return false;
 		//}
 
-		return SendRequest(MessageOut, 7);
+		// Not needed.
+		//if (!ClearRxFifo(timeoutMicros))
+		//{
+		// #if defined(DEBUG_LOLA)
+		//	Serial.println(F("Rx failed 2"));
+		// #endif
+		//	return false;
+		//}
+
+		Message[0] = (uint8_t)Command::START_RX;
+		Message[1] = channel;
+		Message[2] = 0;
+		Message[3] = 0;
+		Message[4] = 0;
+		Message[5] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXTIMEOUT_STATE
+		Message[6] = (uint8_t)RadioStateEnum::READY; // RXVALID_STATE
+		Message[7] = (uint8_t)RadioStateEnum::SLEEP; // RXINVALID_STATE
+
+		return SendRequest(Message, 8, timeoutMicros);
 	}
 
-
-	const bool SetTxFifo(const uint8_t* source, const uint8_t size)
+	const bool RadioStartTx(const uint8_t* data, const uint8_t size, const uint8_t channel, const uint32_t timeoutMicros = 500)
 	{
-		bool cts = 0;
+		if (!SpinWaitClearToSend(timeoutMicros))
+		{
+			Serial.println(F("Tx Wait failed."));
+
+			return false;
+		}
 
 		CsOn();
-
-		// Send read command and check if available.
-		SpiInstance->transfer(LoLaSi446x::COMMAND_WRITE_TX_FIFO);
-		cts = SpiInstance->transfer(0xFF) == 0xFF;
-
-		if (cts)
-		{
-			SpiInstance->transfer((uint8_t*)source, size);
-		}
+		SpiInstance->transfer((uint8_t)Command::WRITE_TX_FIFO);
+		SpiInstance->transfer((uint8_t)size);
+		SpiInstance->transfer((void*)data, (size_t)size);
 		CsOff();
 
-		return cts;
+		if (!SetPacketSize(size, timeoutMicros))
+		{
+			Serial.println(F("SetPacketSize failed."));
+			return false;
+		}
+
+		Message[0] = (uint8_t)Command::START_TX;
+		Message[1] = channel;
+		Message[2] = (uint8_t)RadioStateEnum::READY << 4;// | 1 << 0 | 1 << 1; // On transmitted restore state.
+		Message[3] = 0;
+		Message[4] = 0;
+
+		if (!SendRequest(Message, 5, timeoutMicros))
+		{
+			Serial.println(F("Tx failed."));
+			return false;
+		}
+
+		//TODO: Skip wait for CLS.
+		if (!SpinWaitClearToSend(timeoutMicros))
+		{
+			Serial.println(F("Tx post failed."));
+			return false;
+		}
+
+		if (!SetPacketSize(32, timeoutMicros))
+		{
+			Serial.println(F("Tx restore failed."));
+			return false;
+		}
+
+		return true;
 	}
 
 	const bool GetRxFifo(uint8_t* target, const uint8_t size)
 	{
-		bool cts = 0;
-
 		CsOn();
-
-		// Send read command and check if available.
-		SpiInstance->transfer(LoLaSi446x::COMMAND_READ_RX_FIFO);
-		cts = SpiInstance->transfer(0xFF) == 0xFF;
-
-		if (cts)
+		SpiInstance->transfer((uint8_t)Command::READ_RX_FIFO);
+		for (uint8_t i = 0; i < size; i++)
 		{
-			// Get response data
-			for (uint8_t i = 0; i < size; i++)
-			{
-				target[i] = SpiInstance->transfer(0xFF);
-			}
+			target[i] = SpiInstance->transfer(0xFF);
 		}
 		CsOff();
-		return cts;
-	}
-
-public:
-	const bool TryGetResponse(uint8_t* target, const uint8_t size)
-	{
-		bool cts = 0;
-
-		CsOn();
-		SpiInstance->transfer(LoLaSi446x::COMMAND_READ_BUFFER);
-		cts = SpiInstance->transfer(0xFF) == 0xFF;
-		if (cts)
-		{
-			for (uint8_t i = 0; i < size; i++)
-			{
-				target[i] = SpiInstance->transfer(0xFF);
-			}
-		}
-		CsOff();
-
-		return cts;
-	}
-
-	const bool TryWaitForResponse(uint8_t* target, const uint8_t size, const uint16_t timeoutMillis)
-	{
-		const uint32_t start = millis();
-
-		while (!TryGetResponse(target, size))
-		{
-			if ((millis() - start) > timeoutMillis)
-			{
-				return false;
-			}
-			else
-			{
-				delayMicroseconds(5);
-			}
-		}
 
 		return true;
 	}
@@ -313,14 +415,69 @@ public:
 		bool cts = 0;
 
 		CsOn();
-		SpiInstance->transfer(LoLaSi446x::COMMAND_READ_BUFFER);
+		SpiInstance->transfer((uint8_t)Command::READ_CMD_BUFF);
 		cts = SpiInstance->transfer(0xFF) == 0xFF;
 		CsOff();
 
 		return cts;
 	}
 
-protected:
+	const bool GetResponse(uint8_t* target, const uint8_t size)
+	{
+		bool cts = 0;
+
+		CsOn();
+		SpiInstance->transfer((uint8_t)Command::READ_CMD_BUFF);
+		cts = SpiInstance->transfer(0xFF) == 0xFF;
+		if (cts)
+		{
+			for (uint8_t i = 0; i < size; i++)
+			{
+				target[i] = SpiInstance->transfer(0xFF);
+			}
+		}
+		CsOff();
+
+		return cts;
+	}
+
+
+	const bool GetRxFifoCount(uint8_t& fifoCount, const uint32_t timeoutMicros = 500)
+	{
+		if (!SpinWaitClearToSend(timeoutMicros))
+		{
+			fifoCount = 0;
+			return false;
+		}
+
+		CsOn();
+		SpiInstance->transfer((uint8_t)Command::READ_RX_FIFO);
+		fifoCount = SpiInstance->transfer(0xFF);
+		CsOff();
+
+		return true;
+	}
+
+	const bool SpinWaitForResponse(uint8_t* target, const uint8_t size, const uint32_t timeoutMicros = 500)
+	{
+		const uint32_t start = micros();
+
+		while (!GetResponse(target, size))
+		{
+			if ((micros() - start) > timeoutMicros)
+			{
+				return false;
+			}
+			else
+			{
+				delayMicroseconds(1);
+			}
+		}
+
+		return true;
+	}
+
+private:
 	/// <summary>
 	/// Read a fast response register.
 	/// </summary>
@@ -338,205 +495,162 @@ protected:
 		return frr;
 	}
 
-	const bool ClearFifo(const uint8_t fifoCommand)
+	/// <summary>
+	/// This command is normally used for error recovery, fifo hardware does not need to be reset prior to use.
+	/// </summary>
+	/// <param name="fifoCommand"></param>
+	/// <returns></returns>
+	const bool ClearFifo(const FIFO_INFO_PROPERY fifoCommand, const uint32_t timeoutMicros = 500)
 	{
-		MessageOut[0] = LoLaSi446x::COMMAND_FIFO_INFO;
-		MessageOut[1] = fifoCommand;
+		Message[0] = (uint8_t)Command::FIFO_INFO;
+		Message[1] = (uint8_t)fifoCommand;
 
-		return SendRequest(MessageOut, 2);
+		return SendRequest(Message, 2, timeoutMicros);
 	}
 
-	const bool SetProperty(const uint16_t property, const uint16_t value)
+	const bool SetProperty(const Property property, const uint16_t value, const uint32_t timeoutMicros = 500)
 	{
-		MessageOut[0] = LoLaSi446x::COMMAND_SET_PROPERTY;
-		MessageOut[1] = (uint8_t)(property >> 8);
-		MessageOut[2] = 2;
-		MessageOut[3] = (uint8_t)property;
-		MessageOut[4] = (uint8_t)(value >> 8);
-		MessageOut[5] = (uint8_t)value;
+		Message[0] = (uint8_t)Command::SET_PROPERTY;
+		Message[1] = (uint8_t)((uint16_t)property >> 8);
+		Message[2] = 2;
+		Message[3] = (uint8_t)property;
+		Message[4] = (uint8_t)(value >> 8);
+		Message[5] = (uint8_t)value;
 
-		return SendRequest(MessageOut, 6);
+		return SendRequest(Message, 6, timeoutMicros);
 	}
 
-	const bool GetProperty(const uint16_t property)
+	const bool SetProperty(const Property property, const uint8_t value, const uint32_t timeoutMicros = 500)
 	{
-		MessageOut[0] = LoLaSi446x::COMMAND_GET_PROPERTY;
-		MessageOut[1] = (uint8_t)(property >> 8);
-		MessageOut[2] = 2;
-		MessageOut[3] = property;
+		Message[0] = (uint8_t)Command::SET_PROPERTY;
+		Message[1] = (uint8_t)((uint16_t)property >> 8);
+		Message[2] = 1;
+		Message[3] = (uint8_t)property;
+		Message[4] = (uint8_t)value;
 
-		if (!SendRequest(LoLaSi446x::COMMAND_GET_PART_INFO))
-		{
-			Serial.println(F("GetPartInfo Failed 1."));
-			return false;
-		}
-
-		return TryWaitForResponse(MessageIn, 2, 1);
+		return SendRequest(Message, 5, timeoutMicros);
 	}
 
-protected:
-	const bool GetPartInfo(LoLaSi446x::Si446xInfoStruct& deviceInfo, const uint16_t timeoutMillis)
+	const bool GetProperty(const Property property, const uint32_t timeoutMicros = 500)
 	{
-		if (!SpinWaitClearToSend(timeoutMillis))
+		Message[0] = (uint8_t)Command::GET_PROPERTY;
+		Message[1] = (uint8_t)((uint16_t)property >> 8);
+		Message[2] = 2;
+		Message[3] = (uint8_t)property;
+
+		if (!SendRequest(Message, 4, timeoutMicros))
 		{
 			return false;
 		}
 
-		if (!SendRequest(LoLaSi446x::COMMAND_GET_PART_INFO))
+		return SpinWaitForResponse(Message, 2, timeoutMicros);
+	}
+
+	const bool GetPartInfo(LoLaSi446x::Si446xInfoStruct& deviceInfo, const uint32_t timeoutMicros)
+	{
+		if (!SpinWaitClearToSend(timeoutMicros))
 		{
-			Serial.println(F("GetPartInfo Failed 1."));
 			return false;
 		}
 
-		if (!TryWaitForResponse(MessageIn, 8, timeoutMillis))
+		if (!SendRequest(Command::PART_INFO))
 		{
-			Serial.println(F("GetPartInfo Failed 2."));
 			return false;
 		}
 
-		deviceInfo.ChipRevision = MessageIn[0];
-		deviceInfo.PartId = ((uint16_t)MessageIn[1] << 8) | MessageIn[2];
-		deviceInfo.PartBuild = MessageIn[3];
-		deviceInfo.DeviceId = ((uint16_t)MessageIn[4] << 8) | MessageIn[5];
-		deviceInfo.Customer = MessageIn[6];
-		deviceInfo.RomId = MessageIn[7];
-
-		if (!SpinWaitClearToSend(timeoutMillis))
+		if (!SpinWaitForResponse(Message, 8, timeoutMicros))
 		{
-			Serial.println(F("GetPartInfo Failed 3."));
 			return false;
 		}
 
-		if (!SendRequest(LoLaSi446x::COMMAND_FUNCTION_INFO))
+		deviceInfo.ChipRevision = Message[0];
+		deviceInfo.PartId = ((uint16_t)Message[1] << 8) | Message[2];
+		deviceInfo.PartBuild = Message[3];
+		deviceInfo.DeviceId = ((uint16_t)Message[4] << 8) | Message[5];
+		deviceInfo.Customer = Message[6];
+		deviceInfo.RomId = Message[7];
+
+		if (!SpinWaitClearToSend(timeoutMicros))
 		{
-			Serial.println(F("GetPartInfo Failed 4."));
 			return false;
 		}
 
-		if (!TryWaitForResponse(MessageIn, 6, timeoutMillis))
+		if (!SendRequest(Command::FUNC_INFO))
 		{
-			Serial.println(F("GetPartInfo Failed 5."));
 			return false;
 		}
 
-		deviceInfo.RevisionExternal = MessageIn[0];
-		deviceInfo.RevisionBranch = MessageIn[1];
-		deviceInfo.RevisionInternal = MessageIn[2];
-		deviceInfo.Patch = ((uint16_t)MessageIn[3] << 8) | MessageIn[4];
-		deviceInfo.Function = MessageIn[5];
+		if (!SpinWaitForResponse(Message, 6, timeoutMicros))
+		{
+			return false;
+		}
+
+		deviceInfo.RevisionExternal = Message[0];
+		deviceInfo.RevisionBranch = Message[1];
+		deviceInfo.RevisionInternal = Message[2];
+		deviceInfo.Patch = ((uint16_t)Message[3] << 8) | Message[4];
+		deviceInfo.Function = Message[5];
 
 		return true;
 	}
 
 
-
-	const bool SetupCallbacks(const uint16_t timeoutMillis)
+	const bool ApplyConfiguration(const uint8_t* configuration, const uint16_t configurationSize, const uint32_t timeoutMicros)
 	{
-		uint16_t packet = 0;
-		uint16_t modem = 0;
+		const uint32_t start = micros();
 
-		const uint8_t onFlag =
-			LoLaSi446x::INTERRUPT_RX_BEGIN
-			//| LoLaSi446x::INTERRUPT_RX_COMPLETE
-			//| LoLaSi446x::INTERRUPT_RX_INVALID
-			////| LoLaSi446x::INTERRUPT_SENT
-			;
-
-
-		if (!SpinWaitClearToSend(timeoutMillis))
+		uint_fast16_t i = 0;
+		bool success = false;
+		while (i < configurationSize
+			&& ((micros() - start) < timeoutMicros))
 		{
-			return false;
-		}
-
-		// Read back properties to ensure everythin is as expected.
-		if (!GetProperty(LoLaSi446x::CONFIG_INTERRUPTS_PHY_ENABLE))
-		{
-			return false;
-		}
-
-		packet = MessageIn[0];
-		modem = MessageIn[1];
-
-		Serial.println(F("Interrupt State Read start."));
-		Serial.print(F("\tPacket 0b"));
-		Serial.println(packet, BIN);
-		Serial.print(F("\tModem 0b"));
-		Serial.println(modem, BIN);
-
-		const uint16_t flag = (onFlag) | ((uint16_t)(onFlag) << 8);
-		//const uint16_t flag = (MessageIn[0] | lowFlag) | ((uint16_t)(MessageIn[1] | highFlag) << 8);
-
-		if (!SpinWaitClearToSend(1))
-		{
-			return false;
-		}
-
-		// Write properties.
-		if (!SetProperty(LoLaSi446x::CONFIG_INTERRUPTS_PHY_ENABLE, flag))
-		{
-			return false;
-		}
-
-		if (!SpinWaitClearToSend(timeoutMillis))
-		{
-			return false;
-		}
-
-		// Read back properties to ensure everythin is as expected.
-		if (!GetProperty(LoLaSi446x::CONFIG_INTERRUPTS_PHY_ENABLE))
-		{
-			return false;
-		}
-
-		packet = MessageIn[0];
-		modem = MessageIn[1];
-
-		Serial.println(F("Interrupt State Read back."));
-		Serial.print(F("\tPacket 0b"));
-		Serial.println(packet, BIN);
-		Serial.print(F("\tModem 0b"));
-		Serial.println(modem, BIN);
-
-
-		return true;
-	}
-
-	const bool ApplyStartupConfig(const uint8_t* configuration, const uint16_t configurationSize, const uint16_t timeoutMillis)
-	{
-		const uint32_t start = millis();
-
-		for (uint_fast16_t i = 0; i < configurationSize; i++)
-		{
-			for (uint_fast8_t j = 0; j < 17; j++)
+			if (ClearToSend())
 			{
-				MessageOut[j] = configuration[i + j];
-			}
+				const uint8_t length = configuration[i];
 
-			const uint8_t length = MessageOut[0];
+				CsOn();
+				SpiInstance->transfer((void*)&configuration[i + 1], (size_t)length);
+				CsOff();
 
-			// Make sure it's ok to send a command.
-			while (!ClearToSend())
-			{
-				if ((millis() - start) > timeoutMillis)
+				i += 1 + length;
+				if (!success)
 				{
-					return false;
+					success = i == configurationSize;
+					if (!success
+						&& i > configurationSize)
+					{
+						return false;
+					}
 				}
 			}
-
-			CsOn();
-			SpiInstance->transfer(&MessageOut[1], length);
-			CsOff();
-
-			i += length;
 		}
+
+		return success;
+	}
+
+	const bool Start()
+	{
+		// Setup IO pins.
+		pinMode(SdnPin, INPUT);
+		CsOff();
+		pinMode(CsPin, OUTPUT);
+
+		if (SpiInstance == nullptr)
+		{
+			return false;
+		}
+
+		//TODO: can be much shorter? Keep SDN Active, no need to reset on each link start?
+		Reset();
+
+		SpiInstance->begin();
 
 		return true;
 	}
 
-private:
-	const bool SendRequest(const uint8_t requestCode, const uint8_t* source, const uint8_t size)
+	const bool SendRequest(const Command requestCode, const uint8_t* source, const uint8_t size, const uint32_t timeoutMicros = 500)
 	{
-		if (ClearToSend())
+		if (SpinWaitClearToSend(timeoutMicros))
 		{
 			CsOn();
 			// Send request header.
@@ -552,9 +666,22 @@ private:
 		return false;
 	}
 
-	const bool SendRequest(const uint8_t* source, const uint8_t size)
+	const bool SendRequest(const Command requestCode, const uint32_t timeoutMicros = 500)
 	{
-		if (ClearToSend())
+		if (SpinWaitClearToSend(timeoutMicros))
+		{
+			CsOn();
+			SpiInstance->transfer((uint8_t)requestCode);
+			CsOff();
+			return true;
+		}
+
+		return false;
+	}
+
+	const bool SendRequest(const uint8_t* source, const uint8_t size, const uint32_t timeoutMicros = 500)
+	{
+		if (SpinWaitClearToSend(timeoutMicros))
 		{
 			CsOn();
 			SpiInstance->transfer((uint8_t*)source, size);
@@ -566,27 +693,28 @@ private:
 		return false;
 	}
 
-	const bool SendRequest(const uint8_t requestCode)
-	{
-		if (ClearToSend())
-		{
-			CsOn();
-			SpiInstance->transfer(requestCode);
-			CsOff();
-			return true;
-		}
-
-		return false;
-	}
-
 	void CsOn()
 	{
 		digitalWrite(CsPin, LOW);
+		SpiInstance->beginTransaction(Settings);
 	}
 
 	void CsOff()
 	{
+		SpiInstance->endTransaction();
 		digitalWrite(CsPin, HIGH);
+	}
+
+	/// <summary>
+	/// Reset the RF chip.
+	/// </summary>
+	void Reset()
+	{
+		pinMode(SdnPin, OUTPUT);
+		digitalWrite(SdnPin, HIGH);
+		delay(10);
+		digitalWrite(SdnPin, LOW);
+		delay(10);
 	}
 };
 #endif
