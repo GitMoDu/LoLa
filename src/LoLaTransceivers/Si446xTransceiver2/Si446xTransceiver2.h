@@ -10,25 +10,31 @@
 
 #include "SpiDriver/LoLaSi446xRadioTask.h"
 #include "SpiDriver/LoLaConfig433.h"
+#include "SpiDriver/ZakKembleConfig433.h"
 
 /// <summary>
 /// 
 /// </summary>
-/// <typeparam name="CsPin"></typeparam>
-/// <typeparam name="SdnPin"></typeparam>
-/// <typeparam name="InterruptPin"></typeparam>
-template<const uint8_t CsPin,
-	const uint8_t SdnPin,
-	const uint8_t InterruptPin>
+template<const uint8_t pinCS,
+	const uint8_t pinSDN,
+	const uint8_t pinInterrupt,
+	const uint8_t pinCLK = UINT8_MAX,
+	const uint8_t pinMISO = UINT8_MAX,
+	const uint8_t pinMOSI = UINT8_MAX,
+	const uint8_t spiChannel = 0>
 class Si446xTransceiver2 final
 	: public LoLaSi446xRadioTask<
 	LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE,
-	CsPin,
-	SdnPin,
-	InterruptPin>
+	pinCS,
+	pinSDN,
+	pinInterrupt,
+	pinCLK,
+	pinMISO,
+	pinMOSI,
+	spiChannel>
 	, public virtual ILoLaTransceiver
 {
-	using BaseClass = LoLaSi446xRadioTask<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE, CsPin, SdnPin, InterruptPin>;
+	using BaseClass = LoLaSi446xRadioTask<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE, pinCS, pinSDN, pinInterrupt, pinCLK, pinMISO, pinMOSI, spiChannel>;
 
 	static constexpr uint8_t ChannelCount = 10;//TODO: LoLaSi4463Config::GetRadioConfigChannelCount(MODEM_2_1);
 
@@ -46,9 +52,9 @@ private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
 public:
-	Si446xTransceiver2(Scheduler& scheduler, SPIClass* spiInstance)
+	Si446xTransceiver2(Scheduler& scheduler)
 		: ILoLaTransceiver()
-		, BaseClass(scheduler, spiInstance)
+		, BaseClass(scheduler)
 	{}
 
 	void SetupInterrupt(void (*onRadioInterrupt)(void))
@@ -88,18 +94,15 @@ public:
 	{
 		//TODO: Use config from parameter.
 
-		const auto configuration = Si446xConfig433::Config;
-		const auto configurationSize = sizeof(Si446xConfig433::Config);
+		const auto configuration = ZakKembleConfig433::Config;
+		const auto configurationSize = ZakKembleConfig433::ConfigSize;;
 
 		if (Listener != nullptr
 			&& BaseClass::RadioStart(configuration, configurationSize))
 		{
 			//TODO: Get DeviceId and set MaxTxPower accordingly.
 
-			//SpiDriver.SetRadioTransmitPower(DEFAULT_POWER);
-			//Si446x_setTxPower(DEFAULT_POWER);
-
-			return true;
+			return BaseClass::SetTxPower(5);
 		}
 
 		return false;

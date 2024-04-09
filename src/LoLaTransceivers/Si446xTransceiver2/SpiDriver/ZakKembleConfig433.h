@@ -1,11 +1,9 @@
-#ifndef LOLA_CONFIG_433_H_
-#define LOLA_CONFIG_433_H_
+#ifndef ZAK_KEMBLE_CONFIG_433_H_
+#define ZAK_KEMBLE_CONFIG_433_H_
 
-#include "LoLaSi446x.h"
+#include <stdint.h>
 
-using namespace LoLaSi446x;
-
-namespace Si446xConfig433
+namespace ZakKembleConfig433
 {
 	static constexpr uint8_t Config[] = {
 		0x07, 0x02, 0x01, 0x00, 0x01, 0xC9, 0xC3, 0x80,
@@ -50,6 +48,5 @@ namespace Si446xConfig433
 	};
 
 	static constexpr size_t ConfigSize = sizeof(Config);
-	
 };
 #endif

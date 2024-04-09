@@ -9,11 +9,13 @@
 
 using namespace LoLaSi446x;
 
-/// <summary>
-/// </summary>
-/// <typeparam name="CsPin"></typeparam>
-template<const uint8_t CsPin,
-	const uint8_t SdnPin>
+
+template<const uint8_t pinCS,
+	const uint8_t pinSDN,
+	const uint8_t pinCLK = UINT8_MAX,
+	const uint8_t pinMISO = UINT8_MAX,
+	const uint8_t pinMOSI = UINT8_MAX,
+	const uint8_t spiChannel = 0>
 class LoLaSi446xSpiDriver
 {
 private:
@@ -22,44 +24,66 @@ private:
 	/// </summary>
 	static constexpr uint8_t MAX_MESSAGE_SIZE = 8;
 
-	// The SPI interface is designed to operate at a maximum of 10 MHz.
-	// 72 MHz / 8 = 9 MHz
-	static constexpr uint32_t SPI_CLOCK_SPEED = 9000000;
+	/// <summary>
+	/// The SPI interface is designed to operate at a maximum of 10 MHz.
+	/// </summary>
+	static constexpr uint32_t SPI_CLOCK_SPEED = 10000000;
+
+	/// <summary>
+	/// The rising edges of SCLK should be aligned with the center of the SDI/SDO data.
+	/// </summary>
+	static constexpr int SPI_MODE = SPI_MODE0;
 
 private:
 	uint8_t Message[MAX_MESSAGE_SIZE]{};
 
 private:
-	SPIClass* SpiInstance;
+	SPIClass SpiInstance;
 
 	const SPISettings Settings;
 
 public:
-	LoLaSi446xSpiDriver(SPIClass* spiInstance)
-		: SpiInstance(spiInstance)
-		, Settings(SPI_CLOCK_SPEED, MSBFIRST, SPI_MODE0)
+	LoLaSi446xSpiDriver()
+#if defined(ARDUINO_ARCH_ESP32)
+		: SpiInstance(pinCLK, pinMOSI, pinMISO)
+#elif defined(ARDUINO_ARCH_STM32F1)
+		: SpiInstance(spiChannel)
+#else
+		: SpiInstance()
+#endif
+		, Settings(SPI_CLOCK_SPEED, MSBFIRST, SPI_MODE)
 	{}
 
 public:
 	void Stop()
 	{
-		if (SpiInstance != nullptr)
-		{
-			// TODO: Send shutdown command
-		}
+		SpiInstance.end();
 
 		// Disable IO pins.
-		pinMode(SdnPin, INPUT);
+		pinMode(pinSDN, INPUT);
 		CsOff();
-		pinMode(CsPin, INPUT);
+		pinMode(pinCS, INPUT);
+		digitalWrite(pinCS, HIGH);
 	}
 
 	const bool Start(const uint8_t* configuration, const size_t configurationSize)
 	{
-		if (!Start())
+		// Setup IO pins.
+		pinMode(pinSDN, INPUT);
+		CsOff();
+		pinMode(pinCS, OUTPUT);
+		digitalWrite(pinCS, HIGH);
+
+		Reset();
+
+#if defined(ARDUINO_ARCH_ESP32)
+		if (!SpiInstance.begin(pinCS, pinCLK, pinMOSI, -1))
 		{
 			return false;
 		}
+#else
+		SpiInstance.begin();
+#endif
 
 		LoLaSi446x::Si446xInfoStruct deviceInfo{};
 		if (!GetPartInfo(deviceInfo, 100000))
@@ -134,6 +158,20 @@ public:
 		return true;
 	}
 
+
+public:
+	const bool ClearToSend()
+	{
+		bool cts = 0;
+
+		CsOn();
+		SpiInstance.transfer((uint8_t)Command::READ_CMD_BUFF);
+		cts = SpiInstance.transfer(0xFF) == 0xFF;
+		CsOff();
+
+		return cts;
+	}
+
 	const uint8_t GetLatchedRssi()
 	{
 		return GetFrr(Command::FRR_A_READ);
@@ -154,33 +192,42 @@ public:
 		return ClearFifo(FIFO_INFO_PROPERY::CLEAR_TX, timeoutMicros);
 	}
 
+	/// <summary>
+	/// </summary>
+	/// <param name="txPower">[0;127]</param>
+	/// <param name="timeoutMicros"></param>
+	/// <returns>True on success.</returns>
 	const bool SetTxPower(const uint8_t txPower, const uint32_t timeoutMicros = 500)
 	{
-		return SetProperty(Property::PA_PWR_LVL, (uint16_t)txPower, timeoutMicros);
+		return SetProperty(Property::PA_PWR_LVL, (uint8_t)(txPower & 0x7F), timeoutMicros);
 	}
 
 	const bool SetPacketSize(const uint8_t packetSize, const uint32_t timeoutMicros = 500)
 	{
-		return SetProperty(Property::PKT_FIELD_2_LENGTH_12_8, (uint8_t)0, timeoutMicros)
-			&& SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
+		return
+			//SetProperty(Property::PKT_FIELD_2_LENGTH_12_8, (uint8_t)0, timeoutMicros)
+			//&&
+			SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
 	}
 
-	const bool SetupCallbacks()
+	const bool SetupCallbacks(const uint32_t timeoutMicros = 10000)
 	{
-		const uint8_t phFlag = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN;
-		if (!SetProperty(Property::INT_CTL_PH_ENABLE, phFlag, 10000))
+		const uint8_t phFlag = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN
+			| (uint8_t)INT_CTL_PH::CRC_ERROR_EN;
+
+		if (!SetProperty(Property::INT_CTL_PH_ENABLE, phFlag, timeoutMicros))
 		{
 			return false;
 		}
 
-		const uint8_t modemFlag = 0;
-		if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, modemFlag, 10000))
+		const uint8_t modemFlag = (uint8_t)INT_CTL_MODEM::SYNC_DETECT_EN;
+		if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, modemFlag, timeoutMicros))
 		{
 			return false;
 		}
 
-		const uint8_t chipFlag = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN;
-		if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, chipFlag, 10000))
+		const uint8_t chipFlag = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN | (uint8_t)INT_CTL_CHIP::CMD_ERROR_EN | (uint8_t)INT_CTL_CHIP::FIFO_UNDERFLOW_OVERFLOW_ERROR_EN;
+		if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, chipFlag, timeoutMicros))
 		{
 			return false;
 		}
@@ -260,10 +307,10 @@ public:
 			Message[0] = (uint8_t)Command::GET_INT_STATUS;
 			Message[1] = 0;
 			Message[2] = 0;
-			Message[3] = 0xFF;
+			Message[3] = 0;
 
 			CsOn();
-			SpiInstance->transfer(Message, 4);
+			SpiInstance.transfer(Message, 4);
 			CsOff();
 
 			return true;
@@ -295,7 +342,7 @@ public:
 		Message[0] = (uint8_t)Command::GET_INT_STATUS;
 		Message[1] = 0;
 		Message[2] = 0;
-		Message[3] = 0xFF;
+		Message[3] = 0;
 
 		if (!SpinWaitClearToSend(timeoutMicros))
 		{
@@ -303,7 +350,7 @@ public:
 		}
 
 		CsOn();
-		SpiInstance->transfer(Message, 4);
+		SpiInstance.transfer(Message, 4);
 		CsOff();
 
 		if (!SpinWaitForResponse(Message, 8, timeoutMicros))
@@ -316,51 +363,32 @@ public:
 		return true;
 	}
 
-	const bool RadioStartRx(const uint8_t channel, const uint32_t timeoutMicros = 1000)
+	/// <summary>
+	/// ClearRxFifo is not needed, packet handler's FIFO just keeps rolling.
+	/// </summary>
+	/// <param name="channel"></param>
+	/// <param name="timeoutMicros"></param>
+	/// <returns></returns>
+	const bool RadioStartRx(const uint8_t channel, const uint32_t timeoutMicros = 500)
 	{
-		// Not need, spin send request will have the same effect.
-		//if (!SetRadioState(RadioStateEnum::SPI_ACTIVE, timeoutMicros))
-		//{
-		// #if defined(DEBUG_LOLA)
-		//	Serial.println(F("Rx failed 2"));
-		// #endif
-		//	return false;
-		//}
-
-		// Not needed.
-		//if (!ClearRxFifo(timeoutMicros))
-		//{
-		// #if defined(DEBUG_LOLA)
-		//	Serial.println(F("Rx failed 2"));
-		// #endif
-		//	return false;
-		//}
-
 		Message[0] = (uint8_t)Command::START_RX;
 		Message[1] = channel;
 		Message[2] = 0;
 		Message[3] = 0;
 		Message[4] = 0;
-		Message[5] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXTIMEOUT_STATE
+		Message[5] = (uint8_t)RadioStateEnum::RX; // RXTIMEOUT_STATE
 		Message[6] = (uint8_t)RadioStateEnum::READY; // RXVALID_STATE
-		Message[7] = (uint8_t)RadioStateEnum::SLEEP; // RXINVALID_STATE
+		Message[7] = (uint8_t)RadioStateEnum::RX; // RXINVALID_STATE
 
 		return SendRequest(Message, 8, timeoutMicros);
 	}
 
 	const bool RadioStartTx(const uint8_t* data, const uint8_t size, const uint8_t channel, const uint32_t timeoutMicros = 500)
 	{
-		if (!SpinWaitClearToSend(timeoutMicros))
-		{
-			Serial.println(F("Tx Wait failed."));
-
-			return false;
-		}
-
 		CsOn();
-		SpiInstance->transfer((uint8_t)Command::WRITE_TX_FIFO);
-		SpiInstance->transfer((uint8_t)size);
-		SpiInstance->transfer((void*)data, (size_t)size);
+		SpiInstance.transfer((uint8_t)Command::WRITE_TX_FIFO);
+		SpiInstance.transfer((uint8_t)size);
+		SpiInstance.transfer((void*)data, (size_t)size);
 		CsOff();
 
 		if (!SetPacketSize(size, timeoutMicros))
@@ -374,23 +402,12 @@ public:
 		Message[2] = (uint8_t)RadioStateEnum::READY << 4;// | 1 << 0 | 1 << 1; // On transmitted restore state.
 		Message[3] = 0;
 		Message[4] = 0;
+		Message[5] = 0;
+		Message[6] = 0;
 
-		if (!SendRequest(Message, 5, timeoutMicros))
+		if (!SendRequest(Message, 4, timeoutMicros))
 		{
 			Serial.println(F("Tx failed."));
-			return false;
-		}
-
-		//TODO: Skip wait for CLS.
-		if (!SpinWaitClearToSend(timeoutMicros))
-		{
-			Serial.println(F("Tx post failed."));
-			return false;
-		}
-
-		if (!SetPacketSize(32, timeoutMicros))
-		{
-			Serial.println(F("Tx restore failed."));
 			return false;
 		}
 
@@ -400,47 +417,36 @@ public:
 	const bool GetRxFifo(uint8_t* target, const uint8_t size)
 	{
 		CsOn();
-		SpiInstance->transfer((uint8_t)Command::READ_RX_FIFO);
+		SpiInstance.transfer((uint8_t)Command::READ_RX_FIFO);
 		for (uint8_t i = 0; i < size; i++)
 		{
-			target[i] = SpiInstance->transfer(0xFF);
+			target[i] = SpiInstance.transfer(0xFF);
 		}
 		CsOff();
 
 		return true;
 	}
 
-	const bool ClearToSend()
-	{
-		bool cts = 0;
 
-		CsOn();
-		SpiInstance->transfer((uint8_t)Command::READ_CMD_BUFF);
-		cts = SpiInstance->transfer(0xFF) == 0xFF;
-		CsOff();
-
-		return cts;
-	}
 
 	const bool GetResponse(uint8_t* target, const uint8_t size)
 	{
 		bool cts = 0;
 
 		CsOn();
-		SpiInstance->transfer((uint8_t)Command::READ_CMD_BUFF);
-		cts = SpiInstance->transfer(0xFF) == 0xFF;
+		SpiInstance.transfer((uint8_t)Command::READ_CMD_BUFF);
+		cts = SpiInstance.transfer(0xFF) == 0xFF;
 		if (cts)
 		{
 			for (uint8_t i = 0; i < size; i++)
 			{
-				target[i] = SpiInstance->transfer(0xFF);
+				target[i] = SpiInstance.transfer(0xFF);
 			}
 		}
 		CsOff();
 
 		return cts;
 	}
-
 
 	const bool GetRxFifoCount(uint8_t& fifoCount, const uint32_t timeoutMicros = 500)
 	{
@@ -451,8 +457,8 @@ public:
 		}
 
 		CsOn();
-		SpiInstance->transfer((uint8_t)Command::READ_RX_FIFO);
-		fifoCount = SpiInstance->transfer(0xFF);
+		SpiInstance.transfer((uint8_t)Command::READ_RX_FIFO);
+		fifoCount = SpiInstance.transfer(0xFF);
 		CsOff();
 
 		return true;
@@ -488,8 +494,8 @@ private:
 		uint_fast8_t frr = 0;
 
 		CsOn();
-		SpiInstance->transfer(reg);
-		frr = SpiInstance->transfer(0xFF);
+		SpiInstance.transfer(reg);
+		frr = SpiInstance.transfer(0xFF);
 		CsOff();
 
 		return frr;
@@ -594,22 +600,21 @@ private:
 		return true;
 	}
 
-
-	const bool ApplyConfiguration(const uint8_t* configuration, const uint16_t configurationSize, const uint32_t timeoutMicros)
+	const bool ApplyConfiguration(const uint8_t* configuration, const size_t configurationSize, const uint32_t timeoutMicros)
 	{
 		const uint32_t start = micros();
 
-		uint_fast16_t i = 0;
+		size_t i = 0;
 		bool success = false;
 		while (i < configurationSize
 			&& ((micros() - start) < timeoutMicros))
 		{
 			if (ClearToSend())
 			{
-				const uint8_t length = configuration[i];
+				const size_t length = configuration[i];
 
 				CsOn();
-				SpiInstance->transfer((void*)&configuration[i + 1], (size_t)length);
+				SpiInstance.transfer((void*)&configuration[i + 1], length);
 				CsOff();
 
 				i += 1 + length;
@@ -628,36 +633,16 @@ private:
 		return success;
 	}
 
-	const bool Start()
-	{
-		// Setup IO pins.
-		pinMode(SdnPin, INPUT);
-		CsOff();
-		pinMode(CsPin, OUTPUT);
-
-		if (SpiInstance == nullptr)
-		{
-			return false;
-		}
-
-		//TODO: can be much shorter? Keep SDN Active, no need to reset on each link start?
-		Reset();
-
-		SpiInstance->begin();
-
-		return true;
-	}
-
 	const bool SendRequest(const Command requestCode, const uint8_t* source, const uint8_t size, const uint32_t timeoutMicros = 500)
 	{
 		if (SpinWaitClearToSend(timeoutMicros))
 		{
 			CsOn();
 			// Send request header.
-			SpiInstance->transfer((uint8_t)requestCode);
+			SpiInstance.transfer((uint8_t)requestCode);
 
 			// Send request data
-			SpiInstance->transfer((uint8_t*)source, size);
+			SpiInstance.transfer((uint8_t*)source, size);
 			CsOff();
 
 			return true;
@@ -671,7 +656,7 @@ private:
 		if (SpinWaitClearToSend(timeoutMicros))
 		{
 			CsOn();
-			SpiInstance->transfer((uint8_t)requestCode);
+			SpiInstance.transfer((uint8_t)requestCode);
 			CsOff();
 			return true;
 		}
@@ -684,7 +669,7 @@ private:
 		if (SpinWaitClearToSend(timeoutMicros))
 		{
 			CsOn();
-			SpiInstance->transfer((uint8_t*)source, size);
+			SpiInstance.transfer((uint8_t*)source, size);
 			CsOff();
 
 			return true;
@@ -695,14 +680,14 @@ private:
 
 	void CsOn()
 	{
-		digitalWrite(CsPin, LOW);
-		SpiInstance->beginTransaction(Settings);
+		digitalWrite(pinCS, LOW);
+		SpiInstance.beginTransaction(Settings);
 	}
 
 	void CsOff()
 	{
-		SpiInstance->endTransaction();
-		digitalWrite(CsPin, HIGH);
+		SpiInstance.endTransaction();
+		digitalWrite(pinCS, HIGH);
 	}
 
 	/// <summary>
@@ -710,10 +695,10 @@ private:
 	/// </summary>
 	void Reset()
 	{
-		pinMode(SdnPin, OUTPUT);
-		digitalWrite(SdnPin, HIGH);
+		pinMode(pinSDN, OUTPUT);
+		digitalWrite(pinSDN, HIGH);
 		delay(10);
-		digitalWrite(SdnPin, LOW);
+		digitalWrite(pinSDN, LOW);
 		delay(10);
 	}
 };

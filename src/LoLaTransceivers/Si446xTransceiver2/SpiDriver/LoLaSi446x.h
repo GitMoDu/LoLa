@@ -92,13 +92,15 @@ namespace LoLaSi446x
 	/// </summary>
 	enum class Property : uint16_t
 	{
-		GLOBAL_WUT_CONFIG = 0x0004,
+		GLOBAL_XO_TUNE = 0x0000,				// Configure crystal oscillator frequency tuning bank.
+		GLOBAL_WUT_CONFIG = 0x0004,				// GLOBAL WUT configuation.
 		PKT_FIELD_2_LENGTH_12_8 = 0x1211,		// Byte 1 of field length.
 		PKT_FIELD_2_LENGTH_7_0 = 0x1212,		// Byte 0 of field length.
 		INT_CTL_ENABLE = 0x0100,				// Interrupt enable property.
 		INT_CTL_PH_ENABLE = 0x0101,				// Packet handler interrupt enable property.
 		INT_CTL_MODEM_ENABLE = 0x0102,			// Modem interrupt enable property.
 		INT_CTL_CHIP_ENABLE = 0x0103,			// Chip interrupt enable property.
+		MODEM_MOD_TYPE = 0x2000,				// Modulation Type.
 		PA_PWR_LVL = 0x2201,					// PA Level Configuration.
 	};
 
@@ -259,13 +261,13 @@ namespace LoLaSi446x
 		uint8_t PartBuild = 0;
 		uint16_t DeviceId = 0;
 		uint8_t Customer = 0;
-		uint8_t RomId = 0; // ROM ID (3 = revB1B, 6 = revC2A)
+		uint8_t RomId; // ROM ID (3 = revB1B, 6 = revC2A)
 
-		uint8_t RevisionExternal = 0;
-		uint8_t RevisionBranch = 0;
-		uint8_t RevisionInternal = 0;
-		uint16_t Patch = 0;
-		uint8_t Function = 0;
+		uint8_t RevisionExternal;
+		uint8_t RevisionBranch;
+		uint8_t RevisionInternal;
+		uint16_t Patch;
+		uint8_t Function;
 	};
 
 	struct Si446xConfigStruct
@@ -321,6 +323,8 @@ namespace LoLaSi446x
 		bool RxFail = false;
 		bool TxDone = false;
 		bool VccWarning = false;
+		bool CalibrationPending = false;
+		bool Error = false;
 
 		void Clear()
 		{
@@ -329,6 +333,8 @@ namespace LoLaSi446x
 			RxFail = false;
 			TxDone = false;
 			VccWarning = false;
+			CalibrationPending = false;
+			Error = false;
 		}
 
 		const bool Pending()
@@ -337,10 +343,12 @@ namespace LoLaSi446x
 				|| RxReady
 				|| RxFail
 				|| TxDone
-				|| VccWarning;
+				|| VccWarning
+				|| CalibrationPending
+				|| Error;
 		}
 
-		void SetFrom(uint8_t source[(uint8_t)GET_INT_STATUS_REPLY::GET_INT_STATUS_REPLY_SIZE], const bool merge = true)
+		void SetFrom(const uint8_t source[(uint8_t)GET_INT_STATUS_REPLY::GET_INT_STATUS_REPLY_SIZE], const bool merge = true)
 		{
 			if (merge)
 			{
@@ -349,6 +357,8 @@ namespace LoLaSi446x
 				RxFail |= source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::CRC_ERROR_PEND;
 				TxDone |= source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::PACKET_SENT_PEND;
 				VccWarning |= source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::LOW_BATT_PEND;
+				CalibrationPending |= source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::CAL_PEND;
+				Error |= source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & ((uint8_t)CHIP_PEND::CMD_ERROR_PEND | (uint8_t)CHIP_PEND::FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND);
 			}
 			else
 			{
@@ -357,6 +367,8 @@ namespace LoLaSi446x
 				RxFail = source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::CRC_ERROR_PEND;
 				TxDone = source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::PACKET_SENT_PEND;
 				VccWarning = source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::LOW_BATT_PEND;
+				CalibrationPending = source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::CAL_PEND;
+				Error = source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & ((uint8_t)CHIP_PEND::CMD_ERROR_PEND | (uint8_t)CHIP_PEND::FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND);
 			}
 
 			// Rx Start will be set regardless of interrupt configuration.
