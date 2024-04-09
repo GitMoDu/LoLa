@@ -233,6 +233,13 @@ namespace LoLaSi446x
 		CAL = 1 << 6
 	};
 
+	static constexpr uint8_t PH_FLAG_DEBUG = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN | (uint8_t)INT_CTL_PH::CRC_ERROR_EN;
+	static constexpr uint8_t MODEM_FLAG_DEBUG = (uint8_t)INT_CTL_MODEM::SYNC_DETECT_EN;
+	static constexpr uint8_t CHIP_FLAG_DEBUG = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN | (uint8_t)INT_CTL_CHIP::CMD_ERROR_EN | (uint8_t)INT_CTL_CHIP::FIFO_UNDERFLOW_OVERFLOW_ERROR_EN;
+	
+	static constexpr uint8_t PH_FLAG = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN;
+	static constexpr uint8_t MODEM_FLAG = 0;
+	static constexpr uint8_t CHIP_FLAG = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN;
 
 	//Power range.
 	//   0 = -32dBm	(<1uW)

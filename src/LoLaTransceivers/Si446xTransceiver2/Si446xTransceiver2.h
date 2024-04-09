@@ -36,7 +36,7 @@ class Si446xTransceiver2 final
 {
 	using BaseClass = LoLaSi446xRadioTask<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE, pinCS, pinSDN, pinInterrupt, pinCLK, pinMISO, pinMOSI, spiChannel>;
 
-	static constexpr uint8_t ChannelCount = 10;//TODO: LoLaSi4463Config::GetRadioConfigChannelCount(MODEM_2_1);
+	static constexpr auto ChannelCount = ZakKembleConfig433::ChannelCount;
 
 	static constexpr uint16_t TRANSCEIVER_ID = 0x4463;
 
@@ -47,6 +47,10 @@ private:
 
 	static constexpr uint16_t DIA_LONG = 1923;
 	static constexpr uint16_t DIA_SHORT = 987;
+
+	static constexpr uint8_t RSSI_LATCH_MIN = 60;
+	static constexpr uint8_t RSSI_LATCH_MAX = 140;
+	static constexpr uint8_t RSSI_LATCH_RANGE = RSSI_LATCH_MAX - RSSI_LATCH_MIN;
 
 private:
 	ILoLaTransceiverListener* Listener = nullptr;
@@ -102,7 +106,7 @@ public:
 		{
 			//TODO: Get DeviceId and set MaxTxPower accordingly.
 
-			return BaseClass::SetTxPower(5);
+			return BaseClass::SetTxPower(3);
 		}
 
 		return false;
@@ -117,7 +121,7 @@ public:
 
 	virtual const bool TxAvailable() final
 	{
-		return BaseClass::RadioTxAvailable(25);
+		return BaseClass::RadioTxAvailable(50);
 	}
 
 	virtual const uint32_t GetTransceiverCode() final
@@ -130,20 +134,7 @@ public:
 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, HIGH);
-#endif
-		if (BaseClass::RadioTx(data, packetSize, GetRawChannel(channel)))
-		{
-#ifdef TX_TEST_PIN
-			digitalWrite(TX_TEST_PIN, LOW);
-#endif
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+		return BaseClass::RadioTx(data, packetSize, GetRawChannel(channel));
 	}
 
 	virtual void Rx(const uint8_t channel) final
@@ -172,9 +163,20 @@ private:
 		return GetRealChannel<ChannelCount>(abstractChannel);
 	}
 
-	static constexpr uint8_t GetNormalizedRssi(const uint8_t rssiLatch)
+	static const uint8_t GetNormalizedRssi(const uint8_t rssiLatch)
 	{
-		return (UINT8_MAX - rssiLatch);
+		if (rssiLatch < RSSI_LATCH_MIN)
+		{
+			return 0;
+		}
+		else if (rssiLatch >= RSSI_LATCH_MAX)
+		{
+			return UINT8_MAX;
+		}
+		else
+		{
+			return ((uint16_t)(rssiLatch - RSSI_LATCH_MIN) * UINT8_MAX) / RSSI_LATCH_RANGE;
+		}
 	}
 
 	/// <summary>

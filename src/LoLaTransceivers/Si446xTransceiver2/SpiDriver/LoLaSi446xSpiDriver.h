@@ -118,7 +118,7 @@ public:
 			return false;
 		}
 
-		if (!SetupCallbacks())
+		if (!SetupCallbacks(false, 10000))
 		{
 			return false;
 		}
@@ -140,17 +140,7 @@ public:
 			return false;
 		}
 
-		if (!SpinWaitClearToSend(10000))
-		{
-			return false;
-		}
-
-		if (GetRadioStateFast() != RadioStateEnum::SLEEP)
-		{
-			return false;
-		}
-
-		if (!SpinWaitClearToSend(10000))
+		if (!SpinWaitForResponse(10000))
 		{
 			return false;
 		}
@@ -158,28 +148,10 @@ public:
 		return true;
 	}
 
-
 public:
-	const bool ClearToSend()
-	{
-		bool cts = 0;
-
-		CsOn();
-		SpiInstance.transfer((uint8_t)Command::READ_CMD_BUFF);
-		cts = SpiInstance.transfer(0xFF) == 0xFF;
-		CsOff();
-
-		return cts;
-	}
-
-	const uint8_t GetLatchedRssi()
-	{
-		return GetFrr(Command::FRR_A_READ);
-	}
-
 	const bool ClearRxFifo(const uint32_t timeoutMicros = 500)
 	{
-		if (!SpinWaitClearToSend(timeoutMicros))
+		if (!SpinWaitForResponse(timeoutMicros))
 		{
 			return false;
 		}
@@ -204,56 +176,56 @@ public:
 
 	const bool SetPacketSize(const uint8_t packetSize, const uint32_t timeoutMicros = 500)
 	{
-		return
-			//SetProperty(Property::PKT_FIELD_2_LENGTH_12_8, (uint8_t)0, timeoutMicros)
-			//&&
-			SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
+		return SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
 	}
 
-	const bool SetupCallbacks(const uint32_t timeoutMicros = 10000)
+	const bool SetPacketSizeFull(const uint8_t packetSize, const uint32_t timeoutMicros = 500)
 	{
-		const uint8_t phFlag = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN
-			| (uint8_t)INT_CTL_PH::CRC_ERROR_EN;
+		return SetProperty(Property::PKT_FIELD_2_LENGTH_12_8, (uint8_t)0, timeoutMicros)
+			&& SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
+	}
 
-		if (!SetProperty(Property::INT_CTL_PH_ENABLE, phFlag, timeoutMicros))
+	const bool SetupCallbacks(const bool useDebugInterrupts = false, const uint32_t timeoutMicros = 10000)
+	{
+		if (useDebugInterrupts)
 		{
-			return false;
+			if (!SetProperty(Property::INT_CTL_PH_ENABLE, PH_FLAG_DEBUG, timeoutMicros))
+			{
+				return false;
+			}
+
+			if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, MODEM_FLAG_DEBUG, timeoutMicros))
+			{
+				return false;
+			}
+
+			if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, CHIP_FLAG_DEBUG, timeoutMicros))
+			{
+				return false;
+			}
 		}
-
-		const uint8_t modemFlag = (uint8_t)INT_CTL_MODEM::SYNC_DETECT_EN;
-		if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, modemFlag, timeoutMicros))
+		else
 		{
-			return false;
-		}
+			if (!SetProperty(Property::INT_CTL_PH_ENABLE, PH_FLAG, timeoutMicros))
+			{
+				return false;
+			}
 
-		const uint8_t chipFlag = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN | (uint8_t)INT_CTL_CHIP::CMD_ERROR_EN | (uint8_t)INT_CTL_CHIP::FIFO_UNDERFLOW_OVERFLOW_ERROR_EN;
-		if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, chipFlag, timeoutMicros))
-		{
-			return false;
+			if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, MODEM_FLAG, timeoutMicros))
+			{
+				return false;
+			}
+
+			if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, CHIP_FLAG, timeoutMicros))
+			{
+				return false;
+			}
 		}
 
 		return true;
 	}
 
 public:
-	const bool SpinWaitClearToSend(const uint32_t timeoutMicros)
-	{
-		const uint32_t start = micros();
-		while (!ClearToSend())
-		{
-			if (micros() - start > timeoutMicros)
-			{
-				return false;
-			}
-			else
-			{
-				delayMicroseconds(1);
-			}
-		}
-
-		return true;
-	}
-
 	const bool SetRadioState(const RadioStateEnum newState, const uint32_t timeoutMicros = 10000)
 	{
 		Message[0] = (uint8_t)Command::CHANGE_STATE;
@@ -279,30 +251,17 @@ public:
 
 	const RadioStateEnum GetRadioStateFast(const uint32_t timeoutMicros = 50)
 	{
-		if (!SpinWaitClearToSend(timeoutMicros))
-		{
-			return RadioStateEnum::NO_CHANGE;
-		}
-
 		return (RadioStateEnum)GetFrr((uint8_t)Command::FRR_B_READ);
 	}
 
-	const bool GetRssiLatchFast(uint8_t& rssiLatch, const uint32_t timeoutMicros = 50)
+	const uint8_t GetRssiLatchFast()
 	{
-		if (!SpinWaitClearToSend(timeoutMicros))
-		{
-			rssiLatch = 0;
-			return false;
-		}
-
-		rssiLatch = GetFrr((uint8_t)Command::FRR_A_READ);
-
-		return true;
+		return GetFrr((uint8_t)Command::FRR_A_READ);
 	}
 
 	const bool TryPrepareGetRadioEvents()
 	{
-		if (ClearToSend())
+		if (GetResponse())
 		{
 			Message[0] = (uint8_t)Command::GET_INT_STATUS;
 			Message[1] = 0;
@@ -344,7 +303,7 @@ public:
 		Message[2] = 0;
 		Message[3] = 0;
 
-		if (!SpinWaitClearToSend(timeoutMicros))
+		if (!SpinWaitForResponse(timeoutMicros))
 		{
 			return false;
 		}
@@ -376,14 +335,22 @@ public:
 		Message[2] = 0;
 		Message[3] = 0;
 		Message[4] = 0;
-		Message[5] = (uint8_t)RadioStateEnum::RX; // RXTIMEOUT_STATE
+		Message[5] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXTIMEOUT_STATE
 		Message[6] = (uint8_t)RadioStateEnum::READY; // RXVALID_STATE
-		Message[7] = (uint8_t)RadioStateEnum::RX; // RXINVALID_STATE
+		Message[7] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXINVALID_STATE
 
 		return SendRequest(Message, 8, timeoutMicros);
 	}
 
-	const bool RadioStartTx(const uint8_t* data, const uint8_t size, const uint8_t channel, const uint32_t timeoutMicros = 500)
+	/// <summary>
+	///  ClearTxFifo is not needed, packet handler's FIFO just keeps rolling.
+	/// </summary>
+	/// <param name="data"></param>
+	/// <param name="size"></param>
+	/// <param name="channel"></param>
+	/// <param name="timeoutMicros"></param>
+	/// <returns></returns>
+	const bool RadioStartTx(const uint8_t* data, const uint8_t size, const uint8_t channel)
 	{
 		CsOn();
 		SpiInstance.transfer((uint8_t)Command::WRITE_TX_FIFO);
@@ -391,25 +358,26 @@ public:
 		SpiInstance.transfer((void*)data, (size_t)size);
 		CsOff();
 
-		if (!SetPacketSize(size, timeoutMicros))
-		{
-			Serial.println(F("SetPacketSize failed."));
-			return false;
-		}
-
 		Message[0] = (uint8_t)Command::START_TX;
 		Message[1] = channel;
-		Message[2] = (uint8_t)RadioStateEnum::READY << 4;// | 1 << 0 | 1 << 1; // On transmitted restore state.
+		Message[2] = (uint8_t)RadioStateEnum::READY << 4;
 		Message[3] = 0;
 		Message[4] = 0;
-		Message[5] = 0;
-		Message[6] = 0;
 
-		if (!SendRequest(Message, 4, timeoutMicros))
+		if (!SendRequest(Message, 5, 0))
 		{
-			Serial.println(F("Tx failed."));
 			return false;
 		}
+
+		return true;
+	}
+
+	const bool GetRxFifoCount(uint8_t& fifoCount, const uint32_t timeoutMicros = 500)
+	{
+		CsOn();
+		SpiInstance.transfer((uint8_t)Command::READ_RX_FIFO);
+		fifoCount = SpiInstance.transfer(0xFF);
+		CsOff();
 
 		return true;
 	}
@@ -427,7 +395,15 @@ public:
 		return true;
 	}
 
+	const bool GetResponse()
+	{
+		CsOn();
+		SpiInstance.transfer((uint8_t)Command::READ_CMD_BUFF);
+		const bool cts = SpiInstance.transfer(0xFF) == 0xFF;
+		CsOff();
 
+		return cts;
+	}
 
 	const bool GetResponse(uint8_t* target, const uint8_t size)
 	{
@@ -448,18 +424,21 @@ public:
 		return cts;
 	}
 
-	const bool GetRxFifoCount(uint8_t& fifoCount, const uint32_t timeoutMicros = 500)
+	const bool SpinWaitForResponse(const uint32_t timeoutMicros = 500)
 	{
-		if (!SpinWaitClearToSend(timeoutMicros))
-		{
-			fifoCount = 0;
-			return false;
-		}
+		const uint32_t start = micros();
 
-		CsOn();
-		SpiInstance.transfer((uint8_t)Command::READ_RX_FIFO);
-		fifoCount = SpiInstance.transfer(0xFF);
-		CsOff();
+		while (!GetResponse())
+		{
+			if ((micros() - start) > timeoutMicros)
+			{
+				return false;
+			}
+			else
+			{
+				delayMicroseconds(1);
+			}
+		}
 
 		return true;
 	}
@@ -554,12 +533,7 @@ private:
 
 	const bool GetPartInfo(LoLaSi446x::Si446xInfoStruct& deviceInfo, const uint32_t timeoutMicros)
 	{
-		if (!SpinWaitClearToSend(timeoutMicros))
-		{
-			return false;
-		}
-
-		if (!SendRequest(Command::PART_INFO))
+		if (!SendRequest(Command::PART_INFO, timeoutMicros))
 		{
 			return false;
 		}
@@ -576,7 +550,7 @@ private:
 		deviceInfo.Customer = Message[6];
 		deviceInfo.RomId = Message[7];
 
-		if (!SpinWaitClearToSend(timeoutMicros))
+		if (!SpinWaitForResponse(timeoutMicros))
 		{
 			return false;
 		}
@@ -609,7 +583,7 @@ private:
 		while (i < configurationSize
 			&& ((micros() - start) < timeoutMicros))
 		{
-			if (ClearToSend())
+			if (GetResponse())
 			{
 				const size_t length = configuration[i];
 
@@ -635,7 +609,7 @@ private:
 
 	const bool SendRequest(const Command requestCode, const uint8_t* source, const uint8_t size, const uint32_t timeoutMicros = 500)
 	{
-		if (SpinWaitClearToSend(timeoutMicros))
+		if (SpinWaitForResponse(timeoutMicros))
 		{
 			CsOn();
 			// Send request header.
@@ -653,7 +627,7 @@ private:
 
 	const bool SendRequest(const Command requestCode, const uint32_t timeoutMicros = 500)
 	{
-		if (SpinWaitClearToSend(timeoutMicros))
+		if (SpinWaitForResponse(timeoutMicros))
 		{
 			CsOn();
 			SpiInstance.transfer((uint8_t)requestCode);
@@ -666,7 +640,7 @@ private:
 
 	const bool SendRequest(const uint8_t* source, const uint8_t size, const uint32_t timeoutMicros = 500)
 	{
-		if (SpinWaitClearToSend(timeoutMicros))
+		if (SpinWaitForResponse(timeoutMicros))
 		{
 			CsOn();
 			SpiInstance.transfer((uint8_t*)source, size);
