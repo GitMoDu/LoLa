@@ -148,6 +148,16 @@ public:
 		}
 	}
 
+	virtual const uint8_t GetChannelCount() final
+	{
+		return Config::ChannelCount;
+	}
+
+	virtual const uint8_t GetCurrentChannel() final
+	{
+		return CurrentChannel;
+	}
+
 public:
 	const uint16_t GetOutgoingDelay()
 	{

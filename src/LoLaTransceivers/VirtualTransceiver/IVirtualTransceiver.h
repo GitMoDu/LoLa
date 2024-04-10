@@ -5,7 +5,6 @@
 
 #include <stdint.h>
 
-
 class IVirtualTransceiver
 {
 public:
@@ -24,6 +23,10 @@ public:
 		static constexpr uint32_t AirByteNanos = airByteNanos;
 		static constexpr uint32_t HopMicros = hopMicros;
 	};
+
+public:
+	virtual const uint8_t GetChannelCount() { return 0; }
+	virtual const uint8_t GetCurrentChannel() { return 0; }
 
 public:
 	virtual void SetPartner(IVirtualTransceiver* partner) {}
