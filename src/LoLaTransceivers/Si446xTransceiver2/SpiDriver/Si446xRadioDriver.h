@@ -7,8 +7,10 @@
 #include <TaskSchedulerDeclarations.h>
 
 #include "Si446xSpiDriver.h"
+#include "Si446xRadioFlow.h"
 
 using namespace Si446x;
+using namespace Si446xRadioFlow;
 
 
 /// <summary>
@@ -33,118 +35,6 @@ template<const uint8_t MaxRxSize,
 class Si446xRadioDriver : private Task
 {
 private:
-	enum class ReadStateEnum
-	{
-		NoData,
-		TryPrepare,
-		TryRead
-	};
-
-	struct AsyncReadInterruptsStruct
-	{
-		volatile uint32_t Timestamp = 0;
-		volatile ReadStateEnum State = ReadStateEnum::NoData;
-		volatile bool Double = false;
-
-		const bool Pending()
-		{
-			return State != ReadStateEnum::NoData;
-		}
-
-		void SetPending(const uint32_t timestamp)
-		{
-			if (State != ReadStateEnum::NoData)
-			{
-				Double = true;
-			}
-			else
-			{
-				Timestamp = timestamp;
-				State = ReadStateEnum::TryPrepare;
-			}
-		}
-
-		void Clear()
-		{
-			State = ReadStateEnum::NoData;
-			Double = false;
-		}
-
-		const uint32_t Elapsed(const uint32_t timestamp)
-		{
-			return timestamp - Timestamp;
-		}
-	};
-
-	struct HopFlowStruct
-	{
-	public:
-		uint32_t Timestamp = 0;
-		uint8_t Channel = 0;
-		bool Pending = false;
-
-	public:
-		void Clear()
-		{
-			Pending = false;
-		}
-
-		void SetPending(const uint32_t startTimestamp)
-		{
-			Timestamp = startTimestamp;
-			Pending = true;
-		}
-
-		void SetPending(const uint32_t startTimestamp, const uint8_t channel)
-		{
-			SetPending(startTimestamp);
-			Channel = channel;
-		}
-	};
-
-	struct TxFlowStruct
-	{
-		uint32_t Timestamp = 0;
-		bool Pending = false;
-
-		void SetPending(const uint32_t timestamp)
-		{
-			Timestamp = timestamp;
-			Pending = true;
-		}
-
-		void Clear()
-		{
-			Pending = false;
-		}
-	};
-
-	struct RxFlowStruct
-	{
-		uint32_t Timestamp = 0;
-		uint8_t Size = 0;
-		uint8_t RssiLatch = 0;
-
-		void SetPending(const uint32_t startTimestamp)
-		{
-			Timestamp = startTimestamp;
-		}
-
-		const bool Pending()
-		{
-			return Size > 0;
-		}
-
-		void Clear()
-		{
-			Size = 0;
-		}
-	};
-
-private:
-	static constexpr uint32_t TX_CONSISTENCY_DELAY = 100;
-
-private:
 	Si446xSpiDriver<pinCS, pinSDN, pinCLK, pinMISO, pinMOSI, spiChannel> SpiDriver;
 
 	void (*RadioInterrupt)(void) = nullptr;
@@ -153,11 +43,11 @@ private:
 
 	AsyncReadInterruptsStruct AsyncReadInterrupts{};
 
-	RadioEventsStruct RadioEvents{};
+	RadioEventsFlowStruct RadioEvents{};
 
-	RxFlowStruct RxFlow{};
-	TxFlowStruct TxFlow{};
+	FlowStruct TxFlow{};
 	HopFlowStruct HopFlow{};
+	RxFlowStruct RxFlow{};
 
 protected:
 	virtual void OnTxDone() {}
@@ -189,6 +79,7 @@ protected:
 
 	const bool RadioStart(const uint8_t* configuration, const size_t configurationSize)
 	{
+		//pinMode(7, OUTPUT);
 		pinMode(pinSDN, INPUT_PULLUP);
 		RadioStop();
 
@@ -232,7 +123,7 @@ protected:
 		}
 		else
 		{
-			HopFlow.SetPending(micros(), channel);
+			HopFlow.SetPendingChannel(micros(), channel);
 		}
 		Task::enableDelayed(0);
 	}
@@ -265,20 +156,26 @@ protected:
 		// Disable Rx temporarily.
 		if (!SpiDriver.SetRadioState(RadioStateEnum::READY, 100))
 		{
+			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
+			Task::enable();
 			return false;
 		}
 
 		if (!SpiDriver.SetPacketSize(packetSize, 250))
 		{
+			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
+			Task::enable();
 			return false;
 		}
 
 		// Push data to radio FIFO and start transmission.
-
-		
 		if (!SpiDriver.RadioStartTx(data, packetSize, channel))
 		{
+			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
+			Task::enable();
 			HopFlow.SetPending(micros());
+
+			//digitalWrite(7, LOW);
 			return false;
 		}
 
@@ -343,26 +240,18 @@ private:
 		case ReadStateEnum::TryRead:
 			if (SpiDriver.TryGetRadioEvents(RadioEvents))
 			{
+				RadioEvents.OnSet(AsyncReadInterrupts.Timestamp);
+#if defined(DEBUG_LOLA)
 				if (AsyncReadInterrupts.Double)
 				{
-#if defined(DEBUG_LOLA)
 					Serial.println(F("AsyncReadInterrupts overflow"));
-#endif
 				}
-
-				AsyncReadInterrupts.Clear();
-
-				RadioEvents.StartTimestamp = AsyncReadInterrupts.Timestamp;
-				if (RadioEvents.RxReady)
+				if (RxFlow.Pending())
 				{
-					RadioEvents.RxTimestamp = RadioEvents.StartTimestamp;
-#if defined(DEBUG_LOLA)
-					if (RxFlow.Pending())
-					{
-						Serial.println(F("Rx overrun."));
-					}
-#endif
+					Serial.println(F("Rx overrun."));
 				}
+#endif
+				AsyncReadInterrupts.Clear();
 			}
 			break;
 		default:
@@ -384,7 +273,6 @@ private:
 	{
 		if (RadioEvents.TxDone)
 		{
-			RadioEvents.TxDone = false;
 			if (TxFlow.Pending)
 			{
 				TxFlow.Clear();
@@ -408,15 +296,16 @@ private:
 
 		if (RadioEvents.RxReady)
 		{
-			RadioEvents.RxReady = false;
 			if (SpiDriver.GetRxFifoCount(RxFlow.Size)
 				&& RxFlow.Size > 0 && RxFlow.Size <= MaxRxSize)
 			{
-				RxFlow.RssiLatch = SpiDriver.GetRssiLatchFast();
-				RxFlow.SetPending(RadioEvents.RxTimestamp);
+				RxFlow.SetPending(RadioEvents.RxTimestamp, SpiDriver.GetRssiLatchFast());
 			}
 			else
 			{
+#if defined(DEBUG_LOLA)
+				Serial.println(F("Rx invalid size."));
+#endif
 				RxFlow.Clear();
 				HopFlow.SetPending(micros());
 				if (!SpiDriver.SetPacketSize(MaxRxSize, 1000))
@@ -425,49 +314,23 @@ private:
 					Serial.println(F("Size restore failed."));
 #endif
 				}
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Rx invalid size."));
-#endif
+
 			}
 		}
 
 #if defined(DEBUG_LOLA)
 		if (RadioEvents.RxStart)
-		{
-			RadioEvents.RxStart = false;
 			Serial.println(F("Rx Start"));
-		}
-
 		if (RadioEvents.RxFail)
-		{
-			RadioEvents.RxFail = false;
 			Serial.println(F("Rx Fail"));
-		}
-
 		if (RadioEvents.VccWarning)
-		{
-			RadioEvents.VccWarning = false;
 			Serial.println(F("VccWarning"));
-		}
-
 		if (RadioEvents.CalibrationPending)
-		{
-			RadioEvents.CalibrationPending = false;
 			Serial.println(F("CalibrationPending."));
-		}
-
 		if (RadioEvents.Error)
-		{
-			RadioEvents.Error = false;
 			Serial.println(F("RF Error."));
-		}
-#else
-		RadioEvents.RxStart = false;
-		RadioEvents.RxFail = false;
-		RadioEvents.VccWarning = false;
-		RadioEvents.CalibrationPending = false;
-		RadioEvents.Error = false;
 #endif
+		RadioEvents.Clear();
 	}
 
 	void ProcessPendingFlows()
@@ -480,6 +343,7 @@ private:
 			}
 			else
 			{
+				HopFlow.SetPending(micros());
 #if defined(DEBUG_LOLA)
 				Serial.println(F("Get Rx failed."));
 #endif
@@ -487,9 +351,8 @@ private:
 			RxFlow.Clear();
 		}
 		else if (TxFlow.Pending
-			&& ((micros() - TxFlow.Timestamp) > 20000))
+			&& ((micros() - TxFlow.Timestamp) > TX_FLOW_TIMEOUT_MICROS))
 		{
-			//TODO: Handle failed Rx, needs restore?
 #if defined(DEBUG_LOLA)
 			Serial.println(F("Tx timeout."));
 #endif
@@ -507,18 +370,10 @@ private:
 			// Only set to Rx if Radio is not busy.
 			if (!AsyncReadInterrupts.Pending())
 			{
-				uint32_t start = micros();
 				//TODO: If Radio is already in RX but in a different channel, use fast hop instead.
 				if (SpiDriver.RadioStartRx(HopFlow.Channel))
 				{
 					HopFlow.Clear();
-
-					const uint32_t elapsed = micros() - start;
-					Serial.print(F("Rx Hop took: "));
-					Serial.print(elapsed);
-					Serial.println(F(" us"));
-					Serial.println();
-					Serial.println();
 				}
 				else
 				{

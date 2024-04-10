@@ -23,16 +23,6 @@ private:
 	/// </summary>
 	static constexpr uint8_t MAX_MESSAGE_SIZE = 8;
 
-	/// <summary>
-	/// The SPI interface is designed to operate at a maximum of 10 MHz.
-	/// </summary>
-	static constexpr uint32_t SPI_CLOCK_SPEED = 10000000;
-
-	/// <summary>
-	/// The rising edges of SCLK should be aligned with the center of the SDI/SDO data.
-	/// </summary>
-	static constexpr int SPI_MODE = SPI_MODE0;
-
 private:
 	uint8_t Message[MAX_MESSAGE_SIZE]{};
 
@@ -44,7 +34,7 @@ private:
 public:
 	Si446xSpiDriver()
 #if defined(ARDUINO_ARCH_ESP32)
-		: SpiInstance(pinCLK, pinMOSI, pinMISO)
+		: SpiInstance(HSPI)
 #elif defined(ARDUINO_ARCH_STM32F1)
 		: SpiInstance(spiChannel)
 #else
@@ -76,28 +66,40 @@ public:
 		Reset();
 
 #if defined(ARDUINO_ARCH_ESP32)
-		if (!SpiInstance.begin(pinCS, pinCLK, pinMOSI, -1))
+		if (pinCS != UINT8_MAX
+			&& pinCLK != UINT8_MAX
+			&& pinMOSI != UINT8_MAX
+			&& pinMISO != UINT8_MAX)
 		{
-			return false;
+			SpiInstance.begin((int8_t)pinCLK, (int8_t)pinMISO, (int8_t)pinMOSI, (int8_t)pinCS);
+		}
+		else if (pinCS != UINT8_MAX && pinCLK != UINT8_MAX)
+		{
+			SpiInstance.begin((int8_t)pinCLK, (int8_t)-1, (int8_t)-1, (int8_t)pinCS);
+		}
+		else if (pinCS != UINT8_MAX)
+		{
+			SpiInstance.begin((int8_t)-1, (int8_t)-1, (int8_t)-1, (int8_t)pinCS);
 		}
 #else
 		SpiInstance.begin();
 #endif
 
-		Si446x::Si446xInfoStruct deviceInfo{};
-		if (!GetPartInfo(deviceInfo, 100000))
+		PartInfoStruct partInfo{};
+
+		if (!GetPartInfo(partInfo, 100000))
 		{
 			return false;
 		}
 
-		switch (deviceInfo.PartId)
+		switch (partInfo.PartId)
 		{
 		case (uint16_t)Si446x::PART_NUMBER::SI4463:
-			if (deviceInfo.DeviceId != (uint16_t)Si446x::DEVICE_ID::SI4463)
+			if (partInfo.DeviceId != (uint16_t)Si446x::DEVICE_ID::SI4463)
 			{
 #if defined(DEBUG_LOLA)
 				Serial.print(F("DeviceId: "));
-				Serial.println(deviceInfo.DeviceId);
+				Serial.println(partInfo.DeviceId);
 #endif
 				return false;
 			}
@@ -105,9 +107,9 @@ public:
 		default:
 #if defined(DEBUG_LOLA)
 			Serial.print(F("Si446xSpiDriver Unknown Part Number: "));
-			Serial.println(deviceInfo.PartId);
+			Serial.println(partInfo.PartId);
 			Serial.print(F("DeviceId: "));
-			Serial.println(deviceInfo.DeviceId);
+			Serial.println(partInfo.DeviceId);
 #endif
 			return false;
 		}
@@ -363,6 +365,7 @@ public:
 		SpiInstance.transfer((void*)data, (size_t)size);
 		CsOff();
 
+		//digitalWrite(7, HIGH);
 
 		return SendRequest(Message, 5, 0);
 	}
@@ -458,11 +461,6 @@ public:
 	}
 
 private:
-	/// <summary>
-	/// Read a fast response register.
-	/// </summary>
-	/// <param name="reg"></param>
-	/// <returns></returns>
 	const uint8_t GetFrr(const uint8_t reg)
 	{
 		uint_fast8_t frr = 0;
@@ -475,11 +473,6 @@ private:
 		return frr;
 	}
 
-	/// <summary>
-	/// This command is normally used for error recovery, fifo hardware does not need to be reset prior to use.
-	/// </summary>
-	/// <param name="fifoCommand"></param>
-	/// <returns></returns>
 	const bool ClearFifo(const FIFO_INFO_PROPERY fifoCommand, const uint32_t timeoutMicros = 500)
 	{
 		Message[0] = (uint8_t)Command::FIFO_INFO;
@@ -526,7 +519,7 @@ private:
 		return SpinWaitForResponse(Message, 2, timeoutMicros);
 	}
 
-	const bool GetPartInfo(Si446x::Si446xInfoStruct& deviceInfo, const uint32_t timeoutMicros)
+	const bool GetPartInfo(PartInfoStruct& partInfo, const uint32_t timeoutMicros)
 	{
 		if (!SendRequest(Command::PART_INFO, timeoutMicros))
 		{
@@ -538,18 +531,13 @@ private:
 			return false;
 		}
 
-		deviceInfo.ChipRevision = Message[0];
-		deviceInfo.PartId = ((uint16_t)Message[1] << 8) | Message[2];
-		deviceInfo.PartBuild = Message[3];
-		deviceInfo.DeviceId = ((uint16_t)Message[4] << 8) | Message[5];
-		deviceInfo.Customer = Message[6];
-		deviceInfo.RomId = Message[7];
+		partInfo.SetFrom(Message);
 
-		if (!SpinWaitForResponse(timeoutMicros))
-		{
-			return false;
-		}
+		return true;
+	}
 
+	const bool GetFunctionInfo(FunctionInfoStruct& functionInfo, const uint32_t timeoutMicros)
+	{
 		if (!SendRequest(Command::FUNC_INFO))
 		{
 			return false;
@@ -560,11 +548,7 @@ private:
 			return false;
 		}
 
-		deviceInfo.RevisionExternal = Message[0];
-		deviceInfo.RevisionBranch = Message[1];
-		deviceInfo.RevisionInternal = Message[2];
-		deviceInfo.Patch = ((uint16_t)Message[3] << 8) | Message[4];
-		deviceInfo.Function = Message[5];
+		functionInfo.SetFrom(Message);
 
 		return true;
 	}

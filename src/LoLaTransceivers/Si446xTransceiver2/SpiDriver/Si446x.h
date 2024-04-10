@@ -5,9 +5,18 @@
 
 #include <stdint.h>
 
-
 namespace Si446x
 {
+	/// <summary>
+	/// The SPI interface is designed to operate at a maximum of 10 MHz.
+	/// </summary>
+	static constexpr uint32_t SPI_CLOCK_SPEED = 10000000;
+
+	/// <summary>
+	/// The rising edges of SCLK should be aligned with the center of the SDI/SDO data.
+	/// </summary>
+	static constexpr int SPI_MODE = SPI_MODE0;
+
 	enum class PART_NUMBER : uint16_t
 	{
 		SI4463 = 17507,
@@ -21,7 +30,6 @@ namespace Si446x
 		SI4461 = 0,//TODO:
 		SI4460 = 1,//TODO:
 	};
-
 
 	enum class RadioStateEnum : uint8_t
 	{
@@ -234,7 +242,7 @@ namespace Si446x
 	static constexpr uint8_t PH_FLAG_DEBUG = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN | (uint8_t)INT_CTL_PH::CRC_ERROR_EN;
 	static constexpr uint8_t MODEM_FLAG_DEBUG = (uint8_t)INT_CTL_MODEM::SYNC_DETECT_EN;
 	static constexpr uint8_t CHIP_FLAG_DEBUG = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN | (uint8_t)INT_CTL_CHIP::CMD_ERROR_EN | (uint8_t)INT_CTL_CHIP::FIFO_UNDERFLOW_OVERFLOW_ERROR_EN;
-	
+
 	static constexpr uint8_t PH_FLAG = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN;
 	static constexpr uint8_t MODEM_FLAG = 0;
 	static constexpr uint8_t CHIP_FLAG = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN;
@@ -258,22 +266,6 @@ namespace Si446x
 	{
 		return (((int16_t)(rssiRegisterValue / 2)) - 134);
 	}
-
-	struct Si446xInfoStruct
-	{
-		uint8_t ChipRevision = 0;
-		uint16_t PartId = 0;
-		uint8_t PartBuild = 0;
-		uint16_t DeviceId = 0;
-		uint8_t Customer = 0;
-		uint8_t RomId; // ROM ID (3 = revB1B, 6 = revC2A)
-
-		uint8_t RevisionExternal;
-		uint8_t RevisionBranch;
-		uint8_t RevisionInternal;
-		uint16_t Patch;
-		uint8_t Function;
-	};
 
 	struct Si446xConfigStruct
 	{
@@ -318,11 +310,46 @@ namespace Si446x
 		uint8_t FrequencyControl1[8];
 	};
 
+	struct PartInfoStruct
+	{
+		uint8_t ChipRevision = 0;
+		uint16_t PartId = 0;
+		uint8_t PartBuild = 0;
+		uint16_t DeviceId = 0;
+		uint8_t Customer = 0;
+		uint8_t RomId; // ROM ID (3 = revB1B, 6 = revC2A)
+
+		void SetFrom(const uint8_t source[8])
+		{
+			ChipRevision = source[0];
+			PartId = ((uint16_t)source[1] << 8) | source[2];
+			PartBuild = source[3];
+			DeviceId = ((uint16_t)source[4] << 8) | source[5];
+			Customer = source[6];
+			RomId = source[7];
+		}
+	};
+
+	struct FunctionInfoStruct
+	{
+		uint8_t RevisionExternal;
+		uint8_t RevisionBranch;
+		uint8_t RevisionInternal;
+		uint16_t Patch;
+		uint8_t Function;
+
+		void SetFrom(const uint8_t source[6])
+		{
+			RevisionExternal = source[0];
+			RevisionBranch = source[1];
+			RevisionInternal = source[2];
+			Patch = ((uint16_t)source[3] << 8) | source[4];
+			Function = source[5];
+		}
+	};
+
 	struct RadioEventsStruct
 	{
-		uint32_t StartTimestamp = 0;
-		uint32_t RxTimestamp = 0;
-
 		bool RxStart = false;
 		bool RxReady = false;
 		bool RxFail = false;
@@ -330,28 +357,6 @@ namespace Si446x
 		bool VccWarning = false;
 		bool CalibrationPending = false;
 		bool Error = false;
-
-		void Clear()
-		{
-			RxStart = false;
-			RxReady = false;
-			RxFail = false;
-			TxDone = false;
-			VccWarning = false;
-			CalibrationPending = false;
-			Error = false;
-		}
-
-		const bool Pending()
-		{
-			return RxStart
-				|| RxReady
-				|| RxFail
-				|| TxDone
-				|| VccWarning
-				|| CalibrationPending
-				|| Error;
-		}
 
 		void SetFrom(const uint8_t source[(uint8_t)GET_INT_STATUS_REPLY::GET_INT_STATUS_REPLY_SIZE], const bool merge = true)
 		{

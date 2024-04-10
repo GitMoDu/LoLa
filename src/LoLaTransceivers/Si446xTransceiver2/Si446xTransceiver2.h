@@ -30,7 +30,7 @@ template<const uint8_t pinCS,
 	const uint8_t pinMOSI = UINT8_MAX,
 	const uint8_t spiChannel = 0>
 class Si446xTransceiver2 final
-	: public Si446xRadioDriver <
+	: public Si446xRadioDriver<
 	LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE,
 	pinCS,
 	pinSDN,
@@ -72,7 +72,7 @@ public:
 		BaseClass::RadioSetup(onRadioInterrupt);
 	}
 
-	void OnRadioInterrupt()
+	void OnInterrupt()
 	{
 		BaseClass::OnRadioInterrupt(micros());
 	}
