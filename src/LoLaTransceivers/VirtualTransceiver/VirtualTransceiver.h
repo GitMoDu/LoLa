@@ -31,6 +31,8 @@ private:
 
 	static constexpr uint32_t PAUSE_AFTER_TX_MICROS = 20 + Config::HopMicros;
 
+	static constexpr uint8_t RX_RSSI_MIN = UINT8_MAX / 3;
+
 	struct HopRequestStruct
 	{
 		uint32_t StartTimestamp = 0;
@@ -127,6 +129,11 @@ private:
 		Serial.print(']');
 		Serial.print(' ');
 #endif
+	}
+
+	static const uint8_t GetRxRssi()
+	{
+		return RX_RSSI_MIN + random(UINT8_MAX - RX_RSSI_MIN + 1);
 	}
 
 public:
@@ -239,7 +246,7 @@ public:
 				}
 				else
 #endif
-					if (!Listener->OnRx(Incoming.Buffer, Incoming.StartTimestamp, Incoming.Size, UINT8_MAX / 2))
+					if (!Listener->OnRx(Incoming.Buffer, Incoming.StartTimestamp, Incoming.Size, GetRxRssi()))
 					{
 #if defined(DEBUG_LOLA)
 						PrintName();
