@@ -10,7 +10,6 @@
 //#define USE_SX12_TRANSCEIVER
 
 //#define LINK_USE_CHANNEL_HOP
-//#define LINK_USE_TIMER_AND_RTC
 
 // Shared Link configuration.
 static const uint16_t DuplexPeriod = 10000;
@@ -35,7 +34,7 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 #error "USE_ESPNOW_TRANSCEIVER Is only available for the ESP32 and ESP8266 Arduino core platforms."
 #endif
 #elif defined(USE_SI446X_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER2)
-#if defined(USE_SI446X_TRANSCEIVER1) && !defined(SI446X_CUSTOM_SPI)
+#if defined(USE_SI446X_TRANSCEIVER1)
 #warning "SI446X fixed to SPI 1"
 #endif
 #define SI446X_TRANSCEIVER_SPI_CHANNEL		2
@@ -43,7 +42,7 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 #define SI446X_TRANSCEIVER_PIN_SDN			26
 #define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	25
 #elif defined(USE_SX12_TRANSCEIVER)
-#define SX12_TRANSCEIVER_SPI_CHANNEL		1
+#define SX12_TRANSCEIVER_SPI_CHANNEL		2
 #define SX12_TRANSCEIVER_PIN_CS				8
 #define SX12_TRANSCEIVER_PIN_RST			12
 #define SX12_TRANSCEIVER_PIN_BUSY			13
@@ -77,7 +76,7 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 
 
 // Use best available sources.
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#if defined(ARDUINO_ARCH_STM32F1)
 Stm32Entropy EntropySource{};
 #elif defined(ARDUINO_ARCH_ESP8266)
 Esp8266Entropy EntropySource{};
@@ -85,18 +84,7 @@ Esp8266Entropy EntropySource{};
 ArduinoLowEntropy EntropySource{};
 #endif
 
-// Use best source only if specified by LINK_USE_TIMER_AND_RTC.
-#if !defined(LINK_USE_TIMER_AND_RTC)
 ArduinoCycles CyclesSource{};
-#else
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32TimerCycles CyclesSource{};
-#elif defined(ARDUINO_ARCH_ESP8266)
-#error No CyclesSource found.
-#else 
-#error No CyclesSource found.
-#endif
-#endif
 
 // Use timed hopper when LINK_USE_CHANNEL_HOP but not on Full-Duplex.
 #if !defined(LINK_USE_CHANNEL_HOP) || defined(LINK_FULL_DUPLEX_TRANSCEIVER)
