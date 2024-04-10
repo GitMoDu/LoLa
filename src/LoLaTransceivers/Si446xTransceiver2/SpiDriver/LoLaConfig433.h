@@ -1,9 +1,9 @@
 #ifndef LOLA_CONFIG_433_H_
 #define LOLA_CONFIG_433_H_
 
-#include "LoLaSi446x.h"
+#include "Si446x.h"
 
-using namespace LoLaSi446x;
+using namespace Si446x;
 
 namespace Si446xConfig433
 {

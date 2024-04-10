@@ -1,20 +1,27 @@
 // Si446xTransceiver2.h
 
-#ifndef _LOLA_SI446X_TRANSCEIVER2_h
-#define _LOLA_SI446X_TRANSCEIVER2_h
+#ifndef _SI446X_TRANSCEIVER2_h
+#define _SI446X_TRANSCEIVER2_h
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
 #include <ILoLaTransceiver.h>
 
-#include "SpiDriver/LoLaSi446xRadioTask.h"
+#include "SpiDriver/Si446xRadioDriver.h"
 #include "SpiDriver/LoLaConfig433.h"
 #include "SpiDriver/ZakKembleConfig433.h"
 
 /// <summary>
 /// 
 /// </summary>
+/// <typeparam name="pinCS"></typeparam>
+/// <typeparam name="pinSDN"></typeparam>
+/// <typeparam name="pinInterrupt"></typeparam>
+/// <typeparam name="pinCLK"></typeparam>
+/// <typeparam name="pinMISO"></typeparam>
+/// <typeparam name="pinMOSI"></typeparam>
+/// <typeparam name="spiChannel"></typeparam>
 template<const uint8_t pinCS,
 	const uint8_t pinSDN,
 	const uint8_t pinInterrupt,
@@ -23,7 +30,7 @@ template<const uint8_t pinCS,
 	const uint8_t pinMOSI = UINT8_MAX,
 	const uint8_t spiChannel = 0>
 class Si446xTransceiver2 final
-	: public LoLaSi446xRadioTask<
+	: public Si446xRadioDriver <
 	LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE,
 	pinCS,
 	pinSDN,
@@ -34,19 +41,18 @@ class Si446xTransceiver2 final
 	spiChannel>
 	, public virtual ILoLaTransceiver
 {
-	using BaseClass = LoLaSi446xRadioTask<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE, pinCS, pinSDN, pinInterrupt, pinCLK, pinMISO, pinMOSI, spiChannel>;
+	using BaseClass = Si446xRadioDriver<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE, pinCS, pinSDN, pinInterrupt, pinCLK, pinMISO, pinMOSI, spiChannel>;
 
 	static constexpr auto ChannelCount = ZakKembleConfig433::ChannelCount;
 
 	static constexpr uint16_t TRANSCEIVER_ID = 0x4463;
 
 private:
-	// TODO: These values might change with different SPI and CPU clock speed.
-	static constexpr uint16_t TTA_LONG = 719;
-	static constexpr uint16_t TTA_SHORT = 638;
+	static constexpr uint16_t TTA_LONG = ZakKembleConfig433::TTA_LONG;
+	static constexpr uint16_t TTA_SHORT = ZakKembleConfig433::TTA_SHORT;
 
-	static constexpr uint16_t DIA_LONG = 1923;
-	static constexpr uint16_t DIA_SHORT = 987;
+	static constexpr uint16_t DIA_LONG = ZakKembleConfig433::DIA_LONG;
+	static constexpr uint16_t DIA_SHORT = ZakKembleConfig433::DIA_SHORT;
 
 	static constexpr uint8_t RSSI_LATCH_MIN = 60;
 	static constexpr uint8_t RSSI_LATCH_MAX = 140;

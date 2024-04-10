@@ -1,14 +1,12 @@
-// LoLaSi446x.h
+// Si446x.h
 
-#ifndef _LOLA_SI446X_h
-#define _LOLA_SI446X_h
+#ifndef _SI446X_h
+#define _SI446X_h
 
 #include <stdint.h>
 
-/// <summary>
-/// Rename Si446x after deprecation of wrapper.
-/// </summary>
-namespace LoLaSi446x
+
+namespace Si446x
 {
 	enum class PART_NUMBER : uint16_t
 	{
@@ -387,4 +385,3 @@ namespace LoLaSi446x
 	};
 };
 #endif
-

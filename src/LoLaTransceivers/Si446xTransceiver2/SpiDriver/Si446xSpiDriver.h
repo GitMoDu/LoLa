@@ -1,14 +1,13 @@
-// LoLaSi446xSpiDriver.h
+// Si446xSpiDriver.h
 
-#ifndef _LOLA_SI446X_SPI_DRIVER_h
-#define _LOLA_SI446X_SPI_DRIVER_h
+#ifndef _SI446X_SPI_DRIVER_h
+#define _SI446X_SPI_DRIVER_h
 
-#include "LoLaSi446x.h"
+#include "Si446x.h"
 
 #include <SPI.h>
 
-using namespace LoLaSi446x;
-
+using namespace Si446x;
 
 template<const uint8_t pinCS,
 	const uint8_t pinSDN,
@@ -16,7 +15,7 @@ template<const uint8_t pinCS,
 	const uint8_t pinMISO = UINT8_MAX,
 	const uint8_t pinMOSI = UINT8_MAX,
 	const uint8_t spiChannel = 0>
-class LoLaSi446xSpiDriver
+class Si446xSpiDriver
 {
 private:
 	/// <summary>
@@ -43,7 +42,7 @@ private:
 	const SPISettings Settings;
 
 public:
-	LoLaSi446xSpiDriver()
+	Si446xSpiDriver()
 #if defined(ARDUINO_ARCH_ESP32)
 		: SpiInstance(pinCLK, pinMOSI, pinMISO)
 #elif defined(ARDUINO_ARCH_STM32F1)
@@ -85,7 +84,7 @@ public:
 		SpiInstance.begin();
 #endif
 
-		LoLaSi446x::Si446xInfoStruct deviceInfo{};
+		Si446x::Si446xInfoStruct deviceInfo{};
 		if (!GetPartInfo(deviceInfo, 100000))
 		{
 			return false;
@@ -93,8 +92,8 @@ public:
 
 		switch (deviceInfo.PartId)
 		{
-		case (uint16_t)LoLaSi446x::PART_NUMBER::SI4463:
-			if (deviceInfo.DeviceId != (uint16_t)LoLaSi446x::DEVICE_ID::SI4463)
+		case (uint16_t)Si446x::PART_NUMBER::SI4463:
+			if (deviceInfo.DeviceId != (uint16_t)Si446x::DEVICE_ID::SI4463)
 			{
 #if defined(DEBUG_LOLA)
 				Serial.print(F("DeviceId: "));
@@ -118,12 +117,12 @@ public:
 			return false;
 		}
 
-		if (!SetupCallbacks(false, 10000))
+		if (!SetupCallbacks(true, 10000))
 		{
 			return false;
 		}
 
-		LoLaSi446x::RadioEventsStruct radioEvents{};
+		Si446x::RadioEventsStruct radioEvents{};
 		if (!GetRadioEvents(radioEvents, 10000))
 		{
 			return false;
@@ -277,7 +276,7 @@ public:
 		return false;
 	}
 
-	const bool TryGetRadioEvents(LoLaSi446x::RadioEventsStruct& radioEvents)
+	const bool TryGetRadioEvents(Si446x::RadioEventsStruct& radioEvents)
 	{
 		if (GetResponse(Message, 8))
 		{
@@ -296,7 +295,7 @@ public:
 	/// </summary>
 	/// <param name="radioEvents"></param>
 	/// <returns>True on success.</returns>
-	const bool GetRadioEvents(LoLaSi446x::RadioEventsStruct& radioEvents, const uint32_t timeoutMicros = 1000)
+	const bool GetRadioEvents(Si446x::RadioEventsStruct& radioEvents, const uint32_t timeoutMicros = 1000)
 	{
 		Message[0] = (uint8_t)Command::GET_INT_STATUS;
 		Message[1] = 0;
@@ -337,7 +336,7 @@ public:
 		Message[4] = 0;
 		Message[5] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXTIMEOUT_STATE
 		Message[6] = (uint8_t)RadioStateEnum::READY; // RXVALID_STATE
-		Message[7] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXINVALID_STATE
+		Message[7] = (uint8_t)RadioStateEnum::RX; // RXINVALID_STATE
 
 		return SendRequest(Message, 8, timeoutMicros);
 	}
@@ -352,24 +351,20 @@ public:
 	/// <returns></returns>
 	const bool RadioStartTx(const uint8_t* data, const uint8_t size, const uint8_t channel)
 	{
-		CsOn();
-		SpiInstance.transfer((uint8_t)Command::WRITE_TX_FIFO);
-		SpiInstance.transfer((uint8_t)size);
-		SpiInstance.transfer((void*)data, (size_t)size);
-		CsOff();
-
 		Message[0] = (uint8_t)Command::START_TX;
 		Message[1] = channel;
 		Message[2] = (uint8_t)RadioStateEnum::READY << 4;
 		Message[3] = 0;
 		Message[4] = 0;
 
-		if (!SendRequest(Message, 5, 0))
-		{
-			return false;
-		}
+		CsOn();
+		SpiInstance.transfer((uint8_t)Command::WRITE_TX_FIFO);
+		SpiInstance.transfer((uint8_t)size);
+		SpiInstance.transfer((void*)data, (size_t)size);
+		CsOff();
 
-		return true;
+
+		return SendRequest(Message, 5, 0);
 	}
 
 	const bool GetRxFifoCount(uint8_t& fifoCount, const uint32_t timeoutMicros = 500)
@@ -531,7 +526,7 @@ private:
 		return SpinWaitForResponse(Message, 2, timeoutMicros);
 	}
 
-	const bool GetPartInfo(LoLaSi446x::Si446xInfoStruct& deviceInfo, const uint32_t timeoutMicros)
+	const bool GetPartInfo(Si446x::Si446xInfoStruct& deviceInfo, const uint32_t timeoutMicros)
 	{
 		if (!SendRequest(Command::PART_INFO, timeoutMicros))
 		{

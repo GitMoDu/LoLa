@@ -1,19 +1,27 @@
-// LoLaSi446xRadioTask.h
+// Si446xRadioDriver.h
 
-#ifndef _LOLA_SI446X_RADIO_TASK_h
-#define _LOLA_SI446X_RADIO_TASK_h
+#ifndef _SI446X_RADIO_DRIVER_h
+#define _SI446X_RADIO_DRIVER_h
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include "LoLaSi446xSpiDriver.h"
+#include "Si446xSpiDriver.h"
 
-using namespace LoLaSi446x;
+using namespace Si446x;
+
 
 /// <summary>
-/// Handles and dispatches radio interrupts.
+/// Handles radio interrupts and dispatches radio events.
 /// </summary>
-
+/// <typeparam name="MaxRxSize"></typeparam>
+/// <typeparam name="pinSDN"></typeparam>
+/// <typeparam name="pinCS"></typeparam>
+/// <typeparam name="pinCLK"></typeparam>
+/// <typeparam name="pinMISO"></typeparam>
+/// <typeparam name="pinMOSI"></typeparam>
+/// <typeparam name="spiChannel"></typeparam>
+/// <typeparam name="pinInterrupt"></typeparam>
 template<const uint8_t MaxRxSize,
 	const uint8_t pinCS,
 	const uint8_t pinSDN,
@@ -22,7 +30,7 @@ template<const uint8_t MaxRxSize,
 	const uint8_t pinMISO = UINT8_MAX,
 	const uint8_t pinMOSI = UINT8_MAX,
 	const uint8_t spiChannel = 0>
-class LoLaSi446xRadioTask : private Task
+class Si446xRadioDriver : private Task
 {
 private:
 	enum class ReadStateEnum
@@ -134,10 +142,10 @@ private:
 	};
 
 private:
-	static constexpr uint32_t TX_CONSISTENCY_DELAY = 145;
+	static constexpr uint32_t TX_CONSISTENCY_DELAY = 100;
 
 private:
-	LoLaSi446xSpiDriver<pinCS, pinSDN, pinCLK, pinMISO, pinMOSI, spiChannel> SpiDriver;
+	Si446xSpiDriver<pinCS, pinSDN, pinCLK, pinMISO, pinMOSI, spiChannel> SpiDriver;
 
 	void (*RadioInterrupt)(void) = nullptr;
 
@@ -157,7 +165,7 @@ protected:
 	virtual void OnRxReady(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssiLatch) {}
 
 public:
-	LoLaSi446xRadioTask(Scheduler& scheduler)
+	Si446xRadioDriver(Scheduler& scheduler)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, SpiDriver()
 	{}
@@ -255,25 +263,19 @@ protected:
 		}
 
 		// Disable Rx temporarily.
-		if (!SpiDriver.SetRadioState(RadioStateEnum::READY, 0))
+		if (!SpiDriver.SetRadioState(RadioStateEnum::READY, 100))
 		{
 			return false;
 		}
 
-		const uint32_t txStart = micros();
-		if (!SpiDriver.SetPacketSize(packetSize, TX_CONSISTENCY_DELAY))
+		if (!SpiDriver.SetPacketSize(packetSize, 250))
 		{
 			return false;
-		}
-
-		// Delay the start for better Tx time consistency.
-		const uint32_t elapsed = micros() - txStart;
-		if (elapsed < TX_CONSISTENCY_DELAY)
-		{
-			delayMicroseconds(TX_CONSISTENCY_DELAY - elapsed);
 		}
 
 		// Push data to radio FIFO and start transmission.
+
+		
 		if (!SpiDriver.RadioStartTx(data, packetSize, channel))
 		{
 			HopFlow.SetPending(micros());
@@ -386,13 +388,20 @@ private:
 			if (TxFlow.Pending)
 			{
 				TxFlow.Clear();
-				SpiDriver.SetPacketSize(MaxRxSize, 200);
+
+				// Tipically runs on the first try.
+				if (!SpiDriver.SetPacketSize(MaxRxSize, 100))
+				{
+#if defined(DEBUG_LOLA)
+					Serial.println(F("Size restore failed."));
+#endif
+				}
 				OnTxDone();
 			}
 			else
 			{
 #if defined(DEBUG_LOLA)
-				Serial.println(F("Bad Tx Done"));
+				Serial.println(F("Unexpected Tx Done"));
 #endif
 			}
 		}
@@ -410,51 +419,55 @@ private:
 			{
 				RxFlow.Clear();
 				HopFlow.SetPending(micros());
+				if (!SpiDriver.SetPacketSize(MaxRxSize, 1000))
+				{
+#if defined(DEBUG_LOLA)
+					Serial.println(F("Size restore failed."));
+#endif
+				}
 #if defined(DEBUG_LOLA)
 				Serial.println(F("Rx invalid size."));
 #endif
 			}
 		}
 
+#if defined(DEBUG_LOLA)
 		if (RadioEvents.RxStart)
 		{
 			RadioEvents.RxStart = false;
-#if defined(DEBUG_LOLA)
 			Serial.println(F("Rx Start"));
-#endif
 		}
 
 		if (RadioEvents.RxFail)
 		{
 			RadioEvents.RxFail = false;
-#if defined(DEBUG_LOLA)
 			Serial.println(F("Rx Fail"));
-#endif
 		}
 
 		if (RadioEvents.VccWarning)
 		{
 			RadioEvents.VccWarning = false;
-#if defined(DEBUG_LOLA)
 			Serial.println(F("VccWarning"));
-#endif
 		}
 
 		if (RadioEvents.CalibrationPending)
 		{
 			RadioEvents.CalibrationPending = false;
-#if defined(DEBUG_LOLA)
 			Serial.println(F("CalibrationPending."));
-#endif
 		}
 
 		if (RadioEvents.Error)
 		{
 			RadioEvents.Error = false;
-#if defined(DEBUG_LOLA)
 			Serial.println(F("RF Error."));
-#endif
 		}
+#else
+		RadioEvents.RxStart = false;
+		RadioEvents.RxFail = false;
+		RadioEvents.VccWarning = false;
+		RadioEvents.CalibrationPending = false;
+		RadioEvents.Error = false;
+#endif
 	}
 
 	void ProcessPendingFlows()
@@ -481,7 +494,12 @@ private:
 			Serial.println(F("Tx timeout."));
 #endif
 			TxFlow.Clear();
-			SpiDriver.SetPacketSize(MaxRxSize, 500);
+			if (!SpiDriver.SetPacketSize(MaxRxSize, 1000))
+			{
+#if defined(DEBUG_LOLA)
+				Serial.println(F("Size restore failed."));
+#endif
+			}
 			OnTxDone();
 		}
 		else if (HopFlow.Pending)

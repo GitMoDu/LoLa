@@ -7,6 +7,12 @@ namespace ZakKembleConfig433
 {
 	static constexpr uint8_t ChannelCount = 10;
 
+	static constexpr uint16_t TTA_LONG = 719;
+	static constexpr uint16_t TTA_SHORT = 638;
+
+	static constexpr uint16_t DIA_LONG = 4462;
+	static constexpr uint16_t DIA_SHORT = 2437;
+
 	static constexpr uint8_t Config[] = {
 		0x07, 0x02, 0x01, 0x00, 0x01, 0xC9, 0xC3, 0x80,
 		0x08, 0x13, 0x41, 0x41, 0x21, 0x20, 0x67, 0x4B, 0x00,
