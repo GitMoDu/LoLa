@@ -120,7 +120,7 @@ private:
 private:
 	void PrintName()
 	{
-#ifdef DEBUG_LOLA
+#ifdef DEBUG_LOLA_LINK
 		Serial.print(millis());
 
 		Serial.print('\t');
@@ -185,7 +185,7 @@ public:
 #if defined(ECO_CHANCE)
 					if (random(1 + UINT8_MAX) <= ECO_CHANCE)
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						PrintName();
 						Serial.println(F("Echo attack!"));
 #endif
@@ -197,7 +197,7 @@ public:
 #if defined(DOUBLE_SEND_CHANCE)
 					if (random(1 + UINT8_MAX) <= DOUBLE_SEND_CHANCE)
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						PrintName();
 						Serial.println(F("Double send attack!"));
 #endif
@@ -239,7 +239,7 @@ public:
 #if defined(DROP_CHANCE)
 				if (random(1 + UINT8_MAX) <= DROP_CHANCE)
 				{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 					PrintName();
 					Serial.println(F("Drop attack!"));
 #endif
@@ -248,7 +248,7 @@ public:
 #endif
 					if (!Listener->OnRx(Incoming.Buffer, Incoming.StartTimestamp, Incoming.Size, GetRxRssi()))
 					{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 						PrintName();
 						Serial.println(F("Rx Collision. Packet Service rejected."));
 #endif
@@ -330,7 +330,7 @@ public:
 
 		if (!TxAvailable())
 		{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.println(F("Tx failed. Tx not available."));
 #endif
@@ -339,7 +339,7 @@ public:
 
 		if (packetSize < LoLaPacketDefinition::MIN_PACKET_SIZE || packetSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.print(F("Tx failed. Invalid packet Size ("));
 			Serial.print(packetSize);
@@ -350,7 +350,7 @@ public:
 
 		if (OutGoing.HasPending())
 		{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.println(F("Tx failed. Was sending."));
 #endif
@@ -359,7 +359,7 @@ public:
 
 		if (Incoming.HasPending() && ((micros() - Incoming.StartTimestamp) < GetDurationInAir(Incoming.Size)))
 		{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.println(F("Tx failed. Rx collision."));
 #endif
@@ -428,15 +428,11 @@ public:
 		const uint32_t timestamp = micros() - txDelay;
 
 		LOLA_RTOS_RESUME();
-
-		if (CurrentChannel != channel)
+		if (HopRequest.HasPending() && ((timestamp - HopRequest.StartTimestamp) < Config::HopMicros))
 		{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
-			Serial.print(F("Channel Miss: Rx:"));
-			Serial.print(CurrentChannel);
-			Serial.print(F(" Tx:"));
-			Serial.println(channel);
+			Serial.println(F("Rx failed. Rx was hopping."));
 #endif
 			return;
 		}
@@ -447,7 +443,7 @@ public:
 			{
 				Listener->OnRxLost(timestamp);
 			}
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.println(F("Rx Collision, Rx was pending."));
 #endif
@@ -456,18 +452,21 @@ public:
 
 		if (OutGoing.HasPending())
 		{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.println(F("Rx failed. Tx was pending."));
 #endif
 			return;
 		}
 
-		if (HopRequest.HasPending() && ((timestamp - HopRequest.StartTimestamp) < Config::HopMicros))
+		if (CurrentChannel != channel)
 		{
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
-			Serial.println(F("Rx failed. Rx was hopping."));
+			Serial.print(F("Channel Miss: Rx:"));
+			Serial.print(CurrentChannel);
+			Serial.print(F(" Tx:"));
+			Serial.println(channel);
 #endif
 			return;
 		}
@@ -483,7 +482,7 @@ public:
 		if (random(1 + UINT8_MAX) <= CORRUPT_CHANCE)
 		{
 			Incoming.Buffer[random(packetSize)] = random(1 + UINT8_MAX);
-#if defined(DEBUG_LOLA)
+#if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.println(F("Corruption attack!"));
 #endif
