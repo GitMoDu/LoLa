@@ -73,8 +73,7 @@ public:
 
 	/// <summary>
 	/// Tx/Transmit a packet at the indicated channel.
-	/// Transceiver should auto-return to RX mode on same channel,
-	///  but Rx() will be always called after OnTx() is called from transceiver.
+	/// After OnTx(), Rx() or Tx() will be always called.
 	/// </summary>
 	/// <param name="data">Raw packet data.</param>
 	/// <param name="packetSize">Packet size.</param>
@@ -111,14 +110,14 @@ public:
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) { return 0; }
 
 	/// <summary>
-	///	Unique id for this Transceiver type (i.e. nRF24).
+	///	Unique id for Transceiver type.
 	/// Should also change with configuration parameters such as:
 	/// - Channel count.
 	/// - Baud-rate.
 	/// - Modulation.
 	/// - Encoding.
 	/// - Framing.
-	/// Only used for Link Signature purposes.
+	/// - CRC.
 	/// </summary>
 	/// <returns>32 Bit unique id.</returns>
 	virtual const uint32_t GetTransceiverCode() { return 0; }

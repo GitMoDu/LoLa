@@ -27,9 +27,16 @@
 /// <typeparam name="CsPin"></typeparam>
 /// <typeparam name="InterruptPin"></typeparam>
 /// <typeparam name=DataRate"">RF24_250KBPS, RF24_1MBPS or RF24_2MBPS</typeparam>
-template<const uint8_t CePin,
-	const uint8_t CsPin,
-	const uint8_t InterruptPin,
+/// 
+
+template<
+	const uint8_t pinCS,
+	const uint8_t pinCE,
+	const uint8_t pinInterrupt,
+	const uint8_t pinCLK = UINT8_MAX,
+	const uint8_t pinMISO = UINT8_MAX,
+	const uint8_t pinMOSI = UINT8_MAX,
+	const uint8_t spiChannel = 0,
 	const rf24_datarate_e DataRate = RF24_1MBPS>
 class nRF24Transceiver final
 	: private Task, public virtual ILoLaTransceiver
@@ -57,7 +64,7 @@ private:
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
-	void (*OnInterrupt)(void) = nullptr;
+	void (*OnInterruptCallback)(void) = nullptr;
 
 	uint8_t RssiHistory = 0;
 
@@ -68,30 +75,32 @@ private:
 	uint32_t TxStart = 0;
 
 private:
-	SPIClass* SpiInstance;
+	SPIClass SpiInstance;
 	RF24 Radio;
 
 public:
-	nRF24Transceiver(Scheduler& scheduler, SPIClass* spiInstance)
+	nRF24Transceiver(Scheduler& scheduler)
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, SpiInstance(spiInstance)
-		, Radio((rf24_gpio_pin_t)CePin, (rf24_gpio_pin_t)CsPin, nRF24Support::NRF24_SPI_SPEED)
-	{
-		pinMode(InterruptPin, INPUT);
-		pinMode(CePin, INPUT);
-		pinMode(CsPin, INPUT);
-	}
+#if defined(ARDUINO_ARCH_ESP32)
+		, SpiInstance(HSPI)
+#elif defined(ARDUINO_ARCH_STM32F1)
+		, SpiInstance(spiChannel)
+#else
+		, SpiInstance()
+#endif
+		, Radio((rf24_gpio_pin_t)pinCE, (rf24_gpio_pin_t)pinCS, nRF24Support::NRF24_SPI_SPEED)
+	{}
 
 	void SetupInterrupt(void (*onInterrupt)(void))
 	{
-		OnInterrupt = onInterrupt;
+		OnInterruptCallback = onInterrupt;
 	}
 
 	/// <summary>
 	/// To be called on nRF interrupt.
 	/// </summary>
-	void OnRadioInterrupt()
+	void OnInterrupt()
 	{
 #ifdef RX_TEST_PIN
 		digitalWrite(RX_TEST_PIN, HIGH);
@@ -129,25 +138,53 @@ public:	// ILoLaTransceiver overrides.
 	/// <returns>True on success.</returns>
 	virtual const bool Start() final
 	{
-		if (Listener != nullptr && OnInterrupt != nullptr)
+		pinMode(pinInterrupt, INPUT);
+		pinMode(pinCE, INPUT);
+		pinMode(pinCS, INPUT);
+
+		if (Listener != nullptr && OnInterruptCallback != nullptr)
 		{
 			// Set pins again, in case Transceiver has been reset.
 			DisableInterrupt();
-			pinMode(InterruptPin, INPUT_PULLUP);
-			pinMode(CsPin, OUTPUT);
-			pinMode(CePin, OUTPUT);
+			pinMode(pinInterrupt, INPUT_PULLUP);
+			pinMode(pinCE, OUTPUT);
+			pinMode(pinCS, OUTPUT);
+
+#if defined(ARDUINO_ARCH_ESP32)
+			if (pinCS != UINT8_MAX
+				&& pinCLK != UINT8_MAX
+				&& pinMOSI != UINT8_MAX
+				&& pinMISO != UINT8_MAX)
+			{
+				SpiInstance.begin((int8_t)pinCLK, (int8_t)pinMISO, (int8_t)pinMOSI, (int8_t)pinCS);
+			}
+			else if (pinCS != UINT8_MAX && pinCLK != UINT8_MAX)
+			{
+				SpiInstance.begin((int8_t)pinCLK, (int8_t)-1, (int8_t)-1, (int8_t)pinCS);
+			}
+			else if (pinCS != UINT8_MAX)
+			{
+				SpiInstance.begin((int8_t)-1, (int8_t)-1, (int8_t)-1, (int8_t)pinCS);
+			}
+#else
+			SpiInstance.begin();
+#endif
 
 			// Radio driver handles CePin and CsPin setup.
-			if (!Radio.begin(SpiInstance))
+			if (!Radio.begin(&SpiInstance))
 			{
+#if defined(DEBUG_LOLA)
 				Serial.println("Radio.begin failed.");
+#endif
 				return false;
 			}
 
 			// Ensure the IC is present.
 			if (!Radio.isChipConnected())
 			{
+#if defined(DEBUG_LOLA)
 				Serial.println("No chip found_2.");
+#endif
 				return false;
 			}
 
@@ -224,6 +261,11 @@ public:	// ILoLaTransceiver overrides.
 		Radio.stopListening();
 		Radio.closeReadingPipe(nRF24Support::AddressPipe);
 		DisableInterrupt();
+
+		pinMode(pinInterrupt, INPUT);
+		pinMode(pinCE, INPUT);
+		pinMode(pinCS, INPUT);
+
 		Task::disable();
 
 		return true;
@@ -396,6 +438,7 @@ public:
 	{
 		if (TxAvailableNow())
 		{
+			//TODO: Lock SPI comms until Tx end.
 			Radio.stopListening();
 			Radio.setChannel(GetRawChannel(channel));
 
@@ -427,6 +470,8 @@ public:
 	{
 		const uint8_t rawChannel = GetRawChannel(channel);
 
+		//TODO: Test withou channel hop.
+		//TODO: Optimize by tracking the state locally.
 		//if (CurrentChannel != rawChannel)
 		{
 			CurrentChannel = rawChannel;
@@ -478,12 +523,12 @@ private:
 
 	void EnableInterrupt()
 	{
-		attachInterrupt(digitalPinToInterrupt(InterruptPin), OnInterrupt, FALLING);
+		attachInterrupt(digitalPinToInterrupt(pinInterrupt), OnInterruptCallback, FALLING);
 	}
 
 	void DisableInterrupt()
 	{
-		detachInterrupt(digitalPinToInterrupt(InterruptPin));
+		detachInterrupt(digitalPinToInterrupt(pinInterrupt));
 	}
 
 	/// </summary>

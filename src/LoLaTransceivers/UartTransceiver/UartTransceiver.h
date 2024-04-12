@@ -120,7 +120,7 @@ public:
 	/// <summary>
 	/// To be called on serial receive interrupt.
 	/// </summary>
-	void OnSeriaInterrupt()
+	void OnInterrupt()
 	{
 		// Only one interrupt expected for each packet.
 		DisableInterrupt();

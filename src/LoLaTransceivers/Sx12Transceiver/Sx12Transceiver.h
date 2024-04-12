@@ -96,9 +96,6 @@ public:
 	//	/// </summary>
 	//	void OnRfInterrupt()
 	//	{
-	//#ifdef RX_TEST_PIN
-	//		digitalWrite(RX_TEST_PIN, HIGH);
-	//#endif
 	//		if (Event.Pending)
 	//		{
 	//			// Double event detected.
