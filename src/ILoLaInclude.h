@@ -66,7 +66,6 @@
 #include "LoLaTransceivers\VirtualTransceiver\VirtualTransceiver.h"
 #include "LoLaTransceivers\UartTransceiver\UartTransceiver.h"
 #include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
-#include "LoLaTransceivers\Si446xWrapper\Si446xWrapper.h"
 #include "LoLaTransceivers\Si446xTransceiver\Si4463Transceiver_433_70_250.h"
 #include "LoLaTransceivers\Sx12Transceiver\Sx12Transceiver.h"
 #if defined(ARDUINO_ARCH_ESP8266)
