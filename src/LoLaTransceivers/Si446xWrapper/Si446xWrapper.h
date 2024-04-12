@@ -1,7 +1,7 @@
-// Si446xTransceiver.h
+// Si446xWrapper.h
 
-#ifndef _LOLA_SI446X_TRANSCEIVER_h
-#define _LOLA_SI446X_TRANSCEIVER_h
+#ifndef _SI446X_WRAPPER_h
+#define _SI446X_WRAPPER_h
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
@@ -31,7 +31,7 @@
 /// </summary>
 /// <typeparam name="InterruptPin"></typeparam>
 template<const uint8_t InterruptPin>
-class Si446xTransceiver final
+class Si446xWrapper final
 	: private Task, public virtual ILoLaTransceiver
 {
 private:
@@ -70,7 +70,7 @@ private:
 	Si4463Events::HopStruct HopPending{};
 
 public:
-	Si446xTransceiver(Scheduler& scheduler)
+	Si446xWrapper(Scheduler& scheduler)
 		: ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{}
@@ -82,7 +82,7 @@ public:
 		pinMode(InterruptPin, INPUT);
 	}
 
-	void OnRadioInterrupt()
+	void OnInterrupt()
 	{
 		DisableInterrupt();
 		RadioEvent.Pending = true;

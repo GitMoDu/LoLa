@@ -1,19 +1,16 @@
-// Si446xTransceiver2.h
+// Si446xAbstractTransceiver.h
 
-#ifndef _SI446X_TRANSCEIVER2_h
-#define _SI446X_TRANSCEIVER2_h
+#ifndef _SI446X_ABSTRACT_TRANSCEIVER_h
+#define _SI446X_ABSTRACT_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
 #include <ILoLaTransceiver.h>
-
-#include "SpiDriver/Si446xRadioDriver.h"
-#include "SpiDriver/LoLaConfig433.h"
-#include "SpiDriver/ZakKembleConfig433.h"
+#include "../SpiDriver/Si446xRadioDriver.h"
 
 /// <summary>
-/// 
+/// TODO: Set Tx power.
 /// </summary>
 /// <typeparam name="pinCS"></typeparam>
 /// <typeparam name="pinSDN"></typeparam>
@@ -22,14 +19,15 @@
 /// <typeparam name="pinMISO"></typeparam>
 /// <typeparam name="pinMOSI"></typeparam>
 /// <typeparam name="spiChannel"></typeparam>
-template<const uint8_t pinCS,
+template<typename RadioConfig,
+	const uint8_t pinCS,
 	const uint8_t pinSDN,
 	const uint8_t pinInterrupt,
 	const uint8_t pinCLK = UINT8_MAX,
 	const uint8_t pinMISO = UINT8_MAX,
 	const uint8_t pinMOSI = UINT8_MAX,
 	const uint8_t spiChannel = 0>
-class Si446xTransceiver2 final
+class Si446xAbstractTransceiver
 	: public Si446xRadioDriver<
 	LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE,
 	pinCS,
@@ -43,26 +41,14 @@ class Si446xTransceiver2 final
 {
 	using BaseClass = Si446xRadioDriver<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE, pinCS, pinSDN, pinInterrupt, pinCLK, pinMISO, pinMOSI, spiChannel>;
 
-	static constexpr auto ChannelCount = ZakKembleConfig433::ChannelCount;
-
-	static constexpr uint16_t TRANSCEIVER_ID = 0x4463;
-
-private:
-	static constexpr uint16_t TTA_LONG = ZakKembleConfig433::TTA_LONG;
-	static constexpr uint16_t TTA_SHORT = ZakKembleConfig433::TTA_SHORT;
-
-	static constexpr uint16_t DIA_LONG = ZakKembleConfig433::DIA_LONG;
-	static constexpr uint16_t DIA_SHORT = ZakKembleConfig433::DIA_SHORT;
-
-	static constexpr uint8_t RSSI_LATCH_MIN = 60;
-	static constexpr uint8_t RSSI_LATCH_MAX = 140;
-	static constexpr uint8_t RSSI_LATCH_RANGE = RSSI_LATCH_MAX - RSSI_LATCH_MIN;
-
 private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
+protected:
+	virtual const uint8_t* GetConfigurationArray(size_t& configurationSize) { return nullptr; }
+
 public:
-	Si446xTransceiver2(Scheduler& scheduler)
+	Si446xAbstractTransceiver(Scheduler& scheduler)
 		: ILoLaTransceiver()
 		, BaseClass(scheduler)
 	{}
@@ -87,7 +73,7 @@ protected:
 	{
 		if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
 		{
-			Listener->OnRx(data, timestamp - GetRxDelay(packetSize), packetSize, GetNormalizedRssi(rssiLatch));
+			Listener->OnRx(data, timestamp - GetDurationInAirInternal(packetSize), packetSize, GetNormalizedRssi(rssiLatch));
 		}
 	}
 
@@ -102,10 +88,16 @@ public:
 
 	virtual const bool Start() final
 	{
-		//TODO: Use config from parameter.
+		const uint8_t* configuration = nullptr;
+		size_t configurationSize = 0;
 
-		const auto configuration = ZakKembleConfig433::Config;
-		const auto configurationSize = ZakKembleConfig433::ConfigSize;;
+		configuration = GetConfigurationArray(configurationSize);
+
+		if (configuration == nullptr
+			|| configurationSize == 0)
+		{
+			return false;
+		}
 
 		if (Listener != nullptr
 			&& BaseClass::RadioStart(configuration, configurationSize))
@@ -132,10 +124,10 @@ public:
 
 	virtual const uint32_t GetTransceiverCode() final
 	{
-		return (uint32_t)TRANSCEIVER_ID
-			//| (uint32_t)LoLaSi4463Config::GetConfigId(MODEM_2_1) << 16
-			| (uint32_t)0x23 << 16
-			| (uint32_t)ChannelCount << 24;
+		return (uint32_t)RadioConfig::TRANSCEIVER_ID << 16
+			| (uint32_t)RadioConfig::ChannelCount << 8
+			| (uint32_t)(RadioConfig::BitRate / 10000)
+			| (uint32_t)(RadioConfig::BaseFrequency / 10000000);
 	}
 
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
@@ -155,7 +147,7 @@ public:
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
-		return GetDurationInAir(packetSize);
+		return GetDurationInAirInternal(packetSize);
 	}
 
 private:
@@ -166,43 +158,38 @@ private:
 	/// <returns>Returns the real channel to use [0;(ChannelCount-1)].</returns>
 	static constexpr uint8_t GetRawChannel(const uint8_t abstractChannel)
 	{
-		return GetRealChannel<ChannelCount>(abstractChannel);
+		return ILoLaTransceiver::GetRealChannel<RadioConfig::ChannelCount>(abstractChannel);
 	}
 
+	/// <summary>
+	/// TODO: Add response curve, since rssiLatch is logarithmic.
+	/// </summary>
+	/// <param name="rssiLatch"></param>
+	/// <returns></returns>
 	static const uint8_t GetNormalizedRssi(const uint8_t rssiLatch)
 	{
-		if (rssiLatch < RSSI_LATCH_MIN)
+		if (rssiLatch < RadioConfig::RSSI_LATCH_MIN)
 		{
 			return 0;
 		}
-		else if (rssiLatch >= RSSI_LATCH_MAX)
+		else if (rssiLatch >= RadioConfig::RSSI_LATCH_MAX)
 		{
 			return UINT8_MAX;
 		}
 		else
 		{
-			return ((uint16_t)(rssiLatch - RSSI_LATCH_MIN) * UINT8_MAX) / RSSI_LATCH_RANGE;
+			return ((uint16_t)(rssiLatch - RadioConfig::RSSI_LATCH_MIN) * UINT8_MAX) / (RadioConfig::RSSI_LATCH_MAX - RadioConfig::RSSI_LATCH_MIN);
 		}
-	}
-
-	/// <summary>
-	/// TODO: Calibrate.
-	/// </summary>
-	/// <param name="packetSize"></param>
-	/// <returns></returns>
-	static constexpr uint16_t GetRxDelay(const uint8_t packetSize)
-	{
-		return GetDurationInAirInternal(packetSize) - 50;
 	}
 
 	static constexpr uint16_t GetTimeToAirInternal(const uint8_t packetSize)
 	{
-		return TTA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (TTA_LONG - TTA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+		return RadioConfig::TTA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (RadioConfig::TTA_LONG - RadioConfig::TTA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 	}
 
 	static constexpr uint16_t GetDurationInAirInternal(const uint8_t packetSize)
 	{
-		return DIA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (DIA_LONG - DIA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+		return RadioConfig::DIA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (RadioConfig::DIA_LONG - RadioConfig::DIA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 	}
 };
 #endif
