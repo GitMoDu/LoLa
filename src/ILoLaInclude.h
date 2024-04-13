@@ -16,7 +16,7 @@
 #if defined(ARDUINO_ARCH_AVR)
 #include "EntropySources\AvrEntropy.h"
 #endif
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#if defined(ARDUINO_ARCH_STM32F1)
 #include "EntropySources\Stm32Entropy.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -43,7 +43,7 @@
 #if defined(ARDUINO_ARCH_AVR)
 //#include "TimerSources\AvrTimer1Source.h"
 #endif
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#if defined(ARDUINO_ARCH_STM32F1)
 #include "ClockSources\Stm32SystemCycles.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP8266)
