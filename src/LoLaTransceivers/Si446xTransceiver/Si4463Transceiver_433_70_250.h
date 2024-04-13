@@ -18,6 +18,9 @@ namespace Si4463_433_70_250
 		static constexpr uint8_t ChannelSeparationMin = 7;
 		static constexpr uint8_t ChannelSeparationAbstractMin = 26;
 
+		static constexpr uint8_t TxPowerMax = 3;
+		static constexpr uint8_t TxPowerMin = 1;
+
 		static constexpr uint16_t RX_OFFSET_LONG = 17;
 		static constexpr uint16_t RX_OFFSET_SHORT = 14;
 

@@ -107,9 +107,7 @@ public:
 		if (Listener != nullptr
 			&& BaseClass::RadioStart(configuration, configurationSize))
 		{
-			//TODO: Get DeviceId and set MaxTxPower accordingly.
-
-			return BaseClass::SetTxPower(3);
+			return BaseClass::SetTxPower(RadioConfig::TxPowerMax);
 		}
 
 		return false;
