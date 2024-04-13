@@ -7,6 +7,8 @@
 
 namespace nRF24Support
 {
+	static constexpr uint16_t TRANSCEIVER_ID = 0x3F24;
+
 	// The SPI interface is designed to operate at a maximum of 10 MHz.
 	// Most modules support 16-18 MHz.
 #if defined(ARDUINO_ARCH_AVR)

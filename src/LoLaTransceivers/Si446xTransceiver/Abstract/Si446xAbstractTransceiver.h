@@ -39,7 +39,12 @@ class Si446xAbstractTransceiver
 	spiChannel>
 	, public virtual ILoLaTransceiver
 {
+private:
 	using BaseClass = Si446xRadioDriver<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE, pinCS, pinSDN, pinInterrupt, pinCLK, pinMISO, pinMOSI, spiChannel>;
+
+	static constexpr uint32_t TRANSCEIVER_CODE = (uint32_t)RadioConfig::TRANSCEIVER_ID << 16
+		| (uint32_t)RadioConfig::ChannelCount << 8
+		| ((uint32_t)(RadioConfig::BaseFrequency / 10000000) + (uint32_t)(RadioConfig::BitRate / 10000));
 
 private:
 	ILoLaTransceiverListener* Listener = nullptr;
@@ -73,7 +78,7 @@ protected:
 	{
 		if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
 		{
-			Listener->OnRx(data, timestamp - GetDurationInAirInternal(packetSize), packetSize, GetNormalizedRssi(rssiLatch));
+			Listener->OnRx(data, timestamp - GetRxShift(packetSize), packetSize, GetNormalizedRssi(rssiLatch));
 		}
 	}
 
@@ -124,13 +129,10 @@ public:
 
 	virtual const uint32_t GetTransceiverCode() final
 	{
-		return (uint32_t)RadioConfig::TRANSCEIVER_ID << 16
-			| (uint32_t)RadioConfig::ChannelCount << 8
-			| (uint32_t)(RadioConfig::BitRate / 10000)
-			| (uint32_t)(RadioConfig::BaseFrequency / 10000000);
+		return TRANSCEIVER_CODE;
 	}
 
-	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
+	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		return BaseClass::RadioTx(data, packetSize, GetRawChannel(channel));
 	}
@@ -182,6 +184,11 @@ private:
 		}
 	}
 
+	static constexpr uint8_t GetRawTxPower(const uint8_t abstractTxPower)
+	{
+		return RadioConfig::TxPowerMin + (uint8_t)(((uint16_t)abstractTxPower * (RadioConfig::TxPowerMax - RadioConfig::TxPowerMin)) / UINT8_MAX);
+	}
+
 	static constexpr uint16_t GetTimeToAirInternal(const uint8_t packetSize)
 	{
 		return RadioConfig::TTA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (RadioConfig::TTA_LONG - RadioConfig::TTA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
@@ -190,6 +197,16 @@ private:
 	static constexpr uint16_t GetDurationInAirInternal(const uint8_t packetSize)
 	{
 		return RadioConfig::DIA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (RadioConfig::DIA_LONG - RadioConfig::DIA_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+	}
+
+	static constexpr uint16_t GetRxOffset(const uint8_t packetSize)
+	{
+		return RadioConfig::RX_OFFSET_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (RadioConfig::RX_OFFSET_LONG - RadioConfig::RX_OFFSET_SHORT)) / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+	}
+
+	static constexpr uint16_t GetRxShift(const uint8_t packetSize)
+	{
+		return GetDurationInAirInternal(packetSize) + GetRxOffset(packetSize);
 	}
 };
 #endif

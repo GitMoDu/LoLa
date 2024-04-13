@@ -27,8 +27,6 @@
 /// <typeparam name="CsPin"></typeparam>
 /// <typeparam name="InterruptPin"></typeparam>
 /// <typeparam name=DataRate"">RF24_250KBPS, RF24_1MBPS or RF24_2MBPS</typeparam>
-/// 
-
 template<
 	const uint8_t pinCS,
 	const uint8_t pinCE,
@@ -42,8 +40,6 @@ class nRF24Transceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
 private:
-	static constexpr uint16_t TRANSCEIVER_ID = 0x3F24;
-
 	static constexpr uint32_t EVENT_TIMEOUT_MILLIS = 10;
 
 	// The used timings' constants, based on baudrate.
@@ -496,7 +492,7 @@ public:
 		default:
 			break;
 		}
-		return ((uint32_t)TRANSCEIVER_ID ^ nRF24Support::AddressPipe ^ ((uint32_t)nRF24Support::AddressSize << 8))
+		return ((uint32_t)nRF24Support::TRANSCEIVER_ID ^ nRF24Support::AddressPipe ^ ((uint32_t)nRF24Support::AddressSize << 8))
 			| (uint32_t)dataRateCode << 16
 			| (uint32_t)nRF24Support::ChannelCount << 24;
 	}
