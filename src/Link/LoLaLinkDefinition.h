@@ -100,9 +100,9 @@ namespace LoLaLinkDefinition
 	static constexpr uint16_t FULL_DUPLEX_RESEND_WAIT_MICROS = 100;
 
 	/// <summary>
-	/// Report target update rate. Slow value, let the main services hog the link.
+	/// Report max update period. Slow value, let the main services hog the link.
 	/// </summary>
-	static constexpr uint16_t REPORT_UPDATE_PERIOD = 1000 / 4;
+	static constexpr uint16_t REPORT_UPDATE_PERIOD = 500;
 
 	/// <summary>
 	/// Limit the possible pre-link Advertising channels, BLE style.

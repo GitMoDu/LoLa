@@ -104,10 +104,11 @@ protected:
 			SendVariableDurationMicros = (longDuration - shortDuration) + (airLong - airShort);
 
 #if defined(DEBUG_LOLA)
-			Serial.println(F("Time-to-Air estimation"));
-			Serial.println(F("Short\tLong"));
+			Serial.println(F("Time-to-Air estimation:"));
+			Serial.print(F("\tShort\t"));
 			Serial.print(GetSendDuration(0));
-			Serial.print('\t');
+			Serial.println(F(" us"));
+			Serial.print(F("\tLong\t"));
 			Serial.print(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
 			Serial.println(F(" us"));
 #endif
@@ -120,7 +121,7 @@ protected:
 	const uint16_t GetSendDuration(const uint8_t payloadSize)
 	{
 		return SendShortDurationMicros
-			+ ((((uint32_t)SendVariableDurationMicros) * payloadSize) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
+			+ (uint16_t)((((uint32_t)SendVariableDurationMicros) * payloadSize) / LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
 	}
 
 	const uint16_t GetOnAirDuration(const uint8_t payloadSize)

@@ -11,9 +11,6 @@
 class IDuplex
 {
 public:
-	static constexpr uint16_t DUPLEX_FULL = 0;
-
-public:
 	/// <summary>
 	/// </summary>
 	/// <param name="timestamp"></param>
@@ -28,7 +25,7 @@ public:
 
 	/// <summary>
 	/// </summary>
-	/// <returns>DUPLEX_FULL if full duplex; Duplex period in microseconds otherwise.</returns>
-	virtual const uint16_t GetPeriod() { return DUPLEX_FULL; }
+	/// <returns>Duplex period in microseconds otherwise.</returns>
+	virtual const uint16_t GetPeriod() { return 0; }
 };
 #endif

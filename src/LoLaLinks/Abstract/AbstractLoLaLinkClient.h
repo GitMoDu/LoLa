@@ -71,7 +71,7 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, LinkingDuplex(BaseClass::GetPreLinkDuplexPeriod(duplex, transceiver))
+		, LinkingDuplex(duplex->GetPeriod())
 	{}
 
 protected:
@@ -704,17 +704,6 @@ protected:
 			+ (int32_t)LinkingDuplex.GetFollowerOffset());
 
 		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
-	}
-
-private:
-	static const uint16_t GetPreLinkDuplexStart(IDuplex* duplex, ILoLaTransceiver* transceiver)
-	{
-		return GetPreLinkDuplexPeriod(duplex, transceiver) / 2;
-	}
-
-	static const uint16_t GetPreLinkDuplexEnd(IDuplex* duplex, ILoLaTransceiver* transceiver)
-	{
-		return GetPreLinkDuplexStart(duplex, transceiver) + (GetPreLinkDuplexPeriod(duplex, transceiver) / 2);
 	}
 };
 #endif

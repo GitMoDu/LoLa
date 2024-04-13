@@ -7,9 +7,6 @@ enum PacketEventEnum
 {
 	SendCollisionFailed,
 	ReceiveRejectedTransceiver,
-	ReceiveRejectedDropped,
-	ReceiveRejectedInvalid,
-	ReceiveRejectedOutOfSlot,
 	ReceiveRejectedMac,
 	ReceiveRejectedHeader
 };

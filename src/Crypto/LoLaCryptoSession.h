@@ -45,7 +45,6 @@ protected:
 	XoodyakHashWrapper<MAC_SIZE> CryptoHasher{};
 #endif
 
-
 protected:
 	///// <summary>
 	///// HKDF Expanded key, with extra seeds.
@@ -267,7 +266,7 @@ public:
 		ClearNonce();
 		CryptoHasher.reset(Nonce);
 #else
-		CryptoHasher.finalize(InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+		CryptoHasher.finalize(InputKey, LoLaCryptoDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.reset();
 #endif
 		CryptoHasher.update(ExpandedKey.CypherIvSeed, ADDRESS_KEY_SIZE);
@@ -276,7 +275,7 @@ public:
 #if defined(LOLA_USE_POLY1305)
 		CryptoHasher.finalize(Nonce, OutputKey, ADDRESS_KEY_SIZE);
 #else
-		CryptoHasher.finalize(OutputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
+		CryptoHasher.finalize(OutputKey, LoLaCryptoDefinition::ADDRESS_KEY_SIZE);
 #endif
 		CryptoHasher.clear();
 	}
@@ -373,10 +372,7 @@ public:
 protected:
 	void ClearNonce()
 	{
-		for (uint_fast8_t i = 0; i < CYPHER_IV_SIZE; i++)
-		{
-			Nonce[i] = 0xFF;
-		}
+		memset(Nonce, 0xFF, CYPHER_IV_SIZE);
 	}
 
 private:

@@ -136,15 +136,8 @@ public:
 
 		if (PendingReceiveSize > 0)
 		{
-			if (PendingReceiveSize < LoLaPacketDefinition::MIN_PACKET_SIZE
-				|| PendingReceiveSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-			{
-				ServiceListener->OnDropped(ReceiveTimestamp, PendingReceiveSize);
-			}
-			else
-			{
-				ServiceListener->OnReceived(ReceiveTimestamp, PendingReceiveSize, PendingReceiveRssi);
-			}
+			ServiceListener->OnReceived(ReceiveTimestamp, PendingReceiveSize, PendingReceiveRssi);
+
 			PendingReceiveSize = 0;
 			Task::enable();
 			return true;
@@ -248,7 +241,7 @@ public:
 public:
 	/// <summary>
 	/// Handles incoming packets.
-	/// Checks for valid size and forwards the events to the listener.
+	/// Checks for busy status and forwards the packet to the listener.
 	/// </summary>
 	/// <param name="data">Raw packet data.</param>
 	/// <param name="receiveTimestamp">Accurate timestamp (micros()) of incoming packet start.</param>
@@ -264,18 +257,10 @@ public:
 		}
 
 		// Double buffer input packet, so we don't miss any in the meanwhile.
+		memcpy((void*)RawInPacket, (const void*)data, (size_t)packetSize);
 		PendingReceiveSize = packetSize;
 		ReceiveTimestamp = receiveTimestamp;
 		PendingReceiveRssi = rssi;
-
-		// Only copy buffer if packet fits, but let task notify listener that a packet was dropped.
-		if (packetSize <= LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-		{
-			for (uint_fast8_t i = 0; i < packetSize; i++)
-			{
-				RawInPacket[i] = data[i];
-			}
-		}
 
 		Task::enable();
 

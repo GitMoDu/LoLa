@@ -65,9 +65,8 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, LinkingDuplex(GetPreLinkDuplexPeriod(duplex, transceiver))
-	{
-	}
+		, LinkingDuplex(duplex->GetPeriod())
+	{}
 
 protected:
 #if defined(DEBUG_LOLA)

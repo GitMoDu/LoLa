@@ -157,17 +157,21 @@ public:
 		}
 		else
 		{
-			Task::enableIfNot();
-
 			return false;
 		}
 	}
 
 	virtual const bool Stop() final
 	{
-		UpdateLinkStage(LinkStageEnum::Disabled);
-
-		return Transceiver->Stop();
+		if (LinkStage != LinkStageEnum::Disabled)
+		{
+			UpdateLinkStage(LinkStageEnum::Disabled);
+			return Transceiver->Stop();
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 protected:
@@ -190,20 +194,6 @@ protected:
 	const bool UnlinkedPacketThrottle()
 	{
 		return micros() - LastUnlinkedSent >= GetPacketThrottlePeriod() * 2;
-	}
-
-	static const uint16_t GetPreLinkDuplexPeriod(IDuplex* duplex, ILoLaTransceiver* transceiver)
-	{
-		if (duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
-		{
-			return (transceiver->GetTimeToAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-				+ transceiver->GetDurationInAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-				+ LoLaLinkDefinition::FULL_DUPLEX_RESEND_WAIT_MICROS) * 2;
-		}
-		else
-		{
-			return duplex->GetPeriod() * 2;
-		}
 	}
 
 protected:
@@ -335,15 +325,6 @@ protected:
 			break;
 		case PacketEventEnum::ReceiveRejectedTransceiver:
 			Serial.println(F("@Link Event: ReceiveRejected: Transceiver"));
-			break;
-		case PacketEventEnum::ReceiveRejectedDropped:
-			Serial.println(F("@Link Event: ReceiveRejected: Dropped."));
-			break;
-		case PacketEventEnum::ReceiveRejectedInvalid:
-			Serial.println(F("@Link Event: ReceiveRejected: Invalid."));
-			break;
-		case PacketEventEnum::ReceiveRejectedOutOfSlot:
-			Serial.println(F("@Link Event: ReceiveRejected: OutOfSlot"));
 			break;
 		case PacketEventEnum::ReceiveRejectedMac:
 			Serial.println(F("@Link Event: ReceiveRejectedMAC"));

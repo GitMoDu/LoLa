@@ -116,8 +116,7 @@ public:
 			return false;
 		}
 
-		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL
-			&& GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
+		if (GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE) >= Duplex->GetRange())
 		{
 #if defined(DEBUG_LOLA)
 			Serial.print(F("Estimated Time-On-Air ( is longer than the duplex slot duration."));
@@ -129,8 +128,7 @@ public:
 			return false;
 		}
 
-		if (Duplex->GetPeriod() != IDuplex::DUPLEX_FULL
-			&& Duplex->GetPeriod() > LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS)
+		if (Duplex->GetPeriod() > LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS)
 		{
 #if defined(DEBUG_LOLA)
 			Serial.println(F("Duplex Period is too long for LoLa Link."));
@@ -139,14 +137,41 @@ public:
 		}
 
 #if defined(DEBUG_LOLA)
-		Serial.print(F("Duplex Range: "));
+		const uint32_t transceiverBitsPerSecond = ((uint32_t)LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE * 8 * ONE_SECOND_MICROS)
+			/ GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
+		const uint32_t packetsPerSecond = ONE_SECOND_MICROS / (GetSendDuration(0) + GetOnAirDuration(0));
+		const uint32_t rangedPacketsPerSecond = (packetsPerSecond * Duplex->GetRange()) / Duplex->GetPeriod();
+		const uint32_t rangedBitsPerSecond = (transceiverBitsPerSecond * Duplex->GetRange()) / Duplex->GetPeriod();
+
+		Serial.println(F("Duplex:"));
+		Serial.print(F("\tPeriod:\t"));
+		Serial.println(Duplex->GetPeriod());
+		Serial.print(F("\tRange:\t"));
 		Serial.println(Duplex->GetRange());
 
-		Serial.print(F("Duplex Period: "));
-		Serial.println(Duplex->GetPeriod());
+		Serial.println(F("Packet TX"));
+		Serial.print(F("\tMax:\t"));
+		Serial.print(packetsPerSecond);
+		Serial.println(F(" packets/s"));
+		Serial.print(F("\tRanged:\t"));
+		Serial.print(rangedPacketsPerSecond);
+		Serial.println(F(" packets/s"));
 
-		Serial.print(F("Max Time-On-Air: "));
+		Serial.println(F("Bitrate"));
+		Serial.print(F("\tMax:\t"));
+		Serial.print(transceiverBitsPerSecond);
+		Serial.println(F(" bps"));
+
+		Serial.print(F("\tRanged:\t"));
+		Serial.print(rangedBitsPerSecond);
+		Serial.println(F(" bps"));
+
+		Serial.println(F("Time-On-Air:"));
+		Serial.print(F("\tMin:\t"));
+		Serial.println(GetOnAirDuration(0));
+		Serial.print(F("\tMax:\t"));
 		Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+
 		Serial.println();
 #endif
 
@@ -178,33 +203,18 @@ public:
 public:
 	virtual const uint32_t GetPacketThrottlePeriod() final
 	{
-		if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
-		{
-			return Transceiver->GetTimeToAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-				+ Transceiver->GetDurationInAir(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-				+ LoLaLinkDefinition::FULL_DUPLEX_RESEND_WAIT_MICROS;
-		}
-		else
-		{
-			return Duplex->GetPeriod() / 2;
-		}
+		return (((uint32_t)Duplex->GetPeriod()) * 2) - 1;
 	}
 
 	virtual const bool CanSendPacket(const uint8_t payloadSize) final
 	{
-		if (LinkStage == LinkStageEnum::Linked && PacketService.CanSendPacket())
+		if (LinkStage == LinkStageEnum::Linked
+			&& PacketService.CanSendPacket())
 		{
-			if (Duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
-			{
-				return true;
-			}
-			else
-			{
-				SyncClock.GetTimestamp(LinkTimestamp);
-				LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
+			SyncClock.GetTimestamp(LinkTimestamp);
+			LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
-				return Duplex->IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
-			}
+			return Duplex->IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
 		}
 		else
 		{
@@ -478,28 +488,35 @@ private:
 		Serial.print(calibrationDuration);
 		Serial.println(F(" us)"));
 
-		Serial.println(F("Short\tLong"));
+		Serial.println(F("Encode"));
+		Serial.print(F("\tShort:\t"));
 		Serial.print(shortDuration);
-		Serial.print('\t');
+		Serial.println(F(" us"));
+		Serial.print(F("\tLong\t"));
 		Serial.print(longDuration);
 		Serial.println(F(" us"));
 
-		Serial.println(F("Rejection duration: "));
-		Serial.println(F("Short\tLong"));
+		Serial.println(F("Rejection: "));
+		Serial.print(F("\tShort:\t"));
 		Serial.print(rejectionShortDuration);
-		Serial.print('\t');
+		Serial.println(F(" us"));
+		Serial.print(F("\tLong\t"));
 		Serial.print(rejectionLongDuration);
 		Serial.println(F(" us"));
-		Serial.println(F("PRNG Hop calculation: "));
+		Serial.println(F("PRNG Hop:"));
+		Serial.print('\t');
 		Serial.print(calculationDuration);
 		Serial.println(F(" ns."));
-		Serial.println(F("Timestamping duration: "));
+		Serial.println(F("Timestamping:"));
+		Serial.print('\t');
 		Serial.print(timestampingDuration);
 		Serial.println(F(" ns."));
-		Serial.println(F("Hopper offset: "));
+		Serial.println(F("Hopper offset:"));
+		Serial.print('\t');
 		Serial.print(HOPPER_OFFSET);
 		Serial.println(F(" us."));
-		Serial.println(F("Hopper look forward: "));
+		Serial.println(F("Hopper forward:"));
+		Serial.print('\t');
 		Serial.print(prngHopDuration + HOPPER_OFFSET);
 		Serial.println(F(" us."));
 #endif

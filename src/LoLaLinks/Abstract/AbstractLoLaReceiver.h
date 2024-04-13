@@ -68,18 +68,13 @@ public:
 		OnEvent(PacketEventEnum::ReceiveRejectedTransceiver);
 	}
 
-	virtual void OnDropped(const uint32_t timestamp, const uint8_t packetSize) final
-	{
-		// PacketService validates for size.
-		OnEvent(PacketEventEnum::ReceiveRejectedInvalid);
-	}
-
 	/// <summary>
-	/// Incoming packet is been validated for:
+	/// RawInPacket packet is validated for:
 	/// - Data integrity.
 	/// - Source authenticity.
 	/// - Replay/Echo denied.
-	/// <param name="receiveTimestamp"></param>
+	/// And decoded into InData.
+	/// <param name="receiveTimestamp">micros() timestamp of packet start.</param>
 	/// <param name="packetSize"></param>
 	/// <param name="rssi"></param>
 	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final

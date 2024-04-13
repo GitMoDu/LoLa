@@ -7,7 +7,10 @@
 
 /// <summary>
 /// Fixed full duplex, is always in slot.
+/// Period is used for packet throttling only.
 /// </summary>
+/// <typeparam name="throttlePeriodMicros"></typeparam>
+template<const uint32_t throttlePeriodMicros = 1000>
 class FullDuplex : public virtual IDuplex
 {
 public:
@@ -23,7 +26,7 @@ public:
 
 	virtual const uint16_t GetPeriod() final
 	{
-		return IDuplex::DUPLEX_FULL;
+		return throttlePeriodMicros;
 	}
 };
 
@@ -42,9 +45,6 @@ template<const uint16_t DuplexPeriodMicros,
 class TemplateHalfDuplex : public IDuplex
 {
 private:
-	const uint_fast16_t DuplexStart;
-	const uint_fast16_t DuplexEnd;
-
 	template<const bool IsOdd>
 	static constexpr uint16_t GetDuplexStart()
 	{
@@ -58,11 +58,13 @@ private:
 		return (((uint8_t)IsOdd) * (DuplexPeriodMicros - DeadZoneMicros))
 			+ (((uint8_t)!IsOdd) * (SwitchOverMicros - DeadZoneMicros));
 	}
+
+	static constexpr uint_fast16_t DuplexStart = GetDuplexStart<IsOddSlot>();
+	static constexpr uint_fast16_t DuplexEnd = GetDuplexEnd<IsOddSlot>();
+
 public:
 	TemplateHalfDuplex()
 		: IDuplex()
-		, DuplexStart(GetDuplexStart<IsOddSlot>())
-		, DuplexEnd(GetDuplexEnd<IsOddSlot>())
 	{}
 
 public:
@@ -77,7 +79,7 @@ public:
 
 	virtual const uint16_t GetRange() final
 	{
-		return DuplexEnd - DuplexStart;
+		return (uint16_t)(DuplexEnd - DuplexStart);
 	}
 
 	virtual const uint16_t GetPeriod() final

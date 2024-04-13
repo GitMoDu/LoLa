@@ -36,15 +36,6 @@ public:
 	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) { }
 
 	/// <summary>
-	/// The Packet driver had a packet ready for receive,
-	///  but the packet service was still busy serving the last one.
-	/// </summary>
-	/// <param name="timestamp"></param>
-	/// <param name="size"></param>
-	/// <returns></returns>
-	virtual void OnDropped(const uint32_t timestamp, const uint8_t packetSize) {  }
-
-	/// <summary>
 	/// The Physical Driver failed to receive an integral packet.
 	/// </summary>
 	/// <param name="timestamp"></param>

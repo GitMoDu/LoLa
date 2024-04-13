@@ -10,6 +10,7 @@ class ILoLaTransceiverListener
 public:
 	/// <summary>
 	/// Transceiver has a received packet to deliver.
+	/// TODO: Add direct buffer variant.
 	/// </summary>
 	/// <param name="data">Raw packet data.</param>
 	/// <param name="receiveTimestamp">Accurate timestamp (micros()) of incoming packet start.</param>
@@ -83,7 +84,7 @@ public:
 
 	/// <summary>
 	/// Set to RX mode on the indicated channel.
-	/// If Transceiver doesn't support channels, this can be safely ignored (even better, finalized empty).
+	/// If Transceiver doesn't support channels, this can be safely ignored.
 	/// Caller is unaware of transceiver internal state.
 	/// If the transceiver has already auto set to RX after a transmit, skip.
 	/// If the transceiver has a fast RX_HOP mode, do a fast hop to new channel,
@@ -95,7 +96,7 @@ public:
 	/// <summary>
 	/// How long transmiting will take from Tx request to start In-Air.
 	/// This includes memory copies and SPI transactions and pre-ambles,
-	///	 but does not include medium delay (ex: lightspeed) or internal transceiver processing. 
+	///	 but does not include medium delay (ex: lightspeed). 
 	/// </summary>
 	/// <param name="packetSize"></param>
 	/// <returns>Duration In microseconds.</returns>

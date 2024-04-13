@@ -13,34 +13,34 @@ template<const bool IsOddSlot>
 class PreLinkDuplex
 {
 protected:
-	const uint_fast16_t PreLinkDuplexPeriodMicros;
-	const uint_fast16_t DuplexStart;
-	const uint_fast16_t DuplexEnd;
+	const uint32_t PreLinkDuplexPeriodMicros;
+	const uint32_t DuplexStart;
+	const uint32_t DuplexEnd;
 
 protected:
-	static constexpr uint16_t GetPreLinkDuplexPeriod(const uint16_t duplexPeriodMicros)
+	static constexpr uint32_t GetPreLinkDuplexPeriod(const uint16_t duplexPeriodMicros)
 	{
-		return duplexPeriodMicros * 2;
+		return (uint32_t)duplexPeriodMicros * 4;
 	}
 
 	template<const bool IsOdd>
-	static constexpr uint16_t GetPreLinkDuplexStart(const uint16_t duplexPeriodMicros)
+	static constexpr uint32_t GetPreLinkDuplexStart(const uint16_t duplexPeriodMicros)
 	{
-		return (((uint8_t)IsOdd) * duplexPeriodMicros)
-			+ (((uint8_t)!IsOdd) * 0);
+		return (((uint32_t)IsOdd) * 2 * duplexPeriodMicros)
+			+ (((uint32_t)!IsOdd) * duplexPeriodMicros);
 	}
 
 	template<const bool IsOdd>
-	static constexpr uint16_t GetPreLinkDuplexEnd(const uint16_t duplexPeriodMicros)
+	static constexpr uint32_t GetPreLinkDuplexEnd(const uint16_t duplexPeriodMicros)
 	{
-		return (((uint8_t)IsOdd) * (duplexPeriodMicros + (duplexPeriodMicros / 2)))
-			+ (((uint8_t)!IsOdd) * (duplexPeriodMicros / 2));
+		return (((uint32_t)IsOdd) * 3 * duplexPeriodMicros)
+			+ (((uint32_t)!IsOdd) * 2 * duplexPeriodMicros);
 	}
 
 public:
 	/// <summary>
 	/// </summary>
-	/// <param name="DuplexPeriodMicros">[2;32,767]</param>
+	/// <param name="DuplexPeriodMicros">[2;UINT16_MAX]</param>
 	PreLinkDuplex(const uint16_t duplexPeriodMicros)
 		: PreLinkDuplexPeriodMicros(GetPreLinkDuplexPeriod(duplexPeriodMicros))
 		, DuplexStart(GetPreLinkDuplexStart<IsOddSlot>(duplexPeriodMicros))
@@ -50,21 +50,20 @@ public:
 public:
 	const bool IsInRange(const uint32_t timestamp, const uint16_t duration) const
 	{
-		const uint_fast16_t startRemainder = timestamp % PreLinkDuplexPeriodMicros;
+		const uint32_t startRemainder = timestamp % PreLinkDuplexPeriodMicros;
 
 		return startRemainder >= DuplexStart
 			&& startRemainder < DuplexEnd
-			&& (duration < (DuplexEnd - startRemainder));
+			&& (duration <= (DuplexEnd - startRemainder));
 	}
 };
-
 
 class PreLinkMasterDuplex : public PreLinkDuplex<false>
 {
 public:
 	/// <summary>
 	/// </summary>
-	/// <param name="DuplexPeriodMicros">[2;32,767]</param>
+	/// <param name="DuplexPeriodMicros">[2;UINT16_MAX]</param>
 	PreLinkMasterDuplex(const uint16_t duplexPeriodMicros)
 		: PreLinkDuplex<false>(duplexPeriodMicros)
 	{}
@@ -76,18 +75,18 @@ private:
 	using BaseClass = PreLinkDuplex<true>;
 
 private:
-	uint_fast16_t FollowerOffset = 0;
+	uint32_t FollowerOffset = 0;
 
 public:
 	/// <summary>
 	/// </summary>
-	/// <param name="DuplexPeriodMicros">[2;32,767]</param>
+	/// <param name="DuplexPeriodMicros">[2;UINT16_MAX]</param>
 	PreLinkSlaveDuplex(const uint16_t duplexPeriodMicros)
 		: BaseClass(duplexPeriodMicros)
 	{}
 
 public:
-	const uint16_t GetFollowerOffset()
+	const uint32_t GetFollowerOffset()
 	{
 		return FollowerOffset;
 	}
