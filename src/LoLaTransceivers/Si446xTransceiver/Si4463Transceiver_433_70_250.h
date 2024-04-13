@@ -25,7 +25,7 @@ namespace Si4463_433_70_250
 		static constexpr uint16_t TTA_LONG = 191;
 		static constexpr uint16_t TTA_SHORT = 169;
 
-		static constexpr uint16_t DIA_LONG = 1650 - TTA_LONG;
+		static constexpr uint16_t DIA_LONG = 1651 - TTA_LONG;
 		static constexpr uint16_t DIA_SHORT = 816 - TTA_SHORT;
 
 		static constexpr uint8_t RSSI_LATCH_MIN = 60;

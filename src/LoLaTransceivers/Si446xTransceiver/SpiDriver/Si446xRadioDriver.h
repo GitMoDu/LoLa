@@ -35,9 +35,9 @@ template<const uint8_t MaxRxSize,
 class Si446xRadioDriver : private Task
 {
 private:
-	Si446xSpiDriver<pinCS, pinSDN, pinCLK, pinMISO, pinMOSI, spiChannel> SpiDriver;
-
 	void (*RadioInterrupt)(void) = nullptr;
+
+	Si446xSpiDriver<pinCS, pinSDN, pinCLK, pinMISO, pinMOSI, spiChannel> SpiDriver{};
 
 	uint8_t InBuffer[MaxRxSize]{};
 
@@ -57,7 +57,6 @@ protected:
 public:
 	Si446xRadioDriver(Scheduler& scheduler)
 		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-		, SpiDriver()
 	{}
 
 	void OnRadioInterrupt(const uint32_t timestamp)

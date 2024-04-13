@@ -86,7 +86,6 @@ public:
 #endif
 
 		PartInfoStruct partInfo{};
-
 		if (!GetPartInfo(partInfo, 100000))
 		{
 			return false;
@@ -106,7 +105,7 @@ public:
 			break;
 		default:
 #if defined(DEBUG_LOLA)
-			Serial.print(F("Si446xSpiDriver Unknown Part Number: "));
+			Serial.print(F("Si446x Unknown Part Number: "));
 			Serial.println(partInfo.PartId);
 			Serial.print(F("DeviceId: "));
 			Serial.println(partInfo.DeviceId);
@@ -124,8 +123,7 @@ public:
 			return false;
 		}
 
-		Si446x::RadioEventsStruct radioEvents{};
-		if (!GetRadioEvents(radioEvents, 10000))
+		if (!ClearRadioEvents(10000))
 		{
 			return false;
 		}
@@ -135,7 +133,6 @@ public:
 			return false;
 		}
 
-		// Sleep until first command.
 		if (!SetRadioState(RadioStateEnum::SLEEP, 10000))
 		{
 			return false;
@@ -319,6 +316,30 @@ public:
 		}
 
 		radioEvents.SetFrom(Message, false);
+
+		return true;
+	}
+
+	const bool ClearRadioEvents(const uint32_t timeoutMicros = 1000)
+	{
+		Message[0] = (uint8_t)Command::GET_INT_STATUS;
+		Message[1] = 0;
+		Message[2] = 0;
+		Message[3] = 0;
+
+		if (!SpinWaitForResponse(timeoutMicros))
+		{
+			return false;
+		}
+
+		CsOn();
+		SpiInstance.transfer(Message, 4);
+		CsOff();
+
+		if (!SpinWaitForResponse(Message, 8, timeoutMicros))
+		{
+			return false;
+		}
 
 		return true;
 	}
