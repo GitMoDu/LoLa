@@ -73,7 +73,7 @@ public:
 	}
 
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) final
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -111,7 +111,7 @@ protected:
 #endif
 			break;
 		default:
-			BaseClass::OnUnlinkedPacketReceived(timestamp, payload, payloadSize);
+			BaseClass::OnUnlinkedPacketReceived(timestamp, payload, rollingCounter, payloadSize);
 			break;
 		}
 	}

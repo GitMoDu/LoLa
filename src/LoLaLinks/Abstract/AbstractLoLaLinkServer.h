@@ -120,7 +120,7 @@ protected:
 	}
 
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize)
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize)
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -165,7 +165,7 @@ protected:
 #endif
 					return;
 				}
-
+				SetReceiveCounter(rollingCounter);	// Save last received counter, ready for switch for next stage.
 				StateTransition.OnReceived();
 				Task::enable();
 

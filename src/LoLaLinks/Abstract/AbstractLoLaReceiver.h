@@ -32,9 +32,9 @@ protected:
 	///// </summary>
 	/// <param name="timestamp"></param>
 	/// <param name="payload"></param>
+	/// <param name="rollingCounter"></param>
 	/// <param name="payloadSize"></param>
-	/// <param name="port"></param>
-	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) {}
+	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) {}
 
 	/// <summary>
 	/// Packet parser for Link implementation classes. Only fires when linking is active.
@@ -42,7 +42,6 @@ protected:
 	/// <param name="timestamp"></param>
 	/// <param name="payload"></param>
 	/// <param name="payloadSize"></param>
-	/// <param name="counter"></param>
 	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) {}
 
 	/// <summary>
@@ -93,14 +92,12 @@ public:
 			// Addressing must be explicit in payload.
 			if (Encoder->DecodeInPacket(RawInPacket, InData, receivingCounter, receivingDataSize))
 			{
-				// Save last received counter, ready for switch for next stage.
-				ReceiveCounter = receivingCounter;
-
 				// Check for valid port.
 				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT)
 				{
 					OnUnlinkedPacketReceived(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+						receivingCounter,
 						LoLaPacketDefinition::GetPayloadSize(packetSize));
 				}
 				else
