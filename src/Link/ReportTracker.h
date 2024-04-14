@@ -25,7 +25,8 @@ private:
 	bool BalancingDelay = false;
 
 public:
-	ReportTracker()
+	ReportTracker(const uint32_t timeoutPeriod)
+		: LinkQualityTracker(timeoutPeriod)
 	{}
 
 	void Reset(const uint32_t timestamp)

@@ -32,7 +32,7 @@ private:
 	};
 
 protected:
-	ServerTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
+	ServerTimedStateTransition StateTransition;
 
 private:
 	Timestamp InEstimate{};
@@ -65,6 +65,7 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
+		, StateTransition(LoLaLinkDefinition::GetTransitionDuration(duplex->GetPeriod()))
 		, LinkingDuplex(duplex->GetPeriod())
 	{}
 

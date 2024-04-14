@@ -17,6 +17,9 @@ private:
 	static constexpr uint8_t TX_RSSI_FILTER_WEIGHT = 32;
 
 private:
+	const uint32_t TimeoutPeriod;
+
+private:
 	uint32_t LastConsume = 0;
 
 	uint32_t LastValidReceived = 0;
@@ -31,6 +34,10 @@ protected:
 	uint16_t RxDropCount = 0;
 
 public:
+	LinkQualityTracker(const uint32_t timeoutPeriod)
+		: TimeoutPeriod(timeoutPeriod)
+	{}
+
 	void ResetQuality(const uint32_t timestamp)
 	{
 		RxDropCount = 0;
@@ -81,13 +88,13 @@ public:
 	{
 		const uint32_t elapsedSinceLastValidReceived = GetElapsedSinceLastValidReceived();
 
-		if (elapsedSinceLastValidReceived > LoLaLinkDefinition::LINK_STAGE_TIMEOUT)
+		if (elapsedSinceLastValidReceived > TimeoutPeriod)
 		{
 			return 0;
 		}
 		else
 		{
-			return UINT8_MAX - ((elapsedSinceLastValidReceived * UINT8_MAX) / LoLaLinkDefinition::LINK_STAGE_TIMEOUT);
+			return UINT8_MAX - ((elapsedSinceLastValidReceived * UINT8_MAX) / TimeoutPeriod);
 		}
 	}
 

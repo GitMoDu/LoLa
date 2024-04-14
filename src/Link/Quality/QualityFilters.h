@@ -61,14 +61,14 @@ public:
 /// <summary>
 /// Template EMA filter for uint8_t.
 /// </summary>
-/// <typeparam name="FilterScale">[0:256]</typeparam>
+/// <typeparam name="FilterScale">[0:UINT8_MAX]</typeparam>
 template<const uint8_t FilterScale>
 class EmaFilter8 : public TemplateEmaFilter<FilterScale, uint8_t, uint16_t> {};
 
 /// <summary>
 /// Template EMA filter for uint16_t.
 /// </summary>
-/// <typeparam name="FilterScale">[0:256]</typeparam>
+/// <typeparam name="FilterScale">[0:UINT8_MAX]</typeparam>
 template<const uint8_t FilterScale>
 class EmaFilter16 : public TemplateEmaFilter<FilterScale, uint16_t, uint32_t> {};
 #endif

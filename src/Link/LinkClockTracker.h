@@ -11,21 +11,24 @@
 class LinkServerClockTracker
 {
 private:
-	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 5;
+	static constexpr uint8_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 5;
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 220;
+	static constexpr uint8_t QUALITY_COUNT = 9;
 
 private:
 	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
 
 	int32_t ReplyError = 0;
+	uint8_t Count = 0;
 
 	bool ReplyPending = false;
 
 public:
 	void Reset()
 	{
+		QualityFilter.Clear();
+		Count = 0;
 		ReplyPending = false;
-		QualityFilter.Clear(0);
 	}
 
 	void OnReplySent()
@@ -35,7 +38,7 @@ public:
 
 	const uint8_t GetQuality()
 	{
-		return QualityFilter.Get();
+		return ((uint16_t)QualityFilter.Get() * Count) / QUALITY_COUNT;
 	}
 
 	const bool HasReplyPending()
@@ -54,6 +57,11 @@ public:
 		ReplyError = real - estimate;
 
 		QualityFilter.Step(GetErrorQuality(ReplyError));
+
+		if (Count < QUALITY_COUNT)
+		{
+			Count++;
+		}
 	}
 
 private:
@@ -79,20 +87,21 @@ private:
 class LinkClientClockTracker
 {
 private:
-	static constexpr uint16_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 2;
+	static constexpr uint16_t CLOCK_TUNE_PERIOD = 2200;
+	static constexpr uint16_t CLOCK_TUNE_BASE_PERIOD = 250;
+
+	static constexpr uint8_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 2;
 	static constexpr uint8_t DEVIATION_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE / 4;
 
-	static constexpr uint16_t CLOCK_TUNE_PERIOD = 1800;
-	static constexpr uint16_t CLOCK_TUNE_PAUSE = 501;
-	static constexpr uint8_t CLOCK_TUNE_RETRY_PERIOD = 81;
+	static constexpr uint8_t CLOCK_TUNE_RETRY_DUPLEX_COUNT = 8;
 	static constexpr uint8_t CLOCK_SYNC_SAMPLE_COUNT = 3;
-	static constexpr uint16_t CLOCK_TUNE_MIN_PERIOD = (CLOCK_TUNE_PAUSE + (CLOCK_TUNE_RETRY_PERIOD * CLOCK_SYNC_SAMPLE_COUNT));
 
 	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
 	static constexpr uint8_t CLOCK_TUNE_RATIO = 32;
 	static constexpr uint8_t CLOCK_REJECT_DEVIATION = 3;
 
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 200;
+	static constexpr uint8_t QUALITY_COUNT = 8 * CLOCK_SYNC_SAMPLE_COUNT;
 
 	enum class ClockTuneStateEnum
 	{
@@ -101,6 +110,10 @@ private:
 		WaitingForReply,
 		ResultReady
 	} ClockTuneState = ClockTuneStateEnum::Idling;
+
+private:
+	const uint32_t ClockTuneRetryPeriod;
+	const uint32_t ClockTuneMinPeriod;
 
 private:
 	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
@@ -116,9 +129,28 @@ private:
 	int32_t AverageError = 0;
 	uint16_t DeviationError = 0;
 
+	uint8_t Count = 0;
 	uint8_t SampleCount = 0;
 
 public:
+	LinkClientClockTracker(const uint16_t duplexPeriod)
+		: ClockTuneRetryPeriod(((uint32_t)duplexPeriod* CLOCK_TUNE_RETRY_DUPLEX_COUNT) / ONE_MILLI_MICROS)
+		, ClockTuneMinPeriod((uint32_t)CLOCK_TUNE_BASE_PERIOD + ((uint32_t)ClockTuneRetryPeriod * CLOCK_SYNC_SAMPLE_COUNT))
+	{}
+
+	void Reset()
+	{
+		QualityFilter.Clear();
+		LastClockSent = 0;
+		LastClockSync = 0;
+		RequestSendDuration = 0;
+		TuneError = 0;
+		AverageError = 0;
+		DeviationError = 0;
+		Count = 0;
+		SampleCount = 0;
+	}
+
 	void SetRequestSendDuration(const uint32_t requestSendDuration)
 	{
 		RequestSendDuration = requestSendDuration;
@@ -147,7 +179,7 @@ public:
 
 	const uint8_t GetQuality()
 	{
-		return QualityFilter.Get();
+		return ((uint16_t)QualityFilter.Get() * Count) / QUALITY_COUNT;
 	}
 
 	const bool HasResultReady()
@@ -155,30 +187,16 @@ public:
 		return ClockTuneState == ClockTuneStateEnum::ResultReady;
 	}
 
-	const uint16_t GetSyncPeriod()
-	{
-		const uint8_t MIN_QUALITY = 180;
-
-		if (GetQuality() > MIN_QUALITY)
-		{
-			return CLOCK_TUNE_MIN_PERIOD + (((uint32_t)(CLOCK_TUNE_PERIOD - CLOCK_TUNE_MIN_PERIOD) * (GetQuality() - MIN_QUALITY)) / (UINT8_MAX - MIN_QUALITY));
-		}
-		else
-		{
-			return CLOCK_TUNE_MIN_PERIOD;
-		}
-	}
-
 	const bool HasRequestToSend(const uint32_t timestamp)
 	{
 		switch (ClockTuneState)
 		{
 		case ClockTuneStateEnum::Idling:
-			return (timestamp - LastClockSync) > GetSyncPeriod();
+			return (timestamp - LastClockSync) > GetSyncPeriod(GetQuality());
 			break;
 		case ClockTuneStateEnum::Sending:
 		case ClockTuneStateEnum::WaitingForReply:
-			return (timestamp - LastClockSent) > CLOCK_TUNE_RETRY_PERIOD;
+			return (timestamp - LastClockSent) > ClockTuneRetryPeriod;
 			break;
 		default:
 			return false;
@@ -213,6 +231,10 @@ public:
 		}
 
 		StepError(cappedError);
+		if (Count < QUALITY_COUNT)
+		{
+			Count++;
+		}
 
 		if (SampleCount >= CLOCK_SYNC_SAMPLE_COUNT)
 		{
@@ -275,6 +297,11 @@ public:
 	}
 
 private:
+	const uint32_t GetSyncPeriod(const uint8_t quality)
+	{
+		return (uint32_t)ClockTuneMinPeriod + (((uint32_t)(CLOCK_TUNE_PERIOD - ClockTuneMinPeriod) * quality) / UINT8_MAX);
+	}
+
 	void StepError(const int16_t error)
 	{
 		ErrorSamples[SampleCount] = error;
@@ -378,9 +405,15 @@ private:
 public:
 	void DebugClockError()
 	{
-		Serial.print(F(" AverageError "));
+		Serial.println(F("Client Clock Sync"));
+		Serial.print(F("\tQuality "));
+		Serial.println(GetQuality());
+		Serial.print(F("\tSync Period "));
+		Serial.print(GetSyncPeriod(GetQuality()));
+		Serial.println(F(" us"));
+		Serial.print(F("\tAverageError "));
 		Serial.println(AverageError / CLOCK_FILTER_SCALE);
-		Serial.print(F(" Deviation "));
+		Serial.print(F("\tDeviation "));
 		Serial.println(DeviationError);
 	}
 #endif

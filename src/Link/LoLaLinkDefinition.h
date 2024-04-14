@@ -75,32 +75,29 @@ namespace LoLaLinkDefinition
 	static constexpr uint8_t LINKING_ADVERTISING_PIPE_COUNT = 4;
 
 	/// <summary>
-	/// Link state transition durations in microseconds.
+	/// Link state transition durations in duplex counts.
+	/// Transitions happen on pre-link duplex, which has a period of duplexPeriod x 2.
 	/// </summary>
-	static constexpr uint16_t LINKING_TRANSITION_PERIOD_MICROS = 35000;
+	static constexpr uint8_t LINKING_TRANSITION_DUPLEX_COUNT = 7;
 
 	/// <summary>
 	/// If linking is not complete after this time, unlink and restart.
 	/// </summary>
-	static constexpr uint16_t LINKING_STAGE_TIMEOUT = 300;
+	static constexpr uint8_t LINKING_STAGE_TIMEOUT_DUPLEX_COUNT = 25;
 
 	/// <summary>
 	/// How long without an input message from partner before disconnect.
 	/// </summary>
-	static constexpr uint16_t LINK_STAGE_TIMEOUT = 750;
+	static constexpr uint8_t LINK_STAGE_TIMEOUT_DUPLEX_COUNT = 40;
+	static constexpr uint32_t LINK_STAGE_TIMEOUT_MIN_MICROS = 500000;
 
 	/// <summary>
 	/// Duplex periods over this value are too long for LoLa to work effectively.
 	/// </summary>
-	static constexpr uint16_t DUPLEX_PERIOD_MAX_MICROS = 15000;
+	static constexpr uint16_t DUPLEX_PERIOD_MAX_MICROS = 50000;
 
 	/// <summary>
-	/// Extra wait on full duplex to avoid self-collision.
-	/// </summary>
-	static constexpr uint16_t FULL_DUPLEX_RESEND_WAIT_MICROS = 100;
-
-	/// <summary>
-	/// Report max update period. Slow value, let the main services hog the link.
+	/// Report max update period in milliseconds. Slow value, let the main services hog the link.
 	/// </summary>
 	static constexpr uint16_t REPORT_UPDATE_PERIOD = 500;
 
@@ -117,6 +114,36 @@ namespace LoLaLinkDefinition
 
 		// Scale the pipe back to an abstract channel.
 		return (advertisingPipe * UINT8_MAX) / (LINKING_ADVERTISING_PIPE_COUNT - 1);
+	}
+
+	/// <summary>
+	/// State transitions depend on duplex period.
+	/// </summary>
+	/// <param name="duplexPeriod"></param>
+	/// <returns>Link state transition duration in microseconds.</returns>
+	static constexpr uint32_t GetTransitionDuration(const uint16_t duplexPeriod)
+	{
+		return (uint32_t)duplexPeriod * LINKING_TRANSITION_DUPLEX_COUNT;
+	}
+
+	/// <summary>
+	/// Linking timeout depends on duplex period.
+	/// </summary>
+	/// <param name="duplexPeriod"></param>
+	/// <returns></returns>
+	static constexpr uint32_t GetLinkingTimeoutDuration(const uint16_t duplexPeriod)
+	{
+		return (uint32_t)duplexPeriod * LINKING_STAGE_TIMEOUT_DUPLEX_COUNT;
+	}
+
+	/// <summary>
+	/// Link timeout depends on duplex period.
+	/// </summary>
+	/// <param name="duplexPeriod"></param>
+	/// <returns></returns>
+	static const uint32_t GetLinkTimeoutDuration(const uint16_t duplexPeriod)
+	{
+		return LINK_STAGE_TIMEOUT_MIN_MICROS + (uint32_t)duplexPeriod * LINK_STAGE_TIMEOUT_DUPLEX_COUNT;
 	}
 };
 #endif

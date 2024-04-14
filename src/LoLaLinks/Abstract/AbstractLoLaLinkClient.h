@@ -38,11 +38,12 @@ private:
 	};
 
 protected:
-	ClientTimedStateTransition<LoLaLinkDefinition::LINKING_TRANSITION_PERIOD_MICROS> StateTransition;
+	ClientTimedStateTransition StateTransition;
 
 private:
+	LinkClientClockTracker ClockTracker;
+
 	TimestampError EstimateErrorReply{};
-	LinkClientClockTracker ClockTracker{};
 
 	PreLinkSlaveDuplex LinkingDuplex;
 
@@ -71,6 +72,8 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
+		, StateTransition(GetTransitionDuration(duplex->GetPeriod()))
+		, ClockTracker(duplex->GetPeriod())
 		, LinkingDuplex(duplex->GetPeriod())
 	{}
 
@@ -320,6 +323,7 @@ protected:
 			WaitingState = WaitingStateEnum::SearchingLink;
 			break;
 		case LinkStageEnum::Linking:
+			ClockTracker.Reset();
 			StateTransition.Clear();
 			Encoder->GenerateLocalChallenge(&RandomSource);
 			LinkingState = LinkingStateEnum::WaitingForAuthenticationRequest;
@@ -552,9 +556,8 @@ protected:
 			ClockTracker.OnResultRead();
 
 #if defined(LOLA_DEBUG_LINK_CLOCK)
-			Serial.println(F("Clock Tune:"));
 			ClockTracker.DebugClockError();
-			Serial.print(F(" TunePPM "));
+			Serial.print(F("\tTunePPM "));
 			Serial.println((int32_t)SyncClock.GetTune());
 			Serial.println();
 #endif

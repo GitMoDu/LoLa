@@ -143,11 +143,21 @@ public:
 		const uint32_t rangedPacketsPerSecond = (packetsPerSecond * Duplex->GetRange()) / Duplex->GetPeriod();
 		const uint32_t rangedBitsPerSecond = (transceiverBitsPerSecond * Duplex->GetRange()) / Duplex->GetPeriod();
 
-		Serial.println(F("Duplex:"));
-		Serial.print(F("\tPeriod:\t"));
-		Serial.println(Duplex->GetPeriod());
-		Serial.print(F("\tRange:\t"));
-		Serial.println(Duplex->GetRange());
+		Serial.println(F("Time-to-Air estimation:"));
+		Serial.print(F("\tShort\t"));
+		Serial.print(GetSendDuration(0));
+		Serial.println(F(" us"));
+		Serial.print(F("\tLong\t"));
+		Serial.print(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+		Serial.println(F(" us"));
+
+		Serial.println(F("Time-On-Air:"));
+		Serial.print(F("\tMin:\t"));
+		Serial.print(GetOnAirDuration(0));
+		Serial.println(F(" us."));
+		Serial.print(F("\tMax:\t"));
+		Serial.print(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+		Serial.println(F(" us."));
 
 		Serial.println(F("Packet TX"));
 		Serial.print(F("\tMax:\t"));
@@ -166,11 +176,22 @@ public:
 		Serial.print(rangedBitsPerSecond);
 		Serial.println(F(" bps"));
 
-		Serial.println(F("Time-On-Air:"));
-		Serial.print(F("\tMin:\t"));
-		Serial.println(GetOnAirDuration(0));
-		Serial.print(F("\tMax:\t"));
-		Serial.println(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
+		Serial.println(F("Duplex:"));
+		Serial.print(F("\tPeriod:\t"));
+		Serial.println(Duplex->GetPeriod());
+		Serial.print(F("\tRange:\t"));
+		Serial.println(Duplex->GetRange());
+
+		Serial.println(F("Timeout Durations: "));
+		Serial.print(F("\tLinking:\t"));
+		Serial.print(GetLinkingTimeoutDuration());
+		Serial.println(F(" us."));
+		Serial.print(F("\tLink:\t\t"));
+		Serial.print(GetLinkTimeoutDuration());
+		Serial.println(F(" us."));
+		Serial.print(F("\tTransition:\t"));
+		Serial.print(LoLaLinkDefinition::GetTransitionDuration(Duplex->GetPeriod()));
+		Serial.println(F(" us."));
 
 		Serial.println();
 #endif
@@ -365,6 +386,16 @@ protected:
 		PacketService.RefreshChannel();
 	}
 
+	const uint32_t GetLinkingTimeoutDuration()
+	{
+		return LoLaLinkDefinition::GetLinkingTimeoutDuration(Duplex->GetPeriod());
+	}
+
+	const uint32_t GetLinkTimeoutDuration()
+	{
+		return LoLaLinkDefinition::GetLinkTimeoutDuration(Duplex->GetPeriod());
+	}
+
 private:
 	/// <summary>
 	/// Calibrate CPU dependent durations.
@@ -507,15 +538,15 @@ private:
 		Serial.print('\t');
 		Serial.print(calculationDuration);
 		Serial.println(F(" ns."));
-		Serial.println(F("Timestamping:"));
+		Serial.println(F("Timestamping"));
 		Serial.print('\t');
 		Serial.print(timestampingDuration);
 		Serial.println(F(" ns."));
-		Serial.println(F("Hopper offset:"));
+		Serial.println(F("Hopper offset"));
 		Serial.print('\t');
 		Serial.print(HOPPER_OFFSET);
 		Serial.println(F(" us."));
-		Serial.println(F("Hopper forward:"));
+		Serial.println(F("Hopper forward"));
 		Serial.print('\t');
 		Serial.print(prngHopDuration + HOPPER_OFFSET);
 		Serial.println(F(" us."));

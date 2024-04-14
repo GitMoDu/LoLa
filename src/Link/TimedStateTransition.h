@@ -5,15 +5,18 @@
 
 #include <stdint.h>
 
-template<const uint16_t TransitionTimeout>
 class ServerTimedStateTransition
 {
+private:
+	const uint32_t TransitionTimeout;
+
 private:
 	uint32_t TransitionStart = 0;
 	bool TransitionAcknowledged = false;
 
 public:
-	ServerTimedStateTransition()
+	ServerTimedStateTransition(const uint32_t transitionTimeout)
+		: TransitionTimeout(transitionTimeout)
 	{}
 
 public:
@@ -71,7 +74,6 @@ public:
 	}
 };
 
-template<const uint16_t TransitionTimeout>
 class ClientTimedStateTransition
 {
 private:
@@ -83,12 +85,16 @@ private:
 	};
 
 private:
+	const uint32_t TransitionTimeout;
+
+private:
 	uint32_t TransitionEnd = 0;
 
 	ClientTransitionStateEnum State = ClientTransitionStateEnum::WaitingForTransitionStart;
 
 public:
-	ClientTimedStateTransition()
+	ClientTimedStateTransition(const uint32_t transitionTimeout)
+		: TransitionTimeout(transitionTimeout)
 	{}
 
 public:

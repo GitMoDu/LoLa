@@ -103,15 +103,6 @@ protected:
 			SendShortDurationMicros = shortDuration + airShort;
 			SendVariableDurationMicros = (longDuration - shortDuration) + (airLong - airShort);
 
-#if defined(DEBUG_LOLA)
-			Serial.println(F("Time-to-Air estimation:"));
-			Serial.print(F("\tShort\t"));
-			Serial.print(GetSendDuration(0));
-			Serial.println(F(" us"));
-			Serial.print(F("\tLong\t"));
-			Serial.print(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
-			Serial.println(F(" us"));
-#endif
 			return true;
 		}
 

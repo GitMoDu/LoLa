@@ -23,9 +23,10 @@ private:
 	/// </summary>
 	static constexpr uint8_t LINK_CHECK_PERIOD = 5;
 
-private:
-	ReportTracker QualityTracker{};
+protected:
+	ReportTracker QualityTracker;
 
+private:
 	uint32_t LastUnlinkedSent = 0;
 
 	uint32_t LinkingStartMillis = 0;
@@ -57,6 +58,7 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
+		, QualityTracker(LoLaLinkDefinition::GetLinkTimeoutDuration(duplex->GetPeriod()) / ONE_MILLI_MICROS)
 	{}
 
 	virtual const bool Setup()
@@ -275,7 +277,7 @@ protected:
 			OnServiceAwaitingLink();
 			break;
 		case LinkStageEnum::Linking:
-			if (GetLinkingElapsedMillis() > LoLaLinkDefinition::LINKING_STAGE_TIMEOUT)
+			if (GetLinkingElapsedMillis() > GetLinkingTimeoutDuration())
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
