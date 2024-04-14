@@ -11,13 +11,10 @@
 #endif
 
 #define _TASK_OO_CALLBACKS
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-#define _TASK_THREAD_SAFE	// Enable additional checking for thread safety
-#endif
 #define _TASK_SLEEP_ON_IDLE_RUN
 
-// Selected Driver for test.
-#define USE_SERIAL_TRANSCEIVER
+// Selected Transceiver for test.
+#define USE_SI446X_TRANSCEIVER
 
 #define LINK_DUPLEX_SLOT false
 
@@ -33,29 +30,17 @@
 Scheduler SchedulerBase;
 //
 
-// Transceiver Driver.
+// Transceiver.
 #if defined(USE_SERIAL_TRANSCEIVER)
 UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF24_TRANSCEIVER)
-#define TRANSCEIVER_SPI_INIT
-SPIClass SpiTransceiver(NRF24_TRANSCEIVER_SPI_CHANNEL);
-nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
-#elif defined(USE_ESPNOW_TRANSCEIVER)
-#if defined(ARDUINO_ARCH_ESP8266)
-EspNowTransceiver TransceiverDriver(SchedulerBase);
-#else
-EspNowTransceiver TransceiverDriver(SchedulerBase);
-#endif
+nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_INTERRUPT_PIN, NRF24_TRANSCEIVER_SPI_CHANNEL> TransceiverDriver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER)
-Si446xTransceiver<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase);
-#elif defined(USE_SI446X_TRANSCEIVER2)
-#define TRANSCEIVER_SPI_INIT
-SPIClass SpiTransceiver(SI446X_TRANSCEIVER_SPI_CHANNEL);
-Si446xTransceiver2<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
+Si4463Transceiver_433_70_250<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN, UINT8_MAX, UINT8_MAX, UINT8_MAX, SI446X_TRANSCEIVER_SPI_CHANNEL> TransceiverDriver(SchedulerBase);
 #elif defined(USE_SX12_TRANSCEIVER)
-#define TRANSCEIVER_SPI_INIT
-SPIClass SpiTransceiver(SX12_TRANSCEIVER_SPI_CHANNEL);
-Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
+Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN, SX12_TRANSCEIVER_SPI_CHANNEL> TransceiverDriver(SchedulerBase, &SpiTransceiver);
+#elif defined(USE_ESPNOW_TRANSCEIVER) && defined(ARDUINO_ARCH_ESP32)
+EspNowTransceiver TransceiverDriver(SchedulerBase);
 #else
 #error No Transceiver.
 #endif
@@ -87,17 +72,8 @@ void setup()
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
 #endif
 
-#if defined(TRANSCEIVER_SPI_INIT)
-#if defined(ARDUINO_ARCH_ESP32)
-	SpiTransceiver.begin(9, 11, 10, 8);
-#else
-	SpiTransceiver.begin();
-#endif
-#endif
-#if defined(USE_SERIAL_TRANSCEIVER)
-	TransceiverDriver.SetupInterrupt(OnSeriaInterrupt);
-#elif defined(USE_SI446X_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER2) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
-	TransceiverDriver.SetupInterrupt(OnRadioInterrupt);
+#if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
+	TransceiverDriver.SetupInterrupt(OnInterrupt);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 	TransceiverDriver.SetupInterrupts(OnRxInterrupt);
@@ -114,6 +90,7 @@ void setup()
 	}
 
 	Serial.println(F("TestTransceiver Rx Start!"));
+	pinMode(RX_TEST_PIN, OUTPUT);
 }
 
 void loop()
@@ -125,45 +102,43 @@ void loop()
 	SchedulerBase.execute();
 }
 
-#if defined(USE_SERIAL_TRANSCEIVER)
-void OnSeriaInterrupt()
+#if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER)
+void OnInterrupt()
 {
-	TransceiverDriver.OnSeriaInterrupt();
-}
-#elif defined(USE_NRF24_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER2) || defined(USE_SX12_TRANSCEIVER)
-void OnRadioInterrupt()
-{
-	TransceiverDriver.OnRadioInterrupt();
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, HIGH);
+#endif
+	TransceiverDriver.OnInterrupt();
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, LOW);
+#endif
 }
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 void OnRxInterrupt(const uint8_t* mac, const uint8_t* buf, size_t count, void* arg)
 {
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, HIGH);
+#endif
 	TransceiverDriver.OnRxInterrupt(mac, buf, count);
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, LOW);
+#endif
 }
 #else
 void OnRxInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
 {
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, HIGH);
+#endif
 	TransceiverDriver.OnRxInterrupt(data, data_len);
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, LOW);
+#endif
 }
 void OnTxInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
 {
 	TransceiverDriver.OnTxInterrupt(status);
 }
 #endif
-#endif
-#if defined(USE_SI446X_TRANSCEIVER)
-// Global calls fired in event loop.
-void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
-{
-	TransceiverDriver.OnPostRxInterrupt(length, rssi);
-}
-void SI446X_CB_RXBEGIN(int16_t rssi)
-{
-	TransceiverDriver.OnPreRxInterrupt();
-}
-void SI446X_CB_SENT(void)
-{
-	TransceiverDriver.OnTxInterrupt();
-}
 #endif

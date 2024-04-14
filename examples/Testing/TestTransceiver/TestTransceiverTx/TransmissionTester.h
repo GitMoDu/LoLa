@@ -15,12 +15,11 @@ template<const uint32_t SendPeriodMillis,
 class TransmissionTester : private Task, public virtual ILoLaTransceiverListener
 {
 public:
-	static constexpr uint8_t TestChannel = UINT8_MAX / 2;
+	static constexpr uint8_t TestChannel = 0;
 
 private:
 	uint8_t TestPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
 
-	// Selected Driver for test.
 	ILoLaTransceiver* Transceiver;
 
 	uint32_t TxStartTimestamp = 0;
@@ -33,15 +32,15 @@ public:
 		: ILoLaTransceiverListener()
 		, Task(SendPeriodMillis, TASK_FOREVER, &scheduler, true)
 		, Transceiver(transceiver)
+	{}
+
+	const bool Setup()
 	{
 		if (TxActivePin > 0)
 		{
 			pinMode(TxActivePin, OUTPUT);
 		}
-	}
 
-	const bool Setup()
-	{
 		for (size_t i = 0; i < LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE; i++)
 		{
 			TestPacket[i] = i;
@@ -90,6 +89,16 @@ public:
 		if (!TxActive &&
 			Transceiver->TxAvailable())
 		{
+			uint8_t testPacketSize = 0;
+			if (SmallBig)
+			{
+				testPacketSize = LoLaPacketDefinition::MIN_PACKET_SIZE;
+			}
+			else
+			{
+				testPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
+			}
+
 			TxStartTimestamp = micros();
 
 			if (TxActivePin > 0)
@@ -97,25 +106,18 @@ public:
 				digitalWrite(TxActivePin, HIGH);
 			}
 
-			uint8_t TestPacketSize = 0;
-			if (SmallBig)
+			if (Transceiver->Tx(TestPacket, testPacketSize, TestChannel))
 			{
-				TestPacketSize = LoLaPacketDefinition::MIN_PACKET_SIZE;
-			}
-			else
-			{
-				TestPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
-			}
-
-			if (Transceiver->Tx(TestPacket, TestPacketSize, TestChannel))
-			{
+				const uint32_t txDuration = micros() - TxStartTimestamp;
 				TxActive = true;
 				SmallBig = !SmallBig;
 				TestPacket[0]++;
 
-				Serial.print(F("Tx ("));
-				Serial.print(TestPacketSize);
-				Serial.println(F(") bytes."));
+				Serial.print(F("Tx "));
+				Serial.print(testPacketSize);
+				Serial.print(F(" bytes ("));
+				Serial.print(txDuration);
+				Serial.println(F(" us)."));
 			}
 			else
 			{

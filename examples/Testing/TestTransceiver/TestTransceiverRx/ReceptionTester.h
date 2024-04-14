@@ -3,28 +3,24 @@
 #ifndef _RECEPTION_TESTER_h
 #define _RECEPTION_TESTER_h
 
-
 #include <ILoLaInclude.h>
 #include <Arduino.h>
-
 
 class ReceptionTester : public virtual ILoLaTransceiverListener
 {
 public:
-	static constexpr uint8_t TestChannel = UINT8_MAX / 2;
+	static constexpr uint8_t TestChannel = 0;
 
 private:
 	uint8_t TestPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
 
-	// Selected Driver for test.
 	ILoLaTransceiver* Transceiver;
 
 public:
 	ReceptionTester(ILoLaTransceiver* transceiver)
 		: ILoLaTransceiverListener()
 		, Transceiver(transceiver)
-	{
-	}
+	{}
 
 	const bool Setup()
 	{
@@ -46,9 +42,15 @@ public:
 public:
 	virtual const bool OnRx(const uint8_t* data, const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
+		Transceiver->Rx(TestChannel);
+
 		Serial.print(F("OnRx ("));
 		Serial.print(packetSize);
 		Serial.print(F(" bytes)"));
+
+		Serial.print(F(" RSSI ("));
+		Serial.print(rssi);
+		Serial.print(F("/255)"));
 
 		PrintPacket(data, packetSize);
 		Serial.println();
