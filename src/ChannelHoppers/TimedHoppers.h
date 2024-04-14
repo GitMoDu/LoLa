@@ -9,7 +9,8 @@
 #include <IChannelHop.h>
 
 
-template<const uint32_t HopPeriodMicros>
+template<const uint32_t HopPeriodMicros,
+	const uint16_t ForwardLookMicros = 10>
 class TimedChannelHopper final : private Task, public virtual IChannelHop
 {
 private:
@@ -35,7 +36,7 @@ private:
 	static constexpr bool PeriodBiggerMillisecond()
 	{
 		return HopPeriodMillis() > 0;
-}
+	}
 
 #if defined(LOLA_UNIT_TESTING)
 public:
@@ -56,8 +57,6 @@ private:
 	uint32_t LastTimestamp = 0;
 	uint32_t LastHopIndex = 0;
 	uint32_t LastHop = 0;
-
-	uint16_t LookForwardOffset = 0;
 
 	HopperStateEnum HopperState = HopperStateEnum::Disabled;
 
@@ -80,11 +79,6 @@ public:
 		RollingTimestamp = rollingTimestamp;
 
 		return RollingTimestamp != nullptr && Listener != nullptr && HopPeriodMicros > 1;
-	}
-
-	virtual void SetHopTimestampOffset(const uint16_t offset) final
-	{
-		LookForwardOffset = offset;
 	}
 
 	// General Channel Interfaces //
@@ -146,8 +140,8 @@ public:
 			Task::delay(0);
 			break;
 		case HopperStateEnum::TimedHop:
-			//Check if it's time to hop, with forward look compensation.
-			if (HopSync(rollingTimestamp + LookForwardOffset))
+			// Check if it's time to hop, with forward look compensation.
+			if (HopSync(rollingTimestamp + ForwardLookMicros))
 			{
 #if defined(HOP_TEST_PIN)
 				digitalWrite(HOP_TEST_PIN, LOW);

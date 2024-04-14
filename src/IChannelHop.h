@@ -44,8 +44,6 @@ public:
 
 	virtual void OnLinkStarted() { }
 	virtual void OnLinkStopped() { }
-
-	virtual void SetHopTimestampOffset(const uint16_t offset) { }
 	///
 };
 

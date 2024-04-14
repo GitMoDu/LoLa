@@ -34,11 +34,6 @@ private:
 	/// </summary>
 	static constexpr uint16_t CALIBRATION_ROUNDS = CPU_CLOCK / 1500000L;
 
-	/// <summary>
-	/// Slower MCUs need a bigger look ahead to counter scheduler latency.
-	/// </summary>
-	static constexpr uint16_t HOPPER_OFFSET = 500000000 / CPU_CLOCK;
-
 protected:
 	/// <summary>
 	/// Cryptographic Secure(ish) Random Number Generator.
@@ -471,16 +466,6 @@ private:
 		LOLA_RTOS_RESUME();
 		const uint32_t prngHopDuration = (timestampingDuration + calculationDuration) / 1000;
 
-		if (prngHopDuration > (UINT16_MAX - HOPPER_OFFSET))
-		{
-#if defined(DEBUG_LOLA)
-			Serial.println(F("Hopper duration too long: "));
-			Serial.print(prngHopDuration);
-			Serial.println(F(" us."));
-#endif
-			return false;
-		}
-
 #if defined(DEBUG_LOLA)
 		LOLA_RTOS_PAUSE();
 		const uint32_t calibrationDuration = micros() - calibrationStart;
@@ -534,25 +519,19 @@ private:
 		Serial.print(F("\tLong\t"));
 		Serial.print(rejectionLongDuration);
 		Serial.println(F(" us"));
-		Serial.println(F("PRNG Hop:"));
-		Serial.print('\t');
-		Serial.print(calculationDuration);
-		Serial.println(F(" ns."));
 		Serial.println(F("Timestamping"));
 		Serial.print('\t');
 		Serial.print(timestampingDuration);
 		Serial.println(F(" ns."));
-		Serial.println(F("Hopper offset"));
+		Serial.println(F("PRNG"));
 		Serial.print('\t');
-		Serial.print(HOPPER_OFFSET);
-		Serial.println(F(" us."));
-		Serial.println(F("Hopper forward"));
+		Serial.print(prngHopDuration);
+		Serial.println(F(" ns."));
+		Serial.println(F("PRNG Hop:"));
 		Serial.print('\t');
-		Serial.print(prngHopDuration + HOPPER_OFFSET);
-		Serial.println(F(" us."));
+		Serial.print(calculationDuration);
+		Serial.println(F(" ns."));
 #endif
-
-		ChannelHopper->SetHopTimestampOffset(prngHopDuration + HOPPER_OFFSET);
 
 		return SetSendCalibration(shortDuration, longDuration);
 	}
