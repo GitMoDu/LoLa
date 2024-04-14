@@ -410,7 +410,7 @@ public:
 		Serial.println(GetQuality());
 		Serial.print(F("\tSync Period "));
 		Serial.print(GetSyncPeriod(GetQuality()));
-		Serial.println(F(" us"));
+		Serial.println(F(" ms"));
 		Serial.print(F("\tAverageError "));
 		Serial.println(AverageError / CLOCK_FILTER_SCALE);
 		Serial.print(F("\tDeviation "));
