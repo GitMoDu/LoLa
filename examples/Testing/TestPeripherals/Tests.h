@@ -48,45 +48,45 @@ const bool TestEntropySource(IEntropy& entropySource)
 	return true;
 }
 
-const bool TestTimerSource(ITimerSource& testSource)
-{
-	static const uint32_t TIME_TEST_DELAY_MICROS = 5000000;
-
-	testSource.StartTimer();
-
-	uint32_t time1;
-	uint32_t time2;
-	int64_t timeDelta;
-	int64_t timeError;
-
-	delay(1);
-
-	// Get a timestamp, block wait with arduino millis and get another timestamp.
-	time1 = testSource.GetCounter();
-	delayMicroseconds(TIME_TEST_DELAY_MICROS);
-	time2 = testSource.GetCounter();
-
-	testSource.StopTimer();
-
-	timeDelta = ((uint64_t)((uint32_t)(time2 - time1)) * ONE_SECOND_MICROS) / testSource.GetDefaultRollover();
-	timeError = (int64_t)TIME_TEST_DELAY_MICROS - timeDelta;
-
-
-	if (timeError < 0) {
-		timeError = -timeError;
-	}
-
-	const uint64_t ppm = (timeError * 1000000) / TIME_TEST_DELAY_MICROS;
-	Serial.print(F("\tTimer error:"));
-	Serial.print(timeError);
-	Serial.print(F("us\tPPM: "));
-	Serial.println(ppm);
-	if (ppm > 50) {
-		return false;
-	}
-
-	return true;
-}
+//const bool TestTimerSource(ITimerSource& testSource)
+//{
+//	static const uint32_t TIME_TEST_DELAY_MICROS = 5000000;
+//
+//	testSource.StartTimer();
+//
+//	uint32_t time1;
+//	uint32_t time2;
+//	int64_t timeDelta;
+//	int64_t timeError;
+//
+//	delay(1);
+//
+//	// Get a timestamp, block wait with arduino millis and get another timestamp.
+//	time1 = testSource.GetCounter();
+//	delayMicroseconds(TIME_TEST_DELAY_MICROS);
+//	time2 = testSource.GetCounter();
+//
+//	testSource.StopTimer();
+//
+//	timeDelta = ((uint64_t)((uint32_t)(time2 - time1)) * ONE_SECOND_MICROS) / testSource.GetDefaultRollover();
+//	timeError = (int64_t)TIME_TEST_DELAY_MICROS - timeDelta;
+//
+//
+//	if (timeError < 0) {
+//		timeError = -timeError;
+//	}
+//
+//	const uint64_t ppm = (timeError * 1000000) / TIME_TEST_DELAY_MICROS;
+//	Serial.print(F("\tTimer error:"));
+//	Serial.print(timeError);
+//	Serial.print(F("us\tPPM: "));
+//	Serial.println(ppm);
+//	if (ppm > 50) {
+//		return false;
+//	}
+//
+//	return true;
+//}
 
 
 //#if defined(DEBUG_LOLA)

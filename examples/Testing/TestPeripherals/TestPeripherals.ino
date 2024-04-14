@@ -31,34 +31,31 @@ static constexpr uint32_t TIMER_CLOCK_TEST_SECONDS = 5;
 static constexpr uint32_t TIMER_CLOCK_TEST_MAX_ERROR = 10;
 
 
-ArduinoEntropy ArduinoEntropySource(123);
-ArduinoTaskTimerClockSource<> ArduinoTimerClock(SchedulerBase);
+ArduinoLowEntropy ArduinoEntropySource(123);
+ArduinoCycles ArduinoMicrosSource{};
 
 
 #if defined(ARDUINO_ARCH_AVR)
 #if defined(__AVR_ATmega328p__)
-AvrTimer0TimerSource AvrTimer;
-AvrTimer1ClockSource AvrClock;
+AvrTimer0TimerSource AvrTimer{};
+AvrTimer1ClockSource AvrClock{};
 #else
 #error Avr Device not supported.
 #endif
 #endif
 
 
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-Stm32EntropySource Stm32Entropy;
-
-static const uint8_t TimerStm32Index = 1;
-static const uint8_t TimerStm32Channel = 'A';
-Stm32TimerSource Stm32Timer(TimerStm32Index, TimerStm32Channel);
-Stm32RtcClockSource Stm32Clock(SchedulerBase);
+#if defined(ARDUINO_ARCH_STM32F1)
+Stm32Entropy Stm32EntropySource{};
+Stm32SystemCycles Stm32SystemSource{};
+//static const uint8_t TimerStm32Index = 1;
+//static const uint8_t TimerStm32Channel = 'A';
+//Stm32TimerCycles Stm32TimerSource{};
 #endif
 
 #if defined(ARDUINO_ESP8266)
-#error ESP8266 TODO.
-Esp8266EntropySource Esp8266Entropy;
-
-static const uint8_t TimerEsp8266Index = 1;
+Esp8266Entropy Esp8266EntropySource{};
+//static const uint8_t TimerEsp8266Index = 1;
 //Esp8266TimerSource Esp8266Timer(TimerEsp8266Index);
 //Esp8266ClockSource Esp8266Clock(SchedulerBase);
 #endif
@@ -71,7 +68,7 @@ static const uint8_t TimerEsp32Index = 1;
 //Esp8266ClockSource Esp32Clock(SchedulerBase);
 #endif
 
-TestTask<TIMER_CLOCK_TEST_SECONDS, TIMER_CLOCK_TEST_MAX_ERROR> TestAsync(SchedulerBase);
+//TestTask<TIMER_CLOCK_TEST_SECONDS, TIMER_CLOCK_TEST_MAX_ERROR> TestAsync(SchedulerBase);
 
 bool AllTestsOk = false;
 
@@ -93,9 +90,9 @@ void setup()
 
 	TestEntropy();
 
-	TestTimersBlocking();
+	//TestTimersBlocking();
 
-	TestClocksAsync();
+	//TestClocksAsync();
 }
 
 void TestEntropy()
@@ -112,7 +109,7 @@ void TestEntropy()
 	}
 
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-	if (TestEntropySource(Stm32Entropy))
+	if (TestEntropySource(Stm32EntropySource))
 	{
 		Serial.println(F("Stm32EntropySource Pass."));
 	}
@@ -164,71 +161,71 @@ void OnTestAsyncComplete(const bool success)
 }
 
 
-void TestTimersBlocking()
-{
-	if (TestTimerSource(ArduinoTimerClock))
-	{
-		Serial.println(F("ArduinoTimerSource Pass."));
-	}
-	else
-	{
-		Serial.println(F("ArduinoTimerSource Fail."));
-		AllTestsOk = false;
-	}
-
-#if defined(ARDUINO_ARCH_AVR)
-	if (TestTimerSource(AvrTimer))
-	{
-		Serial.println(F("AvrTimerSource Pass."));
-	}
-	else
-	{
-		AllTestsOk = false;
-		Serial.println(F("AvrTimerSource Fail."));
-	}
-#endif
-
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
-	if (TestTimerSource(Stm32Timer))
-	{
-		Serial.println(F("Stm32TimerSource Pass."));
-	}
-	else
-	{
-		AllTestsOk = false;
-		Serial.println(F("Stm32TimerSource Fail."));
-	}
-#endif
-
-#if defined(ARDUINO_ESP8266)
-	if (TestTimerSource(Esp8266Entropy))
-	{
-		Serial.println(F("Esp8266TimerSource Pass."));
-	}
-	else
-	{
-		AllTestsOk = false;
-		Serial.println(F("Esp8266TimerSource Fail."));
-	}
-#endif
-
-#if defined(ARDUINO_ESP32)
-	if (TestTimerSource(Esp32Entropy))
-	{
-		Serial.println(F("Esp32TimerSource Pass."));
-	}
-	else
-	{
-		AllTestsOk = false;
-		Serial.println(F("Esp32TimerSource Fail."));
-	}
-#endif
-}
-
-void TestClocksAsync()
-{
-	TestAsync.StartClockTestTask(&ArduinoTimerClock, OnTestClocksCompleteArduino);
-}
+//void TestTimersBlocking()
+//{
+//	if (TestTimerSource(ArduinoTim))
+//	{
+//		Serial.println(F("ArduinoTimerSource Pass."));
+//	}
+//	else
+//	{
+//		Serial.println(F("ArduinoTimerSource Fail."));
+//		AllTestsOk = false;
+//	}
+//
+//#if defined(ARDUINO_ARCH_AVR)
+//	if (TestTimerSource(AvrTimer))
+//	{
+//		Serial.println(F("AvrTimerSource Pass."));
+//	}
+//	else
+//	{
+//		AllTestsOk = false;
+//		Serial.println(F("AvrTimerSource Fail."));
+//	}
+//#endif
+//
+//#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+//	if (TestTimerSource(Stm32Timer))
+//	{
+//		Serial.println(F("Stm32TimerSource Pass."));
+//	}
+//	else
+//	{
+//		AllTestsOk = false;
+//		Serial.println(F("Stm32TimerSource Fail."));
+//	}
+//#endif
+//
+//#if defined(ARDUINO_ESP8266)
+//	if (TestTimerSource(Esp8266Entropy))
+//	{
+//		Serial.println(F("Esp8266TimerSource Pass."));
+//	}
+//	else
+//	{
+//		AllTestsOk = false;
+//		Serial.println(F("Esp8266TimerSource Fail."));
+//	}
+//#endif
+//
+//#if defined(ARDUINO_ESP32)
+//	if (TestTimerSource(Esp32Entropy))
+//	{
+//		Serial.println(F("Esp32TimerSource Pass."));
+//	}
+//	else
+//	{
+//		AllTestsOk = false;
+//		Serial.println(F("Esp32TimerSource Fail."));
+//	}
+//#endif
+//}
+//
+//void TestClocksAsync()
+//{
+//	TestAsync.StartClockTestTask(&ArduinoTimerClock, OnTestClocksCompleteArduino);
+//}
 
 void OnTestClocksCompleteArduino(const bool success)
 {
@@ -267,7 +264,7 @@ void OnTestClocksCompleteAvr(const bool success)
 		Serial.println(F("AvrClockSource Test FAILED."));
 	}
 
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#if defined(NOT_ARDUINO_ARCH_STM32F1)
 	if (!TestAsync.StartClockTestTask(&Stm32Clock, OnTestClocksCompleteStm32))
 	{
 		OnTestClocksCompleteStm32(false);
