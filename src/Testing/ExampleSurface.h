@@ -12,17 +12,23 @@ namespace ExampleSurfaceDefinition
 		uint8_t Command64Bits[ISurface::BytesPerBlock]{};
 	};
 
+	struct PaddingStruct
+	{
+		uint8_t Padding64Bits[ISurface::BytesPerBlock]{};
+	};
+
 	struct ControlStruct
 	{
 		uint16_t Steering = UINT16_MAX / 2;
 		uint16_t Accelerator = 0;
 		uint16_t Brake = 0;
-		uint16_t PADDING = 0;
+		uint16_t Padding2 = 0;
 	};
 
 	struct BlockDataStruct
 	{
 		CommandStruct Command{};
+		PaddingStruct Padding1{};
 		ControlStruct Control{};
 	};
 
@@ -33,11 +39,6 @@ namespace ExampleSurfaceDefinition
 
 class ExampleSurface : public TemplateSurface<ExampleSurfaceDefinition::BlockCount, 2>
 {
-public:
-	static constexpr uint8_t Port = 11;
-	static constexpr uint32_t Id = 1800444444;
-	static constexpr uint32_t UpdatePeriodMillis = 10;
-
 private:
 	using BaseClass = TemplateSurface<ExampleSurfaceDefinition::BlockCount, 2>;
 

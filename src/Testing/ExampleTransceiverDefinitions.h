@@ -26,7 +26,7 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 #define NRF24_TRANSCEIVER_SPI_CHANNEL		1
 #define NRF24_TRANSCEIVER_PIN_CE			13
 #define NRF24_TRANSCEIVER_PIN_CS			12
-#define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	14
+#define NRF24_TRANSCEIVER_INTERRUPT_PIN		14
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -57,7 +57,7 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 #elif defined(USE_NRF24_TRANSCEIVER)
 #define NRF24_TRANSCEIVER_PIN_CS			10
 #define NRF24_TRANSCEIVER_PIN_CE			9
-#define NRF24_TRANSCEIVER_RX_INTERRUPT_PIN	2
+#define NRF24_TRANSCEIVER_INTERRUPT_PIN		2
 #elif defined(USE_SI446X_TRANSCEIVER)
 #define SI446X_TRANSCEIVER_PIN_CS			10
 #define SI446X_TRANSCEIVER_PIN_SDN			9
@@ -93,7 +93,7 @@ NoHopNoChannel ChannelHop{};
 
 // Duplex Slot must be set if using half-duplex.
 #if defined(LINK_FULL_DUPLEX_TRANSCEIVER)
-FullDuplex Duplex{};
+FullDuplex<DuplexPeriod> Duplex{};
 #else
 #if defined(LINK_DUPLEX_SLOT)
 HalfDuplex<DuplexPeriod, LINK_DUPLEX_SLOT, DuplexDeadZone> Duplex{};
