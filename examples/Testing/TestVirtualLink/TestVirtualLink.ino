@@ -1,6 +1,6 @@
 /* LoLa Link Virtual tester.
 * Creates instances of both Server and Client,
-* communicating through a virtual radio.
+* communicating through a pair of virtual transceivers.
 *
 * Used to testing and developing the LoLa Link protocol.
 *
@@ -10,13 +10,11 @@
 
 #if defined(DEBUG)
 #define DEBUG_LOLA
+//#define DEBUG_LOLA_LINK
 #define SERIAL_BAUD_RATE 115200
 #endif
 
 #define _TASK_OO_CALLBACKS
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-#define _TASK_THREAD_SAFE	// Enable additional checking for thread safety
-#endif
 #ifdef _TASK_SLEEP_ON_IDLE_RUN
 #undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
 #endif
@@ -32,8 +30,7 @@
 #define TX_CLIENT_TEST_PIN TEST_PIN_2
 #endif
 
-// Enable for Public-Key Exchange Link. Disable for Address Match Link.
-//#define LINK_USE_PKE_LINK
+// Enable for experimental faster hash.
 //#define LOLA_USE_POLY1305
 
 // Enable to use channel hop. Disable for fixed channel.
@@ -43,14 +40,20 @@
 #define LINK_TEST_DETUNE 5
 
 // Log the last error, deviation and tune.
-#define LOLA_DEBUG_LINK_CLOCK
+//#define LOLA_DEBUG_LINK_CLOCK
+
+// Test Discovery Service.
+#define LINK_TEST_DISCOVERY
+
+// Test Surface Service.
+//#define LINK_TEST_SURFACE
 
 // Enable to log raw packets in transit.
 //#define PRINT_PACKETS
 
 // Medium Simulation error chances, out 255, for every call.
-//#define DROP_CHANCE 70
-//#define CORRUPT_CHANCE 20
+//#define DROP_CHANCE 50
+//#define CORRUPT_CHANCE 30
 //#define DOUBLE_SEND_CHANCE 10
 //#define ECO_CHANCE 5
 
@@ -58,22 +61,47 @@
 //#define SERVER_DROP_LINK_TEST 5
 //#define CLIENT_DROP_LINK_TEST 5
 
-// Enable to log the test packets being sent/received.
-//#define PRINT_TEST_PACKETS
-
 // Period in seconds, to log the Links' status. Disable for no heartbeat.
-#define PRINT_LINK_HEARBEAT 5
+//#define PRINT_LINK_HEARBEAT 5
 
 // Set to true to log the current Client channel, as it hops. False to disable.
-#define PRINT_CHANNEL_HOP false
+//#define PRINT_CHANNEL_HOP true
+
+// Enable to use Controller to write to ExampleSurface. 
+// Depends on https://github.com/GitMoDu/NintendoControllerReader
+//#define USE_N64_CONTROLLER
+//#define USE_GAMECUBE_CONTROLLER
+
+// Enable to use ArduinoGraphicsEngine for displaying live link info.
+// Depends on https://github.com/GitMoDu/ArduinoGraphicsEngine
+//#define USE_LINK_DISPLAY
+//#define GRAPHICS_ENGINE_MEASURE
 
 
 #include <TaskScheduler.h>
 #include <ILoLaInclude.h>
 
 #include "TestTask.h"
-#include "ClockDetunerTask.h"
-#include "DiscoveryTestService.h"
+
+#if defined(LINK_TEST_DETUNE)
+#include "../src/Testing/ClockDetunerTask.h"
+#endif
+#if defined(LINK_TEST_DISCOVERY)
+#include "../src/Testing/DiscoveryTestService.h"
+#endif
+#if defined(LINK_TEST_SURFACE)
+#include "../src/Testing/ExampleSurface.h"
+#if defined(USE_N64_CONTROLLER) || defined(USE_GAMECUBE_CONTROLLER)
+#define USE_CONTROLLER 
+#include "../src/Testing/ControllerSource.h"
+#include "../src/Testing/ControllerExampleSurfaceDispatcher.h"
+#endif
+#endif
+
+#if defined(USE_LINK_DISPLAY)
+#include "VirtualLinkGraphicsEngine.h"
+#endif
+
 
 // Process scheduler.
 Scheduler SchedulerBase;
@@ -83,38 +111,28 @@ Scheduler SchedulerBase;
 static const uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
 //
 
-#if defined(LINK_USE_PKE_LINK)
-// Created offline using PublicPrivateKeyGenerator example project.
-static const uint8_t ServerPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x88,0x64,0x9C,0xFE,0x38,0xFA,0xFE,0xB9,0x41,0xA8,0xD1,0xB7,0xAC,0xA0,0x23,0x82,0x97,0xFB,0x5B,0xD1,0xC4,0x75,0x94,0x68,0x41,0x6D,0xEE,0x57,0x6B,0x07,0xF5,0xC0,0x95,0x78,0x10,0xCC,0xEA,0x08,0x0D,0x8F };
-static const uint8_t ServerPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x2E,0xBD,0x81,0x6E,0x56,0x59,0xDF,0x1D,0x77,0x83,0x0D,0x85,0xCE,0x59,0x61,0xE8,0x74,0x52,0xD7,0x98 };
-
-static const uint8_t ClientPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x21,0x9B,0xA6,0x2A,0xF0,0x14,0x8A,0x62,0xEB,0x2A,0xF0,0xD1,0xAC,0xB4,0x6E,0x15,0x1B,0x63,0xA7,0xEA,0x99,0xFD,0x1E,0xDD,0x74,0x2F,0xD4,0xB0,0xE1,0x04,0xC5,0x96,0x09,0x65,0x1F,0xAB,0x4F,0xDC,0x75,0x0C };
-static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x9E,0x78,0xBA,0x67,0xEA,0x57,0xA9,0xBD,0x4E,0x1A,0x35,0xFB,0xD3,0xA7,0x19,0x29,0x55,0xB9,0xA1,0x3A };
-#else
 // Diceware created values for address and secret key.
-static const uint8_t ServerAddress[LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
-static const uint8_t ClientAddress[LoLaCryptoDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+static const uint8_t ServerAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+static const uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
 static const uint8_t SecretKey[LoLaLinkDefinition::SECRET_KEY_SIZE] = { 0x50, 0x05, 0x60, 0x06, 0x70, 0x07, 0x80, 0x08 };
-#endif
-
 
 // Virtual Transceiver configurations.
 // <ChannelCount, TxBaseMicros, TxByteNanos, AirBaseMicros, AirByteNanos, HopMicros>
-using SlowSingleChannel = IVirtualTransceiver::Configuration<1, 50, 2000, 500, 20000, 50>;
-using FastSingleChannel = IVirtualTransceiver::Configuration<1, 5, 500, 40, 2000, 10>;
-using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 50, 2000, 500, 20000, 50>;
-using FastMultiChannel = IVirtualTransceiver::Configuration<160, 5, 500, 40, 2000, 10>;
+using SlowSingleChannel = IVirtualTransceiver::Configuration<1, 50, 4000, 700, 35000, 100>;
+using SlowMultiChannel = IVirtualTransceiver::Configuration<10, 50, 4000, 700, 35000, 100>;
+using FastSingleChannel = IVirtualTransceiver::Configuration<1, 10, 500, 50, 7500, 20>;
+using FastMultiChannel = IVirtualTransceiver::Configuration<160, 10, 500, 50, 7500, 20>;
 
 // Used Virtual Driver Configuration.
 using TestRadioConfig = SlowMultiChannel;
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 5000;
-static const uint16_t DuplexDeadZone = 200 + TestRadioConfig::HopMicros;
-static const uint32_t ChannelHopPeriod = DuplexPeriod / 2;
+static const uint16_t DuplexPeriod = 10000;
+static const uint16_t DuplexDeadZone = 500;
+static const uint32_t ChannelHopPeriod = 200000;
 
 // Use best available sources.
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#if defined(ARDUINO_ARCH_STM32F1)
 Stm32Entropy ServerEntropySource{};
 Stm32Entropy ClientEntropySource{};
 #elif defined(ARDUINO_ARCH_ESP8266)
@@ -126,8 +144,8 @@ ArduinoLowEntropy ClientEntropySource{};
 #endif
 
 #if defined(LINK_USE_CHANNEL_HOP)
-TimedChannelHopper<ChannelHopPeriod> ServerChannelHop(SchedulerBase);
-TimedChannelHopper<ChannelHopPeriod> ClientChannelHop(SchedulerBase);
+TimedChannelHopper<ChannelHopPeriod, DuplexDeadZone> ServerChannelHop(SchedulerBase);
+TimedChannelHopper<ChannelHopPeriod, DuplexDeadZone> ClientChannelHop(SchedulerBase);
 #else
 NoHopNoChannel ServerChannelHop{};
 NoHopNoChannel ClientChannelHop{};
@@ -142,17 +160,6 @@ VirtualTransceiver<TestRadioConfig, 'S', false> ServerTransceiver(SchedulerBase)
 
 HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 ArduinoCycles ServerCyclesSource{};
-#if defined(LINK_USE_PKE_LINK)
-LoLaPkeLinkServer<> Server(SchedulerBase,
-	&ServerTransceiver,
-	&ServerCyclesSource,
-	&ServerEntropySource,
-	&ServerDuplex,
-	&ServerChannelHop,
-	AccessPassword,
-	ServerPublicKey,
-	ServerPrivateKey);
-#else
 LoLaAddressMatchLinkServer<> Server(SchedulerBase,
 	&ServerTransceiver,
 	&ServerCyclesSource,
@@ -162,9 +169,11 @@ LoLaAddressMatchLinkServer<> Server(SchedulerBase,
 	SecretKey,
 	AccessPassword,
 	ServerAddress);
-#endif
 
 // Link Client and its required instances.
+#ifndef PRINT_CHANNEL_HOP
+#define PRINT_CHANNEL_HOP false
+#endif
 #ifdef TX_CLIENT_TEST_PIN
 VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientTransceiver(SchedulerBase);
 #else
@@ -173,17 +182,6 @@ VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP> ClientTransceiver(Sc
 
 HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
 ArduinoCycles ClientCyclesSource{};
-#if defined(LINK_USE_PKE_LINK)
-LoLaPkeLinkClient<> Client(SchedulerBase,
-	&ClientTransceiver,
-	&ClientCyclesSource,
-	&ClientEntropySource,
-	&ClientDuplex,
-	&ClientChannelHop,
-	AccessPassword,
-	ClientPublicKey,
-	ClientPrivateKey);
-#else
 LoLaAddressMatchLinkClient<> Client(SchedulerBase,
 	&ClientTransceiver,
 	&ClientCyclesSource,
@@ -193,17 +191,33 @@ LoLaAddressMatchLinkClient<> Client(SchedulerBase,
 	SecretKey,
 	AccessPassword,
 	ClientAddress);
-#endif
 
 #if defined(LINK_TEST_DETUNE)
 ClockDetunerTask Detuner(SchedulerBase);
 #endif
 
-TestTask Tester(SchedulerBase, &Server, &Client);
-
+#if defined(LINK_TEST_DISCOVERY)
 DiscoveryTestService<'S', 0, 12345> ServerDiscovery(SchedulerBase, &Server);
 DiscoveryTestService<'C', 0, 12345> ClientDiscovery(SchedulerBase, &Client);
+#endif
 
+#if defined(LINK_TEST_SURFACE)
+ExampleSurface ReadSurface{};
+SurfaceReader<1, 23456> ClientReader(SchedulerBase, &Client, &ReadSurface);
+ExampleSurface WriteSurface{};
+SurfaceWriter<1, 23456, DuplexPeriod / 1000> ServerWriter(SchedulerBase, &Server, &WriteSurface);
+#if defined(USE_CONTROLLER)
+ControllerSource<5> Controller(SchedulerBase, &Serial3);
+ControllerExampleSurfaceDispatcher ControllerDispatcher(SchedulerBase, &Controller, &WriteSurface);
+#endif
+#endif
+
+TestTask Tester(SchedulerBase, &Server, &Client);
+
+
+#if defined(USE_LINK_DISPLAY)
+VirtualLinkGraphicsEngine<ScreenDriverType, FrameBufferType>LinkDisplayEngine(&SchedulerBase, &Server, &Client, &ServerTransceiver, &ClientTransceiver);
+#endif
 
 void BootError()
 {
@@ -240,6 +254,7 @@ void setup()
 		BootError();
 	}
 
+#if defined(LINK_TEST_DISCOVERY)
 	// Setup Test Discovery services.
 	if (!ServerDiscovery.Setup())
 	{
@@ -255,6 +270,29 @@ void setup()
 #endif
 		BootError();
 	}
+#endif
+
+#if defined(LINK_TEST_SURFACE)
+	// Setup Test Sync Surface services.
+	if (!ServerWriter.Setup())
+	{
+#ifdef DEBUG
+		Serial.println(F("ServerWriter setup failed."));
+#endif
+		BootError();
+	}
+	if (!ClientReader.Setup())
+	{
+#ifdef DEBUG
+		Serial.println(F("ClientReader setup failed."));
+#endif
+		BootError();
+	}
+#if defined(USE_CONTROLLER)
+	Controller.Start();
+	ControllerDispatcher.Start();
+#endif
+#endif
 
 	// Setup Link instances.
 	if (!Server.Setup())
@@ -278,21 +316,26 @@ void setup()
 #endif
 
 	// Start Link instances.
-	if (Server.Start() &&
-		Client.Start())
+	if (Server.Start() && Client.Start())
 	{
-#ifdef DEBUG_LOLA
+#ifdef DEBUG_LOLA_LINK
 		Serial.print(millis());
 		Serial.println(F("\tLoLa Links have started."));
 #endif
 	}
 	else
 	{
-#ifdef DEBUG
+#ifdef DEBUG_LOLA_LINK
 		Serial.println(F("Link Start Failed."));
 #endif
 		BootError();
 	}
+
+#if defined(USE_LINK_DISPLAY)
+	LinkDisplayEngine.SetBufferTaskCallback(BufferTaskCallback);
+	LinkDisplayEngine.SetInverted(false);
+	LinkDisplayEngine.Start();
+#endif
 }
 
 void loop()
@@ -303,3 +346,10 @@ void loop()
 #endif
 	SchedulerBase.execute();
 }
+
+#if defined(USE_LINK_DISPLAY)
+void BufferTaskCallback(void* parameter)
+{
+	LinkDisplayEngine.BufferTaskCallback(parameter);
+}
+#endif
