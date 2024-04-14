@@ -33,12 +33,6 @@ private:
 
 		if (IsFullDuplex)
 		{
-			if (period != IDuplex::DUPLEX_FULL)
-			{
-				Serial.println(F("Duplex is expected to be full."));
-				return false;
-			}
-
 			for (uint32_t i = 0; i < Period; i++)
 			{
 				if (!duplex->IsInRange(i, Duration))
@@ -52,12 +46,6 @@ private:
 		}
 		else
 		{
-			if (duplex->GetPeriod() == IDuplex::DUPLEX_FULL)
-			{
-				Serial.println(F("Duplex is expected to not be full."));
-				return false;
-			}
-
 			if (period != Period)
 			{
 				Serial.println(F("Duplex has wrong period."));
@@ -120,7 +108,7 @@ private:
 
 	static const bool TestDuplexes()
 	{
-		FullDuplex DuplexFull{};
+		FullDuplex<> DuplexFull{};
 		HalfDuplex<DUPLEX_PERIOD_MICROS, false, 0> DuplexSymmetricalA{};
 		HalfDuplex<DUPLEX_PERIOD_MICROS, true, 0> DuplexSymmetricalB{};
 		HalfDuplexAsymmetric< DUPLEX_PERIOD_MICROS, UINT8_MAX / DUPLEX_ASSYMETRIC_RATIO, false, 0> DuplexAssymmetricalA{};
