@@ -55,10 +55,7 @@ public:
 		Nonce[CYPHER_TAG_TIMESTAMP_INDEX + 3] = timestamp >> 24;
 		Nonce[CYPHER_TAG_ID_INDEX] = inPacket[ID_INDEX];
 		Nonce[CYPHER_TAG_ID_INDEX + 1] = inPacket[ID_INDEX + 1];
-		for (uint_fast8_t i = CYPHER_TAG_SIZE; i < CYPHER_IV_SIZE; i++)
-		{
-			Nonce[i] = InputKey[i - CYPHER_TAG_SIZE];
-		}
+		memcpy(&Nonce[CYPHER_TAG_SIZE], InputKey, CYPHER_IV_SIZE - CYPHER_TAG_SIZE);
 
 		/*****************/
 #if defined(LOLA_USE_POLY1305)
@@ -89,7 +86,7 @@ public:
 
 		/*****************/
 		// Write back the counter from the packet id.
-		counter = inPacket[ID_INDEX] | (inPacket[ID_INDEX + 1] << 8);
+		counter = ((uint16_t)inPacket[ID_INDEX + 1] << 8) | inPacket[ID_INDEX];
 
 		// Reset Key entropy.
 		CryptoCypher.setKey(ExpandedKey.CypherKey, CYPHER_KEY_SIZE);
@@ -133,7 +130,7 @@ public:
 		}
 
 		// Copy plaintext counter from packet id.		
-		counter = inPacket[ID_INDEX] | (inPacket[ID_INDEX + 1] << 8);
+		counter = ((uint16_t)inPacket[ID_INDEX + 1] << 8) | inPacket[ID_INDEX];
 
 		// Copy plaintext content to in data.
 		for (uint_fast8_t i = 0; i < dataSize; i++)
@@ -198,10 +195,7 @@ public:
 		Nonce[CYPHER_TAG_TIMESTAMP_INDEX + 3] = timestamp >> 24;
 		Nonce[CYPHER_TAG_ID_INDEX] = counter;
 		Nonce[CYPHER_TAG_ID_INDEX + 1] = counter >> 8;
-		for (uint_fast8_t i = CYPHER_TAG_SIZE; i < CYPHER_IV_SIZE; i++)
-		{
-			Nonce[i] = OutputKey[i - CYPHER_TAG_SIZE];
-		}
+		memcpy(&Nonce[CYPHER_TAG_SIZE], OutputKey, CYPHER_IV_SIZE - CYPHER_TAG_SIZE);
 
 		/*****************/
 		// Reset Key entropy.

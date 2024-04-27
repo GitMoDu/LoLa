@@ -57,20 +57,20 @@ public:
 		switch (LinkStage)
 		{
 		case LinkStageEnum::AwaitingLink:
-			// Encode packet with no encryption and CRC.
+			// Encode packet with no encryption.
 			Encoder->EncodeOutPacket(data, RawOutPacket, SendCounter, dataSize);
 			break;
 		case LinkStageEnum::Linking:
 			// Encrypt packet without token.
-			Encoder->EncodeOutPacket(data, RawOutPacket, 0, SendCounter, dataSize);
+			Encoder->EncodeOutPacket(data, RawOutPacket,
+				0,
+				SendCounter, dataSize);
 			break;
 		case LinkStageEnum::Linked:
 			// Encrypt packet with token based on time.
-			Encoder->EncodeOutPacket(data,
-				RawOutPacket,
+			Encoder->EncodeOutPacket(data, RawOutPacket,
 				SendTimestamp.Seconds,
-				SendCounter,
-				dataSize);
+				SendCounter, dataSize);
 			break;
 		default:
 			break;
