@@ -17,12 +17,13 @@ protected:
 	const uint32_t DuplexStart;
 	const uint32_t DuplexEnd;
 
-protected:
+public:
 	static constexpr uint32_t GetPreLinkDuplexPeriod(const uint16_t duplexPeriodMicros)
 	{
 		return (uint32_t)duplexPeriodMicros * 4;
 	}
 
+protected:
 	template<const bool IsOdd>
 	static constexpr uint32_t GetPreLinkDuplexStart(const uint16_t duplexPeriodMicros)
 	{
@@ -86,11 +87,6 @@ public:
 	{}
 
 public:
-	const uint32_t GetPeriod()
-	{
-		return PreLinkDuplexPeriodMicros;
-	}
-
 	const uint32_t GetFollowerOffset()
 	{
 		return FollowerOffset;
