@@ -58,7 +58,7 @@ struct Timestamp
 	{
 		return (Seconds * ONE_SECOND_MICROS) + SubSeconds;
 	}
-
+	
 #if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 	void print()
 	{
@@ -72,62 +72,34 @@ struct Timestamp
 		Serial.print(SubSeconds);
 	}
 #endif
-};
 
-/// <summary>
-/// Timestamp differential error.
-/// </summary>
-struct TimestampError
-{
-	int32_t Seconds;
-	int32_t SubSeconds;
-
-#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
-	void print()
+	static const int32_t GetDeltaSeconds(const Timestamp& timestampStart, const Timestamp& timestampEnd)
 	{
-		Serial.print(Seconds);
-		Serial.print('.');
-		if (SubSeconds < 0)
+		int32_t seconds;
+		int32_t subSeconds;
+		if (timestampEnd.Seconds >= timestampStart.Seconds)
 		{
-			Serial.print('-');
+			seconds = timestampEnd.Seconds - timestampStart.Seconds - 1;
+			subSeconds = ONE_SECOND_MICROS;
 		}
-		const uint32_t subSeconds = abs(SubSeconds);
-		if (subSeconds < 100000) Serial.print(0);
-		if (subSeconds < 10000) Serial.print(0);
-		if (subSeconds < 1000) Serial.print(0);
-		if (subSeconds < 100) Serial.print(0);
-		if (subSeconds < 10) Serial.print(0);
-		Serial.print(abs(SubSeconds));
-		Serial.print('\t');
-	}
-#endif
-
-	/// <summary>
-	/// Invalidate estimate error, sub-seconds should never exceed one second.
-	/// </summary>
-	/// <returns>True if valid.</returns>
-	const bool Validate()
-	{
-		return SubSeconds < (int32_t)ONE_SECOND_MICROS && SubSeconds > -((int32_t)ONE_SECOND_MICROS);
-	}
-
-	/// <summary>
-	/// Fill error with delta from estimation to timestamp.
-	/// </summary>
-	/// <param name="timestamp"></param>
-	/// <param name="estimation"></param>
-	void CalculateError(const Timestamp& timestamp, const Timestamp& estimation)
-	{
-		Seconds = timestamp.Seconds - estimation.Seconds;
-		SubSeconds = timestamp.SubSeconds - estimation.SubSeconds;
-
-		// Consolidate SubSeconds.
-		if (SubSeconds >= (int32_t)ONE_SECOND_MICROS
-			|| SubSeconds <= -(int32_t)ONE_SECOND_MICROS)
+		else
 		{
-			Seconds += SubSeconds / (int32_t)ONE_SECOND_MICROS;
-			SubSeconds %= (int32_t)ONE_SECOND_MICROS;
+			seconds = UINT32_MAX - timestampStart.Seconds + timestampEnd.Seconds - 1;
+			subSeconds = -(int32_t)ONE_SECOND_MICROS;
 		}
+
+		if (timestampEnd.SubSeconds >= timestampStart.SubSeconds)
+		{
+			subSeconds += timestampEnd.SubSeconds - timestampStart.SubSeconds;
+		}
+		else
+		{
+			subSeconds += UINT32_MAX - timestampStart.SubSeconds + timestampEnd.SubSeconds;
+		}
+
+		seconds += subSeconds / (int32_t)ONE_SECOND_MICROS;
+
+		return seconds;
 	}
 };
 #endif

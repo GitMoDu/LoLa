@@ -80,8 +80,6 @@ public:
 
 	virtual void GetLinkStatus(LoLaLinkStatus& linkStatus) final
 	{
-		SyncClock.GetTimestampMonotonic(LinkTimestamp);
-		linkStatus.DurationSeconds = LinkTimestamp.Seconds - LinkStartTimestamp.Seconds;
 		linkStatus.RxDropCount = QualityTracker.GetRxDropCount();
 		linkStatus.TxCount = SentCounter;
 		linkStatus.RxCount = ReceivedCounter;
@@ -93,6 +91,17 @@ public:
 		linkStatus.Quality.TxDrop = QualityTracker.GetTxDropQuality();
 		linkStatus.Quality.ClockSync = GetClockSyncQuality();
 		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
+
+		SyncClock.GetTimestampMonotonic(LinkTimestamp);
+		const int32_t seconds = Timestamp::GetDeltaSeconds(LinkStartTimestamp, LinkTimestamp);
+		if (seconds < 0)
+		{
+			linkStatus.DurationSeconds = UINT32_MAX + seconds;
+		}
+		else
+		{
+			linkStatus.DurationSeconds = seconds;
+		}
 	}
 
 	virtual const uint32_t GetLinkElapsed() final
