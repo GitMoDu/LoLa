@@ -61,7 +61,9 @@ public:
 		Link->GetLinkStatus(LinkStatus);
 		LinkStatus.OnUpdate();
 
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 		LinkStatus.LogLong(Serial);
+#endif
 
 		return true;
 	}
