@@ -383,7 +383,7 @@ protected:
 			Task::disable();
 			break;
 		case WaitingStateEnum::SearchingLink:
-			if (GetStageElapsedMillis() > SERVER_SLEEP_TIMEOUT_MILLIS)
+			if (GetStageElapsed() / ONE_MILLI_MICROS > SERVER_SLEEP_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -398,7 +398,7 @@ protected:
 			}
 			break;
 		case WaitingStateEnum::SessionCreation:
-			if (GetStageElapsedMillis() > SERVER_SLEEP_TIMEOUT_MILLIS)
+			if (GetStageElapsed() / ONE_MILLI_MICROS > SERVER_SLEEP_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();

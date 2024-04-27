@@ -86,6 +86,11 @@ public:
 	{}
 
 public:
+	const uint32_t GetPeriod()
+	{
+		return PreLinkDuplexPeriodMicros;
+	}
+
 	const uint32_t GetFollowerOffset()
 	{
 		return FollowerOffset;

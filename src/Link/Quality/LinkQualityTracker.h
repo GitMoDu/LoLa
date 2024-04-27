@@ -65,10 +65,10 @@ public:
 	/// <summary>
 	/// Time since a valid packet was received.
 	/// </summary>
-	/// <returns>Elapsed time in milliseconds</returns>
+	/// <returns>Elapsed time in microseconds</returns>
 	const uint32_t GetElapsedSinceLastValidReceived()
 	{
-		return millis() - LastValidReceived;
+		return micros() - LastValidReceived;
 	}
 
 	/// <summary>
@@ -101,8 +101,8 @@ public:
 	const uint16_t GetRxDropRate()
 	{
 		return RxDropRate.GetDropRate();
-	}	
-	
+	}
+
 	const uint16_t GetRxDropCount()
 	{
 		return RxDropCount;
@@ -157,7 +157,7 @@ protected:
 	void CheckUpdateQuality(const uint32_t timestamp)
 	{
 		// Consume accumulator around every LoLaLinkDefinition::REPORT_UPDATE_PERIOD.
-		if (timestamp - LastConsume >= LoLaLinkDefinition::REPORT_UPDATE_PERIOD)
+		if (timestamp - LastConsume >= LoLaLinkDefinition::REPORT_UPDATE_PERIOD_MICROS)
 		{
 			const uint32_t elapsed = timestamp - LastConsume;
 			LastConsume = timestamp;

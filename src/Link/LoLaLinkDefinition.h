@@ -97,9 +97,9 @@ namespace LoLaLinkDefinition
 	static constexpr uint16_t DUPLEX_PERIOD_MAX_MICROS = 50000;
 
 	/// <summary>
-	/// Report max update period in milliseconds. Slow value, let the main services hog the link.
+	/// Report max update period in microseconds. Slow value, let the main services hog the link.
 	/// </summary>
-	static constexpr uint16_t REPORT_UPDATE_PERIOD = 500;
+	static constexpr uint32_t REPORT_UPDATE_PERIOD_MICROS = 432100;
 
 	/// <summary>
 	/// Limit the possible pre-link Advertising channels, BLE style.

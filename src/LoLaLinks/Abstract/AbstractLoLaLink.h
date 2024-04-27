@@ -29,7 +29,7 @@ protected:
 private:
 	uint32_t LastUnlinkedSent = 0;
 
-	uint32_t LinkingStartMillis = 0;
+	uint32_t LinkingStart = 0;
 	Timestamp LinkStartTimestamp{};
 
 protected:
@@ -58,7 +58,7 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, QualityTracker(LoLaLinkDefinition::GetLinkTimeoutDuration(duplex->GetPeriod()) / ONE_MILLI_MICROS)
+		, QualityTracker(LoLaLinkDefinition::GetLinkTimeoutDuration(duplex->GetPeriod()))
 	{}
 
 	virtual const bool Setup()
@@ -134,7 +134,7 @@ public:
 				| ((uint_least16_t)payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX + 1] << 8);
 
 			// Keep track of partner's RSSI and packet drop, for output gain management.
-			QualityTracker.OnReportReceived(millis(),
+			QualityTracker.OnReportReceived(micros(),
 				loopingDropCounter,
 				payload[Linked::ReportUpdate::PAYLOAD_RSSI_INDEX],
 				payload[Linked::ReportUpdate::PAYLOAD_REQUEST_INDEX]);
@@ -179,13 +179,13 @@ public:
 protected:
 	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint16_t lostCount) final
 	{
-		QualityTracker.OnRxComplete(millis(), rssi, lostCount);
+		QualityTracker.OnRxComplete(micros(), rssi, lostCount);
 	}
 
 protected:
-	const uint32_t GetLinkingElapsedMillis()
+	const uint32_t GetLinkingElapsed()
 	{
-		return millis() - LinkingStartMillis;
+		return micros() - LinkingStart;
 	}
 
 	void ResetUnlinkedPacketThrottle()
@@ -195,7 +195,7 @@ protected:
 
 	const bool UnlinkedPacketThrottle()
 	{
-		return micros() - LastUnlinkedSent >= GetPacketThrottlePeriod() * 2;
+		return (micros() - LastUnlinkedSent) >= GetPacketThrottlePeriod() * 2;
 	}
 
 protected:
@@ -216,11 +216,11 @@ protected:
 			QualityTracker.ResetRssiQuality();
 			break;
 		case LinkStageEnum::Linking:
-			LinkingStartMillis = millis();
+			LinkingStart = micros();
 			break;
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestampMonotonic(LinkStartTimestamp);
-			QualityTracker.Reset(millis());
+			QualityTracker.Reset(micros());
 			break;
 		default:
 			break;
@@ -277,7 +277,7 @@ protected:
 			OnServiceAwaitingLink();
 			break;
 		case LinkStageEnum::Linking:
-			if (GetLinkingElapsedMillis() > GetLinkingTimeoutDuration())
+			if (GetLinkingElapsed() > GetLinkingTimeoutDuration())
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -348,7 +348,7 @@ private:
 	/// <returns>True if a report update is due or pending to send.</returns>
 	const bool CheckForReportUpdate()
 	{
-		const uint32_t timestamp = millis();
+		const uint32_t timestamp = micros();
 
 		if (QualityTracker.CheckUpdate(timestamp))
 		{

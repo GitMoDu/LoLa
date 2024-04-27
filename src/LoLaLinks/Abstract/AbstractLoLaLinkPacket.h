@@ -283,7 +283,7 @@ protected:
 			}
 
 			LinkStage = linkStage;
-			StageStartTime = millis();
+			StageStartTime = micros();
 
 			switch (linkStage)
 			{
@@ -365,14 +365,14 @@ protected:
 	}
 
 protected:
-	const uint32_t GetStageElapsedMillis()
+	const uint32_t GetStageElapsed()
 	{
-		return millis() - StageStartTime;
+		return micros() - StageStartTime;
 	}
 
 	void ResetStageStartTime()
 	{
-		StageStartTime = millis();
+		StageStartTime = micros();
 	}
 
 	void SetAdvertisingChannel(const uint8_t channel)

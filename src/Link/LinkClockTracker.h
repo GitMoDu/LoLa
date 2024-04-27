@@ -1,4 +1,4 @@
-// LinkClock.h
+// LinkClockTracker.h
 
 #ifndef _LINK_CLOCK_TRACKER_h
 #define _LINK_CLOCK_TRACKER_h
@@ -87,8 +87,8 @@ private:
 class LinkClientClockTracker
 {
 private:
-	static constexpr uint16_t CLOCK_TUNE_PERIOD = 2200;
-	static constexpr uint16_t CLOCK_TUNE_BASE_PERIOD = 250;
+	static constexpr uint32_t CLOCK_TUNE_PERIOD = 2200000;
+	static constexpr uint32_t CLOCK_TUNE_BASE_PERIOD = 400000;
 
 	static constexpr uint8_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 2;
 	static constexpr uint8_t DEVIATION_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE / 4;
@@ -134,8 +134,8 @@ private:
 
 public:
 	LinkClientClockTracker(const uint16_t duplexPeriod)
-		: ClockTuneRetryPeriod(((uint32_t)duplexPeriod* CLOCK_TUNE_RETRY_DUPLEX_COUNT) / ONE_MILLI_MICROS)
-		, ClockTuneMinPeriod((uint32_t)CLOCK_TUNE_BASE_PERIOD + ((uint32_t)ClockTuneRetryPeriod * CLOCK_SYNC_SAMPLE_COUNT))
+		: ClockTuneRetryPeriod(((uint32_t)duplexPeriod* CLOCK_TUNE_RETRY_DUPLEX_COUNT))
+		, ClockTuneMinPeriod(CLOCK_TUNE_BASE_PERIOD + (ClockTuneRetryPeriod * CLOCK_SYNC_SAMPLE_COUNT))
 	{}
 
 	void Reset()
@@ -217,13 +217,13 @@ public:
 		}
 
 		int16_t cappedError = 0;
-		if (error > LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
+		if (error > INT16_MAX)
 		{
-			cappedError = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+			cappedError = INT16_MAX;
 		}
-		else if (error < -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
+		else if (error < INT16_MIN)
 		{
-			cappedError = -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+			cappedError = INT16_MIN;
 		}
 		else
 		{
@@ -409,7 +409,7 @@ public:
 		Serial.print(F("\tQuality "));
 		Serial.println(GetQuality());
 		Serial.print(F("\tSync Period "));
-		Serial.print(GetSyncPeriod(GetQuality()));
+		Serial.print(GetSyncPeriod(GetQuality()) / 1000);
 		Serial.println(F(" ms"));
 		Serial.print(F("\tAverageError "));
 		Serial.println(AverageError / CLOCK_FILTER_SCALE);

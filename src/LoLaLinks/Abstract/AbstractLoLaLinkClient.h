@@ -72,8 +72,8 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, StateTransition(GetTransitionDuration(duplex->GetPeriod()))
 		, ClockTracker(duplex->GetPeriod())
+		, StateTransition(LoLaLinkDefinition::GetTransitionDuration(duplex->GetPeriod()))
 		, LinkingDuplex(duplex->GetPeriod())
 	{}
 
@@ -287,7 +287,7 @@ protected:
 				if (payloadSize == Linked::ClockTuneReply::PAYLOAD_SIZE
 					&& ClockTracker.WaitingForClockReply())
 				{
-					ClockTracker.OnReplyReceived(millis(), ArrayToInt32(&payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]));
+					ClockTracker.OnReplyReceived(micros(), ArrayToInt32(&payload[Linked::ClockTuneReply::PAYLOAD_ERROR_INDEX]));
 				}
 #if defined(DEBUG_LOLA_LINK)
 				else {
@@ -331,11 +331,10 @@ protected:
 			break;
 		case LinkStageEnum::Linked:
 #if defined(DEBUG_LOLA_LINK)
-			Serial.print(GetLinkingElapsedMillis());
+			Serial.print(GetLinkingElapsed() / 1000);
 			Serial.println(F(" ms to Link."));
 #endif
-			WaitingForClockReply = false;
-			ClockTracker.Reset(millis());
+			ClockTracker.Reset(micros());
 			break;
 		default:
 			break;
@@ -351,7 +350,7 @@ protected:
 			Task::disable();
 			break;
 		case WaitingStateEnum::SearchingLink:
-			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
+			if (GetStageElapsed() / ONE_MILLI_MICROS > CLIENT_SLEEP_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -366,7 +365,7 @@ protected:
 			}
 			break;
 		case WaitingStateEnum::SessionCreation:
-			if (GetStageElapsedMillis() > CLIENT_SLEEP_TIMEOUT_MILLIS)
+			if ((GetStageElapsed() / ONE_MILLI_MICROS) > CLIENT_SLEEP_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -393,7 +392,7 @@ protected:
 		switch (LinkingState)
 		{
 		case LinkingStateEnum::WaitingForAuthenticationRequest:
-			if (GetStageElapsedMillis() > CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS)
+			if (GetStageElapsed() / ONE_MILLI_MICROS > CLIENT_AUTH_REQUEST_WAIT_TIMEOUT_MILLIS)
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -564,14 +563,17 @@ protected:
 #endif
 			return true;
 		}
-		else if (ClockTracker.HasRequestToSend(millis()) && CanRequestSend())
+		else if (ClockTracker.HasRequestToSend(micros()))
 		{
-			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
-			OutPacket.SetHeader(Linked::ClockTuneRequest::HEADER);
-
-			if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE, GetClockSyncPriority(ClockTracker.GetQuality())))
+			if (CanRequestSend())
 			{
-				ClockTracker.OnRequestSent(millis());
+				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
+				OutPacket.SetHeader(Linked::ClockTuneRequest::HEADER);
+
+				if (RequestSendPacket(Linked::ClockTuneRequest::PAYLOAD_SIZE, GetClockSyncPriority(ClockTracker.GetQuality())))
+				{
+					ClockTracker.OnRequestSent(micros());
+				}
 			}
 			return true;
 		}

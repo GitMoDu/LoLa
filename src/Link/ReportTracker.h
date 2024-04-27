@@ -11,9 +11,10 @@
 class ReportTracker : public LinkQualityTracker
 {
 private:
-	static constexpr uint8_t REPORT_RESEND_PERIOD = LoLaLinkDefinition::REPORT_UPDATE_PERIOD / 4;
-	static constexpr uint8_t REPORT_SEND_BALANCING_DELAY = 7;
-	static constexpr uint8_t REPORT_RESEND_URGENT_PERIOD = REPORT_RESEND_PERIOD / 3;
+	static constexpr uint32_t REPORT_RESEND_PERIOD = LoLaLinkDefinition::REPORT_UPDATE_PERIOD_MICROS / 4;
+	static constexpr uint16_t REPORT_SEND_BALANCING_DELAY = 7000;
+	static constexpr uint32_t REPORT_RESEND_URGENT_PERIOD = REPORT_RESEND_PERIOD / 3;
+
 	static constexpr uint8_t PARTNER_SILENCE_WORST_QUALITY = 127;
 
 private:
@@ -49,7 +50,7 @@ public:
 		if (!SendRequested)
 		{
 			if (ReplyRequested
-				|| ((timestamp - LastSent) > LoLaLinkDefinition::REPORT_UPDATE_PERIOD)
+				|| ((timestamp - LastSent) > LoLaLinkDefinition::REPORT_UPDATE_PERIOD_MICROS)
 				|| GetLastValidReceivedAgeQuality() < PARTNER_SILENCE_WORST_QUALITY)
 			{
 				SendRequested = true;
@@ -118,8 +119,8 @@ public:
 	/// <returns></returns>
 	const bool IsBackReportNeeded(const uint32_t timestamp)
 	{
-		return ((timestamp - LastReportReceived) > (LoLaLinkDefinition::REPORT_UPDATE_PERIOD + REPORT_RESEND_PERIOD))
-			|| (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::REPORT_UPDATE_PERIOD);
+		return ((timestamp - LastReportReceived) > (LoLaLinkDefinition::REPORT_UPDATE_PERIOD_MICROS + REPORT_RESEND_PERIOD))
+			|| (GetElapsedSinceLastValidReceived() > LoLaLinkDefinition::REPORT_UPDATE_PERIOD_MICROS);
 	}
 };
 #endif
