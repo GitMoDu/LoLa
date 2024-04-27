@@ -515,9 +515,11 @@ protected:
 				}
 				else
 				{
-					// No Ack before time out.
-					LinkingState = LinkingStateEnum::ClockSyncing;
-					ClockReplyPending = false;
+#if defined(DEBUG_LOLA_LINK)
+					this->Owner();
+					Serial.println(F("StateTransition failed."));
+#endif
+					UpdateLinkStage(LinkStageEnum::AwaitingLink);
 				}
 			}
 			else if (StateTransition.IsSendRequested(micros())
