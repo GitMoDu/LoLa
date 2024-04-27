@@ -10,8 +10,11 @@
 *
 * Requires libraries Crypto and CryptoLW from repository.
 */
-#include <Ascon128.h>
+#if defined(LOLA_USE_POLY1305)
 #include <Poly1305.h>
+#else
+#include <Ascon128.h>
+#endif
 
 /// <summary>
 /// Encodes and decodes LoLa packets.
@@ -27,8 +30,7 @@ public:
 	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
 	LoLaCryptoEncoderSession(const uint8_t accessPassword[ACCESS_CONTROL_PASSWORD_SIZE])
 		: LoLaCryptoSession(accessPassword)
-	{
-	}
+	{}
 
 	virtual const bool Setup()
 	{
