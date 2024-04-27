@@ -16,7 +16,7 @@ static const uint16_t DuplexPeriod = 10000;
 static const uint16_t DuplexDeadZone = DuplexPeriod / 20;
 static const uint32_t ChannelHopPeriod = DuplexPeriod;
 
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32)
+#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_RP2040)
 #if defined(USE_SERIAL_TRANSCEIVER)
 #define LINK_FULL_DUPLEX_TRANSCEIVER		// Only Full-Duplex transceiver available.
 #define SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN 8

@@ -39,6 +39,18 @@
 #define TFT_SCL		18
 #define TFT_SDA		17
 #define TFT_I2C_HZ	1000000
+#elif defined(ARDUINO_ARCH_RP2040)
+#define TFT_CS		19
+#define TFT_DC		20
+#define TFT_RST		21
+#define TFT_SPI		0
+#define TFT_CLK		26
+#define TFT_MOSI	48
+#define TFT_SPI_HZ	48000000
+#define TFT_I2C		1
+#define TFT_SCL		15
+#define TFT_SDA		14
+#define TFT_I2C_HZ	1000000
 #endif
 
 #include <ArduinoGraphicsDrivers.h>
