@@ -16,11 +16,14 @@ private:
 
 private:
 	// Send duration estimation helpers.
-	uint_fast16_t SendShortDurationMicros = 0;
-	uint_fast16_t SendVariableDurationMicros = 0;
+	uint16_t SendShortDurationMicros = 0;
+	uint16_t SendVariableDurationMicros = 0;
 
 	// Rolling counter.
 	uint16_t SendCounter = 0;
+
+	// Estimation helper.
+	uint8_t TimestampingDuration = 0;
 
 protected:
 	uint16_t SentCounter = 0;
@@ -87,7 +90,7 @@ public:
 	}
 
 protected:
-	const bool SetSendCalibration(const uint32_t shortDuration, const uint32_t longDuration)
+	const bool SetSendCalibration(const uint32_t shortDuration, const uint32_t longDuration, const uint32_t timestampingDuration)
 	{
 		const uint16_t airShort = Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(0));
 		const uint16_t airLong = Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
@@ -98,15 +101,23 @@ protected:
 			&& longDuration >= shortDuration
 			&& shortDuration < UINT16_MAX
 			&& longDuration < UINT16_MAX
+			&& timestampingDuration < UINT8_MAX
 			&& longestSend < UINT16_MAX)
 		{
 			SendShortDurationMicros = shortDuration + airShort;
 			SendVariableDurationMicros = (longDuration - shortDuration) + (airLong - airShort);
 
+			TimestampingDuration = timestampingDuration;
+
 			return true;
 		}
 
 		return false;
+	}
+
+	const uint8_t GetTimestampingDuration()
+	{
+		return TimestampingDuration;
 	}
 
 	const uint16_t GetSendDuration(const uint8_t payloadSize)

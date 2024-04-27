@@ -454,9 +454,10 @@ private:
 		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();
 
-		LOLA_RTOS_PAUSE();
+#if defined(DEBUG_LOLA)
 		// Measure PRNG Hop calculation time.
 		volatile uint8_t dummy = 0;
+		LOLA_RTOS_PAUSE();
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
@@ -465,8 +466,6 @@ private:
 		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();
 		const uint32_t prngHopDuration = (timestampingDuration + calculationDuration) / 1000;
-
-#if defined(DEBUG_LOLA)
 		LOLA_RTOS_PAUSE();
 		const uint32_t calibrationDuration = micros() - calibrationStart;
 
@@ -533,7 +532,7 @@ private:
 		Serial.println(F(" ns."));
 #endif
 
-		return SetSendCalibration(shortDuration, longDuration);
+		return SetSendCalibration(shortDuration, longDuration, timestampingDuration / 1000);
 	}
 };
 #endif
