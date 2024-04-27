@@ -21,7 +21,7 @@
 
 #include <Arduino.h>
 
-#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_RP2040)
 #define LOLA_RTOS_PAUSE()	((void)0)
 #define LOLA_RTOS_RESUME()	((void)0)
 #elif defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_ESP32)

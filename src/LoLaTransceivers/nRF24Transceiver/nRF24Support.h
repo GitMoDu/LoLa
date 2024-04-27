@@ -13,12 +13,12 @@ namespace nRF24Support
 	// Most modules support 16-18 MHz.
 #if defined(ARDUINO_ARCH_AVR)
 	static constexpr uint32_t NRF24_SPI_SPEED = 8000000;
-#elif defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#elif defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_RP2040)
 	static constexpr uint32_t NRF24_SPI_SPEED = 16000000;
 #elif defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
 	static constexpr uint32_t NRF24_SPI_SPEED = 16000000;
 #else
-	static constexpr uint32_t NRF24_SPI_SPEED = RF24_SPI_SPEED;
+	static constexpr uint32_t NRF24_SPI_SPEED = 8000000;
 #endif
 
 

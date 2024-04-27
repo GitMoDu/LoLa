@@ -207,7 +207,7 @@ public:
 			case TxStateEnum::TxStart:
 				// Wait for Tx buffer to be free after the minimum duration.
 				if ((micros() - TxStartTimestamp > LineDuration + ByteDuration)
-					&& (IO->availableForWrite() >= (TxBufferSize - 1)))
+					&& ((uint8_t)IO->availableForWrite() >= (TxBufferSize - 1)))
 				{
 					IO->flush();
 					TxState = TxStateEnum::TxEnd;
