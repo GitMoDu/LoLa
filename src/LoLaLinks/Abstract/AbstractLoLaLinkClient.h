@@ -6,6 +6,7 @@
 #include "..\Abstract\AbstractLoLaLink.h"
 #include "..\..\Link\TimedStateTransition.h"
 #include "..\..\Link\LinkClockTracker.h"
+#include "..\..\Link\LinkClockSync.h"
 #include "..\..\Link\PreLinkDuplex.h"
 
 class AbstractLoLaLinkClient : public AbstractLoLaLink
@@ -41,11 +42,10 @@ protected:
 	ClientTimedStateTransition StateTransition;
 
 private:
-	LinkClientClockTracker ClockTracker;
-
-	TimestampError EstimateErrorReply{};
-
 	PreLinkSlaveDuplex LinkingDuplex;
+
+	LinkClientClockTracker ClockTracker;
+	LinkClientClockSync ClockSyncer;
 
 	WaitingStateEnum WaitingState = WaitingStateEnum::Sleeping;
 
@@ -55,8 +55,6 @@ private:
 
 	uint8_t SearchChannel = 0;
 	uint8_t SearchChannelTryCount = 0;
-
-	bool WaitingForClockReply = 0;
 
 protected:
 	virtual void OnServiceSessionCreation() {}
@@ -72,9 +70,10 @@ public:
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
-		, ClockTracker(duplex->GetPeriod())
 		, StateTransition(LoLaLinkDefinition::GetTransitionDuration(duplex->GetPeriod()))
 		, LinkingDuplex(duplex->GetPeriod())
+		, ClockTracker(duplex->GetPeriod())
+		, ClockSyncer(PreLinkSlaveDuplex::GetPreLinkDuplexPeriod(duplex->GetPeriod()))
 	{}
 
 protected:
@@ -185,58 +184,59 @@ protected:
 			}
 #endif
 			break;
-		case Linking::ClockSyncReply::HEADER:
-			if (payloadSize == Linking::ClockSyncReply::PAYLOAD_SIZE
+		case Linking::ClockSyncBroadReply::HEADER:
+			if (payloadSize == Linking::ClockSyncBroadReply::PAYLOAD_SIZE
 				&& LinkingState == LinkingStateEnum::ClockSyncing)
 			{
-				if (SyncSequence != payload[Linking::ClockSyncReply::PAYLOAD_REQUEST_ID_INDEX])
+				if (SyncSequence == payload[Linking::ClockSyncBroadReply::PAYLOAD_REQUEST_ID_INDEX]
+					&& ClockSyncer.HasPendingReplyBroad()
+					&& !ClockSyncer.IsBroadAccepted())
 				{
-#if defined(DEBUG_LOLA_LINK)
-					this->Skipped(F("ClockSyncReply Bad SyncSequence."));
-#endif
-					return;
+					ClockSyncer.OnBroadReplyReceived(micros(), payload[Linking::ClockSyncBroadReply::PAYLOAD_ACCEPTED_INDEX]);
+
+					// Adjust local seconds to match estimation error.
+					SyncClock.ShiftSeconds(ArrayToInt32(&payload[Linking::ClockSyncBroadReply::PAYLOAD_ERROR_INDEX]));
 				}
-
-				EstimateErrorReply.Seconds = ArrayToInt32(&payload[Linking::ClockSyncReply::PAYLOAD_SECONDS_INDEX]);
-				EstimateErrorReply.SubSeconds = ArrayToInt32(&payload[Linking::ClockSyncReply::PAYLOAD_SUB_SECONDS_INDEX]);
-
-				if (EstimateErrorReply.Validate())
+				else
 				{
-					// Adjust local clock to match estimation error.
-					SyncClock.ShiftSeconds(EstimateErrorReply.Seconds);
-					SyncClock.ShiftSubSeconds(EstimateErrorReply.SubSeconds);
-
-					if (payload[Linking::ClockSyncReply::PAYLOAD_ACCEPTED_INDEX] > 0)
-					{
+					ClockSyncer.Reset(micros());
 #if defined(DEBUG_LOLA_LINK)
-						this->Owner();
-						Serial.println(F("Clock Accepted, starting final step."));
-#endif
-						StateTransition.Clear();
-						LinkingState = LinkingStateEnum::RequestingLinkStart;
-						ResetUnlinkedPacketThrottle();
-					}
-#if defined(DEBUG_LOLA_LINK)
-					else {
-						this->Owner();
-						Serial.println(F("Clock Rejected, trying again."));
-					}
+					Serial.println(F("ClockSyncer broad error, reset."));
 #endif
 				}
-#if defined(DEBUG_LOLA_LINK)
-				else {
-					// Invalid estimate, sub-seconds should never match one second.
-					this->Owner();
-					Serial.print(F("Clock Estimate Error Invalid. SubSeconds="));
-					Serial.print(EstimateErrorReply.SubSeconds);
-					Serial.println(F("us. "));
-				}
-#endif
-				Task::enable();
 			}
 #if defined(DEBUG_LOLA_LINK)
-			else { this->Skipped(F("ClockSyncReply")); }
+			else
+			{
+				this->Skipped(F("ClockSyncBroadReply."));
+			}
 #endif
+			break;
+		case Linking::ClockSyncFineReply::HEADER:
+			if (payloadSize == Linking::ClockSyncFineReply::PAYLOAD_SIZE
+				&& LinkingState == LinkingStateEnum::ClockSyncing)
+			{
+				if (SyncSequence == payload[Linking::ClockSyncFineReply::PAYLOAD_REQUEST_ID_INDEX]
+					&& ClockSyncer.HasPendingReplyFine()
+					&& ClockSyncer.IsFineStarted())
+				{
+					ClockSyncer.OnFineReplyReceived(micros(), payload[Linking::ClockSyncFineReply::PAYLOAD_ACCEPTED_INDEX]);
+
+					// Adjust local sub-seconds to match estimation error.
+					SyncClock.ShiftSubSeconds(ArrayToInt32(&payload[Linking::ClockSyncFineReply::PAYLOAD_ERROR_INDEX]));
+				}
+#if defined(DEBUG_LOLA_LINK)
+				else
+				{
+					Serial.println(F("ClockSyncer fine error."));
+
+				}
+			}
+			else
+			{
+				this->Skipped(F("ClockSyncFineReply."));
+#endif
+			}
 			break;
 		case Linking::LinkTimedSwitchOver::HEADER:
 			if (payloadSize == Linking::LinkTimedSwitchOver::PAYLOAD_SIZE)
@@ -324,6 +324,7 @@ protected:
 			WaitingState = WaitingStateEnum::SearchingLink;
 			break;
 		case LinkStageEnum::Linking:
+			ClockSyncer.Reset(micros());
 			ClockTracker.Reset();
 			StateTransition.Clear();
 			Encoder->GenerateLocalChallenge(&RandomSource);
@@ -431,26 +432,59 @@ protected:
 			Task::enable();
 			break;
 		case LinkingStateEnum::ClockSyncing:
-			if (UnlinkedPacketThrottle())
+			if (ClockSyncer.IsFineAccepted())
 			{
-				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
-				OutPacket.SetHeader(Linking::ClockSyncRequest::HEADER);
-
-				LOLA_RTOS_PAUSE();
-				if (UnlinkedDuplexCanSend(Linking::ClockSyncRequest::PAYLOAD_SIZE) &&
-					PacketService.CanSendPacket())
-				{
-					SyncSequence++;
-					OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
-					SyncClock.GetTimestamp(LinkTimestamp);
-					LinkTimestamp.ShiftSubSeconds(GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE));
-
-					UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SECONDS_INDEX]);
-					UInt32ToArray(LinkTimestamp.SubSeconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_SUB_SECONDS_INDEX]);
-					SendPacket(OutPacket.Data, Linking::ClockSyncRequest::PAYLOAD_SIZE);
-				}
-				LOLA_RTOS_RESUME();
+#if defined(DEBUG_LOLA_LINK)
+				this->Owner();
+				Serial.println(F("Clock Accepted, starting final step."));
+#endif
+				StateTransition.Clear();
+				ResetUnlinkedPacketThrottle();
+				LinkingState = LinkingStateEnum::RequestingLinkStart;
 			}
+			else
+			{
+				if (ClockSyncer.IsTimeToSend(micros()))
+				{
+					OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
+					if (ClockSyncer.IsBroadAccepted())
+					{
+						OutPacket.SetHeader(Linking::ClockSyncFineRequest::HEADER);
+					}
+					else
+					{
+						OutPacket.SetHeader(Linking::ClockSyncBroadRequest::HEADER);
+					}
+
+					LOLA_RTOS_PAUSE();
+					if (PacketService.CanSendPacket())
+					{
+						SyncSequence++;
+						OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
+						SyncClock.GetTimestamp(LinkTimestamp);
+						LinkTimestamp.ShiftSubSeconds((uint32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE));
+
+						if (ClockSyncer.IsBroadAccepted())
+						{
+							UInt32ToArray(LinkTimestamp.GetRollingMicros(), &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_ESTIMATE_INDEX]);
+							if (SendPacket(OutPacket.Data, Linking::ClockSyncBroadRequest::PAYLOAD_SIZE))
+							{
+								ClockSyncer.OnFineEstimateSent(micros());
+							}
+						}
+						else
+						{
+							UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_ESTIMATE_INDEX]);
+							if (SendPacket(OutPacket.Data, Linking::ClockSyncBroadRequest::PAYLOAD_SIZE))
+							{
+								ClockSyncer.OnBroadEstimateSent(micros());
+							}
+						}
+					}
+					LOLA_RTOS_RESUME();
+				}
+			}
+
 			Task::enable();
 			break;
 		case LinkingStateEnum::RequestingLinkStart:

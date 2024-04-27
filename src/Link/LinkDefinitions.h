@@ -4,6 +4,7 @@
 #define _LINK_DEFINITIONS_h
 
 #include "LoLaLinkDefinition.h"
+#include "LoLaCryptoDefinition.h"
 
 /// <summary>
 /// Link uses 3 registered ports:
@@ -13,16 +14,6 @@
 /// </summary>
 namespace LinkDefinitions
 {
-	/// <summary>
-	/// Timestamps are in 32 bit UTC seconds or microseconds.
-	/// </summary>
-	static constexpr uint8_t TIME_SIZE = 4;
-
-	/// <summary>
-	/// Full timestamps have 32 bit UTC seconds and 32 bit microseconds.
-	/// </summary>
-	static constexpr uint8_t TIME_FULL_SIZE = TIME_SIZE * 2;
-
 	/// <summary>
 	/// Abstract struct.
 	/// ||SessionId|CompressedPublicKey||
@@ -52,19 +43,6 @@ namespace LinkDefinitions
 	struct SwitchOverDefinition : public TemplateHeaderDefinition<Header, 1 + ExtraSize>
 	{
 		static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
-
-	};
-
-	/// <summary>
-	/// Abstract struct with full timestamp.
-	/// ||RequestId|Seconds|SubSeconds|||
-	/// </summary>
-	template<const uint8_t Header, const uint8_t ExtraSize = 0>
-	struct ClockSyncDefinition : public TemplateHeaderDefinition<Header, 1 + TIME_FULL_SIZE + ExtraSize>
-	{
-		static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
-		static constexpr uint8_t PAYLOAD_SECONDS_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
-		static constexpr uint8_t PAYLOAD_SUB_SECONDS_INDEX = PAYLOAD_SECONDS_INDEX + TIME_SIZE;
 	};
 
 	struct Unlinked
@@ -131,13 +109,15 @@ namespace LinkDefinitions
 		/// <summary>
 		/// ||RequestId|Remaining|Token||
 		/// </summary>
-		struct LinkingTimedSwitchOver : public SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, TIME_SIZE + LoLaLinkDefinition::LINKING_TOKEN_SIZE>
+		struct LinkingTimedSwitchOver : public SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, sizeof(uint32_t) + LoLaLinkDefinition::LINKING_TOKEN_SIZE>
 		{
-			using BaseClass = SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, TIME_SIZE + LoLaLinkDefinition::LINKING_TOKEN_SIZE>;
+		private:
+			using BaseClass = SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, sizeof(uint32_t) + LoLaLinkDefinition::LINKING_TOKEN_SIZE>;
 
+		public:
 			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_REQUEST_ID_INDEX + 1;
 
-			static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = PAYLOAD_TIME_INDEX + TIME_SIZE;
+			static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = PAYLOAD_TIME_INDEX + sizeof(uint32_t);
 
 		};
 
@@ -146,14 +126,43 @@ namespace LinkDefinitions
 		/// </summary>
 		struct LinkingTimedSwitchOverAck : public SwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, LoLaLinkDefinition::LINKING_TOKEN_SIZE>
 		{
+		private:
 			using BaseClass = SwitchOverDefinition<LinkingTimedSwitchOver::HEADER + 1, LoLaLinkDefinition::LINKING_TOKEN_SIZE>;
 
+		public:
 			static constexpr uint8_t PAYLOAD_SESSION_TOKEN_INDEX = BaseClass::PAYLOAD_REQUEST_ID_INDEX + 1;
 		};
 	};
 
 	struct Linking
 	{
+	private:
+		/// <summary>
+		/// ||RequestId|Estimate||
+		/// </summary>
+		template<const uint8_t Header>
+		struct ClockSyncRequestDefinition : public TemplateHeaderDefinition<Header, 1 + sizeof(uint32_t)>
+		{
+			static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_ESTIMATE_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
+		};
+
+		/// <summary>
+		/// ||RequestId|EstimatedError|Accepted||
+		/// </summary>
+		template<const uint8_t Header>
+		struct ClockSyncReplyDefinition : public  TemplateHeaderDefinition<Header, 1 + sizeof(uint32_t) + 1>
+		{
+			static constexpr uint8_t PAYLOAD_REQUEST_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+			static constexpr uint8_t PAYLOAD_ERROR_INDEX = PAYLOAD_REQUEST_ID_INDEX + 1;
+			static constexpr uint8_t PAYLOAD_ACCEPTED_INDEX = PAYLOAD_ERROR_INDEX + sizeof(uint32_t);
+		};
+
+	public:
+		using ClockSyncRequest = ClockSyncRequestDefinition<0>;
+		using ClockSyncReply = ClockSyncReplyDefinition<0>;
+
+	public:
 		/// <summary>
 		/// ||ChallengeCode||
 		/// </summary>
@@ -181,35 +190,36 @@ namespace LinkDefinitions
 		};
 
 		/// <summary>
-		/// ||RequestId|Seconds|SubSeconds|||
-		/// Seconds in full UTC seconds.
-		/// Sub-seconds in microseconds [-999999; +999999]
+		/// ||RequestId|EstimateSeconds||
 		/// </summary>
-		using ClockSyncRequest = ClockSyncDefinition<ServerChallengeReply::HEADER + 1>;
+		using ClockSyncBroadRequest = ClockSyncRequestDefinition<ServerChallengeReply::HEADER + 1>;
 
 		/// <summary>
-		/// ||RequestId|Seconds|SubSecondsError|Accepted||
-		/// Sub-seconds in microseconds [-999999; +999999]
-		/// Accepted true if non-zero.
+		/// ||RequestId|EstimatedSecondsError|Accepted||
 		/// </summary>
-		struct ClockSyncReply : public ClockSyncDefinition<ClockSyncRequest::HEADER + 1, 1>
-		{
-			using BaseClass = ClockSyncDefinition<ClockSyncRequest::HEADER + 1, 1>;
-
-			static constexpr uint8_t PAYLOAD_ACCEPTED_INDEX = BaseClass::PAYLOAD_SUB_SECONDS_INDEX + TIME_SIZE;
-		};
+		using ClockSyncBroadReply = ClockSyncReplyDefinition<ClockSyncBroadRequest::HEADER + 1>;
 
 		/// <summary>
-		/// 
+		/// ||RequestId|EstimateMicros||
 		/// </summary>
-		using StartLinkRequest = TemplateHeaderDefinition<ClockSyncReply::HEADER + 1, 0>;
+		using ClockSyncFineRequest = ClockSyncRequestDefinition<ClockSyncBroadReply::HEADER + 1>;
+
+		/// <summary>
+		/// ||RequestId|EstimatedMicrosError|Accepted||
+		/// </summary>
+		using ClockSyncFineReply = ClockSyncReplyDefinition<ClockSyncFineRequest::HEADER + 1>;
+
+		/// <summary>
+		/// ||||
+		/// </summary>
+		using StartLinkRequest = TemplateHeaderDefinition<ClockSyncFineReply::HEADER + 1, 0>;
 
 		/// <summary>
 		/// ||RequestId|Remaining||
 		/// </summary>
-		struct LinkTimedSwitchOver : public SwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>
+		struct LinkTimedSwitchOver : public SwitchOverDefinition<StartLinkRequest::HEADER + 1, sizeof(uint32_t)>
 		{
-			using BaseClass = SwitchOverDefinition<StartLinkRequest::HEADER + 1, TIME_SIZE>;
+			using BaseClass = SwitchOverDefinition<StartLinkRequest::HEADER + 1, sizeof(uint32_t)>;
 
 			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_REQUEST_ID_INDEX + 1;
 		};
@@ -236,7 +246,7 @@ namespace LinkDefinitions
 		/// <summary>
 		/// ||Rolling Time (us)||
 		/// </summary>
-		struct ClockTuneRequest : public TemplateHeaderDefinition<ReportUpdate::HEADER + 1, TIME_SIZE>
+		struct ClockTuneRequest : public TemplateHeaderDefinition<ReportUpdate::HEADER + 1, sizeof(uint32_t)>
 		{
 			static constexpr uint8_t PAYLOAD_ROLLING_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
@@ -244,7 +254,7 @@ namespace LinkDefinitions
 		/// <summary>
 		/// ||Rolling Time error (us)||
 		/// </summary>
-		struct ClockTuneReply : public TemplateHeaderDefinition<ClockTuneRequest::HEADER + 1, TIME_SIZE>
+		struct ClockTuneReply : public TemplateHeaderDefinition<ClockTuneRequest::HEADER + 1, sizeof(uint32_t)>
 		{
 			static constexpr uint8_t PAYLOAD_ERROR_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
