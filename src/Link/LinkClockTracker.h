@@ -109,7 +109,6 @@ private:
 
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 200;
 	static constexpr uint8_t QUALITY_COUNT = 8 * CLOCK_SYNC_SAMPLE_COUNT;
-	static constexpr uint8_t TUNE_COUNT = 3 * CLOCK_SYNC_SAMPLE_COUNT;
 
 	enum class ClockTuneStateEnum
 	{
@@ -283,14 +282,7 @@ public:
 
 		TuneError -= tuneMicros * CLOCK_FILTER_SCALE;
 
-		if (Accumulated >= TUNE_COUNT)
-		{
-			return ((int32_t)tuneMicros * Accumulated) / TUNE_COUNT;
-		}
-		else
-		{
-			return tuneMicros;
-		}
+		return tuneMicros;
 	}
 
 	void OnResultRead()
