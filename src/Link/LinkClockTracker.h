@@ -19,7 +19,7 @@ private:
 	EmaFilter8<QUALITY_FILTER_SCALE> QualityFilter{};
 
 	int32_t ReplyError = 0;
-	uint8_t Count = 0;
+	uint8_t Accumulated = 0;
 
 	bool ReplyPending = false;
 
@@ -27,7 +27,7 @@ public:
 	void Reset()
 	{
 		QualityFilter.Clear();
-		Count = 0;
+		Accumulated = 0;
 		ReplyPending = false;
 	}
 
@@ -38,7 +38,14 @@ public:
 
 	const uint8_t GetQuality()
 	{
-		return ((uint16_t)QualityFilter.Get() * Count) / QUALITY_COUNT;
+		if (Accumulated >= QUALITY_COUNT)
+		{
+			return QualityFilter.Get();
+		}
+		else
+		{
+			return ((uint16_t)QualityFilter.Get() * Accumulated) / QUALITY_COUNT;
+		}
 	}
 
 	const bool HasReplyPending()
@@ -58,9 +65,9 @@ public:
 
 		QualityFilter.Step(GetErrorQuality(ReplyError));
 
-		if (Count < QUALITY_COUNT)
+		if (Accumulated < UINT8_MAX)
 		{
-			Count++;
+			Accumulated++;
 		}
 	}
 
@@ -102,6 +109,7 @@ private:
 
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 200;
 	static constexpr uint8_t QUALITY_COUNT = 8 * CLOCK_SYNC_SAMPLE_COUNT;
+	static constexpr uint8_t TUNE_COUNT = 3 * CLOCK_SYNC_SAMPLE_COUNT;
 
 	enum class ClockTuneStateEnum
 	{
@@ -127,7 +135,7 @@ private:
 	int32_t AverageError = 0;
 	uint16_t DeviationError = 0;
 
-	uint8_t Count = 0;
+	uint8_t Accumulated = 0;
 	uint8_t SampleCount = 0;
 
 public:
@@ -144,7 +152,7 @@ public:
 		TuneError = 0;
 		AverageError = 0;
 		DeviationError = 0;
-		Count = 0;
+		Accumulated = 0;
 		SampleCount = 0;
 	}
 
@@ -166,7 +174,14 @@ public:
 
 	const uint8_t GetQuality()
 	{
-		return ((uint16_t)QualityFilter.Get() * Count) / QUALITY_COUNT;
+		if (Accumulated >= QUALITY_COUNT)
+		{
+			return QualityFilter.Get();
+		}
+		else
+		{
+			return ((uint16_t)QualityFilter.Get() * Accumulated) / QUALITY_COUNT;
+		}
 	}
 
 	const bool HasResultReady()
@@ -218,9 +233,9 @@ public:
 		}
 
 		StepError(cappedError);
-		if (Count < QUALITY_COUNT)
+		if (Accumulated < UINT8_MAX)
 		{
-			Count++;
+			Accumulated++;
 		}
 
 		if (SampleCount >= CLOCK_SYNC_SAMPLE_COUNT)
@@ -268,7 +283,14 @@ public:
 
 		TuneError -= tuneMicros * CLOCK_FILTER_SCALE;
 
-		return tuneMicros;
+		if (Accumulated >= TUNE_COUNT)
+		{
+			return ((int32_t)tuneMicros * Accumulated) / TUNE_COUNT;
+		}
+		else
+		{
+			return tuneMicros;
+		}
 	}
 
 	void OnResultRead()
