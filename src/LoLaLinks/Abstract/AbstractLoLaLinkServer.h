@@ -233,10 +233,6 @@ protected:
 				LOLA_RTOS_RESUME();
 
 				SyncSequence = payload[Linking::ClockSyncBroadRequest::PAYLOAD_REQUEST_ID_INDEX];
-#if defined(DEBUG_LOLA_LINK)
-				this->Owner();
-				Serial.println(F("ClockSyncBroadRequest"));
-#endif
 				ClockSyncer.OnBroadEstimateReceived(LinkTimestamp.Seconds,
 					ArrayToUInt32(&payload[Linking::ClockSyncBroadRequest::PAYLOAD_ESTIMATE_INDEX]));
 
