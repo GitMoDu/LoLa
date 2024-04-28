@@ -30,6 +30,6 @@ public:
 
 public:
 	virtual void SetPartner(IVirtualTransceiver* partner) {}
-	virtual void ReceivePacket(const uint8_t* data, const uint16_t txDelay, const uint8_t size, const uint8_t channel) { }
+	virtual void ReceivePacket(const uint8_t* data, const uint32_t txTimestamp, const uint8_t size, const uint8_t channel) { }
 };
 #endif

@@ -159,22 +159,6 @@ public:
 	}
 
 public:
-	const uint16_t GetOutgoingDelay()
-	{
-		const uint32_t outgoingDuration = GetTimeToAir(OutGoing.Size);
-		const uint32_t elapsed = micros() - OutGoing.StartTimestamp;
-
-		if (elapsed > outgoingDuration
-			&& elapsed < 1000)
-		{
-			return elapsed - outgoingDuration;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
 	virtual bool Callback() final
 	{
 		// Simulate transmit delay, from request to on-air start.
@@ -200,7 +184,7 @@ public:
 						Serial.println(F("Echo attack!"));
 #endif
 						LOLA_RTOS_PAUSE();
-						ReceivePacket(OutGoing.Buffer, GetOutgoingDelay(), OutGoing.Size, CurrentChannel);
+						ReceivePacket(OutGoing.Buffer, micros(), OutGoing.Size, CurrentChannel);
 					}
 #endif
 
@@ -212,11 +196,11 @@ public:
 						Serial.println(F("Double send attack!"));
 #endif
 						LOLA_RTOS_PAUSE();
-						Partner->ReceivePacket(OutGoing.Buffer, GetOutgoingDelay(), OutGoing.Size, CurrentChannel);
+						Partner->ReceivePacket(OutGoing.Buffer, micros(), OutGoing.Size, CurrentChannel);
 					}
 #endif
 					LOLA_RTOS_PAUSE();
-					Partner->ReceivePacket(OutGoing.Buffer, GetOutgoingDelay(), OutGoing.Size, OutGoing.Channel);
+					Partner->ReceivePacket(OutGoing.Buffer, OutGoing.StartTimestamp, OutGoing.Size, OutGoing.Channel);
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
 #endif
@@ -433,12 +417,10 @@ public:
 		Partner = partner;
 	}
 
-	virtual void ReceivePacket(const uint8_t* data, const uint16_t txDelay, const uint8_t packetSize, const uint8_t channel) final
+	virtual void ReceivePacket(const uint8_t* data, const uint32_t txTimestamp, const uint8_t packetSize, const uint8_t channel) final
 	{
-		const uint32_t timestamp = micros() - txDelay;
-
 		LOLA_RTOS_RESUME();
-		if (HopRequest.HasPending() && ((timestamp - HopRequest.StartTimestamp) < Config::HopMicros))
+		if (HopRequest.HasPending() && ((micros() - HopRequest.StartTimestamp) < Config::HopMicros))
 		{
 #if defined(DEBUG_LOLA_LINK)
 			PrintName();
@@ -451,7 +433,7 @@ public:
 		{
 			if (Listener != nullptr)
 			{
-				Listener->OnRxLost(timestamp);
+				Listener->OnRxLost(txTimestamp);
 			}
 #if defined(DEBUG_LOLA_LINK)
 			PrintName();
@@ -482,7 +464,7 @@ public:
 		}
 
 		Incoming.Size = packetSize;
-		Incoming.StartTimestamp = timestamp;
+		Incoming.StartTimestamp = txTimestamp;
 		for (uint_fast8_t i = 0; i < packetSize; i++)
 		{
 			Incoming.Buffer[i] = data[i];
