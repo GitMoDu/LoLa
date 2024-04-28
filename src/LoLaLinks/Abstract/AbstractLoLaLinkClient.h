@@ -73,7 +73,7 @@ public:
 		, StateTransition(LoLaLinkDefinition::GetTransitionDuration(duplex->GetPeriod()))
 		, LinkingDuplex(duplex->GetPeriod())
 		, ClockTracker(duplex->GetPeriod())
-		, ClockSyncer(PreLinkSlaveDuplex::GetPreLinkDuplexPeriod(duplex->GetPeriod()))
+		, ClockSyncer()
 	{}
 
 protected:
@@ -313,8 +313,6 @@ protected:
 			break;
 		case LinkStageEnum::Booting:
 			Encoder->SetRandomSessionId(&RandomSource);
-			// Remember the estimated send duration, to avoid calculating it on every PreSend.
-			ClockTracker.SetRequestSendDuration(GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE));
 			break;
 		case LinkStageEnum::AwaitingLink:
 			SearchChannel = RandomSource.GetRandomShort();
@@ -444,7 +442,7 @@ protected:
 			}
 			else
 			{
-				if (ClockSyncer.IsTimeToSend(micros()))
+				if (ClockSyncer.IsTimeToSend(micros(), GetClockSyncRetryPeriod()))
 				{
 					OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 					if (ClockSyncer.IsBroadAccepted())
@@ -461,20 +459,21 @@ protected:
 					{
 						SyncSequence++;
 						OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
-						SyncClock.GetTimestamp(LinkTimestamp);
-						LinkTimestamp.ShiftSubSeconds((uint32_t)GetSendDuration(Linking::ClockSyncRequest::PAYLOAD_SIZE));
 
 						if (ClockSyncer.IsBroadAccepted())
 						{
-							UInt32ToArray(LinkTimestamp.GetRollingMicros(), &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_ESTIMATE_INDEX]);
-							if (SendPacket(OutPacket.Data, Linking::ClockSyncBroadRequest::PAYLOAD_SIZE))
+							SyncClock.GetTimestamp(LinkTimestamp);
+							UInt32ToArray(LinkTimestamp.GetRollingMicros() + GetSendDuration(Linking::ClockSyncFineRequest::PAYLOAD_SIZE)
+								, &OutPacket.Payload[Linking::ClockSyncFineRequest::PAYLOAD_ESTIMATE_INDEX]);
+							if (SendPacket(OutPacket.Data, Linking::ClockSyncFineRequest::PAYLOAD_SIZE))
 							{
 								ClockSyncer.OnFineEstimateSent(micros());
 							}
 						}
 						else
 						{
-							UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncRequest::PAYLOAD_ESTIMATE_INDEX]);
+							SyncClock.GetTimestamp(LinkTimestamp);
+							UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncFineRequest::PAYLOAD_ESTIMATE_INDEX]);
 							if (SendPacket(OutPacket.Data, Linking::ClockSyncBroadRequest::PAYLOAD_SIZE))
 							{
 								ClockSyncer.OnBroadEstimateSent(micros());
@@ -514,10 +513,6 @@ protected:
 			{
 				if (StateTransition.HasAcknowledge())
 				{
-#if defined(DEBUG_LOLA_LINK)
-					this->Owner();
-					Serial.println(F("StateTransition success."));
-#endif
 					UpdateLinkStage(LinkStageEnum::Linked);
 				}
 				else
@@ -540,12 +535,8 @@ protected:
 				{
 					if (SendPacket(OutPacket.Data, Linking::LinkTimedSwitchOverAck::PAYLOAD_SIZE))
 					{
-#if defined(DEBUG_LOLA_LINK)
-						this->Owner();
-						Serial.println(F("Sent StateTransition Ack."));
-#endif
+						StateTransition.OnSent();
 					}
-					StateTransition.OnSent();
 				}
 				LOLA_RTOS_RESUME();
 			}
@@ -558,15 +549,12 @@ protected:
 
 	virtual void OnPreSend() final
 	{
-		if (OutPacket.GetPort() == LoLaLinkDefinition::LINK_PORT &&
-			OutPacket.GetHeader() == Linked::ClockTuneRequest::HEADER)
+		if (OutPacket.GetPort() == LoLaLinkDefinition::LINK_PORT
+			&& OutPacket.GetHeader() == Linked::ClockTuneRequest::HEADER)
 		{
-			const uint32_t start = micros();
 			SyncClock.GetTimestamp(LinkTimestamp);
-			const uint32_t estimatedTimestamp = LinkTimestamp.GetRollingMicros() + ClockTracker.GetRequestSendDuration();
-			const uint32_t duration = micros() - start;
 
-			UInt32ToArray(estimatedTimestamp + duration
+			UInt32ToArray(LinkTimestamp.GetRollingMicros() + GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE) + GetTimestampingDuration()
 				, &OutPacket.Payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
 		}
 	}
@@ -616,6 +604,11 @@ protected:
 	}
 
 private:
+	const uint32_t GetClockSyncRetryPeriod()
+	{
+		return Duplex->GetPeriod();
+	}
+
 	static const RequestPriority GetClockSyncPriority(const uint8_t clockQuality)
 	{
 		uint8_t measure = UINT8_MAX - clockQuality;
@@ -679,10 +672,6 @@ private:
 		{
 			if (StateTransition.HasAcknowledge())
 			{
-#if defined(DEBUG_LOLA_LINK)
-				this->Owner();
-				Serial.println(F("StateTransition success."));
-#endif
 				UpdateLinkStage(LinkStageEnum::Linking);
 			}
 			else
@@ -708,10 +697,6 @@ private:
 				if (SendPacket(OutPacket.Data, Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SIZE))
 				{
 					StateTransition.OnSent();
-#if defined(DEBUG_LOLA_LINK)
-					this->Owner();
-					Serial.println(F("Sent StateTransition Ack."));
-#endif
 				}
 			}
 			LOLA_RTOS_RESUME();

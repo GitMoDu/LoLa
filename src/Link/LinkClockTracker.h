@@ -51,7 +51,7 @@ public:
 		return ReplyError;
 	}
 
-	void OnLinkedEstimateReceived(const uint32_t estimate, const uint32_t real)
+	void OnLinkedEstimateReceived(const uint32_t real, const uint32_t estimate)
 	{
 		ReplyPending = true;
 		ReplyError = real - estimate;
@@ -123,8 +123,6 @@ private:
 	uint32_t LastClockSent = 0;
 	uint32_t LastClockSync = 0;
 
-	uint32_t RequestSendDuration = 0;
-
 	int32_t TuneError = 0;
 	int32_t AverageError = 0;
 	uint16_t DeviationError = 0;
@@ -143,22 +141,11 @@ public:
 		QualityFilter.Clear();
 		LastClockSent = 0;
 		LastClockSync = 0;
-		RequestSendDuration = 0;
 		TuneError = 0;
 		AverageError = 0;
 		DeviationError = 0;
 		Count = 0;
 		SampleCount = 0;
-	}
-
-	void SetRequestSendDuration(const uint32_t requestSendDuration)
-	{
-		RequestSendDuration = requestSendDuration;
-	}
-
-	const uint32_t GetRequestSendDuration()
-	{
-		return RequestSendDuration;
 	}
 
 	const int16_t GetResultCorrection()

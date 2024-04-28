@@ -251,19 +251,13 @@ protected:
 				&& LinkingState == LinkingStateEnum::ClockSyncing
 				&& ClockSyncer.IsBroadAccepted())
 			{
+				SyncSequence = payload[Linking::ClockSyncFineRequest::PAYLOAD_REQUEST_ID_INDEX];
+
 				LOLA_RTOS_PAUSE();
 				SyncClock.GetTimestamp(LinkTimestamp);
-				LinkTimestamp.ShiftSubSeconds(-(int32_t)(micros() - timestamp));
-				LOLA_RTOS_RESUME();
-
-				SyncSequence = payload[Linking::ClockSyncFineRequest::PAYLOAD_REQUEST_ID_INDEX];
-#if defined(DEBUG_LOLA_LINK)
-				this->Owner();
-				Serial.println(F("ClockSyncFineRequest"));
-#endif
-				ClockSyncer.OnFineEstimateReceived(LinkTimestamp.GetRollingMicros(),
+				ClockSyncer.OnFineEstimateReceived(LinkTimestamp.GetRollingMicros() - ((int32_t)(micros() - timestamp)),
 					ArrayToUInt32(&payload[Linking::ClockSyncFineRequest::PAYLOAD_ESTIMATE_INDEX]));
-
+				LOLA_RTOS_RESUME();
 				Task::enable();
 			}
 #if defined(DEBUG_LOLA_LINK)
@@ -331,11 +325,9 @@ protected:
 				{
 					LOLA_RTOS_PAUSE();
 					SyncClock.GetTimestamp(LinkTimestamp);
-					LinkTimestamp.ShiftSubSeconds(-(int32_t)(micros() - timestamp));
+					ClockTracker.OnLinkedEstimateReceived(LinkTimestamp.GetRollingMicros() - ((int32_t)(micros() - timestamp))
+						, ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]));
 					LOLA_RTOS_RESUME();
-
-					ClockTracker.OnLinkedEstimateReceived(ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX])
-						, LinkTimestamp.GetRollingMicros());
 					Task::enable();
 				}
 #if defined(DEBUG_LOLA_LINK)
@@ -507,10 +499,6 @@ protected:
 			{
 				if (StateTransition.HasAcknowledge())
 				{
-#if defined(DEBUG_LOLA_LINK)
-					this->Owner();
-					Serial.println(F("StateTransition success."));
-#endif
 					UpdateLinkStage(LinkStageEnum::Linked);
 				}
 				else
@@ -655,10 +643,6 @@ private:
 		{
 			if (StateTransition.HasAcknowledge())
 			{
-#if defined(DEBUG_LOLA_LINK)
-				this->Owner();
-				Serial.println(F("StateTransition success."));
-#endif
 				UpdateLinkStage(LinkStageEnum::Linking);
 			}
 			else
@@ -717,9 +701,8 @@ protected:
 	const bool UnlinkedDuplexCanSend(const uint8_t payloadSize)
 	{
 		SyncClock.GetTimestamp(LinkTimestamp);
-		LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
-
-		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
+		
+		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros() + GetSendDuration(payloadSize), GetOnAirDuration(payloadSize));
 	}
 };
 #endif

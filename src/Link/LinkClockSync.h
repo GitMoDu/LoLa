@@ -169,29 +169,12 @@ public:
 
 		ReplyPending = ReplyPendingEnum::Fine;
 
-		if (((ErrorReply >= 0 && (ErrorReply < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE))
-			|| (ErrorReply < 0 && ((-ErrorReply) < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE))))
-		{
-			GoodCount++;
-
-			if (State == ClockSyncStateEnum::FineStarted && GoodCount >= 2)
-			{
-				State = ClockSyncStateEnum::FineAccepted;
-			}
-		}
-		else
-		{
-			if (State == ClockSyncStateEnum::FineStarted)
-			{
-				GoodCount = 0;
-			}
-		}
-		/*if (State == ClockSyncStateEnum::FineStarted
+		if (State == ClockSyncStateEnum::FineStarted
 			&& ((ErrorReply >= 0 && (ErrorReply < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE))
 				|| (ErrorReply < 0 && ((-ErrorReply) < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE))))
 		{
 			State = ClockSyncStateEnum::FineAccepted;
-		}*/
+		}
 	}
 };
 
@@ -200,21 +183,18 @@ class LinkClientClockSync : public LinkClockSync
 private:
 	uint32_t LastEstimateSent = 0;
 
-	uint32_t RetryPeriod;
-
 public:
-	LinkClientClockSync(const uint32_t retryPeriod)
-		: RetryPeriod(retryPeriod)
+	LinkClientClockSync()
 	{}
 
 	void Reset(const uint32_t timestamp)
 	{
 		State = ClockSyncStateEnum::WaitingForStart;
 		ReplyPending = ReplyPendingEnum::None;
-		LastEstimateSent = timestamp - RetryPeriod;
+		LastEstimateSent = timestamp - INT32_MAX;
 	}
 
-	const bool IsTimeToSend(const uint32_t timestamp)
+	const bool IsTimeToSend(const uint32_t timestamp, const uint32_t retryPeriod)
 	{
 		switch (State)
 		{
@@ -222,13 +202,13 @@ public:
 			return true;
 			break;
 		case ClockSyncStateEnum::BroadStarted:
-			return !HasPendingReplyBroad() || ((timestamp - LastEstimateSent) >= RetryPeriod);
+			return !HasPendingReplyBroad() || ((timestamp - LastEstimateSent) >= retryPeriod);
 			break;
 		case ClockSyncStateEnum::BroadAccepted:
 			return true;
 			break;
 		case ClockSyncStateEnum::FineStarted:
-			return !HasPendingReplyFine() || ((timestamp - LastEstimateSent) >= RetryPeriod);
+			return !HasPendingReplyFine() || ((timestamp - LastEstimateSent) >= retryPeriod);
 			break;
 		case ClockSyncStateEnum::FineAccepted:
 		default:
@@ -282,7 +262,6 @@ public:
 		}
 
 		ReplyPending = ReplyPendingEnum::None;
-		LastEstimateSent = timestamp - RetryPeriod;
 
 		if (accepted)
 		{
@@ -299,7 +278,6 @@ public:
 		}
 
 		ReplyPending = ReplyPendingEnum::None;
-		LastEstimateSent = timestamp - RetryPeriod;
 
 		if (accepted)
 		{
