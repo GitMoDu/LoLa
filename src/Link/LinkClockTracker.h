@@ -11,7 +11,7 @@
 class LinkServerClockTracker
 {
 private:
-	static constexpr uint8_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 5;
+	static constexpr uint8_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 2;
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 220;
 	static constexpr uint8_t QUALITY_COUNT = 9;
 
