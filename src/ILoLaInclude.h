@@ -15,15 +15,12 @@
 #endif
 #if defined(ARDUINO_ARCH_AVR)
 #include "EntropySources\AvrEntropy.h"
-#endif
-#if defined(ARDUINO_ARCH_STM32F1)
+#elif defined(ARDUINO_ARCH_STM32F1)
 #include "EntropySources\Stm32Entropy.h"
-#endif
-#if defined(ARDUINO_ARCH_ESP8266)
+#elif defined(ARDUINO_ARCH_ESP8266)
 #include "EntropySources\Esp8266Entropy.h"
-#endif
-#if defined(ARDUINO_ARCH_ESP32)
-//TODO: #include "EntropySources\Esp32Entropy.h"
+#elif defined(ARDUINO_ARCH_ESP32)
+#include "EntropySources\Esp32Entropy.h"
 #endif 
 ///
 

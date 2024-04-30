@@ -4,7 +4,7 @@
 #define _STM32_ENTROPY_h
 
 #include <IEntropy.h>
-#include <Arduino.h>
+#include <libmaple/adc.h>
 
 /// <summary>
 /// Uses the internal temperature sensor as an analog entropy source.
