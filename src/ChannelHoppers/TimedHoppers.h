@@ -208,6 +208,9 @@ private:
 			Serial.print(F("->"));
 			Serial.println(rollingTimestamp);
 #endif
+			// Out of clock sync, keep in spin lock.
+			Task::delay(0);
+			return true;
 		}
 
 		Task::delay(0);
