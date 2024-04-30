@@ -19,17 +19,6 @@
 #undef _TASK_SLEEP_ON_IDLE_RUN // Virtual Transceiver can't wake up the CPU, sleep is not compatible.
 #endif
 
-// Test pins for logic analyser.
-#if defined(ARDUINO_ARCH_STM32F1)
-#define TEST_PIN_0 17
-#define TEST_PIN_1 18
-#define TEST_PIN_2 19
-
-#define SCHEDULER_TEST_PIN TEST_PIN_0
-#define TX_SERVER_TEST_PIN TEST_PIN_1
-#define TX_CLIENT_TEST_PIN TEST_PIN_2
-#endif
-
 // Enable for experimental faster hash.
 //#define LOLA_USE_POLY1305
 
@@ -108,13 +97,13 @@ Scheduler SchedulerBase;
 //
 
 // Diceware created access control password.
-static const uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
+static constexpr uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
 //
 
 // Diceware created values for address and secret key.
-static const uint8_t ServerAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
-static const uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
-static const uint8_t SecretKey[LoLaLinkDefinition::SECRET_KEY_SIZE] = { 0x50, 0x05, 0x60, 0x06, 0x70, 0x07, 0x80, 0x08 };
+static constexpr uint8_t ServerAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+static constexpr uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+static constexpr uint8_t SecretKey[LoLaLinkDefinition::SECRET_KEY_SIZE] = { 0x50, 0x05, 0x60, 0x06, 0x70, 0x07, 0x80, 0x08 };
 
 // Virtual Transceiver configurations.
 // <ChannelCount, TxBaseMicros, TxByteNanos, AirBaseMicros, AirByteNanos, HopMicros>
@@ -127,9 +116,9 @@ using FastMultiChannel = IVirtualTransceiver::Configuration<160, 10, 500, 50, 75
 using TestRadioConfig = SlowMultiChannel;
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 10000;
-static const uint16_t DuplexDeadZone = 500;
-static const uint32_t ChannelHopPeriod = 200000;
+static constexpr uint16_t DuplexPeriod = 10000;
+static constexpr uint16_t DuplexDeadZone = 500;
+static constexpr uint32_t ChannelHopPeriod = 200000;
 
 // Use best available sources.
 #if defined(ARDUINO_ARCH_STM32F1)
@@ -160,7 +149,7 @@ VirtualTransceiver<TestRadioConfig, 'S', false> ServerTransceiver(SchedulerBase)
 
 HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 ArduinoCycles ServerCyclesSource{};
-LoLaAddressMatchLinkServer<> Server(SchedulerBase,
+LoLaAddressMatchLinkServer<> LinkServer(SchedulerBase,
 	&ServerTransceiver,
 	&ServerCyclesSource,
 	&ServerEntropySource,
@@ -182,7 +171,7 @@ VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP> ClientTransceiver(Sc
 
 HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
 ArduinoCycles ClientCyclesSource{};
-LoLaAddressMatchLinkClient<> Client(SchedulerBase,
+LoLaAddressMatchLinkClient<> LinkClient(SchedulerBase,
 	&ClientTransceiver,
 	&ClientCyclesSource,
 	&ClientEntropySource,
@@ -197,26 +186,26 @@ ClockDetunerTask Detuner(SchedulerBase);
 #endif
 
 #if defined(LINK_TEST_DISCOVERY)
-DiscoveryTestService<'S', 0, 12345> ServerDiscovery(SchedulerBase, &Server);
-DiscoveryTestService<'C', 0, 12345> ClientDiscovery(SchedulerBase, &Client);
+DiscoveryTestService<'S', 0, 12345> ServerDiscovery(SchedulerBase, &LinkServer);
+DiscoveryTestService<'C', 0, 12345> ClientDiscovery(SchedulerBase, &LinkClient);
 #endif
 
 #if defined(LINK_TEST_SURFACE)
 ExampleSurface ReadSurface{};
-SurfaceReader<1, 23456> ClientReader(SchedulerBase, &Client, &ReadSurface);
+SurfaceReader<1, 23456> ClientReader(SchedulerBase, &LinkClient, &ReadSurface);
 ExampleSurface WriteSurface{};
-SurfaceWriter<1, 23456, DuplexPeriod / 1000> ServerWriter(SchedulerBase, &Server, &WriteSurface);
+SurfaceWriter<1, 23456, DuplexPeriod / 1000> ServerWriter(SchedulerBase, &LinkServer, &WriteSurface);
 #if defined(USE_CONTROLLER)
 ControllerSource<5> Controller(SchedulerBase, &Serial3);
 ControllerExampleSurfaceDispatcher ControllerDispatcher(SchedulerBase, &Controller, &WriteSurface);
 #endif
 #endif
 
-TestTask Tester(SchedulerBase, &Server, &Client);
+TestTask Tester(SchedulerBase, &LinkServer, &LinkClient);
 
 
 #if defined(USE_LINK_DISPLAY)
-VirtualLinkGraphicsEngine<ScreenDriverType, FrameBufferType>LinkDisplayEngine(&SchedulerBase, &Server, &Client, &ServerTransceiver, &ClientTransceiver);
+VirtualLinkGraphicsEngine<ScreenDriverType, FrameBufferType>LinkDisplayEngine(&SchedulerBase, &LinkServer, &LinkClient, &ServerTransceiver, &ClientTransceiver);
 #endif
 
 void BootError()
@@ -227,6 +216,13 @@ void BootError()
 	delay(1000);
 	while (1);;
 }
+
+#if defined(USE_LINK_DISPLAY)
+void BufferTaskCallback(void* parameter)
+{
+	LinkDisplayEngine.BufferTaskCallback(parameter);
+}
+#endif
 
 void setup()
 {
@@ -295,14 +291,14 @@ void setup()
 #endif
 
 	// Setup Link instances.
-	if (!Server.Setup())
+	if (!LinkServer.Setup())
 	{
 #ifdef DEBUG
 		Serial.println(F("Server Link Setup Failed."));
 #endif
 		BootError();
 	}
-	if (!Client.Setup())
+	if (!LinkClient.Setup())
 	{
 #ifdef DEBUG
 		Serial.println(F("Client Link Setup Failed."));
@@ -312,11 +308,11 @@ void setup()
 
 #if defined(LINK_TEST_DETUNE)
 	// Detune client clock by LINK_TEST_DETUNE us every second.
-	Detuner.SetClockDetune(Client.GetInternalClock(), -LINK_TEST_DETUNE);
+	Detuner.SetClockDetune(LinkClient.GetInternalClock(), -LINK_TEST_DETUNE);
 #endif
 
 	// Start Link instances.
-	if (Server.Start() && Client.Start())
+	if (LinkServer.Start() && LinkClient.Start())
 	{
 #ifdef DEBUG_LOLA_LINK
 		Serial.print(millis());
@@ -346,10 +342,3 @@ void loop()
 #endif
 	SchedulerBase.execute();
 }
-
-#if defined(USE_LINK_DISPLAY)
-void BufferTaskCallback(void* parameter)
-{
-	LinkDisplayEngine.BufferTaskCallback(parameter);
-}
-#endif

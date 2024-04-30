@@ -33,7 +33,7 @@ private:
 #endif
 
 protected:
-	virtual void OnServiceStarted() final
+	void OnServiceStarted() final
 	{
 		Task::enableDelayed(0);
 #if defined(DEBUG_LOLA)
@@ -42,7 +42,7 @@ protected:
 #endif
 	}
 
-	virtual void OnDiscoveryFailed() final
+	void OnDiscoveryFailed() final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
@@ -50,7 +50,7 @@ protected:
 #endif
 	}
 
-	virtual void OnServiceEnded() final
+	void OnServiceEnded() final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
@@ -58,12 +58,12 @@ protected:
 #endif
 	}
 
-	virtual void OnLinkedServiceRun() final
+	void OnLinkedServiceRun() final
 	{
 		Task::disable();
 	}
 
-	virtual void OnLinkedSendRequestFail() final
+	void OnLinkedSendRequestFail() final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
@@ -71,7 +71,7 @@ protected:
 #endif
 	}
 
-	virtual void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
+	void OnLinkedPacketReceived(const uint32_t startTimestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 #if defined(DEBUG_LOLA)
 		PrintName();
