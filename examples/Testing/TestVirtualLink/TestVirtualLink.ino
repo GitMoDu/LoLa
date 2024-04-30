@@ -127,6 +127,9 @@ Stm32Entropy ClientEntropySource{};
 #elif defined(ARDUINO_ARCH_ESP8266)
 Esp8266Entropy ServerEntropySource{};
 Esp8266Entropy ClientEntropySource{};
+#elif defined(ARDUINO_ARCH_ESP32)
+Esp32Entropy ServerEntropySource{};
+Esp32Entropy ClientEntropySource{};
 #else 
 ArduinoLowEntropy ServerEntropySource{};
 ArduinoLowEntropy ClientEntropySource{};
