@@ -178,7 +178,6 @@ public:
 						PrintName();
 						Serial.println(F("Echo attack!"));
 #endif
-						LOLA_RTOS_PAUSE();
 						ReceivePacket(OutGoing.Buffer, micros(), OutGoing.Size, CurrentChannel);
 					}
 #endif
@@ -190,11 +189,9 @@ public:
 						PrintName();
 						Serial.println(F("Double send attack!"));
 #endif
-						LOLA_RTOS_PAUSE();
 						Partner->ReceivePacket(OutGoing.Buffer, micros(), OutGoing.Size, CurrentChannel);
 					}
 #endif
-					LOLA_RTOS_PAUSE();
 					Partner->ReceivePacket(OutGoing.Buffer, OutGoing.StartTimestamp, OutGoing.Size, OutGoing.Channel);
 #if defined(PRINT_PACKETS)
 					PrintPacket(OutGoing.Buffer, OutGoing.Size);
@@ -404,7 +401,6 @@ public:
 
 	virtual void ReceivePacket(const uint8_t* data, const uint32_t txTimestamp, const uint8_t packetSize, const uint8_t channel) final
 	{
-		LOLA_RTOS_RESUME();
 		if (HopRequest.HasPending() && ((micros() - HopRequest.StartTimestamp) < Config::HopMicros))
 		{
 #if defined(DEBUG_LOLA_LINK)
