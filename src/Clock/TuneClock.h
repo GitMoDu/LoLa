@@ -61,7 +61,7 @@ public:
 		}
 	}
 
-	const int16_t GetTune()
+	const int16_t GetTune() const
 	{
 		return TuneMicros;
 	}
@@ -112,7 +112,7 @@ protected:
 	/// </summary>
 	/// <param name="cyclestamp"></param>
 	/// <returns>Max delay in milliseconds until next run is required.</returns>
-	virtual uint32_t RunCheck(const uint32_t cyclestamp) final
+	uint32_t RunCheck(const uint32_t cyclestamp) final
 	{
 		const uint32_t overflowDelay = TimeClock::RunCheck(cyclestamp);
 		const uint32_t smearDelay = CheckSmearAdaptive(cyclestamp);
@@ -128,7 +128,7 @@ protected:
 	}
 
 private:
-	const uint32_t GetAdaptiveSmearPeriod()
+	const uint32_t GetAdaptiveSmearPeriod() const
 	{
 		if (TuneMicros >= LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
 		{

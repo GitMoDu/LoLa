@@ -11,7 +11,6 @@
 /// Uses task callback to ensure cyclestamp' overflows are tracked.
 class CycleClock : public CycleCounter
 {
-
 private:
 	uint32_t LastCyclestamp = 0;
 	uint32_t Overflows = 0;

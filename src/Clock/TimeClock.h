@@ -65,9 +65,10 @@ public:
 
 	void GetTimestamp(const uint32_t cyclestamp, Timestamp& timestamp)
 	{
+		// Start with the monotonic timestamp.
 		GetTimestampMonotonic(cyclestamp, timestamp);
 
-		// Shift the local offset.
+		// Shift it with the local offset.
 		timestamp.ShiftSeconds(OffsetSeconds);
 		timestamp.ShiftSubSeconds(OffsetSubSeconds);
 	}
@@ -77,15 +78,13 @@ public:
 		// Get the overflow count.
 		const uint32_t overflows = GetCycleOverflows(cyclestamp);
 
-		// Start with duration from cycle clock and consolidate.
-		// This enables the full range of UINT32_MAX us.
-		timestamp.Seconds = 0;
-		timestamp.SubSeconds = GetElapsedDuration(cyclestamp);
+		// Start with the overflows and consolidate.
+		timestamp.Seconds = overflows * OverflowWrapSeconds;
+		timestamp.SubSeconds = overflows * OverflowWrapRemainder;
 		timestamp.ConsolidateSubSeconds();
 
-		// Shift cycle clock overflows.
-		timestamp.ShiftSeconds(overflows * OverflowWrapSeconds);
-		timestamp.ShiftSubSeconds(overflows * OverflowWrapRemainder);
+		// Shift it with the elapsed duration.
+		timestamp.ShiftSubSeconds(GetElapsedDuration(cyclestamp));
 	}
 
 	void ShiftSeconds(const int32_t offsetSeconds)
@@ -95,19 +94,23 @@ public:
 
 	void ShiftSubSeconds(const int32_t offsetMicros)
 	{
-		if (offsetMicros > 0
-			&& ((uint32_t)(OffsetSubSeconds + offsetMicros) < OffsetSubSeconds))
+		if (offsetMicros > 0)
 		{
-			// Subseconds rollover when adding offset.
-			OffsetSeconds += OverflowWrapSeconds;
-			OffsetSubSeconds += OverflowWrapRemainder;
+			if ((OffsetSubSeconds + offsetMicros) < OffsetSubSeconds)
+			{
+				// Subseconds rollover when adding offset.
+				OffsetSeconds += OverflowWrapSeconds;
+				OffsetSubSeconds += OverflowWrapRemainder;
+			}
 		}
-		else if (offsetMicros < 0
-			&& ((uint32_t)(OffsetSubSeconds + offsetMicros) > OffsetSubSeconds))
+		else if (offsetMicros < 0)
 		{
-			// Subseconds rollover when removing offset.
-			OffsetSeconds -= OverflowWrapSeconds;
-			OffsetSubSeconds -= OverflowWrapRemainder;
+			if ((OffsetSubSeconds + offsetMicros) > OffsetSubSeconds)
+			{
+				// Subseconds rollover when removing offset.
+				OffsetSeconds -= OverflowWrapSeconds;
+				OffsetSubSeconds -= OverflowWrapRemainder;
+			}
 		}
 
 		OffsetSubSeconds += offsetMicros;
