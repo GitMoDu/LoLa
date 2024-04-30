@@ -56,8 +56,11 @@
 #include <ArduinoGraphicsDrivers.h>
 #include <ArduinoGraphicsCore.h>
 
+#if defined(ARDUINO_ARCH_ESP32)
+using ScreenDriverType = ScreenDriverSSD1306_128x64x1_I2C_Rtos<TFT_SCL, TFT_SDA, TFT_RST, TFT_I2C, TFT_I2C_HZ>;
+#else
 using ScreenDriverType = ScreenDriverSSD1306_128x64x1_I2C_Async<TFT_SCL, TFT_SDA, TFT_RST, TFT_I2C, TFT_I2C_HZ, 8>;
-//using ScreenDriverType = ScreenDriverSSD1306_128x64x1_I2C_Rtos<TFT_SCL, TFT_SDA, TFT_RST, TFT_I2C, TFT_I2C_HZ>;
+#endif
 using FrameBufferType = MonochromeFrameBuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, MonochromeColorConverter1<30>>;
 
 //using ScreenDriverType = ScreenDriverSSD1331_96x64x8_SPI<TFT_SPI, TFT_CS, TFT_DC, TFT_RST, TFT_CLK, TFT_MOSI>;
