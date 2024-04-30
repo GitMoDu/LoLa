@@ -54,7 +54,7 @@
 //#define PRINT_LINK_HEARBEAT 5
 
 // Set to true to log the current Client channel, as it hops. False to disable.
-//#define PRINT_CHANNEL_HOP true
+#define PRINT_CHANNEL_HOP false
 
 // Enable to use Controller to write to ExampleSurface. 
 // Depends on https://github.com/GitMoDu/NintendoControllerReader
@@ -144,12 +144,7 @@ NoHopNoChannel ClientChannelHop{};
 #endif
 
 // Link Server and its required instances.
-#ifdef TX_SERVER_TEST_PIN
-VirtualTransceiver<TestRadioConfig, 'S', false, TX_SERVER_TEST_PIN> ServerTransceiver(SchedulerBase);
-#else
 VirtualTransceiver<TestRadioConfig, 'S', false> ServerTransceiver(SchedulerBase);
-#endif
-
 HalfDuplex<DuplexPeriod, false, DuplexDeadZone> ServerDuplex;
 ArduinoCycles ServerCyclesSource{};
 LoLaAddressMatchLinkServer<> LinkServer(SchedulerBase,
@@ -163,15 +158,7 @@ LoLaAddressMatchLinkServer<> LinkServer(SchedulerBase,
 	ServerAddress);
 
 // Link Client and its required instances.
-#ifndef PRINT_CHANNEL_HOP
-#define PRINT_CHANNEL_HOP false
-#endif
-#ifdef TX_CLIENT_TEST_PIN
-VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP, TX_CLIENT_TEST_PIN> ClientTransceiver(SchedulerBase);
-#else
 VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP> ClientTransceiver(SchedulerBase);
-#endif
-
 HalfDuplex<DuplexPeriod, true, DuplexDeadZone> ClientDuplex;
 ArduinoCycles ClientCyclesSource{};
 LoLaAddressMatchLinkClient<> LinkClient(SchedulerBase,

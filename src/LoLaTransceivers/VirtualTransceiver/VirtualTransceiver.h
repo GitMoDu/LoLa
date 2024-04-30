@@ -19,8 +19,7 @@
 /// <typeparam name="LogChannelHop">Enables current channel logging, when DEBUG_LOLA is defined.</typeparam>
 template<typename Config,
 	const char OnwerName,
-	const bool LogChannelHop = false,
-	const uint8_t PinTestTx = 0>
+	const bool LogChannelHop = false>
 class VirtualTransceiver final
 	: private Task
 	, public virtual IVirtualTransceiver
@@ -142,10 +141,6 @@ public:
 		, ILoLaTransceiver()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
-		if (PinTestTx != UINT8_MAX)
-		{
-			pinMode(PinTestTx, OUTPUT);
-		}
 	}
 
 	virtual const uint8_t GetChannelCount() final
@@ -215,11 +210,6 @@ public:
 					Task::enable();
 					OutGoing.Clear();
 					LastOut = micros();
-
-					if (PinTestTx != UINT8_MAX)
-					{
-						digitalWrite(PinTestTx, LOW);
-					}
 				}
 			}
 		}
@@ -358,11 +348,6 @@ public:
 			Serial.println(F("Tx failed. Rx collision."));
 #endif
 			return false;
-		}
-
-		if (PinTestTx != UINT8_MAX)
-		{
-			digitalWrite(PinTestTx, HIGH);
 		}
 
 		// Copy packet to temporary output buffer.
