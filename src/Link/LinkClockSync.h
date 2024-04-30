@@ -199,18 +199,15 @@ public:
 		switch (State)
 		{
 		case ClockSyncStateEnum::WaitingForStart:
+        case ClockSyncStateEnum::BroadAccepted:
 			return true;
 			break;
 		case ClockSyncStateEnum::BroadStarted:
 			return !HasPendingReplyBroad() || ((timestamp - LastEstimateSent) >= retryPeriod);
 			break;
-		case ClockSyncStateEnum::BroadAccepted:
-			return true;
-			break;
 		case ClockSyncStateEnum::FineStarted:
 			return !HasPendingReplyFine() || ((timestamp - LastEstimateSent) >= retryPeriod);
 			break;
-		case ClockSyncStateEnum::FineAccepted:
 		default:
 			return false;
 			break;
