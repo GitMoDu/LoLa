@@ -160,7 +160,7 @@ private:
 	{
 		if (TuneMicros != 0)
 		{
-			const uint32_t elapsedSinceLastSmear = GetDurationCyclestamp(LastSmear, cyclestamp);
+			const uint32_t elapsedSinceLastSmear = GetDurationCyclestamp(LastSmear, cyclestamp) / ONE_MILLI_MICROS;
 			const uint32_t smearPeriod = GetAdaptiveSmearPeriod();
 
 			if (elapsedSinceLastSmear >= smearPeriod)
@@ -177,7 +177,7 @@ private:
 					ShiftSubSeconds(-1);
 				}
 
-				return smearPeriod;
+				return 0;
 			}
 			else
 			{

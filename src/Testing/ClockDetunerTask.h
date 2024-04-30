@@ -48,7 +48,7 @@ public:
 private:
 	const uint32_t CheckSmearAdaptive(const uint32_t timestamp)
 	{
-		const uint32_t elapsedSinceLastSmear = timestamp - LastSmear;
+		const uint32_t elapsedSinceLastSmear = (timestamp - LastSmear) / ONE_MILLI_MICROS;
 		const uint32_t smearPeriod = GetAdaptiveSmearPeriod();
 
 		if (elapsedSinceLastSmear >= smearPeriod)
@@ -65,7 +65,7 @@ private:
 				Clock->ShiftSubSeconds(-1);
 			}
 
-			return smearPeriod;
+			return 0;
 		}
 		else
 		{
