@@ -171,7 +171,7 @@ protected:
 			Task::enable();
 			break;
 		case AmStateEnum::ComputingSecretKey:
-			if (Session.Calculate())
+			if (Session.Calculate(micros()))
 			{
 				AmState = AmStateEnum::SessionCached;
 			}

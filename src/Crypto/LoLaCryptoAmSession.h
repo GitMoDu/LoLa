@@ -32,6 +32,8 @@ private:
 	const uint8_t* SecretKey;
 	const uint8_t* LocalAddress;
 
+	uint32_t CachedStart = 0;
+
 	AmEnum AmState = AmEnum::CalculatingMatch;
 
 
@@ -68,6 +70,11 @@ public:
 	const bool SessionIsCached()
 	{
 		return AmState == AmEnum::AmCached;
+	}
+
+	const bool GetCacheAge(const uint32_t timestamp)
+	{
+		return timestamp - CachedStart;
 	}
 
 	void ResetAm()
@@ -117,7 +124,7 @@ public:
 	/// Long operations, cannot be done in line with linking protocol.
 	/// </summary>
 	/// <returns></returns>
-	const bool Calculate()
+	const bool Calculate(const uint32_t timestamp)
 	{
 		switch (AmState)
 		{
@@ -137,6 +144,7 @@ public:
 		case AmEnum::CalculatingAddressing:
 			CalculateSessionAddressing(LocalAddress, PartnerAddress, PUBLIC_ADDRESS_SIZE);
 			AmState = AmEnum::AmCached;
+			CachedStart = timestamp;
 			break;
 		case AmEnum::AmCached:
 			return true;
