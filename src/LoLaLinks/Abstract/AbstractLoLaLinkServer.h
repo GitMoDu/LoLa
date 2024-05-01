@@ -612,12 +612,12 @@ private:
 				{
 					if (SendPacket(OutPacket.Data, Unlinked::SearchReply::PAYLOAD_SIZE))
 					{
+						SearchReplyPending = false;
 #if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Sent Search Reply."));
 #endif
 					}
-					SearchReplyPending = false;
 				}
 				LOLA_RTOS_RESUME();
 				Task::enable();
@@ -697,7 +697,7 @@ protected:
 	const bool UnlinkedDuplexCanSend(const uint8_t payloadSize)
 	{
 		SyncClock.GetTimestamp(LinkTimestamp);
-		
+
 		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros() + GetSendDuration(payloadSize), GetOnAirDuration(payloadSize));
 	}
 };
