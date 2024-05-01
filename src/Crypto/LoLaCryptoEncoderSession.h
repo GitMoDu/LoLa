@@ -10,11 +10,7 @@
 *
 * Requires libraries Crypto and CryptoLW from repository.
 */
-#if defined(LOLA_USE_POLY1305)
-#include <Poly1305.h>
-#else
 #include <Ascon128.h>
-#endif
 
 /// <summary>
 /// Encodes and decodes LoLa packets.

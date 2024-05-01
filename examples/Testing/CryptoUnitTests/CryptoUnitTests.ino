@@ -4,7 +4,7 @@
 #define DEBUG_LOLA
 #define LOLA_UNIT_TESTING
 
-
+// Enable for experimental faster hash.
 //#define LOLA_USE_POLY1305
 
 #include <ILoLaInclude.h>

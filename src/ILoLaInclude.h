@@ -53,9 +53,6 @@
 /// Available Link Modules
 #include "LoLaLinks\LolaAddressMatchLink\LoLaAddressMatchLinkServer.h"
 #include "LoLaLinks\LolaAddressMatchLink\LoLaAddressMatchLinkClient.h"
-
-#include "LoLaLinks\LolaPkeLink\LoLaPkeLinkServer.h"
-#include "LoLaLinks\LolaPkeLink\LoLaPkeLinkClient.h"
 ///
 
 
