@@ -462,7 +462,6 @@ private:
 		}
 		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();
-		const uint32_t prngHopDuration = (timestampingDuration + calculationDuration) / 1000;
 		LOLA_RTOS_PAUSE();
 		const uint32_t calibrationDuration = micros() - calibrationStart;
 
@@ -518,10 +517,6 @@ private:
 		Serial.println(F("Timestamping"));
 		Serial.print('\t');
 		Serial.print(timestampingDuration);
-		Serial.println(F(" ns."));
-		Serial.println(F("PRNG"));
-		Serial.print('\t');
-		Serial.print(prngHopDuration);
 		Serial.println(F(" ns."));
 		Serial.println(F("PRNG Hop:"));
 		Serial.print('\t');
