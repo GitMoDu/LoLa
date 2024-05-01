@@ -178,7 +178,11 @@ protected:
 			Task::enable();
 			break;
 		case AmStateEnum::SessionCached:
-			if (UnlinkedPacketThrottle())
+			if (Session.GetCacheAge(micros()) > GetLinkingTimeoutDuration())
+			{
+				ResetSearch();
+			}
+			else if (UnlinkedPacketThrottle())
 			{
 				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Unlinked::AmLinkingStartRequest::HEADER);
