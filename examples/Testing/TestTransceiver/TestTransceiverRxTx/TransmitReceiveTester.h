@@ -11,15 +11,14 @@
 
 #include "Link\LoLaPacketService.h"
 
-template<const bool TxEnabled = false>
+template<const bool TxEnabled = false,
+	const uint8_t TxActivePin = UINT8_MAX>
 class TransmitReceiveTester : private Task, public virtual IPacketServiceListener
 {
 public:
-	static constexpr uint8_t TestChannel = UINT8_MAX / 2;
+	static constexpr uint8_t TestChannel = 0;
 
 private:
-	static constexpr uint8_t TestPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
-
 	// The outgoing content is encrypted and MAC'd here before being sent to the Transceiver for transmission.
 	uint8_t OutPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
@@ -32,6 +31,7 @@ private:
 	volatile uint32_t TxStartTimestamp = 0;
 	volatile uint32_t TxEndTimestamp = 0;
 	bool TxActive = false;
+	bool SmallBig = false;
 
 	// Packet service instance, with reference low latency timeouts.
 	LoLaPacketService PacketService;
@@ -45,6 +45,11 @@ public:
 
 	const bool Setup()
 	{
+		if (TxActivePin > 0)
+		{
+			pinMode(TxActivePin, OUTPUT);
+		}
+
 		if (PacketService.Setup())
 		{
 			PacketService.Transceiver->Start();
@@ -116,6 +121,11 @@ public:
 	/// <param name="result"></param>
 	virtual void OnSendComplete(const SendResultEnum result) final
 	{
+		if (TxActivePin > 0)
+		{
+			digitalWrite(TxActivePin, LOW);
+		}
+
 		TxActive = false;
 		const uint32_t endTimestamp = micros();
 
@@ -129,23 +139,44 @@ public:
 	{
 		const uint32_t timestamp = millis();
 
-		if (TxEnabled 
+		uint8_t testPacketSize = 0;
+		if (SmallBig)
+		{
+			testPacketSize = LoLaPacketDefinition::MIN_PACKET_SIZE;
+		}
+		else
+		{
+			testPacketSize = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
+		}
+
+		if (TxEnabled
 			&& !TxActive
 			&& ((timestamp - LastSent) >= 1000)
 			&& (timestamp - LastReceived >= 500)
-			&& PacketService.CanSendPacket()
-			)
+			&& PacketService.CanSendPacket())
 		{
-			Serial.print(F(": Tx."));
-
-			OutPacket[0]++;
-
 			TxStartTimestamp = micros();
-			if (PacketService.Send(TestPacketSize, TestChannel))
+
+			if (TxActivePin != UINT8_MAX)
+			{
+				digitalWrite(TxActivePin, HIGH);
+			}
+
+			if (PacketService.Send(testPacketSize, TestChannel))
 			{
 				TxEndTimestamp = micros();
 				LastSent = timestamp;
+				SmallBig = !SmallBig;
+				OutPacket[0]++;
+
 				TxActive = true;
+
+				const uint32_t txDuration = micros() - TxStartTimestamp;
+				Serial.print(F("Tx "));
+				Serial.print(testPacketSize);
+				Serial.print(F(" bytes ("));
+				Serial.print(txDuration);
+				Serial.println(F(" us)."));
 			}
 			else
 			{

@@ -86,10 +86,11 @@ public:
 public:
 	virtual bool Callback() final
 	{
+		uint8_t testPacketSize = 0;
+
 		if (!TxActive &&
 			Transceiver->TxAvailable())
 		{
-			uint8_t testPacketSize = 0;
 			if (SmallBig)
 			{
 				testPacketSize = LoLaPacketDefinition::MIN_PACKET_SIZE;

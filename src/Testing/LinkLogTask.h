@@ -8,11 +8,9 @@
 
 #include <ILoLaInclude.h>
 
+template<uint32_t PeriodMillis = 1000>
 class LinkLogTask : private Task, public virtual ILinkListener
 {
-private:
-	static constexpr uint32_t PeriodMillis = 1000;
-
 private:
 	ILoLaLink* Link;
 	LoLaLinkExtendedStatus LinkStatus{};

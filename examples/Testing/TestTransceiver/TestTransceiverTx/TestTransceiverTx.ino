@@ -33,15 +33,15 @@ Scheduler SchedulerBase;
 
 // Transceiver.
 #if defined(USE_SERIAL_TRANSCEIVER)
-UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
+UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF24_TRANSCEIVER)
-nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_INTERRUPT_PIN, NRF24_TRANSCEIVER_SPI_CHANNEL> TransceiverDriver(SchedulerBase);
+nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_INTERRUPT_PIN, NRF24_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER)
-Si4463Transceiver_433_70_250<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN, UINT8_MAX, UINT8_MAX, UINT8_MAX, SI446X_TRANSCEIVER_SPI_CHANNEL> TransceiverDriver(SchedulerBase);
+Si4463Transceiver_433_70_250<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN, UINT8_MAX, UINT8_MAX, UINT8_MAX, SI446X_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
 #elif defined(USE_SX12_TRANSCEIVER)
-Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN, SX12_TRANSCEIVER_SPI_CHANNEL> TransceiverDriver(SchedulerBase, &SpiTransceiver);
+Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN, SX12_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase, &SpiTransceiver);
 #elif defined(USE_ESPNOW_TRANSCEIVER) && defined(ARDUINO_ARCH_ESP32)
-EspNowTransceiver TransceiverDriver(SchedulerBase);
+EspNowTransceiver Transceiver(SchedulerBase);
 #else
 #error No Transceiver.
 #endif
@@ -51,11 +51,12 @@ EspNowTransceiver TransceiverDriver(SchedulerBase);
 static const uint32_t SendPeriodMillis = 1000;
 
 #if defined(TX_TEST_PIN)
-TransmissionTester<SendPeriodMillis, TX_TEST_PIN> TestTask(SchedulerBase, &TransceiverDriver);
+TransmissionTester<SendPeriodMillis, TX_TEST_PIN> TestTask(SchedulerBase, &Transceiver);
 #else
-TransmissionTester<SendPeriodMillis> TestTask(SchedulerBase, &TransceiverDriver);
+TransmissionTester<SendPeriodMillis> TestTask(SchedulerBase, &Transceiver);
 #endif
 
+inline void OnInterrupt();
 
 void BootError()
 {
@@ -75,7 +76,7 @@ void setup()
 		;
 	delay(1000);
 #endif
-
+	//Serial.disableBlockingTx
 	Serial.println(F("TestTransceiver Tx Booting..."));
 
 #ifdef SCHEDULER_TEST_PIN
@@ -84,12 +85,12 @@ void setup()
 #endif
 
 #if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
-	TransceiverDriver.SetupInterrupt(OnInterrupt);
+	Transceiver.SetupInterrupt(OnInterrupt);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
-	TransceiverDriver.SetupInterrupts(OnRxInterrupt);
+	Transceiver.SetupInterrupts(OnRxInterrupt);
 #else
-	TransceiverDriver.SetupInterrupts(OnRxInterrupt, OnTxInterrupt);
+	Transceiver.SetupInterrupts(OnRxInterrupt, OnTxInterrupt);
 #endif
 #endif
 
@@ -121,7 +122,7 @@ void OnInterrupt()
 #if defined(RX_TEST_PIN)
 	digitalWrite(RX_TEST_PIN, HIGH);
 #endif
-	TransceiverDriver.OnInterrupt();
+	Transceiver.OnInterrupt();
 #if defined(RX_TEST_PIN)
 	digitalWrite(RX_TEST_PIN, LOW);
 #endif
@@ -133,7 +134,7 @@ void OnRxInterrupt(const uint8_t* mac, const uint8_t* buf, size_t count, void* a
 #if defined(RX_TEST_PIN)
 	digitalWrite(RX_TEST_PIN, HIGH);
 #endif
-	TransceiverDriver.OnRxInterrupt(mac, buf, count);
+	Transceiver.OnRxInterrupt(mac, buf, count);
 #if defined(RX_TEST_PIN)
 	digitalWrite(RX_TEST_PIN, LOW);
 #endif
@@ -144,14 +145,14 @@ void OnRxInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
 #if defined(RX_TEST_PIN)
 	digitalWrite(RX_TEST_PIN, HIGH);
 #endif
-	TransceiverDriver.OnRxInterrupt(data, data_len);
+	Transceiver.OnRxInterrupt(data, data_len);
 #if defined(RX_TEST_PIN)
 	digitalWrite(RX_TEST_PIN, LOW);
 #endif
 }
 void OnTxInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
 {
-	TransceiverDriver.OnTxInterrupt(status);
+	Transceiver.OnTxInterrupt(status);
 }
 #endif
 #endif
