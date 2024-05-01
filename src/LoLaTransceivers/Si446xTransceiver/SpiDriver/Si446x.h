@@ -312,12 +312,12 @@ namespace Si446x
 
 	struct PartInfoStruct
 	{
-		uint8_t ChipRevision = 0;
 		uint16_t PartId = 0;
-		uint8_t PartBuild = 0;
 		uint16_t DeviceId = 0;
+		uint8_t ChipRevision = 0;
+		uint8_t PartBuild = 0;
 		uint8_t Customer = 0;
-		uint8_t RomId; // ROM ID (3 = revB1B, 6 = revC2A)
+		uint8_t RomId = 0; // ROM ID (3 = revB1B, 6 = revC2A)
 
 		void SetFrom(const uint8_t source[8])
 		{
@@ -332,10 +332,10 @@ namespace Si446x
 
 	struct FunctionInfoStruct
 	{
+		uint16_t Patch;
 		uint8_t RevisionExternal;
 		uint8_t RevisionBranch;
 		uint8_t RevisionInternal;
-		uint16_t Patch;
 		uint8_t Function;
 
 		void SetFrom(const uint8_t source[6])

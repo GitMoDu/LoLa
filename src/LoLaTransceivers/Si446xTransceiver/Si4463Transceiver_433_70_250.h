@@ -75,8 +75,6 @@ namespace Si4463_433_70_250
 		0x05, 0x11, 0x22, 0x01, 0x03, 0x3D,
 		0x0A, 0x11, 0x23, 0x06, 0x00, 0x01, 0x05, 0x0B, 0x05, 0x02, 0x00,
 		0x08, 0x11, 0x40, 0x04, 0x00, 0x38, 0x0D, 0xEB, 0x85 };
-
-	static constexpr size_t SetupConfigSize = sizeof(SetupConfig);
 };
 
 template<const uint8_t pinCS,
@@ -99,7 +97,7 @@ public:
 protected:
 	virtual const uint8_t* GetConfigurationArray(size_t& configurationSize) final
 	{
-		configurationSize = Si4463_433_70_250::SetupConfigSize;
+		configurationSize = sizeof(Si4463_433_70_250::SetupConfig);
 
 		return Si4463_433_70_250::SetupConfig;
 	}

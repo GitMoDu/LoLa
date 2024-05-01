@@ -31,10 +31,11 @@ private:
 
 	const SPISettings Settings;
 
+
 public:
 	Si446xSpiDriver()
 #if defined(ARDUINO_ARCH_ESP32)
-		: SpiInstance(HSPI)
+		: SpiInstance(GetSpiHost())
 #elif defined(ARDUINO_ARCH_STM32F1)
 		: SpiInstance(spiChannel)
 #else
@@ -118,7 +119,7 @@ public:
 			return false;
 		}
 
-		if (!SetupCallbacks(true, 10000))
+		if (!SetupCallbacks(false, 10000))
 		{
 			return false;
 		}
@@ -275,7 +276,7 @@ public:
 		return false;
 	}
 
-	const bool TryGetRadioEvents(Si446x::RadioEventsStruct& radioEvents)
+	const bool TryGetRadioEvents(RadioEventsStruct& radioEvents)
 	{
 		if (GetResponse(Message, 8))
 		{
@@ -294,7 +295,7 @@ public:
 	/// </summary>
 	/// <param name="radioEvents"></param>
 	/// <returns>True on success.</returns>
-	const bool GetRadioEvents(Si446x::RadioEventsStruct& radioEvents, const uint32_t timeoutMicros = 1000)
+	const bool GetRadioEvents(RadioEventsStruct& radioEvents, const uint32_t timeoutMicros = 1000)
 	{
 		Message[0] = (uint8_t)Command::GET_INT_STATUS;
 		Message[1] = 0;
@@ -359,7 +360,7 @@ public:
 		Message[4] = 0;
 		Message[5] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXTIMEOUT_STATE
 		Message[6] = (uint8_t)RadioStateEnum::READY; // RXVALID_STATE
-		Message[7] = (uint8_t)RadioStateEnum::RX; // RXINVALID_STATE
+		Message[7] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXINVALID_STATE
 
 		return SendRequest(Message, 8, timeoutMicros);
 	}
@@ -385,8 +386,6 @@ public:
 		SpiInstance.transfer((uint8_t)size);
 		SpiInstance.transfer((void*)data, (size_t)size);
 		CsOff();
-
-		//digitalWrite(7, HIGH);
 
 		return SendRequest(Message, 5, 0);
 	}
@@ -675,5 +674,23 @@ private:
 		digitalWrite(pinSDN, LOW);
 		delay(10);
 	}
+
+#if defined(ARDUINO_ARCH_ESP32)
+	static constexpr int GetSpiHost()
+	{
+		switch (spiChannel)
+		{
+		case 0:
+			return FSPI;
+			break;
+		case 1:
+			return HSPI;
+			break;
+		default:
+			return -1;
+			break;
+		}
+	}
+#endif
 };
 #endif

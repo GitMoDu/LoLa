@@ -10,8 +10,9 @@
 #include "../SpiDriver/Si446xRadioDriver.h"
 
 /// <summary>
-/// TODO: Set Tx power.
+/// 
 /// </summary>
+/// <typeparam name="RadioConfig"></typeparam>
 /// <typeparam name="pinCS"></typeparam>
 /// <typeparam name="pinSDN"></typeparam>
 /// <typeparam name="pinInterrupt"></typeparam>

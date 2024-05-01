@@ -9,7 +9,7 @@ using namespace Si446x;
 
 namespace Si446xRadioFlow
 {
-	static constexpr uint32_t TX_FLOW_TIMEOUT_MICROS = 20000;
+	static constexpr uint32_t TX_FLOW_TIMEOUT_MICROS = 5000;
 
 	enum class ReadStateEnum
 	{
@@ -21,7 +21,7 @@ namespace Si446xRadioFlow
 	struct AsyncReadInterruptsStruct
 	{
 		volatile uint32_t Timestamp = 0;
-		ReadStateEnum State = ReadStateEnum::NoData;
+		volatile ReadStateEnum State = ReadStateEnum::NoData;
 		volatile bool Double = false;
 
 		const bool Pending()
@@ -37,15 +37,21 @@ namespace Si446xRadioFlow
 			}
 			else
 			{
-				Timestamp = timestamp;
 				State = ReadStateEnum::TryPrepare;
 			}
+			Timestamp = timestamp;
 		}
 
 		void Clear()
 		{
 			State = ReadStateEnum::NoData;
 			Double = false;
+		}
+
+		void RestartFromDouble()
+		{
+			Double = false;
+			State = ReadStateEnum::TryPrepare;
 		}
 
 		const uint32_t Elapsed(const uint32_t timestamp)
@@ -86,9 +92,19 @@ namespace Si446xRadioFlow
 	{
 		uint32_t RxTimestamp = 0;
 
-		void OnSet(const uint32_t timestamp)
+		void MergeWith(const RadioEventsStruct& source, const uint32_t timestamp)
 		{
-			if (RxStart)
+			const bool hadRx = RxReady;
+
+			RxStart |= source.RxStart;
+			RxReady |= source.RxReady;
+			RxFail |= source.RxFail;
+			TxDone |= source.TxDone;
+			VccWarning |= source.VccWarning;
+			CalibrationPending |= source.CalibrationPending;
+			Error |= source.Error;
+
+			if (!hadRx && RxReady)
 			{
 				RxTimestamp = timestamp;
 			}

@@ -62,7 +62,7 @@ public:
 	void OnRadioInterrupt(const uint32_t timestamp)
 	{
 		AsyncReadInterrupts.SetPending(timestamp);
-		Task::enable();
+		Task::enableDelayed(0);
 	}
 
 protected:
@@ -195,10 +195,8 @@ public:
 		{
 			ProcessRadioEvents();
 		}
-		else
-		{
-			ProcessPendingFlows();
-		}
+
+		ProcessPendingFlows();
 
 		noInterrupts();
 		if (RadioTaskBusy())
@@ -220,6 +218,8 @@ public:
 private:
 	void ProcessAsyncRead()
 	{
+		RadioEventsFlowStruct radioEvents{};
+
 		// Event read takes too long to do synchronously.
 		switch (AsyncReadInterrupts.State)
 		{
@@ -227,30 +227,32 @@ private:
 			if (SpiDriver.TryPrepareGetRadioEvents())
 			{
 				AsyncReadInterrupts.State = ReadStateEnum::TryRead;
-
-				if (RadioEvents.Pending())
-				{
-#if defined(DEBUG_LOLA)
-					Serial.println(F("Radio Events overflow"));
-#endif
-				}
 			}
 			break;
 		case ReadStateEnum::TryRead:
-			if (SpiDriver.TryGetRadioEvents(RadioEvents))
+			if (SpiDriver.TryGetRadioEvents(radioEvents))
 			{
-				RadioEvents.OnSet(AsyncReadInterrupts.Timestamp);
-#if defined(DEBUG_LOLA)
+				RadioEvents.MergeWith(radioEvents, AsyncReadInterrupts.Timestamp);
+
 				if (AsyncReadInterrupts.Double)
 				{
-					Serial.println(F("AsyncReadInterrupts overflow"));
+					AsyncReadInterrupts.RestartFromDouble();
+#if defined(DEBUG_LOLA)
+					Serial.println(F("AsyncInterrupts overflow"));
+#endif
 				}
-				if (RxFlow.Pending())
+				else
+				{
+					AsyncReadInterrupts.Clear();
+				}
+
+#if defined(DEBUG_LOLA)
+				if (RadioEvents.RxReady
+					&& RxFlow.Pending())
 				{
 					Serial.println(F("Rx overrun."));
 				}
 #endif
-				AsyncReadInterrupts.Clear();
 			}
 			break;
 		default:
@@ -263,7 +265,7 @@ private:
 			AsyncReadInterrupts.Clear();
 			HopFlow.SetPending(micros());
 #if defined(DEBUG_LOLA)
-			Serial.println(F("Async Get Interrupt timed out."));
+			Serial.println(F("AsyncInterrupts timed out."));
 #endif
 		}
 	}
@@ -277,7 +279,8 @@ private:
 				TxFlow.Clear();
 
 				// Tipically runs on the first try.
-				if (!SpiDriver.SetPacketSize(MaxRxSize, 100))
+				if (!SpiDriver.SetPacketSize(MaxRxSize, 200)
+					&& SpiDriver.ClearTxFifo(200))
 				{
 #if defined(DEBUG_LOLA)
 					Serial.println(F("Size restore failed."));
@@ -313,7 +316,6 @@ private:
 					Serial.println(F("Size restore failed."));
 #endif
 				}
-
 			}
 		}
 
@@ -336,7 +338,8 @@ private:
 	{
 		if (RxFlow.Pending())
 		{
-			if (SpiDriver.GetRxFifo(InBuffer, RxFlow.Size))
+			if (SpiDriver.GetRxFifo(InBuffer, RxFlow.Size)
+				&& SpiDriver.ClearRxFifo(1000))
 			{
 				OnRxReady(InBuffer, RxFlow.Timestamp, RxFlow.Size, RxFlow.RssiLatch);
 			}
@@ -356,10 +359,11 @@ private:
 			Serial.println(F("Tx timeout."));
 #endif
 			TxFlow.Clear();
-			if (!SpiDriver.SetPacketSize(MaxRxSize, 1000))
+			if (!SpiDriver.SetPacketSize(MaxRxSize, 1000)
+				|| !SpiDriver.ClearTxFifo(1000))
 			{
 #if defined(DEBUG_LOLA)
-				Serial.println(F("Size restore failed."));
+				Serial.println(F("Tx restore failed."));
 #endif
 			}
 			OnTxDone();
