@@ -1,6 +1,7 @@
 /*
 * TestTransceiverRxTx
-* Test the Transceivers using .
+* Test the Transceivers using LoLaPacketService.
+* Tx is optional and is timed for calibration.
 */
 
 #define DEBUG
