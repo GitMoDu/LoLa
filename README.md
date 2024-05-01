@@ -56,16 +56,5 @@ SyncSurface Service
 - Sx12 LoRa [WORK_IN_PROGRESS]
 
 
-Drunk rebuild. Don't ask, I wasn't happy with a lot of stuff, so I changed a lot of stuff. Now nothing works, but it's fine, it will.
-  - Custom radio driver: no more hogging the interrupt.
-  - Fully async packet processing: no more worrying that taking too long to eat a packet will make us lose the next one.
-  - Revamp crypto with modern practices: KDF and standard hashing.
-  - Simplify radio driver model: simplify radio driver implementation.
-  - Optimize blocking operations: reduce the key generations to once per boot or per lifetime.
-  - Reliable sub-second time with RTC: a 16 bit timer provides enough resolution (< 50 us).
-  - Optimize packet map and definitions: less setupy, more constructy.
-  - Improve replay attack protection: eventually I will decide to add a counter/padding to the packets. Not today.
-
-
 
 
