@@ -219,7 +219,7 @@ public:
 public:
 	virtual const uint32_t GetPacketThrottlePeriod() final
 	{
-		return (((uint32_t)Duplex->GetPeriod()) * 2) - 1;
+		return ((uint32_t)Duplex->GetPeriod()) - 1;
 	}
 
 	virtual const bool CanSendPacket(const uint8_t payloadSize) final
