@@ -26,8 +26,8 @@
 /// <typeparam name="RxBufferSize">UART hardware buffer size.</typeparam>
 /// <typeparam name="TxBufferSize">UART hardware buffer size.</typeparam>
 template<typename SerialType,
-	const uint32_t BaudRate,
 	const uint8_t RxInterruptPin,
+	const uint32_t BaudRate = 115200,
 	const size_t RxBufferSize = 64,
 	const size_t TxBufferSize = 64>
 class UartTransceiver final
@@ -73,7 +73,7 @@ private:
 
 private:
 	static constexpr uint16_t RxWaitDuration = 1500;
-	static constexpr uint16_t TxWaitDuration = 100;
+	static constexpr uint16_t TxWaitDuration = 250;
 
 	static constexpr uint16_t LineDuration = BitDuration;
 
@@ -155,7 +155,7 @@ public:
 				else if (micros() - RxStartTimestamp > ((uint32_t)LineDuration + ByteDuration + RxWaitDuration))
 				{
 					// Too much time elapsed before at least one byte is available, discard.
-					OnRxDone(false);
+					ClearRx();
 				}
 				break;
 			case RxStateEnum::RxEnd:
@@ -169,9 +169,14 @@ public:
 					{
 						RxSize = CobsDecodeInPlace();
 
-						if (RxSize < LoLaPacketDefinition::MIN_PACKET_SIZE || RxSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+						if (RxSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
 						{
 							// Invalid size packet, discard.
+							ClearRx();
+						}
+						else if (RxSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+						{
+							// Overflow detected.
 							OnRxDone(false);
 						}
 						else
@@ -179,13 +184,10 @@ public:
 							OnRxDone(true);
 						}
 					}
-					else
+					else if (RxSize > MAX_COBS_SIZE)
 					{
-						if (RxSize > MAX_COBS_SIZE)
-						{
-							// Invalid COBS size, discard.
-							OnRxDone(false);
-						}
+						// Invalid COBS size, discard.
+						ClearRx();
 					}
 				}
 
@@ -193,7 +195,7 @@ public:
 					&& micros() - RxStartTimestamp > ((uint32_t)LineDuration + DurationLong + RxWaitDuration))
 				{
 					// Too much time elapsed before packet EoF found, discard.
-					OnRxDone(false);
+					ClearRx();
 				}
 				break;
 			default:
