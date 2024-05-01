@@ -1,7 +1,5 @@
 /*
 * Link Client example.
-* Enable LINK_USE_PKE_LINK for Public-Key Exchange Link,
-* disable for Address Match Link.
 * Link objects and definitions in TransceiverDefinitions.
 */
 
@@ -9,101 +7,131 @@
 
 #if defined(DEBUG)
 #define DEBUG_LOLA
+//#define DEBUG_LOLA_LINK
 #define SERIAL_BAUD_RATE 115200
 #endif
 
 #define _TASK_OO_CALLBACKS
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-#define _TASK_THREAD_SAFE	// Enable additional checking for thread safety
-#endif
 #define _TASK_SLEEP_ON_IDLE_RUN
 
-// Enable for Public-Key Exchange Link.
-// Disable for Address Match Link.
-#define LINK_USE_PKE_LINK
+// Enable for experimental faster hash.
+//#define LOLA_USE_POLY1305
 
+// Enable to use channel hop. Disable for fixed channel.
 //#define LINK_USE_CHANNEL_HOP
-//#define LINK_USE_TIMER_AND_RTC
+
+// Log the last error, deviation and tune.
+//#define LOLA_DEBUG_LINK_CLOCK
+
+// Log the link status with the defined period (in ms).
+//#define LOLA_DEBUG_LINK_STATUS 5000
+
+// Test Surface Service.
+//#define LINK_TEST_SURFACE
+
+// Enable to use Controller to write to ExampleSurface. 
+// Depends on https://github.com/GitMoDu/NintendoControllerReader
+//#define USE_N64_CONTROLLER
+//#define USE_GAMECUBE_CONTROLLER
+
+// Enable to use ArduinoGraphicsEngine for displaying live link info.
+// Depends on https://github.com/GitMoDu/ArduinoGraphicsEngine
+//#define USE_LINK_DISPLAY
+//#define GRAPHICS_ENGINE_MEASURE
 
 // Selected Driver for test.
-#define USE_SERIAL_TRANSCEIVER
-//#define USE_NRF24_TRANSCEIVER
-//#define USE_ESPNOW_TRANSCEIVER
-//#define USE_SI446X_TRANSCEIVER
-//#define USE_SI446X_TRANSCEIVER2
+#define USE_NRF24_TRANSCEIVER
+
 
 #define LINK_DUPLEX_SLOT true
 
 #include <TaskScheduler.h>
 #include <ILoLaInclude.h>
 
-#include "Testing\ExampleTransceiverDefinitions.h"
-#include "Testing\ExampleLogicAnalyserDefinitions.h"
+#include "../src/Testing/ExampleTransceiverDefinitions.h"
+#include "../src/Testing/ExampleLogicAnalyserDefinitions.h"
+
+#if defined(LINK_TEST_SURFACE)
+#include "../src/Testing/ExampleSurface.h"
+#if defined(USE_NUNCHUK_CONTROLLER) || defined(USE_N64_CONTROLLER) || defined(USE_GAMECUBE_CONTROLLER)
+#define USE_CONTROLLER 
+#include "../src/Testing/ControllerSource.h"
+#include "../src/Testing/ControllerExampleSurfaceDispatcher.h"
+#endif
+#endif
+
+#if defined(USE_LINK_DISPLAY)
+#include "../src/Testing/LinkGraphicsEngine.h"
+#endif
+
+#include "Testing\LinkLogTask.h"
 
 // Process scheduler.
 Scheduler SchedulerBase;
 //
 
-#if defined(LINK_USE_CHANNEL_HOP) && !defined(LINK_FULL_DUPLEX_TRANSCEIVER)
-TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
-#endif
-
-// Transceiver Driver.
+// Transceiver.
 #if defined(USE_SERIAL_TRANSCEIVER)
-UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_BAUDRATE, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
+UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF24_TRANSCEIVER)
-SPIClass SpiTransceiver(NRF24_TRANSCEIVER_SPI_CHANNEL);
-nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
-#elif defined(USE_ESPNOW_TRANSCEIVER)
-#if defined(ARDUINO_ARCH_ESP8266)
-EspNowTransceiver TransceiverDriver(SchedulerBase);
-#else
-EspNowTransceiver TransceiverDriver(SchedulerBase);
-#endif
+nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_INTERRUPT_PIN, NRF24_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER)
-Si446xTransceiver<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase);
-#elif defined(USE_SI446X_TRANSCEIVER2)
-SPIClass SpiTransceiver(SI446X_TRANSCEIVER_SPI_CHANNEL);
-Si446xTransceiver2<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> TransceiverDriver(SchedulerBase, &SpiTransceiver);
+Si4463Transceiver_433_70_250<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN, UINT8_MAX, UINT8_MAX, UINT8_MAX, SI446X_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
+#elif defined(USE_SX12_TRANSCEIVER)
+Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN, SX12_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase, &SpiTransceiver);
+#elif defined(USE_ESPNOW_TRANSCEIVER) && defined(ARDUINO_ARCH_ESP32)
+EspNowTransceiver Transceiver(SchedulerBase);
 #else
 #error No Transceiver.
 #endif
 //
 
 // Diceware created access control password.
-static const uint8_t Password[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+static const uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
 //
 
-// Created offline using PublicPrivateKeyGenerator example project.
-static const uint8_t ClientPublicKey[LoLaCryptoDefinition::PUBLIC_KEY_SIZE] = { 0x21,0x9B,0xA6,0x2A,0xF0,0x14,0x8A,0x62,0xEB,0x2A,0xF0,0xD1,0xAC,0xB4,0x6E,0x15,0x1B,0x63,0xA7,0xEA,0x99,0xFD,0x1E,0xDD,0x74,0x2F,0xD4,0xB0,0xE1,0x04,0xC5,0x96,0x09,0x65,0x1F,0xAB,0x4F,0xDC,0x75,0x0C };
-static const uint8_t ClientPrivateKey[LoLaCryptoDefinition::PRIVATE_KEY_SIZE] = { 0x00,0x9E,0x78,0xBA,0x67,0xEA,0x57,0xA9,0xBD,0x4E,0x1A,0x35,0xFB,0xD3,0xA7,0x19,0x29,0x55,0xB9,0xA1,0x3A };
-//
+// Diceware created values for address and secret key.
+static const uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+static const uint8_t SecretKey[LoLaLinkDefinition::SECRET_KEY_SIZE] = { 0x50, 0x05, 0x60, 0x06, 0x70, 0x07, 0x80, 0x08 };
 
-#if defined(LINK_USE_PKE_LINK)
-LoLaPkeLinkClient<> Client(SchedulerBase,
-	&TransceiverDriver,
-	&CyclesSource,
-	&EntropySource,
-	&Duplex,
-	&ChannelHop,
-	Password,
-	ClientPublicKey,
-	ClientPrivateKey);
-#else
-LoLaAddressMatchLinkClient<> Client(SchedulerBase,
-	&TransceiverDriver,
-	&CyclesSource,
-	&EntropySource,
-	&Duplex,
-	&ChannelHop,
-	Password,
-	ClientPublicKey);
+#if defined(LINK_USE_CHANNEL_HOP) && !defined(LINK_FULL_DUPLEX_TRANSCEIVER)
+TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
 #endif
 
+LoLaAddressMatchLinkClient<> LinkClient(SchedulerBase,
+	&Transceiver,
+	&CyclesSource,
+	&EntropySource,
+	&Duplex,
+	&ChannelHop,
+	SecretKey,
+	AccessPassword,
+	ClientAddress);
+
+#if defined(LOLA_DEBUG_LINK_STATUS)
+LinkLogTask<LOLA_DEBUG_LINK_STATUS> LogTask(&SchedulerBase, &LinkClient);
+#endif
+
+#if defined(LINK_TEST_SURFACE)
+ExampleSurface WriteSurface{};
+SurfaceWriter<1, 23456, DuplexPeriod / 1000> ClientWriter(SchedulerBase, &Client, &WriteSurface);
+#if defined(USE_CONTROLLER)
+#if defined(USE_NUNCHUK_CONTROLLER)
+ControllerSource<5> Controller(SchedulerBase);
+#elif defined (USE_N64_CONTROLLER) || defined (USE_GAMECUBE_CONTROLLER)
+ControllerSource<5> Controller(SchedulerBase, &Serial3);
+#endif
+ControllerExampleSurfaceDispatcher ControllerDispatcher(SchedulerBase, &Controller, &WriteSurface);
+#endif
+#endif
+
+#if defined(USE_LINK_DISPLAY)
+LinkGraphicsEngine<ScreenDriverType, FrameBufferType>LinkDisplayEngine(&SchedulerBase, &LinkClient);
+#endif
 
 void BootError()
 {
-#ifdef DEBUG
+#if defined(DEBUG)
 	Serial.println("Critical Error");
 #endif  
 	delay(1000);
@@ -112,7 +140,7 @@ void BootError()
 
 void setup()
 {
-#ifdef DEBUG
+#if defined(DEBUG)
 	Serial.begin(SERIAL_BAUD_RATE);
 	while (!Serial)
 		;
@@ -126,23 +154,33 @@ void setup()
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
 #endif
 
-#if defined(USE_SERIAL_TRANSCEIVER)
-	TransceiverDriver.SetupInterrupt(OnSeriaInterrupt);
-#elif defined(USE_NRF24_TRANSCEIVER)
-	SpiTransceiver.begin();
-	TransceiverDriver.SetupInterrupt(OnRxInterrupt);
+#if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
+	Transceiver.SetupInterrupt(OnInterrupt);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
-	TransceiverDriver.SetupInterrupts(OnRxInterrupt);
+	Transceiver.SetupInterrupts(OnRxInterrupt);
 #else
-	TransceiverDriver.SetupInterrupts(OnRxInterrupt, OnTxInterrupt);
+	Transceiver.SetupInterrupts(OnRxInterrupt, OnTxInterrupt);
 #endif
-#elif defined(USE_SI446X_TRANSCEIVER)
-	TransceiverDriver.SetupInterrupt(OnRadioInterrupt);
+#endif
+
+#if defined(LINK_TEST_SURFACE)
+	// Setup Test Sync Surface services.
+	if (!ClientWriter.Setup())
+	{
+#ifdef DEBUG
+		Serial.println(F("ClientWriter setup failed."));
+#endif
+		BootError();
+	}
+#if defined(USE_CONTROLLER)
+	Controller.Start();
+	ControllerDispatcher.Start();
+#endif
 #endif
 
 	// Setup Link instance.
-	if (!Client.Setup())
+	if (!LinkClient.Setup())
 	{
 #ifdef DEBUG
 		Serial.println(F("LoLa Link Client Setup Failed."));
@@ -150,10 +188,19 @@ void setup()
 		BootError();
 	}
 
-	// Start Link instance.
-	if (Client.Start())
+#ifdef LOLA_DEBUG_LINK_STATUS
+	if (!LogTask.Setup())
 	{
-#if !defined(LOLA_DEBUG_LINK_CLOCK)
+#if defined(DEBUG)
+		Serial.println(F("LogTask Setup Failed."));
+#endif
+	}
+#endif
+
+	// Start Link instance.
+	if (LinkClient.Start())
+	{
+#if defined(DEBUG)
 		Serial.print(millis());
 		Serial.println(F("\tLoLa Link Client Started."));
 #endif
@@ -165,6 +212,12 @@ void setup()
 #endif
 		BootError();
 	}
+
+#if defined(USE_LINK_DISPLAY)
+	LinkDisplayEngine.SetBufferTaskCallback(BufferTaskCallback);
+	LinkDisplayEngine.SetInverted(false);
+	LinkDisplayEngine.Start();
+#endif
 }
 
 void loop()
@@ -176,55 +229,50 @@ void loop()
 	SchedulerBase.execute();
 }
 
-#if defined(USE_SERIAL_TRANSCEIVER)
-void OnSeriaInterrupt()
+#if defined(USE_LINK_DISPLAY)
+void BufferTaskCallback(void* parameter)
 {
-	TransceiverDriver.OnSeriaInterrupt();
+	LinkDisplayEngine.BufferTaskCallback(parameter);
 }
-#elif defined(USE_NRF24_TRANSCEIVER)
-void OnRxInterrupt()
+#endif
+
+#if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER)
+void OnInterrupt()
 {
-	TransceiverDriver.OnRfInterrupt();
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, HIGH);
+#endif
+	Transceiver.OnInterrupt();
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, LOW);
+#endif
 }
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 void OnRxInterrupt(const uint8_t* mac, const uint8_t* buf, size_t count, void* arg)
 {
-	TransceiverDriver.OnRxInterrupt(mac, buf, count);
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, HIGH);
+#endif
+	Transceiver.OnRxInterrupt(mac, buf, count);
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, LOW);
+#endif
 }
 #else
 void OnRxInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
 {
-	TransceiverDriver.OnRxInterrupt(data, data_len);
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, HIGH);
+#endif
+	Transceiver.OnRxInterrupt(data, data_len);
+#if defined(RX_TEST_PIN)
+	digitalWrite(RX_TEST_PIN, LOW);
+#endif
 }
 void OnTxInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
 {
-	TransceiverDriver.OnTxInterrupt(status);
+	Transceiver.OnTxInterrupt(status);
 }
 #endif
-#elif defined(USE_SI446X_TRANSCEIVER)
-// Actual interrupt.
-void OnRadioInterrupt()
-{
-	TransceiverDriver.OnRadioInterrupt();
-}
-
-// Global calls fired in event loop.
-void SI446X_CB_RXCOMPLETE(uint8_t length, int16_t rssi)
-{
-	TransceiverDriver.OnPostRxInterrupt(length, rssi);
-}
-void SI446X_CB_RXBEGIN(int16_t rssi)
-{
-	TransceiverDriver.OnPreRxInterrupt();
-}
-void SI446X_CB_SENT(void)
-{
-	TransceiverDriver.OnTxInterrupt();
-}
-#elif defined(USE_SI446X_TRANSCEIVER2)
-void OnRadioInterrupt()
-{
-	TransceiverDriver.OnRadioInterrupt();
-}
 #endif
