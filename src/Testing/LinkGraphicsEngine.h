@@ -8,7 +8,7 @@
 
 #include <ILoLaInclude.h>
 
-#include "../src/Testing/ExampleDisplayDefinitions.h"
+#include "ExampleDisplayDefinitions.h"
 
 #include <ArduinoGraphicsEngineTask.h>
 #include "LinkDisplayDrawer.h"
