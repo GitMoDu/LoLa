@@ -315,11 +315,7 @@ protected:
 			Encoder->SetRandomSessionId(&RandomSource);
 			break;
 		case LinkStageEnum::AwaitingLink:
-			SearchChannel = RandomSource.GetRandomShort();
-			SetAdvertisingChannel(SearchChannel);
-			SearchChannelTryCount = 0;
-			ResetUnlinkedPacketThrottle();
-			WaitingState = WaitingStateEnum::SearchingLink;
+			ResetSearch();
 			break;
 		case LinkStageEnum::Linking:
 			ClockSyncer.Reset(micros());
@@ -601,6 +597,15 @@ protected:
 		}
 
 		return false;
+	}
+
+	void ResetSearch()
+	{
+		SearchChannel = RandomSource.GetRandomShort();
+		SetAdvertisingChannel(SearchChannel);
+		SearchChannelTryCount = 0;
+		ResetUnlinkedPacketThrottle();
+		WaitingState = WaitingStateEnum::SearchingLink;
 	}
 
 private:
