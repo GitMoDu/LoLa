@@ -73,7 +73,6 @@ private:
 
 private:
 	static constexpr uint16_t RxWaitDuration = 1500;
-	static constexpr uint16_t TxWaitDuration = 250;
 
 	static constexpr uint16_t LineDuration = BitDuration;
 
@@ -91,19 +90,19 @@ private:
 	uint8_t TxBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
 	volatile uint32_t RxStartTimestamp = 0;
-	volatile uint32_t TxStartTimestamp = 0;
-
-	uint32_t TxEndTimestamp = 0;
+	uint32_t TxTimestamp = 0;
 
 	volatile RxStateEnum RxState = RxStateEnum::NoRx;
 	TxStateEnum TxState = TxStateEnum::NoTx;
 
 	uint8_t ByteBuffer = 0;
 	uint8_t RxSize = 0;
+	uint8_t TxSize = 0;
+
+	volatile bool DriverEnabled = false;
 
 private:
 	void (*OnRxInterrupt)(void) = nullptr;
-	volatile bool DriverEnabled = false;
 
 public:
 	UartTransceiver(Scheduler& scheduler, SerialType* io)
@@ -208,18 +207,22 @@ public:
 				break;
 			case TxStateEnum::TxStart:
 				// Wait for Tx buffer to be free after the minimum duration.
-				if ((micros() - TxStartTimestamp > LineDuration + ByteDuration)
+				if ((micros() - TxTimestamp > ((uint32_t)LineDuration + ByteDuration))
 					&& ((uint8_t)IO->availableForWrite() >= (TxBufferSize - 1)))
 				{
 					IO->flush();
+					IO->clearWriteError();
 					TxState = TxStateEnum::TxEnd;
+					TxTimestamp = micros();
+					Listener->OnTx();
 				}
 				break;
 			case TxStateEnum::TxEnd:
-				IO->clearWriteError();
-				TxEndTimestamp = micros();
-				Listener->OnTx();
-				TxState = TxStateEnum::NoTx;
+				if (micros() - TxTimestamp > GetDurationInAir(TxSize))
+				{
+					TxSize = 0;
+					TxState = TxStateEnum::NoTx;
+				}
 				break;
 			default:
 				break;
@@ -266,6 +269,7 @@ public:// ILoLaTransceiver overrides.
 
 			TxState = TxStateEnum::NoTx;
 			ClearRx();
+			TxSize = 0;
 			DriverEnabled = true;
 			Task::enable();
 
@@ -297,7 +301,7 @@ public:// ILoLaTransceiver overrides.
 	{
 		return DriverEnabled
 			&& TxState == TxStateEnum::NoTx
-			&& micros() - TxEndTimestamp > TxWaitDuration;
+			&& RxState == RxStateEnum::NoRx;
 	}
 
 	/// <summary>
@@ -315,10 +319,11 @@ public:// ILoLaTransceiver overrides.
 
 			if (txSize > 0)
 			{
+				TxTimestamp = micros();
 				if (IO->write(TxBuffer, txSize) == txSize)
 				{
-					TxStartTimestamp = micros();
 					TxState = TxStateEnum::TxStart;
+					TxSize = packetSize;
 					Task::enable();
 
 					return true;
