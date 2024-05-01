@@ -217,32 +217,29 @@ public:
 	/// ILoLaLink overrides.
 	/// </summary>
 public:
-	virtual const uint32_t GetPacketThrottlePeriod() final
+	const uint32_t GetPacketThrottlePeriod() final
 	{
 		return ((uint32_t)Duplex->GetPeriod()) - 1;
 	}
 
-	virtual const bool CanSendPacket(const uint8_t payloadSize) final
+	const bool CanSendPacket(const uint8_t payloadSize) final
 	{
-		if (LinkStage == LinkStageEnum::Linked
-			&& PacketService.CanSendPacket())
-		{
-			SyncClock.GetTimestamp(LinkTimestamp);
-			LinkTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
-
-			return Duplex->IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
-		}
-		else
+		if (LinkStage != LinkStageEnum::Linked)
 		{
 			return false;
 		}
+
+		SyncClock.GetTimestamp(LinkTimestamp);
+
+		return Duplex->IsInRange(LinkTimestamp.GetRollingMicros() + GetSendDuration(payloadSize), GetOnAirDuration(payloadSize))
+			&& PacketService.CanSendPacket();
 	}
 
 	/// <summary>
 	/// IPacketServiceListener overrides.
 	/// </summary>
 public:
-	virtual const uint8_t GetRxChannel() final
+	const uint8_t GetRxChannel() final
 	{
 		switch (LinkStage)
 		{
@@ -321,7 +318,7 @@ protected:
 	}
 
 protected:
-	virtual const uint8_t MockGetTxChannel(const uint32_t rollingMicros) final
+	const uint8_t MockGetTxChannel(const uint32_t rollingMicros) final
 	{
 		if (IsLinkHopper)
 		{
@@ -339,7 +336,7 @@ protected:
 	/// </summary>
 	/// <param name="rollingMicros">[0;UINT32_MAX]</param>
 	/// <returns>Normalized Tx Chanel.</returns>
-	virtual const uint8_t GetTxChannel(const uint32_t rollingMicros) final
+	const uint8_t GetTxChannel(const uint32_t rollingMicros) final
 	{
 		switch (LinkStage)
 		{
