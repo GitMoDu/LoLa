@@ -158,7 +158,7 @@ public:
 #endif
 	}
 
-	virtual const bool Start() final
+	const bool Start() final
 	{
 		if (LinkStage == LinkStageEnum::Disabled)
 		{
@@ -172,7 +172,7 @@ public:
 		}
 	}
 
-	virtual const bool Stop() final
+	const bool Stop() final
 	{
 		if (LinkStage != LinkStageEnum::Disabled)
 		{
@@ -186,7 +186,7 @@ public:
 	}
 
 protected:
-	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint16_t lostCount) final
+	void OnPacketReceivedOk(const uint8_t rssi, const uint16_t lostCount) final
 	{
 		QualityTracker.OnRxComplete(micros(), rssi, lostCount);
 	}

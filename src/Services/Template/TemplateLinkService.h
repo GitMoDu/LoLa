@@ -295,7 +295,7 @@ private:
 	/// <param name="txElapsed">Elapsed since last transmition ended, in microseconds.</param>
 	/// <param name="requestElapsed">Elapsed since the Send Request started, in microseconds.</param>
 	/// <returns>Abstract priority Score.</returns>
-	const uint8_t GetPriorityScore(const uint32_t txElapsed, const uint32_t requestElapsed)
+	const uint8_t GetPriorityScore(const uint32_t txElapsed, const uint32_t requestElapsed) const
 	{
 		const uint32_t priorityPeriod = LoLaLink->GetPacketThrottlePeriod() * PRIORITY_PERIOD_SCALE;
 		const uint32_t scoreRequest = requestElapsed / ((uint32_t)1 + (priorityPeriod / PRIORITY_NEGATIVE_SCALE));
