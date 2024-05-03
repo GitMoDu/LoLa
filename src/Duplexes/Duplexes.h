@@ -21,7 +21,7 @@ public:
 
 	virtual const uint16_t GetRange() final
 	{
-		return UINT16_MAX;
+		return throttlePeriodMicros;
 	}
 
 	virtual const uint16_t GetPeriod() final
