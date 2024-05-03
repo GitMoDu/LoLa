@@ -13,9 +13,9 @@ public:
 	TemplateFixedChannelNoHop() : IChannelHop()
 	{}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
 	{
-		return listener != nullptr && rollingTimestamp != nullptr;
+		return listener != nullptr && linkClock != nullptr;
 	}
 
 	virtual const uint8_t GetChannel() final

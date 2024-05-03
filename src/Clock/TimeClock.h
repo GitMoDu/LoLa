@@ -44,6 +44,40 @@ public:
 	}
 
 public:
+	const uint32_t GetRollingMicros(const uint32_t cyclestamp)
+	{
+		const uint32_t overflows = GetCycleOverflows(cyclestamp);
+		const uint32_t elapsed = GetElapsedDuration(cyclestamp);
+		const uint32_t remainder = overflows * OverflowWrapRemainder;
+		const uint32_t seconds = overflows * OverflowWrapSeconds;
+
+		return ((seconds + OffsetSeconds) * ONE_SECOND_MICROS) + remainder + elapsed + OffsetSubSeconds;
+	}
+
+	const uint32_t GetRollingMicros()
+	{
+		const uint32_t cyclestamp = GetCyclestamp();
+
+		return GetRollingMicros(cyclestamp);
+	}
+
+	const uint32_t GetRollingMonotonicMicros(const uint32_t cyclestamp)
+	{
+		const uint32_t overflows = GetCycleOverflows(cyclestamp);
+		const uint32_t elapsed = GetElapsedDuration(cyclestamp);
+		const uint32_t remainder = overflows * OverflowWrapRemainder;
+		const uint32_t seconds = overflows * OverflowWrapSeconds;
+
+		return (seconds * ONE_SECOND_MICROS) + remainder + elapsed;
+	}
+
+	const uint32_t GetRollingMonotonicMicros()
+	{
+		const uint32_t cyclestamp = GetCyclestamp();
+
+		return GetRollingMonotonicMicros(cyclestamp);
+	}
+
 	/// <summary>
 	/// Non-monotonic, tuned timestamp.
 	/// Rolls over after ~136.1 years.
@@ -69,7 +103,7 @@ public:
 		GetTimestampMonotonic(cyclestamp, timestamp);
 
 		// Shift it with the local offset.
-		timestamp.ShiftSeconds(OffsetSeconds);
+		timestamp.Seconds += OffsetSeconds;
 		timestamp.ShiftSubSeconds(OffsetSubSeconds);
 	}
 
@@ -77,6 +111,7 @@ public:
 	{
 		// Get the overflow count.
 		const uint32_t overflows = GetCycleOverflows(cyclestamp);
+		const uint32_t elapsed = GetElapsedDuration(cyclestamp);
 
 		// Start with the overflows and consolidate.
 		timestamp.Seconds = overflows * OverflowWrapSeconds;
@@ -84,7 +119,7 @@ public:
 		timestamp.ConsolidateSubSeconds();
 
 		// Shift it with the elapsed duration.
-		timestamp.ShiftSubSeconds(GetElapsedDuration(cyclestamp));
+		timestamp.ShiftSubSeconds(elapsed);
 	}
 
 	void ShiftSeconds(const int32_t offsetSeconds)

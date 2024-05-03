@@ -458,8 +458,7 @@ protected:
 
 						if (ClockSyncer.IsBroadAccepted())
 						{
-							SyncClock.GetTimestamp(LinkTimestamp);
-							UInt32ToArray(LinkTimestamp.GetRollingMicros() + GetSendDuration(Linking::ClockSyncFineRequest::PAYLOAD_SIZE)
+							UInt32ToArray(SyncClock.GetRollingMicros() + GetSendDuration(Linking::ClockSyncFineRequest::PAYLOAD_SIZE)
 								, &OutPacket.Payload[Linking::ClockSyncFineRequest::PAYLOAD_ESTIMATE_INDEX]);
 							if (SendPacket(OutPacket.Data, Linking::ClockSyncFineRequest::PAYLOAD_SIZE))
 							{
@@ -469,7 +468,8 @@ protected:
 						else
 						{
 							SyncClock.GetTimestamp(LinkTimestamp);
-							UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncFineRequest::PAYLOAD_ESTIMATE_INDEX]);
+							LinkTimestamp.ShiftSubSeconds(GetSendDuration(Linking::ClockSyncBroadRequest::PAYLOAD_SIZE));
+							UInt32ToArray(LinkTimestamp.Seconds, &OutPacket.Payload[Linking::ClockSyncBroadRequest::PAYLOAD_ESTIMATE_INDEX]);
 							if (SendPacket(OutPacket.Data, Linking::ClockSyncBroadRequest::PAYLOAD_SIZE))
 							{
 								ClockSyncer.OnBroadEstimateSent(micros());
@@ -548,10 +548,10 @@ protected:
 		if (OutPacket.GetPort() == LoLaLinkDefinition::LINK_PORT
 			&& OutPacket.GetHeader() == Linked::ClockTuneRequest::HEADER)
 		{
-			SyncClock.GetTimestamp(LinkTimestamp);
-
-			UInt32ToArray(LinkTimestamp.GetRollingMicros() + GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE) + GetTimestampingDuration()
-				, &OutPacket.Payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
+			const uint32_t start = micros();
+			const uint32_t timestamp = SyncClock.GetRollingMicros() + GetSendDuration(Linked::ClockTuneRequest::PAYLOAD_SIZE);
+			const uint32_t elapsed = micros() - start;
+			UInt32ToArray(timestamp + elapsed, &OutPacket.Payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]);
 		}
 	}
 
@@ -713,11 +713,8 @@ protected:
 	void OnLinkSyncReceived(const uint32_t receiveTimestamp)
 	{
 		LOLA_RTOS_PAUSE();
-		const uint32_t elapsed = micros() - receiveTimestamp;
-		SyncClock.GetTimestampMonotonic(LinkTimestamp);
+		LinkingDuplex.OnReceivedSync(SyncClock.GetRollingMonotonicMicros() - (micros() - receiveTimestamp));
 		LOLA_RTOS_RESUME();
-		LinkTimestamp.ShiftSubSeconds(-(int32_t)elapsed);
-		LinkingDuplex.OnReceivedSync(LinkTimestamp.GetRollingMicros());
 	}
 
 	/// <summary>
@@ -729,11 +726,10 @@ protected:
 	/// <returns>True when packet can be sent.</returns>
 	const bool UnlinkedDuplexCanSend(const uint8_t payloadSize)
 	{
-		SyncClock.GetTimestampMonotonic(LinkTimestamp);
-		LinkTimestamp.ShiftSubSeconds((int32_t)GetSendDuration(payloadSize)
-			+ (int32_t)LinkingDuplex.GetFollowerOffset());
+		const uint32_t timestamp = SyncClock.GetRollingMonotonicMicros();
 
-		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros(), GetOnAirDuration(payloadSize));
+		return LinkingDuplex.IsInRange(timestamp + GetSendDuration(payloadSize) + LinkingDuplex.GetFollowerOffset(), GetOnAirDuration(payloadSize));
+
 	}
 };
 #endif

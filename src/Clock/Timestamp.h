@@ -15,15 +15,6 @@ struct Timestamp
 	uint32_t SubSeconds = 0;
 
 	/// <summary>
-	/// Validate timestamp, SubSeconds should never exceed or match one second.
-	/// </summary>
-	/// <returns>True if valid.</returns>
-	const bool Validate()
-	{
-		return SubSeconds < ONE_SECOND_MICROS;
-	}
-
-	/// <summary>
 	/// </summary>
 	/// <param name="offsetSeconds"></param>
 	void ShiftSeconds(const int32_t offsetSeconds)

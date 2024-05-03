@@ -15,7 +15,7 @@ private:
 	uint8_t InData[LoLaPacketDefinition::GetDataSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)]{};
 
 private:
-	Timestamp ReceiveTimestamp{};
+	Timestamp RxTimestamp{};
 
 private:
 	/// <summary>
@@ -62,7 +62,7 @@ public:
 
 public:
 	// IPacketServiceListener
-	virtual void OnLost(const uint32_t timestamp) final
+	void OnLost(const uint32_t timestamp) final
 	{
 		OnEvent(PacketEventEnum::ReceiveRejectedTransceiver);
 	}
@@ -139,10 +139,10 @@ public:
 			break;
 		case LinkStageEnum::Linked:
 			LOLA_RTOS_PAUSE();
-			SyncClock.GetTimestamp(ReceiveTimestamp);
-			ReceiveTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
+			SyncClock.GetTimestamp(RxTimestamp);
+			RxTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
 			LOLA_RTOS_RESUME();
-			if (Encoder->DecodeInPacket(RawInPacket, InData, ReceiveTimestamp.Seconds, receivingCounter, receivingDataSize))
+			if (Encoder->DecodeInPacket(RawInPacket, InData, RxTimestamp.Seconds, receivingCounter, receivingDataSize))
 			{
 				// Validate counter and check for valid port.
 				if (ValidateCounter(receivingCounter, receivingLost))
@@ -185,15 +185,15 @@ protected:
 
 		uint16_t receivingCounter = 0;
 
-		SyncClock.GetTimestamp(ReceiveTimestamp);
-		ReceiveTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
+		SyncClock.GetTimestamp(RxTimestamp);
+		RxTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
 
 		// (Fail to) Decrypt packet with token based on time.
-		return Encoder->DecodeInPacket(data, RawInPacket, ReceiveTimestamp.Seconds, receivingCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+		return Encoder->DecodeInPacket(data, RawInPacket, RxTimestamp.Seconds, receivingCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 	}
 
 private:
-	const bool ValidateCounter(const uint16_t counter, uint16_t& receiveLost)
+	const bool ValidateCounter(const uint16_t counter, uint16_t& receiveLost) const
 	{
 		const uint16_t counterRoll = counter - ReceiveCounter;
 		if (counterRoll < LoLaLinkDefinition::ROLLING_COUNTER_ERROR)

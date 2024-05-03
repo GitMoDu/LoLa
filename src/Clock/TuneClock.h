@@ -6,7 +6,8 @@
 #include "TimeClock.h"
 
 /// <summary>
-/// Tuneable timestamp clock.
+/// Tuneable real time clock.
+/// Rolls over after ~136.1 years.
 /// Tracks Cyclestamp overflow count.
 /// Uses task callback to smear the tune offset, 
 ///  as well as ensure cyclestamp' overflows are tracked.

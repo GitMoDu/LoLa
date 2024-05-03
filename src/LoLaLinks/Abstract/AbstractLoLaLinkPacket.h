@@ -229,9 +229,7 @@ public:
 			return false;
 		}
 
-		SyncClock.GetTimestamp(LinkTimestamp);
-
-		return Duplex->IsInRange(LinkTimestamp.GetRollingMicros() + GetSendDuration(payloadSize), GetOnAirDuration(payloadSize))
+		return Duplex->IsInRange(SyncClock.GetRollingMicros() + GetSendDuration(payloadSize), GetOnAirDuration(payloadSize))
 			&& PacketService.CanSendPacket();
 	}
 
@@ -441,8 +439,9 @@ private:
 			longDuration = shortDuration + 1;
 		}
 
-		LOLA_RTOS_PAUSE();
+#if defined(DEBUG_LOLA)
 		// Measure Timestamping time.
+		LOLA_RTOS_PAUSE();
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
@@ -451,7 +450,15 @@ private:
 		const uint32_t timestampingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();
 
-#if defined(DEBUG_LOLA)
+		LOLA_RTOS_PAUSE();
+		start = micros();
+		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
+		{
+			LinkTimestamp.SubSeconds = SyncClock.GetRollingMicros();
+		}
+		const uint32_t timestampingRollingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
+		LOLA_RTOS_RESUME();
+
 		// Measure PRNG Hop calculation time.
 		volatile uint8_t dummy = 0;
 		LOLA_RTOS_PAUSE();
@@ -499,6 +506,19 @@ private:
 		Serial.print(calibrationDuration);
 		Serial.println(F(" us)"));
 
+		Serial.println(F("PRNG Hop:"));
+		Serial.print('\t');
+		Serial.print(calculationDuration);
+		Serial.println(F(" ns"));
+
+		Serial.println(F("Timestamping"));
+		Serial.print(F("\tFull\t"));
+		Serial.print(timestampingDuration);
+		Serial.println(F(" ns"));
+		Serial.print(F("\tRolling\t"));
+		Serial.print(timestampingRollingDuration);
+		Serial.println(F(" ns"));
+
 		Serial.println(F("Encode"));
 		Serial.print(F("\tShort:\t"));
 		Serial.print(shortDuration);
@@ -514,17 +534,9 @@ private:
 		Serial.print(F("\tLong\t"));
 		Serial.print(rejectionLongDuration);
 		Serial.println(F(" us"));
-		Serial.println(F("Timestamping"));
-		Serial.print('\t');
-		Serial.print(timestampingDuration);
-		Serial.println(F(" ns."));
-		Serial.println(F("PRNG Hop:"));
-		Serial.print('\t');
-		Serial.print(calculationDuration);
-		Serial.println(F(" ns."));
 #endif
 
-		return SetSendCalibration(shortDuration, longDuration, timestampingDuration / 1000);
+		return SetSendCalibration(shortDuration, longDuration);
 	}
 };
 #endif

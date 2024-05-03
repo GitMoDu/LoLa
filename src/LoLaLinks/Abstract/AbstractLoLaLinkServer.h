@@ -227,12 +227,11 @@ protected:
 					break;
 				}
 
+				SyncSequence = payload[Linking::ClockSyncBroadRequest::PAYLOAD_REQUEST_ID_INDEX];
 				LOLA_RTOS_PAUSE();
 				SyncClock.GetTimestamp(LinkTimestamp);
 				LinkTimestamp.ShiftSubSeconds(-(int32_t)(micros() - timestamp));
 				LOLA_RTOS_RESUME();
-
-				SyncSequence = payload[Linking::ClockSyncBroadRequest::PAYLOAD_REQUEST_ID_INDEX];
 				ClockSyncer.OnBroadEstimateReceived(LinkTimestamp.Seconds,
 					ArrayToUInt32(&payload[Linking::ClockSyncBroadRequest::PAYLOAD_ESTIMATE_INDEX]));
 
@@ -250,8 +249,7 @@ protected:
 				SyncSequence = payload[Linking::ClockSyncFineRequest::PAYLOAD_REQUEST_ID_INDEX];
 
 				LOLA_RTOS_PAUSE();
-				SyncClock.GetTimestamp(LinkTimestamp);
-				ClockSyncer.OnFineEstimateReceived(LinkTimestamp.GetRollingMicros() - ((int32_t)(micros() - timestamp)),
+				ClockSyncer.OnFineEstimateReceived(SyncClock.GetRollingMicros() - (micros() - timestamp),
 					ArrayToUInt32(&payload[Linking::ClockSyncFineRequest::PAYLOAD_ESTIMATE_INDEX]));
 				LOLA_RTOS_RESUME();
 				Task::enable();
@@ -320,8 +318,7 @@ protected:
 					&& !ClockTracker.HasReplyPending())
 				{
 					LOLA_RTOS_PAUSE();
-					SyncClock.GetTimestamp(LinkTimestamp);
-					ClockTracker.OnLinkedEstimateReceived(LinkTimestamp.GetRollingMicros() - ((int32_t)(micros() - timestamp))
+					ClockTracker.OnLinkedEstimateReceived(SyncClock.GetRollingMicros() - (int16_t)(micros() - timestamp)
 						, ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]));
 					LOLA_RTOS_RESUME();
 					Task::enable();
@@ -696,9 +693,7 @@ protected:
 	//const bool UnlinkedCanSendPacket(const uint8_t payloadSize)
 	const bool UnlinkedDuplexCanSend(const uint8_t payloadSize)
 	{
-		SyncClock.GetTimestamp(LinkTimestamp);
-
-		return LinkingDuplex.IsInRange(LinkTimestamp.GetRollingMicros() + GetSendDuration(payloadSize), GetOnAirDuration(payloadSize));
+		return LinkingDuplex.IsInRange(SyncClock.GetRollingMicros() + GetSendDuration(payloadSize), GetOnAirDuration(payloadSize));
 	}
 };
 #endif

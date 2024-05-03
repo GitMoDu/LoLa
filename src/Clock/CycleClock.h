@@ -31,9 +31,29 @@ public:
 		CycleCounter::Start();
 	}
 
+	const uint32_t GetCycleOverflowsEphemeral(const uint32_t cyclestamp)
+	{
+		if (cyclestamp < LastCyclestamp)
+		{
+			return Overflows + 1;
+		}
+		else
+		{
+			return Overflows;
+		}
+	}
+
 	const uint32_t GetCycleOverflows(const uint32_t cyclestamp)
 	{
-		CheckOverflowsInternal(cyclestamp);
+		if (cyclestamp < LastCyclestamp)
+		{
+			Overflows++;
+			LastCyclestamp = cyclestamp;
+		}
+		else
+		{
+			LastCyclestamp = cyclestamp;
+		}
 
 		return Overflows;
 	}

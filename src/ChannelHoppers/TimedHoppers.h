@@ -6,7 +6,6 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <IChannelHop.h>
 
 
 template<const uint32_t HopPeriodMicros,
@@ -52,7 +51,7 @@ private:
 private:
 	IChannelHop::IHopListener* Listener = nullptr;
 
-	IRollingTimestamp* RollingTimestamp = nullptr;
+	LinkClock* SyncClock = nullptr;
 
 	uint32_t LastTimestamp = 0;
 	uint32_t LastHopIndex = 0;
@@ -73,12 +72,12 @@ public:
 #endif
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) final
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
 	{
 		Listener = listener;
-		RollingTimestamp = rollingTimestamp;
+		SyncClock = linkClock;
 
-		return RollingTimestamp != nullptr && Listener != nullptr && HopPeriodMicros > 1;
+		return SyncClock != nullptr && Listener != nullptr && HopPeriodMicros > 1;
 	}
 
 	// General Channel Interfaces //
@@ -112,7 +111,7 @@ public:
 	virtual void OnLinkStarted() final
 	{
 		// Set first hop index, so GetTimedHopIndex() is accurate before first hop.
-		LastHopIndex = GetHopIndex(RollingTimestamp->GetRollingTimestamp());
+		LastHopIndex = GetHopIndex(SyncClock->GetRollingMicros());
 
 		// Run task to start hop.
 		HopperState = HopperStateEnum::StartHop;
@@ -128,7 +127,7 @@ public:
 
 	virtual bool Callback() final
 	{
-		const uint32_t rollingTimestamp = RollingTimestamp->GetRollingTimestamp();
+		const uint32_t rollingTimestamp = SyncClock->GetRollingMicros();
 
 		switch (HopperState)
 		{

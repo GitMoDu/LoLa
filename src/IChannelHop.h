@@ -4,7 +4,8 @@
 #define _I_CHANEL_HOP_h
 
 #include <stdint.h>
-#include <ITimestamp.h>
+
+#include "Clock\LinkClock.h"
 
 /// <summary>
 /// Interface for generic channel hopper/manager.
@@ -22,7 +23,7 @@ public:
 	};
 
 public:
-	virtual const bool Setup(IChannelHop::IHopListener* listener, IRollingTimestamp* rollingTimestamp) { return false; }
+	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) { return false; }
 
 	/// General Channel Interfaces
 public:

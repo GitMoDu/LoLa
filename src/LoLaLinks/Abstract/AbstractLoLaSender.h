@@ -11,7 +11,7 @@ private:
 	using BaseClass = AbstractLoLa;
 
 private:
-	Timestamp SendTimestamp{};
+	Timestamp TxTimestamp{};
 	uint32_t SentTimestamp = 0;
 
 private:
@@ -21,9 +21,6 @@ private:
 
 	// Rolling counter.
 	uint16_t SendCounter = 0;
-
-	// Estimation helper.
-	uint8_t TimestampingDuration = 0;
 
 protected:
 	uint16_t SentCounter = 0;
@@ -48,8 +45,8 @@ public:
 
 	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
 	{
-		SyncClock.GetTimestamp(SendTimestamp);
-		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
+		SyncClock.GetTimestamp(TxTimestamp);
+		TxTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
 		const uint8_t dataSize = LoLaPacketDefinition::GetDataSizeFromPayloadSize(payloadSize);
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
@@ -69,7 +66,7 @@ public:
 		case LinkStageEnum::Linked:
 			// Encrypt packet with token based on time.
 			Encoder->EncodeOutPacket(data, RawOutPacket,
-				SendTimestamp.Seconds,
+				TxTimestamp.Seconds,
 				SendCounter, dataSize);
 			break;
 		default:
@@ -77,7 +74,7 @@ public:
 		}
 
 		if (PacketService.Send(packetSize,
-			GetTxChannel(SendTimestamp.GetRollingMicros())))
+			GetTxChannel(TxTimestamp.GetRollingMicros())))
 		{
 			SentTimestamp = micros();
 			SendCounter++;
@@ -90,7 +87,7 @@ public:
 	}
 
 protected:
-	const bool SetSendCalibration(const uint32_t shortDuration, const uint32_t longDuration, const uint32_t timestampingDuration)
+	const bool SetSendCalibration(const uint32_t shortDuration, const uint32_t longDuration)
 	{
 		const uint16_t airShort = Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(0));
 		const uint16_t airLong = Transceiver->GetTimeToAir(LoLaPacketDefinition::GetTotalSize(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
@@ -101,23 +98,15 @@ protected:
 			&& longDuration >= shortDuration
 			&& shortDuration < UINT16_MAX
 			&& longDuration < UINT16_MAX
-			&& timestampingDuration < UINT8_MAX
 			&& longestSend < UINT16_MAX)
 		{
 			SendShortDurationMicros = shortDuration + airShort;
 			SendVariableDurationMicros = (longDuration - shortDuration) + (airLong - airShort);
 
-			TimestampingDuration = timestampingDuration;
-
 			return true;
 		}
 
 		return false;
-	}
-
-	const uint8_t GetTimestampingDuration()
-	{
-		return TimestampingDuration;
 	}
 
 	const uint16_t GetSendDuration(const uint8_t payloadSize)
@@ -146,18 +135,18 @@ protected:
 	/// <returns></returns>
 	const bool MockSendPacket(const uint8_t* data, const uint8_t payloadSize)
 	{
-		SyncClock.GetTimestamp(SendTimestamp);
-		SendTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
+		SyncClock.GetTimestamp(TxTimestamp);
+		TxTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));
 
 		const uint8_t dataSize = LoLaPacketDefinition::GetDataSizeFromPayloadSize(payloadSize);
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		// Encrypt packet with token based on time.
-		Encoder->EncodeOutPacket(data, RawOutPacket, SendTimestamp.Seconds, SendCounter, dataSize);
+		Encoder->EncodeOutPacket(data, RawOutPacket, TxTimestamp.Seconds, SendCounter, dataSize);
 
 		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(packetSize,
-			MockGetTxChannel(SendTimestamp.GetRollingMicros())))
+			MockGetTxChannel(TxTimestamp.GetRollingMicros())))
 		{
 			return true;
 		}

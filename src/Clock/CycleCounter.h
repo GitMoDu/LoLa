@@ -125,9 +125,14 @@ public:
 	/// <returns>Internal overflow aware cycle count [0; UINT32_MAX]</returns>
 	const uint32_t GetCyclestamp()
 	{
-		const uint32_t cycles = CyclesSource->GetCycles();
-
-		return GetCyclestamp(cycles);
+		if (CyclesOverflow == UINT32_MAX)
+		{
+			return CyclesSource->GetCycles();
+		}
+		else
+		{
+			return GetCyclestamp(CyclesSource->GetCycles());
+		}
 	}
 
 	/// <summary>
@@ -138,15 +143,15 @@ public:
 	/// <returns>Internal overflow aware cycle count [0; UINT32_MAX]</returns>
 	const uint32_t GetCyclestamp(const uint32_t cycles)
 	{
-		if (CyclesOverflow < UINT32_MAX)
+		if (CyclesOverflow == UINT32_MAX)
+		{
+			return cycles;
+		}
+		else
 		{
 			CheckOverflowsInternal(cycles);
 
 			return ((CyclesOverflow + 1) * Overflows) + cycles;
-		}
-		else
-		{
-			return cycles;
 		}
 	}
 
