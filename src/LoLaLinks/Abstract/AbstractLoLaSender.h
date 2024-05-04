@@ -38,12 +38,12 @@ public:
 		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
 	{}
 
-	virtual const uint32_t GetSendElapsed() final
+	const uint32_t GetSendElapsed() final
 	{
 		return micros() - SentTimestamp;
 	}
 
-	virtual const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
+	const bool SendPacket(const uint8_t* data, const uint8_t payloadSize) final
 	{
 		SyncClock.GetTimestamp(TxTimestamp);
 		TxTimestamp.ShiftSubSeconds(GetSendDuration(payloadSize));

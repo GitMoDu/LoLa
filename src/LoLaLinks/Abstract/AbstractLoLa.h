@@ -139,12 +139,12 @@ public:
 	}
 
 public:
-	virtual const bool RegisterLinkListener(ILinkListener* listener) final
+	const bool RegisterLinkListener(ILinkListener* listener) final
 	{
 		return Registry->RegisterLinkListener(listener);
 	}
 
-	virtual const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) final
+	const bool RegisterPacketListener(ILinkPacketListener* listener, const uint8_t port) final
 	{
 		if (port <= LoLaLinkDefinition::MAX_DEFINITION_PORT)
 		{

@@ -28,7 +28,7 @@ public:
 		: CycleClock(scheduler, cycles)
 	{}
 
-	virtual const bool Setup() final
+	const bool Setup() final
 	{
 		if (CycleCounter::Setup())
 		{
@@ -161,7 +161,7 @@ public:
 		if (OffsetSubSeconds >= ONE_SECOND_MICROS)
 		{
 			OffsetSeconds += OffsetSubSeconds / ONE_SECOND_MICROS;
-			OffsetSubSeconds = OffsetSubSeconds % ONE_SECOND_MICROS;
+			OffsetSubSeconds %= ONE_SECOND_MICROS;
 		}
 	}
 };

@@ -71,7 +71,7 @@ public:
 	}
 
 protected:
-	virtual void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) final
+	void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) final
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -162,13 +162,13 @@ protected:
 	}
 
 protected:
-	virtual void ResetSessionCreation() final
+	void ResetSessionCreation() final
 	{
 		AmState = AmStateEnum::NoMatch;
 		Session.ResetAm();
 	}
 
-	virtual void OnServiceSearchingLink()
+	void OnServiceSearchingLink() final
 	{
 		if (AmSessionRequested)
 		{
@@ -195,7 +195,7 @@ protected:
 		Task::enable();
 	}
 
-	virtual void OnServiceSessionCreation() final
+	void OnServiceSessionCreation() final
 	{
 		switch (AmState)
 		{

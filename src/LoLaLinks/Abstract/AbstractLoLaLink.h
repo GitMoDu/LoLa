@@ -78,7 +78,7 @@ public:
 		return false;
 	}
 
-	virtual void GetLinkStatus(LoLaLinkStatus& linkStatus) final
+	void GetLinkStatus(LoLaLinkStatus& linkStatus) final
 	{
 		linkStatus.RxDropCount = QualityTracker.GetRxDropCount();
 		linkStatus.TxCount = SentCounter;
@@ -104,7 +104,7 @@ public:
 		}
 	}
 
-	virtual const uint32_t GetLinkElapsed() final
+	const uint32_t GetLinkElapsed() final
 	{
 		if (HasLink())
 		{
@@ -117,7 +117,7 @@ public:
 		}
 	}
 
-	virtual void OnSendComplete(const IPacketServiceListener::SendResultEnum result) final
+	void OnSendComplete(const IPacketServiceListener::SendResultEnum result) final
 	{
 		switch (LinkStage)
 		{

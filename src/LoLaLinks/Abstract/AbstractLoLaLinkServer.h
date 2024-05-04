@@ -70,7 +70,7 @@ public:
 
 protected:
 #if defined(DEBUG_LOLA)
-	virtual void Owner() final
+	void Owner() final
 	{
 		Serial.print(millis());
 		Serial.print(F("\t[S] "));
@@ -184,7 +184,7 @@ protected:
 		}
 	}
 
-	virtual void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
+	void OnLinkingPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize) final
 	{
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
@@ -307,7 +307,7 @@ protected:
 		}
 	}
 
-	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
+	void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) final
 	{
 		if (port == LoLaLinkDefinition::LINK_PORT)
 		{
@@ -366,7 +366,7 @@ protected:
 		}
 	}
 
-	virtual void OnServiceAwaitingLink() final
+	void OnServiceAwaitingLink() final
 	{
 		switch (WaitingState)
 		{
@@ -411,7 +411,7 @@ protected:
 		}
 	}
 
-	virtual void OnServiceLinking() final
+	void OnServiceLinking() final
 	{
 		switch (LinkingState)
 		{
@@ -537,12 +537,12 @@ protected:
 		}
 	}
 
-	virtual const uint8_t GetClockSyncQuality() final
+	const uint8_t GetClockSyncQuality() final
 	{
 		return ClockTracker.GetQuality();
 	}
 
-	virtual const bool CheckForClockSyncUpdate() final
+	const bool CheckForClockSyncUpdate() final
 	{
 		if (ClockTracker.HasReplyPending())
 		{

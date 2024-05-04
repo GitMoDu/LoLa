@@ -76,7 +76,7 @@ public:
 	/// <param name="receiveTimestamp">micros() timestamp of packet start.</param>
 	/// <param name="packetSize"></param>
 	/// <param name="rssi"></param>
-	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
+	void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
 		const uint8_t receivingDataSize = LoLaPacketDefinition::GetDataSize(packetSize);
 
