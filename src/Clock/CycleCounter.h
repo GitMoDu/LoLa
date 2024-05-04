@@ -151,7 +151,7 @@ public:
 		{
 			CheckOverflowsInternal(cycles);
 
-			return ((CyclesOverflow + 1) * Overflows) + cycles;
+			return (CyclesOverflow * Overflows) + cycles;
 		}
 	}
 
