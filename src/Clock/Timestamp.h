@@ -49,7 +49,7 @@ struct Timestamp
 	{
 		return (Seconds * ONE_SECOND_MICROS) + SubSeconds;
 	}
-	
+
 #if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
 	void print()
 	{
@@ -64,33 +64,56 @@ struct Timestamp
 	}
 #endif
 
-	static const int32_t GetDeltaSeconds(const Timestamp& timestampStart, const Timestamp& timestampEnd)
+	static const uint32_t GetElapsedSeconds(const Timestamp& timestampStart, const Timestamp& timestampEnd)
 	{
-		int32_t seconds;
-		int32_t subSeconds;
 		if (timestampEnd.Seconds >= timestampStart.Seconds)
 		{
-			seconds = timestampEnd.Seconds - timestampStart.Seconds - 1;
-			subSeconds = ONE_SECOND_MICROS;
+			int32_t seconds;
+			int32_t subSeconds;
+
+			if (timestampEnd.SubSeconds >= timestampStart.SubSeconds)
+			{
+				seconds = timestampEnd.Seconds - timestampStart.Seconds;
+				subSeconds = timestampEnd.SubSeconds - timestampStart.SubSeconds;
+			}
+			else
+			{
+				seconds = timestampEnd.Seconds - timestampStart.Seconds - 1;
+				subSeconds = (ONE_SECOND_MICROS + timestampEnd.SubSeconds) - timestampStart.SubSeconds;
+			}
+
+			return seconds + (subSeconds / (int32_t)ONE_SECOND_MICROS);
 		}
 		else
 		{
-			seconds = UINT32_MAX - timestampStart.Seconds + timestampEnd.Seconds - 1;
-			subSeconds = -(int32_t)ONE_SECOND_MICROS;
+			return (uint32_t)INT32_MAX + 1 + (INT32_MAX - GetElapsedSeconds(timestampEnd, timestampStart));
 		}
+	}
 
-		if (timestampEnd.SubSeconds >= timestampStart.SubSeconds)
+	static const int32_t GetDeltaSeconds(const Timestamp& timestampStart, const Timestamp& timestampEnd)
+	{
+		if (timestampEnd.Seconds >= timestampStart.Seconds)
 		{
-			subSeconds += timestampEnd.SubSeconds - timestampStart.SubSeconds;
+			int32_t seconds;
+			int32_t subSeconds;
+
+			if (timestampEnd.SubSeconds >= timestampStart.SubSeconds)
+			{
+				seconds = timestampEnd.Seconds - timestampStart.Seconds;
+				subSeconds = timestampEnd.SubSeconds - timestampStart.SubSeconds;
+			}
+			else
+			{
+				seconds = timestampEnd.Seconds - timestampStart.Seconds - 1;
+				subSeconds = (ONE_SECOND_MICROS + timestampEnd.SubSeconds) - timestampStart.SubSeconds;
+			}
+
+			return seconds + (subSeconds / (int32_t)ONE_SECOND_MICROS);
 		}
 		else
 		{
-			subSeconds += UINT32_MAX - timestampStart.SubSeconds + timestampEnd.SubSeconds;
+			return -GetDeltaSeconds(timestampEnd, timestampStart);
 		}
-
-		seconds += subSeconds / (int32_t)ONE_SECOND_MICROS;
-
-		return seconds;
 	}
 };
 #endif
