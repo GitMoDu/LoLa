@@ -93,15 +93,7 @@ public:
 		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
 
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
-		const int32_t seconds = Timestamp::GetDeltaSeconds(LinkStartTimestamp, LinkTimestamp);
-		if (seconds < 0)
-		{
-			linkStatus.DurationSeconds = UINT32_MAX + seconds;
-		}
-		else
-		{
-			linkStatus.DurationSeconds = seconds;
-		}
+		linkStatus.DurationSeconds = Timestamp::GetElapsedSeconds(LinkStartTimestamp, LinkTimestamp);
 	}
 
 	const uint32_t GetLinkElapsed() final
