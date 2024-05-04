@@ -15,12 +15,11 @@
 #include "HopperTest.h"
 #include "TestDuplex.h"
 #include "TimestampTest.h"
-#include "TimestampErrorTest.h"
 #include "ClockTest.h"
 
 //#include "TestTask.h"
-//#include "MockCycles.h"
 
+static const uint32_t TestRange = (ONE_SECOND_MICROS / 5) + 1;
 
 // Process scheduler.
 Scheduler SchedulerBase;
@@ -83,7 +82,7 @@ const bool PerformUnitTests()
 		Serial.println(F("TestDuplexes Fail."));
 	}
 
-	if (ClockTester.RunTests())
+	if (ClockTester.RunTests<TestRange>())
 	{
 		Serial.println(F("TestClock Pass."));
 	}

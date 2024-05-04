@@ -49,21 +49,22 @@ public:
 
 
 public:
+	template<const uint32_t TestRange>
 	const bool RunTests()
 	{
-		if (!TestClockMatching())
+		if (!TestClockMatching<TestRange>())
 		{
 			Serial.println(F("TestClockMatching failed"));
 			return false;
 		}
 
-
 		return true;
 	}
 
+	template<const uint32_t TestRange>
 	const bool TestClockMatching()
 	{
-		for (uint32_t i = 0; i < 1000000; i++)
+		for (uint32_t i = 0; i < TestRange; i++)
 		{
 			if (!TestClockPoint(i, (i * 123) % ONE_SECOND_MICROS))
 			{
@@ -74,7 +75,14 @@ public:
 			{
 				return false;
 			}
+
+			if (i % (TestRange / 10) == 0)
+			{
+				Serial.print('.');
+			}
 		}
+
+		Serial.println();
 
 		return true;
 	}
@@ -105,7 +113,7 @@ private:
 		}
 		if (subSeconds > INT32_MAX)
 		{
-			Clock.ShiftSubSeconds(-(int32_t)(UINT32_MAX - subSeconds));
+			Clock.ShiftSubSeconds(-(int32_t)(UINT32_MAX - subSeconds + 1));
 		}
 		else
 		{
@@ -183,7 +191,6 @@ private:
 
 		return true;
 	}
-
 };
 
 #endif

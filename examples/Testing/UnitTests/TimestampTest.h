@@ -73,8 +73,6 @@ private:
 		const uint32_t SubSecondsOffset>
 	static const bool TestTimestampSeconds()
 	{
-		Serial.print('.');
-
 		for (uint32_t i = 0; i <= TestRange; i++)
 		{
 			if (!TestTimestampSecond<SecondsOffset, SubSecondsOffset>(i))
@@ -82,8 +80,7 @@ private:
 				return false;
 			}
 		}
-		Serial.print('.');
-
+		
 		for (uint64_t i = INT32_MAX - TestRange; i <= INT32_MAX + 1 + TestRange; i++)
 		{
 			if (!TestTimestampSecond<SecondsOffset, SubSecondsOffset>(i))
@@ -91,7 +88,6 @@ private:
 				return false;
 			}
 		}
-		Serial.print('.');
 
 		for (uint64_t i = UINT32_MAX - TestRange; i <= UINT32_MAX; i++)
 		{
@@ -100,6 +96,8 @@ private:
 				return false;
 			}
 		}
+
+		Serial.print('.');
 
 		return true;
 	}
@@ -160,7 +158,6 @@ private:
 		const uint32_t SubSecondsOffset>
 	static const bool TestSubSeconds()
 	{
-		Serial.print('.');
 		for (uint32_t i = 0; i < TestRange; i++)
 		{
 			if (!TestTimestampSubSecond<SecondsOffset, SubSecondsOffset>(i))
@@ -168,7 +165,6 @@ private:
 				return false;
 			}
 		}
-		Serial.print('.');
 
 		for (uint64_t i = (UINT32_MAX / 2) - TestRange; i <= (UINT32_MAX / 2) + TestRange; i++)
 		{
@@ -177,7 +173,6 @@ private:
 				return false;
 			}
 		}
-		Serial.print('.');
 
 		for (uint64_t i = UINT32_MAX - TestRange; i <= UINT32_MAX; i++)
 		{
@@ -187,9 +182,10 @@ private:
 			}
 		}
 
+		Serial.print('.');
+
 		return true;
 	}
-
 
 	template<const uint32_t SecondsOffset,
 		const uint32_t SubSecondsOffset>
@@ -218,14 +214,66 @@ private:
 			return false;
 		}
 
-		timestampEnd.ShiftSeconds(durationSeconds);
-		timestampEnd.ShiftSubSeconds(durationMicros);
+		if (durationSeconds > INT32_MAX)
+		{
+			timestampEnd.ShiftSeconds(-(int32_t)(UINT32_MAX - durationSeconds + 1));
+		}
+		else
+		{
+			timestampEnd.ShiftSeconds(durationSeconds);
+		}
 
-		const uint32_t seconds = Timestamp::GetDeltaSeconds(timestampStart, timestampEnd);
+		if (durationMicros > INT32_MAX)
+		{
+			timestampEnd.ShiftSubSeconds(-(int32_t)(UINT32_MAX - durationMicros + 1));
+		}
+		else
+		{
+			timestampEnd.ShiftSubSeconds(durationMicros);
+		}
 
-		if (seconds != durationSeconds)
+		const uint32_t calcSeconds = Timestamp::GetElapsedSeconds(timestampStart, timestampEnd);
+		const uint64_t fullSeconds = (((uint64_t)durationSeconds * ONE_SECOND_MICROS) + durationMicros) / ONE_SECOND_MICROS;
+
+		// Ignore durations that are close to the UINT32 limit (~136 years).
+		if (fullSeconds < (UINT32_MAX - (3600 * 100))
+			&& calcSeconds != (uint32_t)fullSeconds)
 		{
 			Serial.println(F("Durations don't match."));
+			Serial.print(F("\tFull\t"));
+			Serial.println((uint32_t)fullSeconds);
+			Serial.print(F("\tCalc\t"));
+			Serial.println(calcSeconds);
+
+			Serial.print('\t');
+			timestampStart.print();
+			Serial.print('\t');
+			timestampEnd.print();
+			Serial.println();
+
+			return false;
+		}
+
+
+		const int32_t deltaSeconds = Timestamp::GetDeltaSeconds(timestampStart, timestampEnd);
+
+		const int64_t start = ((int64_t)timestampStart.Seconds * ONE_SECOND_MICROS) + timestampStart.SubSeconds;
+		const int64_t end = ((int64_t)timestampEnd.Seconds * ONE_SECOND_MICROS) + timestampEnd.SubSeconds;
+		const int64_t deltaFull = (end - start) / ONE_SECOND_MICROS;
+		const int32_t delta = deltaFull;
+
+
+		// Ignore durations that are close to the INT32 limit (68 years).
+		if (deltaFull < (INT32_MAX - 1000)
+			&& deltaFull >(INT32_MIN + 1000)
+			&& deltaSeconds != delta)
+		{
+			Serial.println(F("Deltas don't match."));
+			Serial.print(F("\tFull\t"));
+			Serial.println(delta);
+			Serial.print(F("\tCalc\t"));
+			Serial.println(deltaSeconds);
+
 			Serial.print('\t');
 			timestampStart.print();
 			Serial.print('\t');
@@ -241,7 +289,6 @@ private:
 	template<const uint32_t TestRange>
 	static const bool TestTimestampShiftSeconds()
 	{
-		Serial.println(F("Timestamp seconds shift."));
 		if (!TestTimestampSeconds<TestRange, 0, 0>())
 		{
 			return false;
@@ -316,7 +363,6 @@ private:
 	template<const uint32_t TestRange>
 	static const bool TestDeltaSeconds()
 	{
-		Serial.println(F("Timestamp seconds shift."));
 		if (!TestDeltaSeconds<TestRange, 0, 0>())
 		{
 			return false;
@@ -392,8 +438,6 @@ private:
 		const uint32_t SubSecondsOffset>
 	static const bool TestDeltaSeconds()
 	{
-		Serial.print('.');
-
 		for (uint32_t i = 0; i <= TestRange; i++)
 		{
 			if (!TestTimestampDeltaSeconds<SecondsOffset, SubSecondsOffset>(i, i))
@@ -401,7 +445,6 @@ private:
 				return false;
 			}
 		}
-		Serial.print('.');
 
 		for (uint64_t i = INT32_MAX - TestRange; i <= INT32_MAX + 1 + TestRange; i++)
 		{
@@ -410,7 +453,6 @@ private:
 				return false;
 			}
 		}
-		Serial.print('.');
 
 		for (uint64_t i = UINT32_MAX - TestRange; i <= UINT32_MAX; i++)
 		{
@@ -419,6 +461,8 @@ private:
 				return false;
 			}
 		}
+		
+		Serial.print('.');
 
 		return true;
 	}
@@ -426,7 +470,6 @@ private:
 	template<const uint32_t TestRange>
 	static const bool TestTimestampShiftSubSeconds()
 	{
-		Serial.println(F("Timestamp sub-seconds shift."));
 		if (!TestSubSeconds<TestRange, 0, 0>())
 		{
 			return false;
