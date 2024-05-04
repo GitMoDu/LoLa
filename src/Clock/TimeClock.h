@@ -43,6 +43,14 @@ public:
 		return false;
 	}
 
+#if defined(LOLA_UNIT_TESTING)
+	void SetOffset(const uint32_t seconds = 0, const uint32_t subSeconds = 0)
+	{
+		OffsetSeconds = seconds;
+		OffsetSubSeconds = subSeconds;
+	}
+#endif
+
 public:
 	const uint32_t GetRollingMicros(const uint32_t cyclestamp)
 	{

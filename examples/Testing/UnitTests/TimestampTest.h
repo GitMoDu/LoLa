@@ -10,7 +10,7 @@
 class TimestampTest
 {
 private:
-	static const uint32_t Range = 100000;// ONE_SECOND_MICROS + 1;
+	//static const uint32_t Range = ONE_SECOND_MICROS + 1;
 
 private:
 	template<const uint32_t SecondsOffset,
@@ -190,6 +190,54 @@ private:
 		return true;
 	}
 
+
+	template<const uint32_t SecondsOffset,
+		const uint32_t SubSecondsOffset>
+	static const bool TestTimestampDeltaSeconds(const uint32_t durationSeconds, const uint32_t durationMicros)
+	{
+		Timestamp timestampStart{};
+		Timestamp timestampEnd{};
+
+		timestampStart.Seconds = SecondsOffset;
+		timestampStart.SubSeconds = SubSecondsOffset;
+		timestampStart.ConsolidateSubSeconds();
+
+		timestampEnd.Seconds = timestampStart.Seconds;
+		timestampEnd.SubSeconds = timestampStart.SubSeconds;
+
+		if (timestampStart.Seconds != timestampEnd.Seconds
+			|| timestampStart.SubSeconds != timestampEnd.SubSeconds)
+		{
+			Serial.println(F("Timestamps don't match at start."));
+			Serial.print('\t');
+			timestampStart.print();
+			Serial.print('\t');
+			timestampEnd.print();
+			Serial.println();
+
+			return false;
+		}
+
+		timestampEnd.ShiftSeconds(durationSeconds);
+		timestampEnd.ShiftSubSeconds(durationMicros);
+
+		const uint32_t seconds = Timestamp::GetDeltaSeconds(timestampStart, timestampEnd);
+
+		if (seconds != durationSeconds)
+		{
+			Serial.println(F("Durations don't match."));
+			Serial.print('\t');
+			timestampStart.print();
+			Serial.print('\t');
+			timestampEnd.print();
+			Serial.println();
+
+			return false;
+		}
+
+		return true;
+	}
+
 	template<const uint32_t TestRange>
 	static const bool TestTimestampShiftSeconds()
 	{
@@ -264,6 +312,116 @@ private:
 		return true;
 	}
 
+
+	template<const uint32_t TestRange>
+	static const bool TestDeltaSeconds()
+	{
+		Serial.println(F("Timestamp seconds shift."));
+		if (!TestDeltaSeconds<TestRange, 0, 0>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, 0, SHIFT_LOW>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, 0, SHIFT_MID>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, 0, SHIFT_HIGH>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_MID, 0>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_LOW, SHIFT_LOW>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_LOW, SHIFT_MID>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_LOW, SHIFT_HIGH>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_MID, 0>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_MID, SHIFT_LOW>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_MID, SHIFT_MID>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_MID, SHIFT_HIGH>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_HIGH, 0>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_HIGH, SHIFT_LOW>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_HIGH, SHIFT_MID>())
+		{
+			return false;
+		}
+		if (!TestDeltaSeconds<TestRange, SHIFT_HIGH, SHIFT_HIGH>())
+		{
+			return false;
+		}
+
+		Serial.println();
+
+		return true;
+	}
+
+	template<const uint32_t TestRange,
+		const uint32_t SecondsOffset,
+		const uint32_t SubSecondsOffset>
+	static const bool TestDeltaSeconds()
+	{
+		Serial.print('.');
+
+		for (uint32_t i = 0; i <= TestRange; i++)
+		{
+			if (!TestTimestampDeltaSeconds<SecondsOffset, SubSecondsOffset>(i, i))
+			{
+				return false;
+			}
+		}
+		Serial.print('.');
+
+		for (uint64_t i = INT32_MAX - TestRange; i <= INT32_MAX + 1 + TestRange; i++)
+		{
+			if (!TestTimestampDeltaSeconds<SecondsOffset, SubSecondsOffset>((uint32_t)i, (uint32_t)i))
+			{
+				return false;
+			}
+		}
+		Serial.print('.');
+
+		for (uint64_t i = UINT32_MAX - TestRange; i <= UINT32_MAX; i++)
+		{
+			if (!TestTimestampDeltaSeconds<SecondsOffset, SubSecondsOffset>((uint32_t)i, (uint32_t)i))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
 
 	template<const uint32_t TestRange>
 	static const bool TestTimestampShiftSubSeconds()
@@ -352,6 +510,12 @@ public:
 		if (!TestTimestampShiftSubSeconds<Range>())
 		{
 			Serial.println(F("TestTimestampShiftSubSeconds failed"));
+			return false;
+		}
+
+		if (!TestDeltaSeconds<Range>())
+		{
+			Serial.println(F("TestTimestampDeltaSeconds failed"));
 			return false;
 		}
 

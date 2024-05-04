@@ -16,6 +16,7 @@
 #include "TestDuplex.h"
 #include "TimestampTest.h"
 #include "TimestampErrorTest.h"
+#include "ClockTest.h"
 
 //#include "TestTask.h"
 //#include "MockCycles.h"
@@ -24,6 +25,8 @@
 // Process scheduler.
 Scheduler SchedulerBase;
 //
+
+ClockTest ClockTester(SchedulerBase);
 
 void Halt()
 {
@@ -80,6 +83,16 @@ const bool PerformUnitTests()
 		Serial.println(F("TestDuplexes Fail."));
 	}
 
+	if (ClockTester.RunTests())
+	{
+		Serial.println(F("TestClock Pass."));
+	}
+	else
+	{
+		allTestsOk = false;
+		Serial.println(F("TestClock Fail."));
+	}
+
 	if (TimestampTest::RunTests<TestRange>())
 	{
 		Serial.println(F("TestTimestamp Pass."));
@@ -88,16 +101,6 @@ const bool PerformUnitTests()
 	{
 		allTestsOk = false;
 		Serial.println(F("TestTimestamp Fail."));
-	}
-
-	if (TimestampErrorTest::RunTests<TestRange>())
-	{
-		Serial.println(F("TestTimestampError Pass."));
-	}
-	else
-	{
-		allTestsOk = false;
-		Serial.println(F("TestTimestampError Fail."));
 	}
 
 	return allTestsOk;
