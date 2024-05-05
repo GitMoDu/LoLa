@@ -86,6 +86,11 @@ public:
 		, LoLaLink(loLaLink)
 	{}
 
+	const bool HasLink() const
+	{
+		return LoLaLink->HasLink();
+	}
+
 	virtual const bool Setup()
 	{
 		return LoLaLink != nullptr;
