@@ -13,6 +13,7 @@
 #include "Services\Template\TemplateLinkService.h"
 #include "Services\Discovery\DiscoveryDefinitions.h"
 #include "Services\Discovery\AbstractDiscoveryService.h"
+#include "Services\Delivery\AbstractDeliveryService.h"
 ///
 
 /// Ready-to-use Link Services

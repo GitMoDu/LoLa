@@ -32,10 +32,13 @@
 //#define LOLA_DEBUG_LINK_CLOCK
 
 // Test Discovery Service.
-#define LINK_TEST_DISCOVERY
+//#define LINK_TEST_DISCOVERY
 
 // Test Surface Service.
 //#define LINK_TEST_SURFACE
+
+// Test Delivery Service.
+#define LINK_TEST_DELIVERY
 
 // Enable to log raw packets in transit.
 //#define PRINT_PACKETS
@@ -78,6 +81,10 @@
 #if defined(LINK_TEST_DISCOVERY)
 #include "../src/Testing/DiscoveryTestService.h"
 #endif
+#if defined(LINK_TEST_DELIVERY)
+#include "../src/Testing/DeliveryTestService.h"
+#endif
+
 #if defined(LINK_TEST_SURFACE)
 #include "../src/Testing/ExampleSurface.h"
 #if defined(USE_N64_CONTROLLER) || defined(USE_GAMECUBE_CONTROLLER)
@@ -180,6 +187,11 @@ DiscoveryTestService<'S', 0, 12345> ServerDiscovery(SchedulerBase, &LinkServer);
 DiscoveryTestService<'C', 0, 12345> ClientDiscovery(SchedulerBase, &LinkClient);
 #endif
 
+#if defined(LINK_TEST_DELIVERY)
+DeliveryTestService<'S', 1, 123456, true> ServerDelivery(SchedulerBase, &LinkServer);
+DeliveryTestService<'C', 1, 123456, false> ClientDelivery(SchedulerBase, &LinkClient);
+#endif
+
 #if defined(LINK_TEST_SURFACE)
 ExampleSurface ReadSurface{};
 SurfaceReader<1, 23456> ClientReader(SchedulerBase, &LinkClient, &ReadSurface);
@@ -258,6 +270,24 @@ void setup()
 	}
 #endif
 
+#if defined(LINK_TEST_DELIVERY)
+	// Setup Test Discovery services.
+	if (!ServerDelivery.Setup())
+	{
+#ifdef DEBUG
+		Serial.println(F("ServerDelivery setup failed."));
+#endif
+		BootError();
+	}
+	if (!ClientDelivery.Setup())
+	{
+#ifdef DEBUG
+		Serial.println(F("ClientDelivery setup failed."));
+#endif
+		BootError();
+	}
+#endif
+
 #if defined(LINK_TEST_SURFACE)
 	// Setup Test Sync Surface services.
 	if (!ServerWriter.Setup())
@@ -304,14 +334,14 @@ void setup()
 	// Start Link instances.
 	if (LinkServer.Start() && LinkClient.Start())
 	{
-#ifdef DEBUG_LOLA_LINK
+#if defined(DEBUG_LOLA)
 		Serial.print(millis());
 		Serial.println(F("\tLoLa Links have started."));
 #endif
 	}
 	else
 	{
-#ifdef DEBUG_LOLA_LINK
+#if defined(DEBUG_LOLA)
 		Serial.println(F("Link Start Failed."));
 #endif
 		BootError();
