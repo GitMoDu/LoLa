@@ -98,6 +98,8 @@ struct HeaderDefinition
 /// <summary>
 /// Wraps Payload as |Header|SubPayload...|
 /// </summary>
+/// <typeparam name="Header"></typeparam>
+/// <typeparam name="SubPayloadSize">[0 ; LoLaPacketDefinition::MAX_PAYLOAD_SIZE - 1]</typeparam>
 template<const uint8_t Header,
 	const uint8_t SubPayloadSize>
 struct TemplateHeaderDefinition : public HeaderDefinition

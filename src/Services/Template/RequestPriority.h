@@ -33,19 +33,19 @@ enum class RequestPriority : uint8_t
 	/// <summary>
 	/// ASAP (after RESERVED_FOR_LINK), with some co-operative margin.
 	/// Minimum recommended priority.
-	/// Recommended for critical-latency (< 1ms).
+	/// Recommended for critical-latency (under 1ms).
 	/// </summary>
 	FAST = 20,
 
 	/// <summary>
 	/// Standard priority for a quick delivery. Should only skip 1 duplex on high congestion.
-	/// Recommended for lower-latency (< Duplex Period).
+	///	Recommended for lower-latency (under Duplex Period).
 	/// </summary>
 	REGULAR = 75,
 
 	/// <summary>
 	/// Should skip 1 duplex most of the time, unless there is medium or low congestion.
-	/// Recommended higher-latency (> Duplex Period).
+	/// Recommended for higher-latency (over Duplex Period).
 	/// </summary>
 	IRREGULAR = 130,
 
