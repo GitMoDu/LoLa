@@ -17,8 +17,8 @@ class AbstractDeliveryService
 	: public AbstractDiscoveryService<Port, ServiceId, LoLaPacketDefinition::MAX_PAYLOAD_SIZE>
 {
 private:
-	static constexpr uint32_t DELIVERY_TIMEOUT_MILLIS = 500;
-	static constexpr uint32_t ACK_TIMEOUT_MILLIS = 30000;
+	static constexpr uint32_t DELIVERY_TIMEOUT_MILLIS = 1000;
+	static constexpr uint32_t ACK_TIMEOUT_MILLIS = 5000;
 
 private:
 	using BaseClass = AbstractDiscoveryService<Port, ServiceId, LoLaPacketDefinition::MAX_PAYLOAD_SIZE>;
@@ -215,7 +215,6 @@ protected:
 		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
 		case DeliveryDefinitions::DeliveryRequestDefinition::HEADER:
-			// Handler as receiver.
 			switch (RxState)
 			{
 			case RxStateEnum::None:
