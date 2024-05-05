@@ -80,12 +80,6 @@ protected:
 	virtual void OnLinkedServiceRun() { Task::disable(); }
 
 	/// <summary>
-	/// Fires when the service packet send request
-	///  failed after transmission request.
-	/// </summary>
-	virtual void OnLinkedSendRequestFail() { }
-
-	/// <summary>
 	/// After discovery is completed, any non-discovery packets will be routed to the service.
 	/// </summary>
 	virtual void OnLinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
@@ -335,19 +329,6 @@ protected:
 		case DiscoveryStateEnum::Running:
 			OnLinkedServiceRun();
 			break;
-		default:
-			break;
-		}
-	}
-
-	virtual void OnSendRequestTimeout() final
-	{
-		switch (DiscoveryState)
-		{
-		case DiscoveryStateEnum::Running:
-			OnLinkedSendRequestFail();
-			break;
-			//TODO: handle internal cases.
 		default:
 			break;
 		}

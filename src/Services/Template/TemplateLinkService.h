@@ -25,10 +25,6 @@ class TemplateLinkService : protected Task
 	, public virtual ILinkPacketListener
 {
 private:
-	static constexpr uint32_t REQUEST_TIMEOUT_MILLIS = 1000;
-	static constexpr uint32_t REQUEST_TIMEOUT_MICROS = 1000 * REQUEST_TIMEOUT_MILLIS;
-
-private:
 	static constexpr uint16_t PRIORITY_NEGATIVE_SCALE = 275;
 	static constexpr uint8_t PRIORITY_POSITIVE_SCALE = 15;
 	static constexpr uint8_t PRIORITY_PERIOD_SCALE = 2;
@@ -56,11 +52,6 @@ protected:
 	/// Last chance to update payload right before transmission.
 	/// </summary>
 	virtual void OnPreSend() { }
-
-	/// <summary>
-	/// The requested packet to send has failed.
-	/// </summary>
-	virtual void OnSendRequestTimeout() { }
 
 	/// <summary>
 	/// The service class can ride this task's callback, when no send is being performed.
@@ -119,14 +110,6 @@ public:
 						PayloadSize = 0;
 						LastSent = micros();
 					}
-					else if ((micros() - RequestStart) >= REQUEST_TIMEOUT_MICROS)
-					{
-						PayloadSize = 0;
-#if defined(DEBUG_LOLA)
-						Serial.println(F("Tx Failed Timeout."));
-#endif
-						OnSendRequestTimeout();
-					}
 					else
 					{
 						// Transmit failed on Transceiver, try again until time-out.
@@ -138,16 +121,7 @@ public:
 				else
 				{
 					LOLA_RTOS_RESUME();
-					// Can't send now, try again until timeout.
-					if (micros() - RequestStart >= REQUEST_TIMEOUT_MICROS)
-					{
-						// Send timed out.
-						PayloadSize = 0;
-#if defined(DEBUG_LOLA)
-						Serial.println(F("Tx Timeout."));
-#endif
-						OnSendRequestTimeout();
-					}
+					// Can't send now, try again later.
 				}
 			}
 			else if (GetPriorityScore(LoLaLink->GetSendElapsed(), micros() - RequestStart) >= Priority)
@@ -199,7 +173,7 @@ protected:
 	/// </summary>
 	void ResetPacketThrottle()
 	{
-		LastSent = micros() - REQUEST_TIMEOUT_MILLIS;
+		LastSent = micros() - LoLaLink->GetPacketThrottlePeriod();
 	}
 
 	/// <summary>
