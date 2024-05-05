@@ -32,6 +32,14 @@ Create a seamless bi-directional communication, real-time system, for Remote Con
 - 1-second rolling one-time-password combined with 16 bit counter, supports up 65535 packets/s before Nonce re-use.
 - No CRC needed on Transceiver.
 
+## Dependencies
+- TaskScheduler: https://github.com/arkhipenko/TaskScheduler
+- Memory efficient tracker: https://github.com/GitMoDu/BitTracker.git
+- Ascon128, Xoodyak and Poly1305: https://github.com/rweather/arduinolibs
+- Fletcher 16 CRC: https://github.com/RobTillaart/Fletcher
+- Driver for nRF24: https://github.com/nRF24/RF24
+- PSRNG: https://www.pcg-random.org
+- [EXPERIMENTAL]Micro Elyptic Curve Cryptography: https://github.com/kmackay/micro-ecc
 
 # LinkService
 TemplateLinkService:
