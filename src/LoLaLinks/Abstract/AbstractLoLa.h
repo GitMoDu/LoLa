@@ -4,17 +4,17 @@
 #define _ABSTRACT_LOLA_
 
 
-#include "..\..\Link\ILoLaLink.h"
-#include "..\..\Link\ILinkRegistry.h"
-#include "..\..\Link\LoLaLinkDefinition.h"
+#include "../../Link\ILoLaLink.h"
+#include "../../Link\ILinkRegistry.h"
+#include "../../Link\LoLaLinkDefinition.h"
 
-#include "..\..\Link\PacketEventEnum.h"
-#include "..\..\Link\LoLaPacketService.h"
+#include "../../Link/PacketEventEnum.h"
+#include "../../Link/LoLaPacketService.h"
 
-#include "..\..\Clock\LinkClock.h"
-#include "..\..\Crypto\LoLaCryptoEncoderSession.h"
+#include "../../Clock/LinkClock.h"
+#include "../../Crypto/LoLaCryptoEncoderSession.h"
 
-#include "..\..\Services\Template\TemplateLinkService.h"
+#include "../../Services/Template/TemplateLinkService.h"
 
 /// <summary>
 /// LoLa Link base (AbstractLoLa) is a special case of a TemplateLinkService,

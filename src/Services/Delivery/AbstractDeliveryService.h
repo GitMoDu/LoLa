@@ -3,7 +3,7 @@
 #ifndef _ABSTRACT_DELIVERY_SERVICE_
 #define _ABSTRACT_DELIVERY_SERVICE_
 
-#include "..\..\Services\Discovery\AbstractDiscoveryService.h"
+#include "../../Services/Discovery/AbstractDiscoveryService.h"
 #include "DeliveryDefinitions.h"
 
 /// <summary>

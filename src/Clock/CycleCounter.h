@@ -6,7 +6,7 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ICycles.h>
+#include "../ClockSources/ICycles.h"
 
 /// <summary>
 /// Task based Cycle Counter.

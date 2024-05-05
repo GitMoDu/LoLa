@@ -2,7 +2,7 @@
 #ifndef _ARDUINO_CYCLES_h
 #define _ARDUINO_CYCLES_h
 
-#include <ICycles.h>
+#include "ICycles.h"
 
 /// <summary>
 /// Uses Arduino micros() as a system cycle counter.

@@ -3,7 +3,7 @@
 #ifndef _AVR_ENTROPY_h
 #define _AVR_ENTROPY_h
 
-#include <IEntropy.h>
+#include "IEntropy.h"
 #include <Arduino.h>
 
 /// <summary>

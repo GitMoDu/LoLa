@@ -3,7 +3,7 @@
 #ifndef _ESP32_ENTROPY_h
 #define _ESP32_ENTROPY_h
 
-#include <IEntropy.h>
+#include "IEntropy.h"
 #include <esp_mac.h>
 #include <esp_random.h>
 

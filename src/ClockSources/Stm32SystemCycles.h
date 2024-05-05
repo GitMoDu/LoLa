@@ -2,7 +2,7 @@
 #ifndef _STM32_SYSTEM_CLOCK_CYCLES_h
 #define _STM32_SYSTEM_CLOCK_CYCLES_h
 
-#include <ICycles.h>
+#include "ICycles.h"
 
 /// <summary>
 /// Uses STM32 System Clock Tick as the cycle counter.

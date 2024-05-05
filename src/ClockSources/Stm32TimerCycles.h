@@ -2,7 +2,7 @@
 #ifndef _STM32_TIMER_CYCLES_h
 #define _STM32_TIMER_CYCLES_h
 
-#include <ICycles.h>
+#include "ICycles.h"
 #include <Arduino.h>
 
 /// <summary>

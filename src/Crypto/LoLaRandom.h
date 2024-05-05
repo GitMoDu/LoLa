@@ -3,7 +3,7 @@
 #ifndef _LOLA_RANDOM_h
 #define _LOLA_RANDOM_h
 
-#include <IEntropy.h>
+#include "../EntropySources/IEntropy.h"
 
 /*
 * https://www.pcg-random.org
@@ -14,6 +14,7 @@
 /// <summary>
 /// LoLa Random number generator.
 /// Cryptographic Secure(ish) Random Number Generator.
+/// Based on https://www.pcg-random.org
 /// </summary>
 class LoLaRandom
 {

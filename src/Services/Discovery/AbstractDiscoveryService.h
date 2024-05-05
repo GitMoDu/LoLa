@@ -3,7 +3,7 @@
 #ifndef _ABSTRACT_DISCOVERY_SERVICE_
 #define _ABSTRACT_DISCOVERY_SERVICE_
 
-#include "..\..\Services\Template\TemplateLinkService.h"
+#include "../../Services/Template/TemplateLinkService.h"
 #include "DiscoveryDefinitions.h"
 
 using namespace DiscoveryDefinitions;

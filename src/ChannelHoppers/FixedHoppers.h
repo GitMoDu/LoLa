@@ -3,7 +3,7 @@
 #ifndef _FIXED_HOPPERS_h
 #define _FIXED_HOPPERS_h
 
-#include <IChannelHop.h>
+#include "ChannelHoppers/IChannelHop.h"
 
 template<const uint8_t BroadcastChannel,
 	const uint8_t PermanentChannel>

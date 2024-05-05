@@ -8,8 +8,8 @@
 
 #include "RequestPriority.h"
 
-#include "..\..\Link\LoLaPacketDefinition.h"
-#include "..\..\Link\ILoLaLink.h"
+#include "../../Link/LoLaPacketDefinition.h"
+#include "../../Link/ILoLaLink.h"
 
 
 /// <summary>

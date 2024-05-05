@@ -3,8 +3,8 @@
 #ifndef _LOLA_ADDRESS_MATCH_LINK_CLIENT_
 #define _LOLA_ADDRESS_MATCH_LINK_CLIENT_
 
-#include "..\Abstract\AbstractLoLaLinkClient.h"
-#include "..\..\Crypto\LoLaCryptoAmSession.h"
+#include "../Abstract/AbstractLoLaLinkClient.h"
+#include "../../Crypto/LoLaCryptoAmSession.h"
 
 /// <summary>
 /// LoLa Address Match Link Client.

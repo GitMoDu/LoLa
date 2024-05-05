@@ -6,7 +6,7 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include "..\..\LoLa\src\Clock\TuneClock.h"
+#include "../../LoLa/src/Clock/TuneClock.h"
 
 class ClockDetunerTask : private Task
 {

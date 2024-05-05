@@ -2,7 +2,7 @@
 #ifndef _ARDUINO_ENTROPY_h
 #define _ARDUINO_ENTROPY_h
 
-#include <IEntropy.h>
+#include "IEntropy.h"
 #include <Arduino.h>
 
 /// <summary>

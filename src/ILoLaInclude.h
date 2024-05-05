@@ -7,37 +7,37 @@
 
 /// Entropy Sources
 #if defined(ARDUINO)
-#include "EntropySources\ArduinoEntropy.h"
+#include "EntropySources/ArduinoEntropy.h"
 #endif
 #if defined(ARDUINO_ARCH_AVR)
-#include "EntropySources\AvrEntropy.h"
+#include "EntropySources/AvrEntropy.h"
 #elif defined(ARDUINO_ARCH_STM32F1)
-#include "EntropySources\Stm32Entropy.h"
+#include "EntropySources/Stm32Entropy.h"
 #elif defined(ARDUINO_ARCH_ESP8266)
-#include "EntropySources\Esp8266Entropy.h"
+#include "EntropySources/Esp8266Entropy.h"
 #elif defined(ARDUINO_ARCH_ESP32)
-#include "EntropySources\Esp32Entropy.h"
+#include "EntropySources/Esp32Entropy.h"
 #endif 
 ///
 
 /// Duplex Options
-#include "Duplexes\Duplexes.h"
+#include "Duplexes/Duplexes.h"
 ///
 
 /// Channel Hopper Options
-#include "ChannelHoppers\FixedHoppers.h"
-#include "ChannelHoppers\TimedHoppers.h"
+#include "ChannelHoppers/FixedHoppers.h"
+#include "ChannelHoppers/TimedHoppers.h"
 ///
 
 /// Clock Timer Sources
 #if defined(ARDUINO)
-#include "ClockSources\ArduinoCycles.h"
+#include "ClockSources/ArduinoCycles.h"
 #endif
 #if defined(ARDUINO_ARCH_AVR)
-//#include "TimerSources\AvrTimer1Source.h"
+//#include "TimerSources/AvrTimer1Source.h"
 #endif
 #if defined(ARDUINO_ARCH_STM32F1)
-#include "ClockSources\Stm32SystemCycles.h"
+#include "ClockSources/Stm32SystemCycles.h"
 #endif
 #if defined(ARDUINO_ARCH_ESP8266)
 #endif
@@ -47,24 +47,23 @@
 
 
 /// Available Link Modules
-#include "LoLaLinks\LolaAddressMatchLink\LoLaAddressMatchLinkServer.h"
-#include "LoLaLinks\LolaAddressMatchLink\LoLaAddressMatchLinkClient.h"
+#include "LoLaLinks\LolaAddressMatchLink/LoLaAddressMatchLinkServer.h"
+#include "LoLaLinks\LolaAddressMatchLink/LoLaAddressMatchLinkClient.h"
 ///
 
 
 /// Available Transceiver Drivers
-#include "LoLaTransceivers\VirtualTransceiver\VirtualTransceiver.h"
-#include "LoLaTransceivers\UartTransceiver\UartTransceiver.h"
-#include "LoLaTransceivers\nRF24Transceiver\nRF24Transceiver.h"
-#include "LoLaTransceivers\Si446xTransceiver\Si4463Transceiver_433_70_250.h"
-#include "LoLaTransceivers\Sx12Transceiver\Sx12Transceiver.h"
+#include "LoLaTransceivers/VirtualTransceiver/VirtualTransceiver.h"
+#include "LoLaTransceivers/UartTransceiver/UartTransceiver.h"
+#include "LoLaTransceivers/nRF24Transceiver/nRF24Transceiver.h"
+#include "LoLaTransceivers/Si446xTransceiver/Si4463Transceiver_433_70_250.h"
 #if defined(ARDUINO_ARCH_ESP8266)
-#include "LoLaTransceivers\EspNowTransceiver\Esp8266NowTransceiver.h"
+#include "LoLaTransceivers/EspNowTransceiver/Esp8266NowTransceiver.h"
 #elif defined(ARDUINO_ARCH_ESP32)
-#include "LoLaTransceivers\EspNowTransceiver\Esp32NowTransceiver.h"
+#include "LoLaTransceivers/EspNowTransceiver/Esp32NowTransceiver.h"
 #endif
 #if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1)
-#include "LoLaTransceivers\PimTransceiver\PimTransceiver.h"
+#include "LoLaTransceivers/PimTransceiver/PimTransceiver.h"
 #endif
 ///
 

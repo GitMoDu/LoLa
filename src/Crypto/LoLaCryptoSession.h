@@ -3,10 +3,9 @@
 #ifndef _LOLA_CRYPTO_SESSION_h
 #define _LOLA_CRYPTO_SESSION_h
 
-#include <IEntropy.h>
-
-#include "..\Link\LoLaLinkSession.h"
-#include "..\Link\LoLaCryptoDefinition.h"
+#include "../Link/LoLaLinkSession.h"
+#include "../Link/LoLaCryptoDefinition.h"
+#include "../EntropySources/IEntropy.h"
 
 #include "LoLaRandom.h"
 #include "SeedXorShifter.h"

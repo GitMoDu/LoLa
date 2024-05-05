@@ -3,7 +3,7 @@
 #ifndef _STM32_ENTROPY_h
 #define _STM32_ENTROPY_h
 
-#include <IEntropy.h>
+#include "IEntropy.h"
 #include <libmaple/adc.h>
 
 /// <summary>

@@ -4,8 +4,8 @@
 
 
 #include "AbstractLoLaLinkPacket.h"
-#include "..\..\Link\LinkDefinitions.h"
-#include "..\..\Link\ReportTracker.h"
+#include "../../Link/LinkDefinitions.h"
+#include "../../Link/ReportTracker.h"
 
 using namespace LinkDefinitions;
 

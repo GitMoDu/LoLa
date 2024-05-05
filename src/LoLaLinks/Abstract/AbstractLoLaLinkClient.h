@@ -3,11 +3,11 @@
 #ifndef _ABSTRACT_LOLA_LINK_CLIENT_
 #define _ABSTRACT_LOLA_LINK_CLIENT_
 
-#include "..\Abstract\AbstractLoLaLink.h"
-#include "..\..\Link\TimedStateTransition.h"
-#include "..\..\Link\LinkClockTracker.h"
-#include "..\..\Link\LinkClockSync.h"
-#include "..\..\Link\PreLinkDuplex.h"
+#include "AbstractLoLaLink.h"
+#include "../../Link/TimedStateTransition.h"
+#include "../../Link/LinkClockTracker.h"
+#include "../../Link/LinkClockSync.h"
+#include "../../Link/PreLinkDuplex.h"
 
 class AbstractLoLaLinkClient : public AbstractLoLaLink
 {

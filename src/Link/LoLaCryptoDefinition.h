@@ -4,8 +4,8 @@
 #define _LOLA_CRYPTO_DEFINITION_h
 
 #include <stdint.h>
-#include "..\Link\LoLaPacketDefinition.h"
-#include "..\Link\LoLaLinkDefinition.h"
+#include "../Link/LoLaPacketDefinition.h"
+#include "../Link/LoLaLinkDefinition.h"
 
 namespace LoLaCryptoDefinition
 {

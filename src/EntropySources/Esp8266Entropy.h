@@ -3,7 +3,7 @@
 #ifndef _ESP8266_ENTROPY_h
 #define _ESP8266_ENTROPY_h
 
-#include <IEntropy.h>
+#include "IEntropy.h"
 #include <wl_definitions.h>
 #include <esp8266_peri.h>
 
