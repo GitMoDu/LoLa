@@ -9,8 +9,8 @@
 class LinkQualityTracker
 {
 private:
-	static constexpr uint8_t DROP_REFERENCE = 200;
-	static constexpr uint8_t RX_DROP_FILTER_WEIGHT = 240;
+	static constexpr uint8_t DROP_REFERENCE = 8;
+	static constexpr uint8_t RX_DROP_FILTER_WEIGHT = 220;
 	static constexpr uint8_t TX_DROP_FILTER_WEIGHT = 110;
 
 	static constexpr uint8_t RX_RSSI_FILTER_WEIGHT = 200;

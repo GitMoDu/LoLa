@@ -10,10 +10,6 @@ template<const uint8_t FilterScale,
 class AbstractDropRateAccumulator
 {
 private:
-	static constexpr uint16_t REFERENCE_MILLIS = 1000;
-	static constexpr uint8_t DROP_RATE_SCALE = 10;
-
-private:
 	EmaFilter16<FilterScale> DropRateFilter{};
 
 protected:
@@ -61,7 +57,7 @@ public:
 
 	void Consume(const uint32_t accumulationPeriod)
 	{
-		const uint16_t accumulatedRateScaled = ((uint32_t)Accumulator * REFERENCE_MILLIS * DROP_RATE_SCALE) / accumulationPeriod;
+		const uint16_t accumulatedRateScaled = ((uint32_t)Accumulator * ONE_SECOND_MILLIS) / (accumulationPeriod / ONE_MILLI_MICROS);
 		DropRateFilter.Step(accumulatedRateScaled);
 		Accumulator = 0;
 	}
