@@ -1,7 +1,7 @@
-// ILinkServiceInclude.h
+// ILinkServices.h
 
-#ifndef _I_LINK_SERVICE_INCLUDE_h
-#define _I_LINK_SERVICE_INCLUDE_h
+#ifndef _I_LINK_SERVICES_INCLUDE_h
+#define _I_LINK_SERVICES_INCLUDE_h
 
 #include <LoLaDefinitions.h>
 

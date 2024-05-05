@@ -3,7 +3,7 @@
 #ifndef _DISCOVERY_DEFINITIONS_h
 #define _DISCOVERY_DEFINITIONS_h
 
-#include "../../Link/LoLaPacketDefinition.h"
+#include <ILinkServices.h>
 
 namespace DiscoveryDefinitions
 {

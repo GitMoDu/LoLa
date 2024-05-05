@@ -3,7 +3,7 @@
 #ifndef _DELIVERY_DEFINITIONS_h
 #define _DELIVERY_DEFINITIONS_h
 
-#include "ILinkServiceInclude.h"
+#include <ILinkServices.h>
 
 struct DeliveryDefinitions
 {
