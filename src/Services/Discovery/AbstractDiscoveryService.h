@@ -31,9 +31,8 @@ class AbstractDiscoveryService
 private:
 	using BaseClass = TemplateLinkService<DiscoveryDefinition::MaxPayloadSize(MaxSendPayloadSize)>;
 
-	static constexpr uint32_t DISCOVERY_SLOT_PERIOD_MICROS = LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS * 4;
-	static constexpr uint32_t DISCOVERY_INCREMENTAL_PERIOD_MICROS = (DISCOVERY_SLOT_PERIOD_MICROS / 2) - 1;
-	static constexpr uint32_t DISCOVERY_TIMEOUT_MICROS = 3000000;
+	static constexpr uint32_t DISCOVERY_SLOT_PERIOD_MICROS = LoLaLinkDefinition::DUPLEX_PERIOD_MAX_MICROS * 5;
+	static constexpr uint32_t DISCOVERY_TIMEOUT_MICROS = 10000000;
 	static constexpr uint16_t DISCOVERY_SLOT_TOLERANCE_MICROS = 1000;
 	static constexpr uint8_t DISCOVERY_SLOT_COUNT = DiscoveryDefinition::SLOT_MASK;
 
