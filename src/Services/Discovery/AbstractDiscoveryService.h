@@ -160,7 +160,9 @@ public:
 
 				if (remoteReject)
 				{
-					Serial.println(F("Received remote shutdown."));
+#if defined(DEBUG_LOLA)
+					Serial.println(F("Discovery remote shutdown."));
+#endif
 					if (DiscoveryState == DiscoveryStateEnum::Running)
 					{
 						RequestSendCancel();
@@ -318,10 +320,6 @@ protected:
 			}
 			else if (LoLaLink->GetLinkElapsed() >= GetTurnoverTimestamp(LocalSlot))
 			{
-				Serial.print(F("Discovery Success after "));
-				Serial.print(LoLaLink->GetLinkElapsed());
-				Serial.print(F("us Slot = "));
-				Serial.println(LocalSlot);
 				DiscoveryState = DiscoveryStateEnum::Running;
 				OnServiceStarted();
 			}
@@ -379,10 +377,12 @@ private:
 			DiscoveryState = DiscoveryStateEnum::WaitingForLink;
 			RequestSendCancel();
 
+#if defined(DEBUG_LOLA)
 			Serial.print(F("Discovery Timed out after "));
 			Serial.print(LoLaLink->GetLinkElapsed());
 			Serial.print(F("us Slot = "));
 			Serial.println(LocalSlot);
+#endif
 			OnDiscoveryFailed();
 
 			return true;
