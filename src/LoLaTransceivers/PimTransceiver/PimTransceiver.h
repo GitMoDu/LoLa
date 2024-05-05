@@ -4,7 +4,7 @@
 #ifndef _PIM_TRANSCEIVER_h
 #define _PIM_TRANSCEIVER_h
 
-#include <ILoLaTransceiver.h>
+#include <ILoLaTransceiverInclude.h>
 
 #define PIM_NO_CHECKS
 #include <PulsePacketTaskDriver.h>

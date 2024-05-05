@@ -3,11 +3,7 @@
 #ifndef _I_LOLA_INCLUDE_h
 #define _I_LOLA_INCLUDE_h
 
-#include <LoLaDefinitions.h>
 #include <ILinkServiceInclude.h>
-
-#include "Link\ILoLaLink.h"
-#include "Link\LoLaLinkDefinition.h"
 
 /// Entropy Sources
 #if defined(ARDUINO)

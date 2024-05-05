@@ -7,11 +7,10 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
+#include <ILoLaTransceiverInclude.h>
+
 #include <SPI.h>
-
 #include "nRF24Support.h"
-
-#include <ILoLaTransceiver.h>
 
 // https://github.com/nRF24/RF24
 #define RF24_SPI_PTR

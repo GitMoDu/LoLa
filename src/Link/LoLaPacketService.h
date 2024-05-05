@@ -7,7 +7,7 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-#include <ILoLaTransceiver.h>
+#include <ILoLaTransceiverInclude.h>
 #include "IPacketServiceListener.h"
 
 
