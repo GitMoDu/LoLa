@@ -18,7 +18,10 @@
 class LoLaCryptoEncoderSession : public LoLaCryptoSession
 {
 private:
-	Ascon128 CryptoCypher{}; // Cryptographic cypher.
+	/// <summary>
+	/// Cryptographic cypher.
+	/// </summary>
+	Ascon128 CryptoCypher{};
 
 public:
 	LoLaCryptoEncoderSession()
@@ -34,6 +37,7 @@ public:
 	}
 
 	/// <summary>
+	/// Validates and decodes packet with implicit addressing, key and token.
 	/// </summary>
 	/// <param name="inPacket"></param>
 	/// <param name="data"></param>
@@ -97,7 +101,10 @@ public:
 	}
 
 	/// <summary>
+	/// Validates and decodes packet without implicit addressing, key or token.
 	/// </summary>
+	/// <param name="inPacket"></param>
+	/// <param name="data"></param>
 	/// <param name="counter"></param>
 	/// <param name="dataSize"></param>
 	/// <returns>True if packet was accepted.</returns>
@@ -137,7 +144,7 @@ public:
 	}
 
 	/// <summary>
-	/// Encodes HMAC without implicit addressing, key or token.
+	/// Encodes packet without implicit addressing, key or token.
 	/// </summary>
 	/// <param name="data"></param>
 	/// <param name="outPacket"></param>
@@ -174,7 +181,7 @@ public:
 	}
 
 	/// <summary>
-	/// 
+	/// Encodes packet with implicit addressing, key and token.
 	/// </summary>
 	/// <param name="data"></param>
 	/// <param name="outPacket"></param>

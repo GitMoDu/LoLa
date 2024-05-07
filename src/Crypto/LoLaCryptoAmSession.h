@@ -119,13 +119,11 @@ public:
 	/// <summary>
 	/// Long operations, cannot be done in line with linking protocol.
 	/// </summary>
-	/// <returns></returns>
-	const bool Calculate()
+	void Calculate()
 	{
 		switch (AmState)
 		{
 		case AmEnum::NoPartner:
-			return false;
 			break;
 		case AmEnum::CalculatingLinkingToken:
 			CalculateLinkingToken(LocalAddress, PartnerAddress, LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE);
@@ -145,12 +143,9 @@ public:
 			AmState = AmEnum::AmCached;
 			break;
 		case AmEnum::AmCached:
-			return true;
 		default:
 			break;
 		}
-
-		return false;
 	}
 
 	const bool AddressCollision()
