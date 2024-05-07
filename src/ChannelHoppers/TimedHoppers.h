@@ -63,12 +63,7 @@ public:
 	TimedChannelHopper(Scheduler& scheduler)
 		: IChannelHop()
 		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-	{
-#if defined(HOP_TEST_PIN)
-		digitalWrite(HOP_TEST_PIN, LOW);
-		pinMode(HOP_TEST_PIN, OUTPUT);
-#endif
-	}
+	{}
 
 	const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
 	{
@@ -108,12 +103,14 @@ public:
 
 	void OnLinkStarted() final
 	{
-		// Set first hop index, so GetTimedHopIndex() is accurate before first hop.
-		LastHopIndex = GetHopIndex(SyncClock->GetRollingMicros());
+		// Set starting hop.
+		LastTimestamp = SyncClock->GetRollingMicros();
+		LastHopIndex = GetHopIndex(LastTimestamp);
 
-		// Run task to start hop.
+		// Run task to synchronize first hop.
 		HopperState = HopperStateEnum::StartHop;
-		Task::enableDelayed(0);
+		Task::enableDelayed(0); 
+		Listener->OnChannelHopTime();
 	}
 
 	void OnLinkStopped() final
@@ -130,20 +127,21 @@ public:
 		switch (HopperState)
 		{
 		case HopperStateEnum::StartHop:
-			LastHopIndex = GetHopIndex(rollingTimestamp);
-			LastTimestamp = rollingTimestamp;
-			LastHop = millis();
-			HopperState = HopperStateEnum::TimedHop;
+			// Synchronize first hop.
+			if ((rollingTimestamp - LastTimestamp < ((uint32_t)INT32_MAX))
+				&& (GetHopIndex(rollingTimestamp) != LastHopIndex))
+			{
+				LastHopIndex = GetHopIndex(rollingTimestamp);
+				LastHop = millis();
+				HopperState = HopperStateEnum::TimedHop;
+				Listener->OnChannelHopTime();
+			}
 			Task::delay(0);
 			break;
 		case HopperStateEnum::TimedHop:
 			// Check if it's time to hop, with forward look compensation.
 			if (HopSync(rollingTimestamp + ForwardLookMicros))
 			{
-#if defined(HOP_TEST_PIN)
-				digitalWrite(HOP_TEST_PIN, LOW);
-				digitalWrite(HOP_TEST_PIN, HIGH);
-#endif
 				Listener->OnChannelHopTime();
 			}
 			break;
