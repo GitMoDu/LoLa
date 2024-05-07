@@ -159,10 +159,7 @@ LoLaAddressMatchLinkServer<> LinkServer(SchedulerBase,
 	&ServerCyclesSource,
 	&ServerEntropySource,
 	&ServerDuplex,
-	&ServerChannelHop,
-	SecretKey,
-	AccessPassword,
-	ServerAddress);
+	&ServerChannelHop);
 
 // Link Client and its required instances.
 VirtualTransceiver<TestRadioConfig, 'C', PRINT_CHANNEL_HOP> ClientTransceiver(SchedulerBase);
@@ -173,10 +170,7 @@ LoLaAddressMatchLinkClient<> LinkClient(SchedulerBase,
 	&ClientCyclesSource,
 	&ClientEntropySource,
 	&ClientDuplex,
-	&ClientChannelHop,
-	SecretKey,
-	AccessPassword,
-	ClientAddress);
+	&ClientChannelHop);
 
 #if defined(LINK_TEST_DETUNE)
 ClockDetunerTask Detuner(SchedulerBase);
@@ -311,14 +305,14 @@ void setup()
 #endif
 
 	// Setup Link instances.
-	if (!LinkServer.Setup())
+	if (!LinkServer.Setup(ServerAddress, SecretKey, AccessPassword))
 	{
 #ifdef DEBUG
 		Serial.println(F("Server Link Setup Failed."));
 #endif
 		BootError();
 	}
-	if (!LinkClient.Setup())
+	if (!LinkClient.Setup(ClientAddress, SecretKey, AccessPassword))
 	{
 #ifdef DEBUG
 		Serial.println(F("Client Link Setup Failed."));

@@ -39,49 +39,11 @@ namespace LoLaCryptoDefinition
 	/// </summary>
 	static constexpr uint8_t CHANNEL_KEY_SIZE = 4;
 
-	////////// Public Key Exchange
-	/// <summary>
-	/// Elliptic-curve Diffie–Hellman public key exchange.
-	/// SECP 160 R1
-	/// </summary>
-	static constexpr uint8_t PKE_CURVE_SIZE = 160;
-
-	/// <summary>
-	/// Shared secret key size in bytes.
-	/// </summary>
-	static constexpr uint8_t SHARED_KEY_SIZE = PKE_CURVE_SIZE / 8;
-
-	/// <summary>
-	/// Public key, uncompressed.
-	/// </summary>
-	static constexpr uint8_t PUBLIC_KEY_SIZE = SHARED_KEY_SIZE * 2;
-
-	/// <summary>
-	/// Compressed Public key to be exchanged.
-	/// 161 bits take 21 bytes.
-	/// </summary>
-	static constexpr uint8_t COMPRESSED_KEY_SIZE = SHARED_KEY_SIZE + 1;
-
-	/// <summary>
-	/// Private key size.
-	/// 161 bits take 21 bytes.
-	/// </summary>
-	static constexpr uint8_t PRIVATE_KEY_SIZE = COMPRESSED_KEY_SIZE;
-
 	/// <summary>
 	/// Size of time-based token.
 	/// 32 bits cover 1 Unix epoch, since token is updated every second.
 	/// </summary>
 	static constexpr uint8_t TIME_TOKEN_KEY_SIZE = 4;
-
-	/// <summary>
-	/// Random challenge to be solved by the partner,
-	/// before granting access to next Linking Step..
-	/// Uses a simple hash with the Challenge and ACCESS_CONTROL_PASSWORD,
-	/// instead of a slow (but more secure) certificate-signature.
-	/// </summary>
-	static constexpr uint8_t CHALLENGE_CODE_SIZE = 4;
-	static constexpr uint8_t CHALLENGE_SIGNATURE_SIZE = 4;
 
 	/// <summary>
 	/// Cypher Tag (Nonce) content indexes.

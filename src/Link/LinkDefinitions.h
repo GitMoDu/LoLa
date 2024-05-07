@@ -15,17 +15,6 @@
 namespace LinkDefinitions
 {
 	/// <summary>
-	/// Abstract struct.
-	/// ||SessionId|CompressedPublicKey||
-	/// </summary>
-	template<const uint8_t Header>
-	struct PkeDefinition : public TemplateHeaderDefinition<Header, LoLaLinkDefinition::SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
-	{
-		static constexpr uint8_t PAYLOAD_SESSION_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
-		static constexpr uint8_t PAYLOAD_PUBLIC_KEY_INDEX = PAYLOAD_SESSION_ID_INDEX + LoLaLinkDefinition::SESSION_ID_SIZE;
-	};
-
-	/// <summary>
 	/// ||SessionId|ServerPublicAddress||
 	/// </summary>
 	template<const uint8_t Header, const uint8_t ExtraSize>
@@ -85,34 +74,13 @@ namespace LinkDefinitions
 		};
 		//_______________________________________________________
 
-
-		//_______________Public Key Exchange LINK________________
-		/// <summary>
-		/// ||||
-		/// Request server to start a PKE session.
-		/// TODO: Add support for search for specific Device Id.
-		/// </summary>
-		using PkeSessionRequest = TemplateHeaderDefinition<AmLinkingStartRequest::HEADER + 1, 0>;
-
-		/// <summary>
-		/// ||SessionId|CompressedServerPublicKey||
-		/// </summary>
-		using PkeSessionAvailable = PkeDefinition<PkeSessionRequest::HEADER + 1>;
-
-		/// <summary>
-		/// ||SessionId|CompressedClientPublicKey||
-		/// </summary>
-		using PkeLinkingStartRequest = PkeDefinition<PkeSessionAvailable::HEADER + 1>;
-		//_______________________________________________________
-
-
 		/// <summary>
 		/// ||RequestId|Remaining|Token||
 		/// </summary>
-		struct LinkingTimedSwitchOver : public SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, sizeof(uint32_t) + LoLaLinkDefinition::LINKING_TOKEN_SIZE>
+		struct LinkingTimedSwitchOver : public SwitchOverDefinition<AmLinkingStartRequest::HEADER + 1, sizeof(uint32_t) + LoLaLinkDefinition::LINKING_TOKEN_SIZE>
 		{
 		private:
-			using BaseClass = SwitchOverDefinition<PkeLinkingStartRequest::HEADER + 1, sizeof(uint32_t) + LoLaLinkDefinition::LINKING_TOKEN_SIZE>;
+			using BaseClass = SwitchOverDefinition<AmLinkingStartRequest::HEADER + 1, sizeof(uint32_t) + LoLaLinkDefinition::LINKING_TOKEN_SIZE>;
 
 		public:
 			static constexpr uint8_t PAYLOAD_TIME_INDEX = BaseClass::PAYLOAD_REQUEST_ID_INDEX + 1;
@@ -167,7 +135,7 @@ namespace LinkDefinitions
 		/// ||ChallengeCode||
 		/// </summary>
 		//using LinkChallenge = TemplateHeaderDefinition<0, CHALLENGE_REQUEST_SIZE>;
-		struct ServerChallengeRequest : public TemplateHeaderDefinition<0, LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
+		struct ServerChallengeRequest : public TemplateHeaderDefinition<0, LoLaLinkDefinition::CHALLENGE_CODE_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};
@@ -175,16 +143,16 @@ namespace LinkDefinitions
 		/// <summary>
 		/// ||SignedCode|ChallengeCode||
 		/// </summary>
-		struct ClientChallengeReplyRequest : public TemplateHeaderDefinition<ServerChallengeRequest::HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaCryptoDefinition::CHALLENGE_CODE_SIZE>
+		struct ClientChallengeReplyRequest : public TemplateHeaderDefinition<ServerChallengeRequest::HEADER + 1, LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE + LoLaLinkDefinition::CHALLENGE_CODE_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
-			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE;
+			static constexpr uint8_t PAYLOAD_CHALLENGE_INDEX = PAYLOAD_SIGNED_INDEX + LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE;
 		};
 
 		/// <summary>
 		/// ||SignedCode||
 		/// </summary>
-		struct ServerChallengeReply : public TemplateHeaderDefinition<ClientChallengeReplyRequest::HEADER + 1, LoLaCryptoDefinition::CHALLENGE_SIGNATURE_SIZE>
+		struct ServerChallengeReply : public TemplateHeaderDefinition<ClientChallengeReplyRequest::HEADER + 1, LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE>
 		{
 			static constexpr uint8_t PAYLOAD_SIGNED_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
 		};

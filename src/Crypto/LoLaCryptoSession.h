@@ -22,10 +22,6 @@
 #include "XoodyakHashWrapper.h"
 #endif
 
-using namespace LoLaPacketDefinition;
-using namespace LoLaLinkDefinition;
-using namespace LoLaCryptoDefinition;
-
 class LoLaCryptoSession : public LoLaLinkSession
 {
 private:
@@ -41,62 +37,55 @@ protected:
 #if defined(LOLA_USE_POLY1305)
 	Poly1305Wrapper CryptoHasher{};
 #else
-	XoodyakHashWrapper<MAC_SIZE> CryptoHasher{};
+	XoodyakHashWrapper<LoLaPacketDefinition::MAC_SIZE> CryptoHasher{};
 #endif
 
 protected:
-	///// <summary>
-	///// HKDF Expanded key, with extra seeds.
-	///// </summary>
-	ExpandedKeyStruct ExpandedKey{};
+	/// <summary>
+	/// HKDF Expanded key, with extra seeds.
+	/// </summary>
+	LoLaCryptoDefinition::ExpandedKeyStruct ExpandedKey{};
 
 	/// <summary>
 	/// Reusable nonce for encode/decode. 2 extra bytes to keep the size required by the cypher.
 	/// </summary>
-	uint8_t Nonce[CYPHER_IV_SIZE]{};
+	uint8_t Nonce[LoLaCryptoDefinition::CYPHER_IV_SIZE]{};
 
 protected:
 	/// <summary>
 	/// 32 bit protocol id.
 	/// </summary>
-	uint8_t ProtocolId[PROTOCOL_ID_SIZE]{};
+	uint8_t ProtocolId[LoLaLinkDefinition::PROTOCOL_ID_SIZE]{};
 
 protected:
 	/// <summary>
 	/// Implicit addressing Rx key.
 	/// Extracted from seed and public keys: [Sender|Receiver]
 	/// </summary>
-	uint8_t InputKey[ADDRESS_KEY_SIZE]{};
+	uint8_t InputKey[LoLaCryptoDefinition::ADDRESS_KEY_SIZE]{};
 
 	/// <summary>
 	/// Implicit addressing Tx key.
 	/// Extracted from seed and public keys: [Receiver|Sender]
 	/// </summary>
-	uint8_t OutputKey[ADDRESS_KEY_SIZE]{};
+	uint8_t OutputKey[LoLaCryptoDefinition::ADDRESS_KEY_SIZE]{};
 
 protected:
 	/// <summary>
 	/// Access control password.
 	/// </summary>
-	const uint8_t* AccessPassword;
+	const uint8_t* AccessPassword = nullptr;
 
-	uint8_t LinkingToken[LINKING_TOKEN_SIZE]{};
+	uint8_t LinkingToken[LoLaLinkDefinition::LINKING_TOKEN_SIZE]{};
 
 private:
-	uint8_t LocalChallengeCode[CHALLENGE_CODE_SIZE]{};
-	uint8_t PartnerChallengeCode[CHALLENGE_CODE_SIZE]{};
-	uint8_t PartnerChallengeSignature[CHALLENGE_SIGNATURE_SIZE]{};
-
-protected:
-	virtual const LinkType GetLinkType() { return LinkType::PublicKeyExchange; }
+	uint8_t LocalChallengeCode[LoLaLinkDefinition::CHALLENGE_CODE_SIZE]{};
+	uint8_t PartnerChallengeCode[LoLaLinkDefinition::CHALLENGE_CODE_SIZE]{};
+	uint8_t PartnerChallengeSignature[LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE]{};
 
 public:
-	/// <summary>
-	/// </summary>
-	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
-	LoLaCryptoSession(const uint8_t accessPassword[ACCESS_CONTROL_PASSWORD_SIZE])
+	LoLaCryptoSession()
 		: LoLaLinkSession()
-		, AccessPassword(accessPassword)
 	{}
 
 	const uint8_t GetPrngHopChannel(const uint32_t tokenIndex)
@@ -107,8 +96,22 @@ public:
 
 	virtual const bool Setup()
 	{
-		return AccessPassword != nullptr
-			&& CryptoHasher.DIGEST_LENGTH >= MAC_SIZE;
+		return CryptoHasher.DIGEST_LENGTH >= LoLaPacketDefinition::MAC_SIZE;
+	}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="accessPassword">sizeof = LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE</param>
+	const bool SetAccessPassword(const uint8_t accessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE])
+	{
+		if (accessPassword != nullptr)
+		{
+			AccessPassword = accessPassword;
+			return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>
@@ -128,12 +131,11 @@ public:
 #else
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(LOLA_VERSION);
-		CryptoHasher.update((uint8_t)GetLinkType());
+		CryptoHasher.update(LoLaLinkDefinition::LOLA_VERSION);
 #if defined(LOLA_USE_POLY1305)
 		CryptoHasher.update((uint8_t)MacType::Poly1305);
 #else
-		CryptoHasher.update((uint8_t)MacType::Xoodyak);
+		CryptoHasher.update((uint8_t)LoLaCryptoDefinition::MacType::Xoodyak);
 #endif
 		CryptoHasher.update(duplexPeriod);
 		CryptoHasher.update(hopperPeriod);
@@ -142,7 +144,7 @@ public:
 #if defined(LOLA_USE_POLY1305)
 		CryptoHasher.finalize(Nonce, ProtocolId, PROTOCOL_ID_SIZE);
 #else
-		CryptoHasher.finalize(ProtocolId, PROTOCOL_ID_SIZE);
+		CryptoHasher.finalize(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 #endif
 		CryptoHasher.clear();
 
@@ -159,7 +161,7 @@ public:
 		}
 		Serial.println();
 		Serial.print(F("Protocol Id: |"));
-		for (size_t i = 0; i < PROTOCOL_ID_SIZE; i++)
+		for (size_t i = 0; i < LoLaLinkDefinition::PROTOCOL_ID_SIZE; i++)
 		{
 			if (ProtocolId[i] < 0x10)
 			{
@@ -176,7 +178,7 @@ public:
 	virtual void SetSessionId(const uint8_t* sessionId)
 	{
 		LoLaLinkSession::SetSessionId(sessionId);
-		for (uint_fast8_t i = 0; i < LINKING_TOKEN_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
 		{
 			LinkingToken[i] = 0;
 		}
@@ -185,7 +187,7 @@ public:
 public:
 	virtual void SetRandomSessionId(LoLaRandom* randomSource)
 	{
-		randomSource->GetRandomStreamCrypto(SessionId, SESSION_ID_SIZE);
+		randomSource->GetRandomStreamCrypto(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}
 
 	/// <summary>
@@ -200,6 +202,10 @@ public:
 	/// <param name="keySize"></param>
 	void CalculateExpandedKey(const uint8_t* key, const uint8_t keySize)
 	{
+		if (AccessPassword == nullptr)
+		{
+			return;
+		}
 #if defined(LOLA_USE_POLY1305)
 		ClearNonce();
 #endif
@@ -213,9 +219,9 @@ public:
 #endif
 			CryptoHasher.update(index);
 			CryptoHasher.update(key, keySize);
-			CryptoHasher.update(AccessPassword, ACCESS_CONTROL_PASSWORD_SIZE);
-			CryptoHasher.update(SessionId, SESSION_ID_SIZE);
-			CryptoHasher.update(ProtocolId, PROTOCOL_ID_SIZE);
+			CryptoHasher.update(AccessPassword, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
+			CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
+			CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
 
 			if (LoLaCryptoDefinition::HKDFSize - index > CryptoHasher.DIGEST_LENGTH)
 			{
@@ -231,9 +237,9 @@ public:
 #if defined(LOLA_USE_POLY1305)
 				CryptoHasher.finalize(Nonce, &((uint8_t*)&ExpandedKey)[index], HKDFSize - index);
 #else
-				CryptoHasher.finalize(&((uint8_t*)&ExpandedKey)[index], HKDFSize - index);
+				CryptoHasher.finalize(&((uint8_t*)&ExpandedKey)[index], LoLaCryptoDefinition::HKDFSize - index);
 #endif
-				index += (HKDFSize - index);
+				index += (LoLaCryptoDefinition::HKDFSize - index);
 			}
 		}
 		CryptoHasher.clear();
@@ -256,11 +262,11 @@ public:
 #else
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(ExpandedKey.CypherIvSeed, ADDRESS_KEY_SIZE);
+		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaCryptoDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.update(partnerKey, keySize);
 		CryptoHasher.update(localKey, keySize);
 #if defined(LOLA_USE_POLY1305)
-		CryptoHasher.finalize(Nonce, InputKey, ADDRESS_KEY_SIZE);
+		CryptoHasher.finalize(Nonce, InputKey, LoLaLinkDefinition::ADDRESS_KEY_SIZE);
 
 		ClearNonce();
 		CryptoHasher.reset(Nonce);
@@ -268,11 +274,11 @@ public:
 		CryptoHasher.finalize(InputKey, LoLaCryptoDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(ExpandedKey.CypherIvSeed, ADDRESS_KEY_SIZE);
+		CryptoHasher.update(ExpandedKey.CypherIvSeed, LoLaCryptoDefinition::ADDRESS_KEY_SIZE);
 		CryptoHasher.update(localKey, keySize);
 		CryptoHasher.update(partnerKey, keySize);
 #if defined(LOLA_USE_POLY1305)
-		CryptoHasher.finalize(Nonce, OutputKey, ADDRESS_KEY_SIZE);
+		CryptoHasher.finalize(Nonce, OutputKey, LoLaCryptoDefinition::ADDRESS_KEY_SIZE);
 #else
 		CryptoHasher.finalize(OutputKey, LoLaCryptoDefinition::ADDRESS_KEY_SIZE);
 #endif
@@ -287,9 +293,9 @@ public:
 #else
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(SessionId, SESSION_ID_SIZE);
+		CryptoHasher.update(SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 
-		for (uint_fast8_t i = 0; i < PUBLIC_ADDRESS_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE; i++)
 		{
 			CryptoHasher.update((uint8_t)(localKey[i] ^ partnerKey[i]));
 		}
@@ -297,22 +303,19 @@ public:
 #if defined(LOLA_USE_POLY1305)
 		CryptoHasher.finalize(Nonce, LinkingToken, LINKING_TOKEN_SIZE);
 #else
-		CryptoHasher.finalize(LinkingToken, LINKING_TOKEN_SIZE);
+		CryptoHasher.finalize(LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);
 #endif
 		CryptoHasher.clear();
 	}
 
 	void CopyLinkingTokenTo(uint8_t* target)
 	{
-		for (uint_fast8_t i = 0; i < LINKING_TOKEN_SIZE; i++)
-		{
-			target[i] = LinkingToken[i];
-		}
+		memcpy(target, LinkingToken, LoLaLinkDefinition::LINKING_TOKEN_SIZE);		
 	}
 
 	const bool LinkingTokenMatches(const uint8_t* linkingToken)
 	{
-		for (uint_fast8_t i = 0; i < LINKING_TOKEN_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::LINKING_TOKEN_SIZE; i++)
 		{
 			if (linkingToken[i] != LinkingToken[i])
 			{
@@ -324,9 +327,14 @@ public:
 
 	const bool VerifyChallengeSignature(const uint8_t* signatureSource)
 	{
+		if (AccessPassword == nullptr)
+		{
+			return false;
+		}
+
 		GetChallengeSignature(LocalChallengeCode, AccessPassword, PartnerChallengeSignature);
 
-		for (uint_fast8_t i = 0; i < CHALLENGE_SIGNATURE_SIZE; i++)
+		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE; i++)
 		{
 			if (PartnerChallengeSignature[i] != signatureSource[i])
 			{
@@ -337,41 +345,43 @@ public:
 		return true;
 	}
 
-	void SetPartnerChallenge(const uint8_t* challengeSource)
+	void SetPartnerChallenge(const uint8_t challengeSource[LoLaLinkDefinition::CHALLENGE_CODE_SIZE])
 	{
-		for (uint_fast8_t i = 0; i < CHALLENGE_CODE_SIZE; i++)
-		{
-			PartnerChallengeCode[i] = challengeSource[i];
-		}
+		memcpy(PartnerChallengeCode, challengeSource, LoLaLinkDefinition::CHALLENGE_CODE_SIZE);
 	}
 
 	void CopyLocalChallengeTo(uint8_t* challengeTarget)
 	{
-		for (uint_fast8_t i = 0; i < CHALLENGE_CODE_SIZE; i++)
-		{
-			challengeTarget[i] = LocalChallengeCode[i];
-		}
+		memcpy(challengeTarget, LocalChallengeCode, LoLaLinkDefinition::CHALLENGE_CODE_SIZE);
 	}
 
 	void SignPartnerChallengeTo(uint8_t* signatureTarget)
 	{
+		if (AccessPassword == nullptr)
+		{
+			return;
+		}
 		GetChallengeSignature(PartnerChallengeCode, AccessPassword, signatureTarget);
 	}
 
 	void SignLocalChallengeTo(uint8_t* signatureTarget)
 	{
+		if (AccessPassword == nullptr)
+		{
+			return;
+		}
 		GetChallengeSignature(LocalChallengeCode, AccessPassword, signatureTarget);
 	}
 
 	void GenerateLocalChallenge(LoLaRandom* randomSource)
 	{
-		randomSource->GetRandomStreamCrypto(LocalChallengeCode, CHALLENGE_CODE_SIZE);
+		randomSource->GetRandomStreamCrypto(LocalChallengeCode, LoLaLinkDefinition::CHALLENGE_CODE_SIZE);
 	}
 
 protected:
 	void ClearNonce()
 	{
-		memset(Nonce, 0xFF, CYPHER_IV_SIZE);
+		memset(Nonce, 0xFF, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 	}
 
 private:
@@ -383,12 +393,12 @@ private:
 #else
 		CryptoHasher.reset();
 #endif
-		CryptoHasher.update(password, ACCESS_CONTROL_PASSWORD_SIZE);
-		CryptoHasher.update(challenge, CHALLENGE_CODE_SIZE);
+		CryptoHasher.update(password, LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE);
+		CryptoHasher.update(challenge, LoLaLinkDefinition::CHALLENGE_CODE_SIZE);
 #if defined(LOLA_USE_POLY1305)
-		CryptoHasher.finalize(Nonce, signatureTarget, CHALLENGE_SIGNATURE_SIZE);
+		CryptoHasher.finalize(Nonce, signatureTarget, LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE);
 #else
-		CryptoHasher.finalize(signatureTarget, CHALLENGE_SIGNATURE_SIZE);
+		CryptoHasher.finalize(signatureTarget, LoLaLinkDefinition::CHALLENGE_SIGNATURE_SIZE);
 #endif
 		CryptoHasher.clear();
 	}

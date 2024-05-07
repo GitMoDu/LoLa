@@ -22,7 +22,7 @@ private:
 private:
 	LinkRegistry<MaxPacketReceiveListeners, MaxLinkListeners> RegistryInstance{};
 
-	LoLaCryptoAmSession Session;
+	LoLaCryptoAmSession Session{};
 
 public:
 	LoLaAddressMatchLinkClient(Scheduler& scheduler,
@@ -30,17 +30,16 @@ public:
 		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
-		IChannelHop* hop,
-		const uint8_t* secretKey,
-		const uint8_t* accessPassword,
-		const uint8_t* localAddress)
+		IChannelHop* hop)
 		: BaseClass(scheduler, &RegistryInstance, &Session, transceiver, cycles, entropy, duplex, hop)
-		, Session(secretKey, accessPassword, localAddress)
 	{}
 
-	const bool Setup()
+	const bool Setup(const uint8_t localAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE],
+		const uint8_t secretKey[LoLaLinkDefinition::SECRET_KEY_SIZE],
+		const uint8_t accessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE])
 	{
-		if (Session.Setup())
+		if (Session.Setup()
+			&& Session.SetKeys(localAddress, secretKey, accessPassword))
 		{
 			return RegistryInstance.Setup() && BaseClass::Setup();
 		}

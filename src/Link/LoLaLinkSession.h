@@ -18,23 +18,17 @@ public:
 	LoLaLinkSession()
 	{}
 
-	virtual void SetSessionId(const uint8_t* sessionId)
+	virtual void SetSessionId(const uint8_t sessionId[LoLaLinkDefinition::SESSION_ID_SIZE])
 	{
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::SESSION_ID_SIZE; i++)
-		{
-			SessionId[i] = sessionId[i];
-		}
+		memcpy(SessionId, sessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}
 
 	void CopySessionIdTo(uint8_t* target)
 	{
-		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::SESSION_ID_SIZE; i++)
-		{
-			target[i] = SessionId[i];
-		}
+		memcpy(target, SessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}
 
-	const bool SessionIdMatches(const uint8_t* sessionId)
+	const bool SessionIdMatches(const uint8_t sessionId[LoLaLinkDefinition::SESSION_ID_SIZE])
 	{
 		for (uint_fast8_t i = 0; i < LoLaLinkDefinition::SESSION_ID_SIZE; i++)
 		{

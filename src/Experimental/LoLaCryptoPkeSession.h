@@ -26,7 +26,67 @@ private:
 		PkeCached
 	};
 
+	//_______________Public Key Exchange LINK________________
+	//// 
+	///// <summary>
+	///// Abstract struct.
+	///// ||SessionId|CompressedPublicKey||
+	///// </summary>
+	//template<const uint8_t Header>
+	//struct PkeDefinition : public TemplateHeaderDefinition<Header, LoLaLinkDefinition::SESSION_ID_SIZE + LoLaCryptoDefinition::COMPRESSED_KEY_SIZE>
+	//{
+	//	static constexpr uint8_t PAYLOAD_SESSION_ID_INDEX = HeaderDefinition::SUB_PAYLOAD_INDEX;
+	//	static constexpr uint8_t PAYLOAD_PUBLIC_KEY_INDEX = PAYLOAD_SESSION_ID_INDEX + LoLaLinkDefinition::SESSION_ID_SIZE;
+	//}; 
+	///// <summary>
+	///// ||||
+	///// Request server to start a PKE session.
+	///// TODO: Add support for search for specific Device Id.
+	///// </summary>
+	//using PkeSessionRequest = TemplateHeaderDefinition<AmLinkingStartRequest::HEADER + 1, 0>;
+
+	///// <summary>
+	///// ||SessionId|CompressedServerPublicKey||
+	///// </summary>
+	//using PkeSessionAvailable = PkeDefinition<PkeSessionRequest::HEADER + 1>;
+
+	///// <summary>
+	///// ||SessionId|CompressedClientPublicKey||
+	///// </summary>
+	//using PkeLinkingStartRequest = PkeDefinition<AmLinkingStartRequest::HEADER + 1>;
+	////_______________________________________________________
+
+
 	static constexpr uint8_t MATCHING_TOKEN_SIZE = 4;
+
+	////////// Public Key Exchange
+	/// <summary>
+	/// Elliptic-curve Diffie–Hellman public key exchange.
+	/// SECP 160 R1
+	/// </summary>
+	static constexpr uint8_t PKE_CURVE_SIZE = 160;
+
+	/// <summary>
+	/// Public key, uncompressed.
+	/// </summary>
+	static constexpr uint8_t PUBLIC_KEY_SIZE = SHARED_KEY_SIZE * 2;
+
+	/// <summary>
+	/// Compressed Public key to be exchanged.
+	/// 161 bits take 21 bytes.
+	/// </summary>
+	static constexpr uint8_t COMPRESSED_KEY_SIZE = SHARED_KEY_SIZE + 1;
+
+	/// <summary>
+	/// Private key size.
+	/// 161 bits take 21 bytes.
+	/// </summary>
+	static constexpr uint8_t PRIVATE_KEY_SIZE = COMPRESSED_KEY_SIZE;
+
+	/// <summary>
+	/// Shared secret key size in bytes.
+	/// </summary>
+	static constexpr uint8_t SHARED_KEY_SIZE = PKE_CURVE_SIZE / 8;
 
 private:
 	const uECC_Curve_t* ECC_CURVE; // uECC_secp160r1

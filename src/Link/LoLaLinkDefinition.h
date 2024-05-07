@@ -5,20 +5,8 @@
 
 #include "LoLaPacketDefinition.h"
 
-/// <summary>
-/// Link uses 3 registered ports:
-/// - Unencrypted port for link start or quick re-link.
-/// - Encrypted port. Tokens may change during linking.
-/// - Link-time service port. Encrypted with token, as are all user services.
-/// </summary>
 namespace LoLaLinkDefinition
 {
-	enum class LinkType : uint8_t
-	{
-		PublicKeyExchange = 0xBE,
-		AddressMatch = 0xAE
-	};
-
 	static constexpr uint8_t LOLA_VERSION = 0;
 
 	/// <summary>
@@ -56,6 +44,15 @@ namespace LoLaLinkDefinition
 	/// Shared secret key equivalent. 
 	/// </summary>
 	static constexpr uint8_t SECRET_KEY_SIZE = ACCESS_CONTROL_PASSWORD_SIZE;
+
+	/// <summary>
+	/// Random challenge to be solved by the partner,
+	/// before granting access to next Linking Step..
+	/// Uses a  hash with the Challenge and ACCESS_CONTROL_PASSWORD,
+	/// instead of a slow (but more secure) certificate-signature.
+	/// </summary>
+	static constexpr uint8_t CHALLENGE_CODE_SIZE = 4;
+	static constexpr uint8_t CHALLENGE_SIGNATURE_SIZE = 4;
 
 	/// <summary>
 	/// Period in microseconds.

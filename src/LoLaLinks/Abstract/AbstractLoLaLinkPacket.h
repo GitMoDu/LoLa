@@ -404,10 +404,7 @@ private:
 	{
 		uint32_t start = 0;
 		OutPacket.SetPort(123);
-		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PAYLOAD_SIZE; i++)
-		{
-			OutPacket.Payload[i] = i + 1;
-		}
+		memset(OutPacket.Payload, 123, LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
 
 		LOLA_RTOS_PAUSE();
 #if defined(DEBUG_LOLA)
