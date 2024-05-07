@@ -20,7 +20,8 @@ private:
 	using BaseClass = AbstractSurfaceService<Port, ServiceId, SurfaceReaderMaxPayloadSize>;
 
 	static constexpr uint8_t RECEIVE_FAILED_PERIOD_MILLIS = 50;
-	static constexpr uint8_t RESEND_PERIOD_MILLIS = RECEIVE_FAILED_PERIOD_MILLIS / 2;
+	static constexpr uint8_t RESEND_PERIOD_DUPLEX_COUNT = 2;
+	//static constexpr uint8_t RESEND_PERIOD_MILLIS = RECEIVE_FAILED_PERIOD_MILLIS / 2;
 
 	enum class ReaderStateEnum : uint8_t
 	{
@@ -122,7 +123,7 @@ public:
 			}
 			break;
 		case ReaderStateEnum::Invalidating:
-			if (PacketThrottle(1000 * RESEND_PERIOD_MILLIS))
+			if (PacketThrottle(RESEND_PERIOD_DUPLEX_COUNT))
 			{
 				RequestSendMeta(ReaderInvalidateDefinition::HEADER);
 			}
