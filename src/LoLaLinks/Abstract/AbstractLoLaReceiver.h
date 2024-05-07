@@ -201,7 +201,9 @@ private:
 	const bool ValidateCounter(const uint16_t counter, uint16_t& receiveLost)
 	{
 		const uint16_t counterRoll = counter - ReceiveCounter;
-		if (counterRoll < (uint16_t)INT16_MAX)
+		if (counterRoll < (uint16_t)INT16_MAX
+			&& counterRoll > 0
+			)
 		{
 			// Counter accepted, update local tracker.
 			ReceiveCounter = counter;
