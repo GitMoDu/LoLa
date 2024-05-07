@@ -58,11 +58,6 @@ namespace LoLaLinkDefinition
 	static constexpr uint8_t SECRET_KEY_SIZE = ACCESS_CONTROL_PASSWORD_SIZE;
 
 	/// <summary>
-	/// Link will tolerate some dropped packets by forwarding the rolling counter.
-	/// </summary>
-	static constexpr uint16_t ROLLING_COUNTER_ERROR = 500;
-
-	/// <summary>
 	/// Period in microseconds.
 	/// Link switch over will tolerate a small error at the start.
 	/// During link time, clock will be continously tuned for higher accuracy.

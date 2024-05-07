@@ -123,9 +123,6 @@ public:
 				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT
 					&& ValidateCounter(receivingCounter, receivingLost))
 				{
-					// Counter accepted, update local tracker.
-					ReceiveCounter = receivingCounter;
-
 					OnLinkingPacketReceived(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
 						LoLaPacketDefinition::GetPayloadSize(packetSize));
@@ -152,9 +149,6 @@ public:
 				// Validate counter and check for valid port.
 				if (ValidateCounter(receivingCounter, receivingLost))
 				{
-					// Counter accepted, update local tracker.
-					ReceiveCounter = receivingCounter;
-
 					Registry->NotifyPacketListener(receiveTimestamp,
 						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
 						LoLaPacketDefinition::GetPayloadSize(packetSize),
@@ -198,11 +192,19 @@ protected:
 	}
 
 private:
-	const bool ValidateCounter(const uint16_t counter, uint16_t& receiveLost) const
+	/// <summary>
+	/// Link will tolerate some dropped packets by forwarding the rolling counter.
+	/// </summary>
+	/// <param name="counter">Received counter.</param>
+	/// <param name="receiveLost">Resulting counter roll. [1 ; INT16_MAX] for typical operation, 0 when invalid.</param>
+	/// <returns>True on valid counter.</returns>
+	const bool ValidateCounter(const uint16_t counter, uint16_t& receiveLost)
 	{
 		const uint16_t counterRoll = counter - ReceiveCounter;
-		if (counterRoll < LoLaLinkDefinition::ROLLING_COUNTER_ERROR)
+		if (counterRoll < (uint16_t)INT16_MAX)
 		{
+			// Counter accepted, update local tracker.
+			ReceiveCounter = counter;
 			receiveLost = counterRoll - 1;
 			return true;
 		}
