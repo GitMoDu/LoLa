@@ -13,31 +13,31 @@ public:
 	TemplateFixedChannelNoHop() : IChannelHop()
 	{}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
+	const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
 	{
 		return listener != nullptr && linkClock != nullptr;
 	}
 
-	virtual const uint8_t GetChannel() final
+	const uint8_t GetChannel() final
 	{
 		return PermanentChannel;
 	}
 
-	virtual void SetChannel(const uint8_t channel) final
+	void SetChannel(const uint8_t channel) final
 	{}
 
-	virtual const uint32_t GetHopPeriod() final
+	const uint32_t GetHopPeriod() final
 	{
 		return IChannelHop::NOT_A_HOPPER;
 	}
 
-	virtual const uint32_t GetHopIndex(const uint32_t timestamp)  final { return 0; }
+	const uint32_t GetHopIndex(const uint32_t timestamp)  final { return 0; }
 
-	virtual const uint32_t GetTimedHopIndex() final { return 0; }
+	const uint32_t GetTimedHopIndex() final { return 0; }
 
-	virtual void OnLinkStarted() final { }
+	void OnLinkStarted() final { }
 
-	virtual void OnLinkStopped() final { }
+	void OnLinkStopped() final { }
 };
 
 /// <summary>

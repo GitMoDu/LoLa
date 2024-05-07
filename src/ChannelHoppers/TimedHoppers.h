@@ -6,8 +6,6 @@
 #define _TASK_OO_CALLBACKS
 #include <TaskSchedulerDeclarations.h>
 
-
-
 template<const uint32_t HopPeriodMicros,
 	const uint16_t ForwardLookMicros = 10>
 class TimedChannelHopper final : private Task, public virtual IChannelHop
@@ -72,7 +70,7 @@ public:
 #endif
 	}
 
-	virtual const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
+	const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
 	{
 		Listener = listener;
 		SyncClock = linkClock;
@@ -81,7 +79,7 @@ public:
 	}
 
 	// General Channel Interfaces //
-	virtual const uint8_t GetChannel() final
+	const uint8_t GetChannel() final
 	{
 		return FixedChannel;
 	}
@@ -93,22 +91,22 @@ public:
 	////
 
 	// Hopper Interfaces //
-	virtual const uint32_t GetHopPeriod() final
+	const uint32_t GetHopPeriod() final
 	{
 		return HopPeriodMicros;
 	}
 
-	virtual const uint32_t GetHopIndex(const uint32_t timestamp) final
+	const uint32_t GetHopIndex(const uint32_t timestamp) final
 	{
 		return timestamp / HopPeriodMicros;
 	}
 
-	virtual const uint32_t GetTimedHopIndex() final
+	const uint32_t GetTimedHopIndex() final
 	{
 		return LastHopIndex;
 	}
 
-	virtual void OnLinkStarted() final
+	void OnLinkStarted() final
 	{
 		// Set first hop index, so GetTimedHopIndex() is accurate before first hop.
 		LastHopIndex = GetHopIndex(SyncClock->GetRollingMicros());
@@ -118,14 +116,14 @@ public:
 		Task::enableDelayed(0);
 	}
 
-	virtual void OnLinkStopped() final
+	void OnLinkStopped() final
 	{
 		HopperState = HopperStateEnum::Disabled;
 		Task::disable();
 	}
 	////
 
-	virtual bool Callback() final
+	bool Callback() final
 	{
 		const uint32_t rollingTimestamp = SyncClock->GetRollingMicros();
 
