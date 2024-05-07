@@ -12,7 +12,7 @@
 #include "../../Link/LoLaPacketService.h"
 
 #include "../../Clock/LinkClock.h"
-#include "../../Crypto/LoLaCryptoEncoderSession.h"
+#include "../../Crypto/LoLaCryptoAmSession.h"
 
 #include "../../Services/Template/TemplateLinkService.h"
 
@@ -67,7 +67,7 @@ protected:
 	ILoLaTransceiver* Transceiver;
 
 	// Expandable session encoder.
-	LoLaCryptoEncoderSession* Encoder;
+	LoLaCryptoAmSession Session{};
 
 protected:
 	// Duplex, Channel Hop and Cryptography depend on a synchronized clock between Server and Client.
@@ -95,7 +95,6 @@ public:
 public:
 	AbstractLoLa(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
-		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)
 		: ILoLaLink()
@@ -104,7 +103,6 @@ public:
 		, PacketService(scheduler, this, transceiver, RawInPacket, RawOutPacket)
 		, Registry(linkRegistry)
 		, Transceiver(transceiver)
-		, Encoder(encoder)
 		, SyncClock(scheduler, cycles)
 	{}
 

@@ -22,8 +22,6 @@ private:
 private:
 	LinkRegistry<MaxPacketReceiveListeners, MaxLinkListeners> RegistryInstance{};
 
-	LoLaCryptoAmSession Session{};
-
 	bool AmReplyPending = false;
 
 public:
@@ -33,15 +31,15 @@ public:
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, &RegistryInstance, &Session, transceiver, cycles, entropy, duplex, hop)
+		: BaseClass(scheduler, &RegistryInstance, transceiver, cycles, entropy, duplex, hop)
 	{}
 
 	const bool Setup(const uint8_t localAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE],
-		const uint8_t secretKey[LoLaLinkDefinition::SECRET_KEY_SIZE],
-		const uint8_t accessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE])
+		const uint8_t accessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE],
+		const uint8_t secretKey[LoLaLinkDefinition::SECRET_KEY_SIZE])
 	{
 		if (Session.Setup()
-			&& Session.SetKeys(localAddress, secretKey, accessPassword))
+			&& Session.SetKeys(localAddress, accessPassword, secretKey))
 		{
 			return RegistryInstance.Setup() && BaseClass::Setup();
 		}

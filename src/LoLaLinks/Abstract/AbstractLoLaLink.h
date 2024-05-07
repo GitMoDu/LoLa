@@ -54,13 +54,12 @@ protected:
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
-		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
+		: BaseClass(scheduler, linkRegistry, transceiver, cycles, entropy, duplex, hop)
 		, QualityTracker(LoLaLinkDefinition::GetLinkTimeoutDuration(duplex->GetPeriod()))
 	{}
 

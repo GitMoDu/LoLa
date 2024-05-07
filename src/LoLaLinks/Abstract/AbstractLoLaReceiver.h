@@ -54,10 +54,9 @@ protected:
 public:
 	AbstractLoLaReceiver(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
-		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)
-		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
+		: BaseClass(scheduler, linkRegistry, transceiver, cycles)
 	{}
 
 public:
@@ -93,7 +92,7 @@ public:
 		case LinkStageEnum::SwitchingToLinking:
 			// Update MAC without implicit addressing or token.
 			// Addressing must be explicit in payload.
-			if (Encoder->DecodeInPacket(RawInPacket, InData, receivingCounter, receivingDataSize))
+			if (Session.DecodeInPacket(RawInPacket, InData, receivingCounter, receivingDataSize))
 			{
 				// Check for valid port.
 				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT)
@@ -117,7 +116,7 @@ public:
 		case LinkStageEnum::ClockSyncing:
 		case LinkStageEnum::SwitchingToLinked:
 			// Update MAC with implicit addressing but without token.
-			if (Encoder->DecodeInPacket(RawInPacket, InData, 0, receivingCounter, receivingDataSize))
+			if (Session.DecodeInPacket(RawInPacket, InData, 0, receivingCounter, receivingDataSize))
 			{
 				// Validate counter and check for valid port.
 				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT
@@ -144,7 +143,7 @@ public:
 			SyncClock.GetTimestamp(RxTimestamp);
 			RxTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
 			LOLA_RTOS_RESUME();
-			if (Encoder->DecodeInPacket(RawInPacket, InData, RxTimestamp.Seconds, receivingCounter, receivingDataSize))
+			if (Session.DecodeInPacket(RawInPacket, InData, RxTimestamp.Seconds, receivingCounter, receivingDataSize))
 			{
 				// Validate counter and check for valid port.
 				if (ValidateCounter(receivingCounter, receivingLost))
@@ -188,7 +187,7 @@ protected:
 		RxTimestamp.ShiftSubSeconds(-((int32_t)(micros() - receiveTimestamp)));
 
 		// (Fail to) Decrypt packet with token based on time.
-		return Encoder->DecodeInPacket(data, RawInPacket, RxTimestamp.Seconds, receivingCounter, LoLaPacketDefinition::GetDataSize(packetSize));
+		return Session.DecodeInPacket(data, RawInPacket, RxTimestamp.Seconds, receivingCounter, LoLaPacketDefinition::GetDataSize(packetSize));
 	}
 
 private:

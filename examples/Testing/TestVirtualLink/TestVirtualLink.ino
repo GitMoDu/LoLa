@@ -103,14 +103,12 @@
 Scheduler SchedulerBase;
 //
 
-// Diceware created access control password.
-static constexpr uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
-//
-
-// Diceware created values for address and secret key.
+// Diceware created values for address and secret keys.
 static constexpr uint8_t ServerAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
 static constexpr uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+static constexpr uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
 static constexpr uint8_t SecretKey[LoLaLinkDefinition::SECRET_KEY_SIZE] = { 0x50, 0x05, 0x60, 0x06, 0x70, 0x07, 0x80, 0x08 };
+//
 
 // Virtual Transceiver configurations.
 // <ChannelCount, TxBaseMicros, TxByteNanos, AirBaseMicros, AirByteNanos, HopMicros>
@@ -141,7 +139,9 @@ Esp32Entropy ClientEntropySource{};
 ArduinoLowEntropy ServerEntropySource{};
 ArduinoLowEntropy ClientEntropySource{};
 #endif
+//
 
+// Channel Hoppers
 #if defined(LINK_USE_CHANNEL_HOP)
 TimedChannelHopper<ChannelHopPeriod, DuplexDeadZone> ServerChannelHop(SchedulerBase);
 TimedChannelHopper<ChannelHopPeriod, DuplexDeadZone> ClientChannelHop(SchedulerBase);
@@ -149,6 +149,7 @@ TimedChannelHopper<ChannelHopPeriod, DuplexDeadZone> ClientChannelHop(SchedulerB
 NoHopNoChannel ServerChannelHop{};
 NoHopNoChannel ClientChannelHop{};
 #endif
+///
 
 // Link Server and its required instances.
 VirtualTransceiver<TestRadioConfig, 'S', false> ServerTransceiver(SchedulerBase);
@@ -305,14 +306,14 @@ void setup()
 #endif
 
 	// Setup Link instances.
-	if (!LinkServer.Setup(ServerAddress, SecretKey, AccessPassword))
+	if (!LinkServer.Setup(ServerAddress, AccessPassword, SecretKey))
 	{
 #ifdef DEBUG
 		Serial.println(F("Server Link Setup Failed."));
 #endif
 		BootError();
 	}
-	if (!LinkClient.Setup(ClientAddress, SecretKey, AccessPassword))
+	if (!LinkClient.Setup(ClientAddress, AccessPassword, SecretKey))
 	{
 #ifdef DEBUG
 		Serial.println(F("Client Link Setup Failed."));

@@ -63,14 +63,13 @@ private:
 public:
 	AbstractLoLaLinkPacket(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
-		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
 		: IChannelHop::IHopListener()
-		, BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
+		, BaseClass(scheduler, linkRegistry, transceiver, cycles)
 		, RandomSource(entropy)
 		, Duplex(duplex)
 		, ChannelHopper(hop)
@@ -191,7 +190,7 @@ public:
 		Serial.println();
 #endif
 
-		Encoder->GenerateProtocolId(
+		Session.GenerateProtocolId(
 			Duplex->GetPeriod(),
 			ChannelHopper->GetHopPeriod(),
 			Transceiver->GetTransceiverCode());
@@ -254,7 +253,7 @@ public:
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
-				return Encoder->GetPrngHopChannel(ChannelHopper->GetTimedHopIndex());
+				return Session.GetPrngHopChannel(ChannelHopper->GetTimedHopIndex());
 			}
 			else
 			{
@@ -330,7 +329,7 @@ protected:
 	{
 		if (IsLinkHopper)
 		{
-			return Encoder->GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
+			return Session.GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
 		}
 		else
 		{
@@ -361,7 +360,7 @@ protected:
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
 			{
-				return Encoder->GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
+				return Session.GetPrngHopChannel(ChannelHopper->GetHopIndex(rollingMicros));
 			}
 			else
 			{
@@ -472,7 +471,7 @@ private:
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			dummy += Encoder->GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
+			dummy += Session.GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
 		}
 		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();

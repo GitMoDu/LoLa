@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include "LoLaLinkDefinition.h"
 
+/// <summary>
+/// Base session with Id.
+/// </summary>
 class LoLaLinkSession
 {
 protected:
@@ -18,7 +21,7 @@ public:
 	LoLaLinkSession()
 	{}
 
-	virtual void SetSessionId(const uint8_t sessionId[LoLaLinkDefinition::SESSION_ID_SIZE])
+	void SetSessionId(const uint8_t sessionId[LoLaLinkDefinition::SESSION_ID_SIZE])
 	{
 		memcpy(SessionId, sessionId, LoLaLinkDefinition::SESSION_ID_SIZE);
 	}

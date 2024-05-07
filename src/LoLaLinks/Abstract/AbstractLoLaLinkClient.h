@@ -56,13 +56,12 @@ private:
 public:
 	AbstractLoLaLinkClient(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
-		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
 		IDuplex* duplex,
 		IChannelHop* hop)
-		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles, entropy, duplex, hop)
+		: BaseClass(scheduler, linkRegistry, transceiver, cycles, entropy, duplex, hop)
 		, StateTransition(LoLaLinkDefinition::GetTransitionDuration(duplex->GetPeriod()))
 		, LinkingDuplex(duplex->GetPeriod())
 		, ClockTracker(duplex->GetPeriod())
@@ -145,7 +144,7 @@ protected:
 		case LinkStageEnum::Disabled:
 			break;
 		case LinkStageEnum::Booting:
-			Encoder->SetRandomSessionId(&RandomSource);
+			Session.SetRandomSessionId(&RandomSource);
 			break;
 		case LinkStageEnum::Sleeping:
 			break;
@@ -175,7 +174,7 @@ protected:
 			ClockSyncer.Reset(micros());
 			ClockTracker.Reset();
 			StateTransition.Clear();
-			Encoder->GenerateLocalChallenge(&RandomSource);
+			Session.GenerateLocalChallenge(&RandomSource);
 			break;
 		case LinkStageEnum::ClockSyncing:
 			ClockAccepted = false;
@@ -295,8 +294,8 @@ protected:
 			{
 				OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 				OutPacket.SetHeader(Linking::ClientChallengeReplyRequest::HEADER);
-				Encoder->SignPartnerChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
-				Encoder->CopyLocalChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
+				Session.SignPartnerChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_SIGNED_INDEX]);
+				Session.CopyLocalChallengeTo(&OutPacket.Payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
 
 				LOLA_RTOS_PAUSE();
 				if (UnlinkedDuplexCanSend(Linking::ClientChallengeReplyRequest::PAYLOAD_SIZE) &&
@@ -361,7 +360,7 @@ protected:
 		case Unlinked::LinkingTimedSwitchOver::HEADER:
 			if (payloadSize == Unlinked::LinkingTimedSwitchOver::PAYLOAD_SIZE
 				&& LinkStage == LinkStageEnum::Pairing
-				&& Encoder->LinkingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
+				&& Session.PairingTokenMatches(&payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_SESSION_TOKEN_INDEX]))
 			{
 				SetReceiveCounter(rollingCounter);	// Save last received counter, ready for switch for next stage.
 				StateTransition.OnReceived(timestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
@@ -393,7 +392,7 @@ protected:
 			if (payloadSize == Linking::ServerChallengeRequest::PAYLOAD_SIZE
 				&& LinkStage == LinkStageEnum::Authenticating)
 			{
-				Encoder->SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
+				Session.SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 				AuthenticationReplyPending = true;
 				OnLinkSyncReceived(timestamp);
 				Task::enableDelayed(0);
@@ -410,7 +409,7 @@ protected:
 		case Linking::ServerChallengeReply::HEADER:
 			if (payloadSize == Linking::ServerChallengeReply::PAYLOAD_SIZE
 				&& LinkStage == LinkStageEnum::Authenticating
-				&& Encoder->VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
+				&& Session.VerifyChallengeSignature(&payload[Linking::ServerChallengeReply::PAYLOAD_SIGNED_INDEX]))
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -630,7 +629,7 @@ private:
 			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Unlinked::LinkingTimedSwitchOverAck::HEADER);
 			OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_REQUEST_ID_INDEX] = SyncSequence;
-			Encoder->CopyLinkingTokenTo(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
+			Session.GetPairingToken(&OutPacket.Payload[Unlinked::LinkingTimedSwitchOverAck::PAYLOAD_SESSION_TOKEN_INDEX]);
 
 			LOLA_RTOS_PAUSE();
 			if (PacketService.CanSendPacket())

@@ -32,10 +32,9 @@ protected:
 public:
 	AbstractLoLaSender(Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
-		LoLaCryptoEncoderSession* encoder,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)
-		: BaseClass(scheduler, linkRegistry, encoder, transceiver, cycles)
+		: BaseClass(scheduler, linkRegistry, transceiver, cycles)
 	{}
 
 	const uint32_t GetSendElapsed() final
@@ -58,19 +57,19 @@ public:
 		case LinkStageEnum::Pairing:
 		case LinkStageEnum::SwitchingToLinking:
 			// Encode packet with no encryption.
-			Encoder->EncodeOutPacket(data, RawOutPacket, SendCounter, dataSize);
+			Session.EncodeOutPacket(data, RawOutPacket, SendCounter, dataSize);
 			break;
 		case LinkStageEnum::Authenticating:
 		case LinkStageEnum::ClockSyncing:
 		case LinkStageEnum::SwitchingToLinked:
 			// Encrypt packet without token.
-			Encoder->EncodeOutPacket(data, RawOutPacket,
+			Session.EncodeOutPacket(data, RawOutPacket,
 				0,
 				SendCounter, dataSize);
 			break;
 		case LinkStageEnum::Linked:
 			// Encrypt packet with token based on time.
-			Encoder->EncodeOutPacket(data, RawOutPacket,
+			Session.EncodeOutPacket(data, RawOutPacket,
 				TxTimestamp.Seconds,
 				SendCounter, dataSize);
 			break;
@@ -147,7 +146,7 @@ protected:
 		const uint8_t packetSize = LoLaPacketDefinition::GetTotalSize(payloadSize);
 
 		// Encrypt packet with token based on time.
-		Encoder->EncodeOutPacket(data, RawOutPacket, TxTimestamp.Seconds, SendCounter, dataSize);
+		Session.EncodeOutPacket(data, RawOutPacket, TxTimestamp.Seconds, SendCounter, dataSize);
 
 		// Call Packet Service Send (mock) to include the call overhead.
 		if (PacketService.MockSend(packetSize,

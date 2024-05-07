@@ -28,9 +28,9 @@ public:
 		: LoLaCryptoSession()
 	{}
 
-	virtual const bool Setup()
+	const bool Setup()
 	{
-		return LoLaCryptoSession::Setup()
+		return CryptoHasher.DIGEST_LENGTH >= LoLaPacketDefinition::MAC_SIZE
 			&& 2 == LoLaPacketDefinition::ID_SIZE
 			&& CryptoCypher.keySize() == LoLaCryptoDefinition::CYPHER_KEY_SIZE
 			&& CryptoCypher.ivSize() == LoLaCryptoDefinition::CYPHER_IV_SIZE;
@@ -73,7 +73,7 @@ public:
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 #if defined(LOLA_USE_POLY1305)
-		if (!CryptoHasher.macMatches(Nonce, &inPacket[MAC_INDEX]))
+		if (!CryptoHasher.macMatches(Nonce, &inPacket[LoLaPacketDefinition::MAC_INDEX]))
 #else
 		if (!CryptoHasher.macMatches(&inPacket[LoLaPacketDefinition::MAC_INDEX]))
 #endif
@@ -122,7 +122,7 @@ public:
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 #if defined(LOLA_USE_POLY1305)
-		if (!CryptoHasher.macMatches(Nonce, &inPacket[MAC_INDEX]))
+		if (!CryptoHasher.macMatches(Nonce, &inPacket[LoLaPacketDefinition::MAC_INDEX]))
 #else
 		if (!CryptoHasher.macMatches(&inPacket[LoLaPacketDefinition::MAC_INDEX]))
 #endif
@@ -174,7 +174,7 @@ public:
 
 		// Only the first LoLaPacketDefinition:MAC_SIZE bytes are effectively used.
 #if defined(LOLA_USE_POLY1305)
-		CryptoHasher.finalize(Nonce, &outPacket[MAC_INDEX], MAC_SIZE);
+		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
 #else
 		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
 #endif
@@ -231,7 +231,7 @@ public:
 
 #if defined(LOLA_USE_POLY1305)
 		// Nonce and finalize HMAC.
-		CryptoHasher.finalize(Nonce, &outPacket[MAC_INDEX], MAC_SIZE);
+		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
 #else
 		// Finalize MAC.
 		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
