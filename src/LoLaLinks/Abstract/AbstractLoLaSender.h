@@ -53,11 +53,16 @@ public:
 
 		switch (LinkStage)
 		{
-		case LinkStageEnum::AwaitingLink:
+		case LinkStageEnum::Sleeping:
+		case LinkStageEnum::Searching:
+		case LinkStageEnum::Pairing:
+		case LinkStageEnum::SwitchingToLinking:
 			// Encode packet with no encryption.
 			Encoder->EncodeOutPacket(data, RawOutPacket, SendCounter, dataSize);
 			break;
-		case LinkStageEnum::Linking:
+		case LinkStageEnum::Authenticating:
+		case LinkStageEnum::ClockSyncing:
+		case LinkStageEnum::SwitchingToLinked:
 			// Encrypt packet without token.
 			Encoder->EncodeOutPacket(data, RawOutPacket,
 				0,

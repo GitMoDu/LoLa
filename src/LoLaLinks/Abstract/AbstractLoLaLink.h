@@ -29,24 +29,27 @@ protected:
 private:
 	uint32_t LastUnlinkedSent = 0;
 
-	uint32_t LinkingStart = 0;
 	Timestamp LinkStartTimestamp{};
 
 protected:
 	/// <summary>
 	/// </summary>
-	virtual void OnServiceLinking() {}
+	virtual void OnServiceAuthenticating() {}
+	virtual void OnServiceClockSyncing() {}
 
-	/// <summary>
-	/// </summary>
-	virtual void OnServiceAwaitingLink() {}
+
+	virtual void OnServiceSleeping() {}
+	virtual void OnServiceSearching() {}
+	virtual void OnServicePairing() {}
+	virtual void OnServiceSwitchingToLinking() {}
+	virtual void OnServiceSwitchingToLinked() {}
 
 	/// <summary>
 	/// </summary>
 	/// <returns>True if a clock sync update is due or pending to send.</returns>
-	virtual const bool CheckForClockSyncUpdate() { return false; }
+	virtual const bool CheckForClockTuneUpdate() { return false; }
 
-	virtual const uint8_t GetClockSyncQuality() { return 0; }
+	virtual const uint8_t GetClockQuality() { return 0; }
 
 public:
 	AbstractLoLaLink(Scheduler& scheduler,
@@ -89,7 +92,7 @@ public:
 		linkStatus.Quality.TxRssi = QualityTracker.GetTxRssiQuality();
 		linkStatus.Quality.RxDrop = QualityTracker.GetRxDropQuality();
 		linkStatus.Quality.TxDrop = QualityTracker.GetTxDropQuality();
-		linkStatus.Quality.ClockSync = GetClockSyncQuality();
+		linkStatus.Quality.ClockSync = GetClockQuality();
 		linkStatus.Quality.Age = QualityTracker.GetLastValidReceivedAgeQuality();
 
 		SyncClock.GetTimestampMonotonic(LinkTimestamp);
@@ -113,8 +116,12 @@ public:
 	{
 		switch (LinkStage)
 		{
-		case LinkStageEnum::AwaitingLink:
-		case LinkStageEnum::Linking:
+		case LinkStageEnum::Searching:
+		case LinkStageEnum::Pairing:
+		case LinkStageEnum::SwitchingToLinking:
+		case LinkStageEnum::Authenticating:
+		case LinkStageEnum::ClockSyncing:
+		case LinkStageEnum::SwitchingToLinked:
 			if (result == IPacketServiceListener::SendResultEnum::Success)
 			{
 				LastUnlinkedSent = micros();
@@ -131,8 +138,8 @@ public:
 			&& payload[HeaderDefinition::HEADER_INDEX] == Linked::ReportUpdate::HEADER
 			&& payloadSize == Linked::ReportUpdate::PAYLOAD_SIZE)
 		{
-			const uint_least16_t loopingDropCounter = payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX]
-				| ((uint_least16_t)payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX + 1] << 8);
+			const uint16_t loopingDropCounter = payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX]
+				| ((uint16_t)payload[Linked::ReportUpdate::PAYLOAD_DROP_COUNTER_INDEX + 1] << 8);
 
 			// Keep track of partner's RSSI and packet drop, for output gain management.
 			QualityTracker.OnReportReceived(micros(),
@@ -184,11 +191,6 @@ protected:
 	}
 
 protected:
-	const uint32_t GetLinkingElapsed()
-	{
-		return micros() - LinkingStart;
-	}
-
 	void ResetUnlinkedPacketThrottle()
 	{
 		LastUnlinkedSent -= GetPacketThrottlePeriod() * 2;
@@ -206,18 +208,17 @@ protected:
 		{
 		case LinkStageEnum::Disabled:
 			SyncClock.Stop();
-			Transceiver->Stop();
 			break;
 		case LinkStageEnum::Booting:
+			RandomSource.RandomReseed();
+			break;
+		case LinkStageEnum::Searching:
+			RandomSource.RandomReseed();
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 			SyncClock.ShiftSubSeconds(RandomSource.GetRandomLong());
 			break;
-		case LinkStageEnum::AwaitingLink:
-			RandomSource.RandomReseed();
+		case LinkStageEnum::Authenticating:
 			QualityTracker.ResetRssiQuality();
-			break;
-		case LinkStageEnum::Linking:
-			LinkingStart = micros();
 			break;
 		case LinkStageEnum::Linked:
 			SyncClock.GetTimestampMonotonic(LinkStartTimestamp);
@@ -240,11 +241,26 @@ protected:
 		case LinkStageEnum::Booting:
 			Serial.println(F("Stage = Booting"));
 			break;
-		case LinkStageEnum::AwaitingLink:
-			Serial.println(F("Stage = AwaitingLink"));
+		case LinkStageEnum::Sleeping:
+			Serial.println(F("Stage = Sleeping"));
 			break;
-		case LinkStageEnum::Linking:
-			Serial.println(F("Stage = Linking"));
+		case LinkStageEnum::Searching:
+			Serial.println(F("Stage = Searching"));
+			break;
+		case LinkStageEnum::Pairing:
+			Serial.println(F("Stage = Pairing"));
+			break;
+		case LinkStageEnum::SwitchingToLinking:
+			Serial.println(F("Stage = SwitchingToLinking"));
+			break;
+		case LinkStageEnum::Authenticating:
+			Serial.println(F("Stage = Authenticating"));
+			break;
+		case LinkStageEnum::ClockSyncing:
+			Serial.println(F("Stage = ClockSyncing"));
+			break;
+		case LinkStageEnum::SwitchingToLinked:
+			Serial.println(F("Stage = SwitchingToLinked"));
 			break;
 		case LinkStageEnum::Linked:
 			Serial.println(F("Stage = Linked"));
@@ -262,48 +278,101 @@ protected:
 		case LinkStageEnum::Disabled:
 			Task::disable();
 			break;
+		case LinkStageEnum::Sleeping:
+			OnServiceSleeping();
+			break;
 		case LinkStageEnum::Booting:
 			SyncClock.Start(0);
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 			if (Transceiver->Start())
 			{
-				UpdateLinkStage(LinkStageEnum::AwaitingLink);
+				UpdateLinkStage(LinkStageEnum::Searching);
 			}
 			else
-			{
-				UpdateLinkStage(LinkStageEnum::Disabled);
-			}
-			break;
-		case LinkStageEnum::AwaitingLink:
-			OnServiceAwaitingLink();
-			break;
-		case LinkStageEnum::Linking:
-			if (GetLinkingElapsed() > GetLinkingTimeoutDuration())
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
-				Serial.println(F("Linking timed out!"));
+				Serial.println(F("Link failed to start transceiver"));
 #endif
-				UpdateLinkStage(LinkStageEnum::AwaitingLink);
+				UpdateLinkStage(LinkStageEnum::Disabled);
+			}
+			break;
+		case LinkStageEnum::Searching:
+			if (GetStageElapsed() > 10000000)
+			{
+#if defined(DEBUG_LOLA_LINK)
+				this->Owner();
+				Serial.println(F("Search timed out!"));
+#endif
+				UpdateLinkStage(LinkStageEnum::Sleeping);
 			}
 			else
 			{
-				OnServiceLinking();
+				OnServiceSearching();
 			}
+			break;
+		case LinkStageEnum::Pairing:
+			if (GetStageElapsed() > GetLinkingStageTimeoutDuration())
+			{
+#if defined(DEBUG_LOLA_LINK)
+				this->Owner();
+				Serial.println(F("Pairing timed out!"));
+#endif
+				//TODO restart pairing.
+				UpdateLinkStage(LinkStageEnum::Searching);
+			}
+			else
+			{
+				OnServicePairing();
+			}
+			break;
+		case LinkStageEnum::SwitchingToLinking:
+			OnServiceSwitchingToLinking();
+			break;
+		case LinkStageEnum::Authenticating:
+			if (GetStageElapsed() > GetLinkingStageTimeoutDuration())
+			{
+#if defined(DEBUG_LOLA_LINK)
+				this->Owner();
+				Serial.println(F("Authentication timed out!"));
+#endif
+				UpdateLinkStage(LinkStageEnum::Searching);
+			}
+			else
+			{
+				OnServiceAuthenticating();
+			}
+			break;
+		case LinkStageEnum::ClockSyncing:
+			if (GetStageElapsed() > GetLinkingStageTimeoutDuration())
+			{
+#if defined(DEBUG_LOLA_LINK)
+				this->Owner();
+				Serial.println(F("ClockSync timed out!"));
+#endif
+				UpdateLinkStage(LinkStageEnum::Searching);
+			}
+			else
+			{
+				OnServiceClockSyncing();
+			}
+			break;
+		case LinkStageEnum::SwitchingToLinked:
+			OnServiceSwitchingToLinked();
 			break;
 		case LinkStageEnum::Linked:
 			if (QualityTracker.GetLastValidReceivedAgeQuality() == 0)
 			{
-				// Zero quality means link has timed out.
-				UpdateLinkStage(LinkStageEnum::AwaitingLink);
+				// Zero quality age means link has timed out.
+				UpdateLinkStage(LinkStageEnum::Searching);
 			}
 			else if (CheckForReportUpdate())
 			{
 				// Report takes priority over clock, as it refers to counters and RSSI.
-				CheckForClockSyncUpdate();
+				CheckForClockTuneUpdate();
 				Task::enable();
 			}
-			else if (CheckForClockSyncUpdate())
+			else if (CheckForClockTuneUpdate())
 			{
 				Task::enable();
 			}

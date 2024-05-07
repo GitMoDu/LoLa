@@ -23,22 +23,11 @@ public:
 	static constexpr uint32_t SERVER_SLEEP_TIMEOUT_MILLIS = 10000;
 
 private:
-	enum class AmStateEnum : uint8_t
-	{
-		NoMatch,
-		ValidatingSession,
-		ComputingSecretKey,
-		SessionCached
-	};
-
-private:
 	LinkRegistry<MaxPacketReceiveListeners, MaxLinkListeners> RegistryInstance{};
 
 	LoLaCryptoAmSession Session;
 
-	AmStateEnum AmState = AmStateEnum::NoMatch;
-
-	bool AmSessionRequested = false;
+	bool AmReplyPending = false;
 
 public:
 	LoLaAddressMatchLinkServer(Scheduler& scheduler,
@@ -71,106 +60,17 @@ public:
 	}
 
 protected:
-	void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) final
+	void OnServicePairing() final
 	{
-		switch (payload[HeaderDefinition::HEADER_INDEX])
+		if (Session.Ready())
 		{
-		case Unlinked::AmSessionRequest::HEADER:
-			if (payloadSize == Unlinked::AmSessionRequest::PAYLOAD_SIZE)
-			{
-				if (IsInSearchingLink())
-				{
-					AmSessionRequested = true;
-					Task::enable();
-#if defined(DEBUG_LOLA_LINK)
-					this->Owner();
-					Serial.println(F("Session request received."));
-#endif
-				}
-				else if (IsInSessionCreation())
-				{
-					if (AmState == AmStateEnum::SessionCached)
-					{
-						Session.ResetAm();
-						AmState = AmStateEnum::NoMatch;
-						StartSearching();
-						AmSessionRequested = true;
-						Task::enable();
-#if defined(DEBUG_LOLA_LINK)
-						this->Owner();
-						Serial.println(F("Session request overrode state back to search."));
-#endif
-					}
-#if defined(DEBUG_LOLA_LINK)
-					else { this->Skipped(F("SessionRequest1")); }
-#endif
-				}
-#if defined(DEBUG_LOLA_LINK)
-				else { this->Skipped(F("SessionRequest2")); }
-#endif
-			}
-#if defined(DEBUG_LOLA_LINK)
-			else { this->Skipped(F("SessionRequest3")); }
-#endif
-			break;
-		case Unlinked::AmLinkingStartRequest::HEADER:
-			if (payloadSize == Unlinked::AmLinkingStartRequest::PAYLOAD_SIZE
-				&& Session.LocalAddressMatchFrom(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_SERVER_ADDRESS_INDEX])
-				&& Session.SessionIdMatches(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
-			{
-				if (IsInSearchingLink())
-				{
-					StartSessionCreationIfNot();
-					Task::enable();
-				}
-				else if (IsInSessionCreation())
-				{
-					switch (AmState)
-					{
-					case AmStateEnum::NoMatch:
-					case AmStateEnum::SessionCached:
-						Task::enable();
-						break;
-					default:
-#if defined(DEBUG_LOLA_LINK)
-						this->Skipped(F("LinkingStartRequest1"));
-#endif
-						return;
-					}
-				}
-				else
-				{
-#if defined(DEBUG_LOLA_LINK)
-					this->Skipped(F("LinkingStartRequest2"));
-#endif
-					return;
-				}
-
-				Session.SetPartnerAddressFrom(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_CLIENT_ADDRESS_INDEX]);
-				AmState = AmStateEnum::ValidatingSession;
-			}
-#if defined(DEBUG_LOLA_LINK)
-			else {
-				this->Skipped(F("LinkingStartRequest3"));
-			}
-#endif
-			break;
-		default:
-			BaseClass::OnUnlinkedPacketReceived(timestamp, payload, rollingCounter, payloadSize);
-			break;
+			UpdateLinkStage(LinkStageEnum::SwitchingToLinking);
 		}
-	}
-
-protected:
-	void ResetSessionCreation() final
-	{
-		AmState = AmStateEnum::NoMatch;
-		Session.ResetAm();
-	}
-
-	void OnServiceSearchingLink() final
-	{
-		if (AmSessionRequested)
+		else if (Session.HasPartner())
+		{
+			Session.Calculate();
+		}
+		else if (AmReplyPending)
 		{
 			OutPacket.SetPort(LoLaLinkDefinition::LINK_PORT);
 			OutPacket.SetHeader(Unlinked::AmSessionAvailable::HEADER);
@@ -181,62 +81,87 @@ protected:
 			if (UnlinkedDuplexCanSend(Unlinked::AmSessionAvailable::PAYLOAD_SIZE) &&
 				PacketService.CanSendPacket())
 			{
-				AmSessionRequested = false;
+				AmReplyPending = false;
 				if (SendPacket(OutPacket.Data, Unlinked::AmSessionAvailable::PAYLOAD_SIZE))
 				{
 #if defined(DEBUG_LOLA_LINK)
 					this->Owner();
-					Serial.println(F("Sent Address Match Session."));
+					Serial.println(F("Sent AmSessionAvailable"));
 #endif
 				}
 			}
 			LOLA_RTOS_RESUME();
 		}
-		Task::enable();
+
+		Task::enableDelayed(0);
 	}
 
-	void OnServiceSessionCreation() final
+	void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) final
 	{
-		switch (AmState)
+		switch (payload[HeaderDefinition::HEADER_INDEX])
 		{
-		case AmStateEnum::NoMatch:
-		case AmStateEnum::SessionCached:
-			Task::enable();
+		case Unlinked::AmSessionRequest::HEADER:
+			if (payloadSize == Unlinked::AmSessionRequest::PAYLOAD_SIZE
+				&& !Session.HasPartner())
+			{
+				switch (LinkStage)
+				{
+				case LinkStageEnum::Searching:
+					Session.ResetAm();
+					UpdateLinkStage(LinkStageEnum::Pairing);
+				case LinkStageEnum::Pairing:
+					AmReplyPending = true;
+					Task::enableDelayed(0);
+#if defined(DEBUG_LOLA_LINK)
+					this->Owner();
+					Serial.println(F("AmSessionRequest received."));
+#endif
+					break;
+				default:
+					this->Skipped(F("AmSessionRequest2"));
+					return;
+					break;
+				}
+			}
+#if defined(DEBUG_LOLA_LINK)
+			else { this->Skipped(F("AmSessionRequest")); }
+#endif
 			break;
-		case AmStateEnum::ValidatingSession:
-			if (Session.AddressCollision())
+		case Unlinked::AmLinkingStartRequest::HEADER:
+			if (payloadSize == Unlinked::AmLinkingStartRequest::PAYLOAD_SIZE
+				&& LinkStage == LinkStageEnum::Pairing
+				&& !Session.HasPartner()
+				&& Session.LocalAddressMatchFrom(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_SERVER_ADDRESS_INDEX])
+				&& Session.SessionIdMatches(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_SESSION_ID_INDEX]))
 			{
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
-				Serial.println(F("Local and Partner addresses match, link is impossible."));
-#endif
-				AmState = AmStateEnum::NoMatch;
+				Serial.println(F("AmLinkingStartRequest received"));
+#endif				
+				Session.SetPartnerAddressFrom(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_CLIENT_ADDRESS_INDEX]);
+				Task::enableDelayed(0);
 			}
-			else if (Session.SessionIsCached())
-			{
 #if defined(DEBUG_LOLA_LINK)
-				this->Owner();
-				Serial.println(F("Session secrets are cached, let's start linking."));
-#endif
-				StartSwitchToLinking();
+			else {
+				this->Skipped(F("AmLinkingStartRequest"));
 			}
-			else
-			{
-#if defined(DEBUG_LOLA_LINK)
-				this->Owner();
-				Serial.println(F("Session secrets invalidated, caching..."));
 #endif
-				Session.ResetAm();
-				AmState = AmStateEnum::ComputingSecretKey;
-			}
-			Task::enable();
 			break;
-		case AmStateEnum::ComputingSecretKey:
-			if (Session.Calculate(micros()))
-			{
-				AmState = AmStateEnum::SessionCached;
-			}
-			Task::enable();
+		default:
+			BaseClass::OnUnlinkedPacketReceived(timestamp, payload, rollingCounter, payloadSize);
+			break;
+		}
+	}
+
+	void UpdateLinkStage(const LinkStageEnum linkStage) final
+	{
+		BaseClass::UpdateLinkStage(linkStage);
+
+		switch (linkStage)
+		{
+		case LinkStageEnum::Searching:
+		case LinkStageEnum::Pairing:
+			Session.ResetAm();
 			break;
 		default:
 			break;

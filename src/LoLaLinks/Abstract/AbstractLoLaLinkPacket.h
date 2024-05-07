@@ -138,7 +138,7 @@ public:
 		const uint32_t rangedPacketsPerSecond = (packetsPerSecond * Duplex->GetRange()) / Duplex->GetPeriod();
 		const uint32_t rangedBitsPerSecond = (transceiverBitsPerSecond * Duplex->GetRange()) / Duplex->GetPeriod();
 
-		Serial.println(F("Time-to-Air estimation:"));
+		Serial.println(F("Time-to-Air estimation"));
 		Serial.print(F("\tShort\t"));
 		Serial.print(GetSendDuration(0));
 		Serial.println(F(" us"));
@@ -146,46 +146,46 @@ public:
 		Serial.print(GetSendDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
 		Serial.println(F(" us"));
 
-		Serial.println(F("Time-On-Air:"));
-		Serial.print(F("\tMin:\t"));
+		Serial.println(F("Time-On-Air"));
+		Serial.print(F("\tMin\t"));
 		Serial.print(GetOnAirDuration(0));
 		Serial.println(F(" us."));
-		Serial.print(F("\tMax:\t"));
+		Serial.print(F("\tMax\t"));
 		Serial.print(GetOnAirDuration(LoLaPacketDefinition::MAX_PAYLOAD_SIZE));
 		Serial.println(F(" us."));
 
 		Serial.println(F("Packet TX"));
-		Serial.print(F("\tMax:\t"));
+		Serial.print(F("\tMax\t"));
 		Serial.print(packetsPerSecond);
 		Serial.println(F(" packets/s"));
-		Serial.print(F("\tRanged:\t"));
+		Serial.print(F("\tRanged\t"));
 		Serial.print(rangedPacketsPerSecond);
 		Serial.println(F(" packets/s"));
 
 		Serial.println(F("Bitrate"));
-		Serial.print(F("\tMax:\t"));
+		Serial.print(F("\tMax\t"));
 		Serial.print(transceiverBitsPerSecond);
 		Serial.println(F(" bps"));
 
-		Serial.print(F("\tRanged:\t"));
+		Serial.print(F("\tRanged\t"));
 		Serial.print(rangedBitsPerSecond);
 		Serial.println(F(" bps"));
 
-		Serial.println(F("Duplex:"));
-		Serial.print(F("\tPeriod:\t"));
+		Serial.println(F("Duplex"));
+		Serial.print(F("\tPeriod\t"));
 		Serial.println(Duplex->GetPeriod());
-		Serial.print(F("\tRange:\t"));
+		Serial.print(F("\tRange\t"));
 		Serial.println(Duplex->GetRange());
 
-		Serial.println(F("Timeout Durations: "));
-		Serial.print(F("\tLinking:\t"));
-		Serial.print(GetLinkingTimeoutDuration());
+		Serial.println(F("Timeouts"));
+		Serial.print(F("\tLinking Stage\t"));
+		Serial.print(GetLinkingStageTimeoutDuration());
 		Serial.println(F(" us."));
-		Serial.print(F("\tLink:\t\t"));
-		Serial.print(GetLinkTimeoutDuration());
-		Serial.println(F(" us."));
-		Serial.print(F("\tTransition:\t"));
+		Serial.print(F("\tTransition\t"));
 		Serial.print(LoLaLinkDefinition::GetTransitionDuration(Duplex->GetPeriod()));
+		Serial.println(F(" us."));
+		Serial.print(F("\tLink\t\t"));
+		Serial.print(GetLinkTimeoutDuration());
 		Serial.println(F(" us."));
 
 		Serial.println();
@@ -243,8 +243,13 @@ public:
 		{
 		case LinkStageEnum::Disabled:
 			break;
-		case LinkStageEnum::AwaitingLink:
-		case LinkStageEnum::Linking:
+		case LinkStageEnum::Sleeping:
+		case LinkStageEnum::Searching:
+		case LinkStageEnum::Pairing:
+		case LinkStageEnum::Authenticating:
+		case LinkStageEnum::ClockSyncing:
+		case LinkStageEnum::SwitchingToLinking:
+		case LinkStageEnum::SwitchingToLinked:
 			return LoLaLinkDefinition::GetAdvertisingChannel(ChannelHopper->GetChannel());
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
@@ -285,14 +290,20 @@ protected:
 			case LinkStageEnum::Disabled:
 				Task::disable();
 				break;
-			case LinkStageEnum::AwaitingLink:
+			case LinkStageEnum::Sleeping:
+			case LinkStageEnum::Pairing:
+			case LinkStageEnum::Authenticating:
+			case LinkStageEnum::ClockSyncing:
+			case LinkStageEnum::SwitchingToLinking:
+			case LinkStageEnum::SwitchingToLinked:
+				Task::enable();
+				break;
+			case LinkStageEnum::Searching:
 				ChannelHopper->OnLinkStopped();
+				RandomSource.RandomReseed();
 				SetSendCounter((uint16_t)RandomSource.GetRandomLong());
 				SetReceiveCounter((uint16_t)RandomSource.GetRandomLong());
 				PacketService.RefreshChannel();
-				break;
-			case LinkStageEnum::Linking:
-				Task::enable();
 				break;
 			case LinkStageEnum::Linked:
 				// Reset rolling counters.
@@ -340,8 +351,13 @@ protected:
 		{
 		case LinkStageEnum::Disabled:
 			break;
-		case LinkStageEnum::AwaitingLink:
-		case LinkStageEnum::Linking:
+		case LinkStageEnum::Sleeping:
+		case LinkStageEnum::Searching:
+		case LinkStageEnum::Pairing:
+		case LinkStageEnum::Authenticating:
+		case LinkStageEnum::ClockSyncing:
+		case LinkStageEnum::SwitchingToLinking:
+		case LinkStageEnum::SwitchingToLinked:
 			return LoLaLinkDefinition::GetAdvertisingChannel(ChannelHopper->GetChannel());
 		case LinkStageEnum::Linked:
 			if (IsLinkHopper)
@@ -365,23 +381,18 @@ protected:
 		return micros() - StageStartTime;
 	}
 
-	void ResetStageStartTime()
-	{
-		StageStartTime = micros();
-	}
-
 	void SetAdvertisingChannel(const uint8_t channel)
 	{
 		ChannelHopper->SetChannel(channel);
 		PacketService.RefreshChannel();
 	}
 
-	const uint32_t GetLinkingTimeoutDuration()
+	const uint32_t GetLinkingStageTimeoutDuration() const
 	{
-		return LoLaLinkDefinition::GetLinkingTimeoutDuration(Duplex->GetPeriod());
+		return LoLaLinkDefinition::GetLinkingStageTimeoutDuration(Duplex->GetPeriod());
 	}
 
-	const uint32_t GetLinkTimeoutDuration()
+	const uint32_t GetLinkTimeoutDuration() const
 	{
 		return LoLaLinkDefinition::GetLinkTimeoutDuration(Duplex->GetPeriod());
 	}

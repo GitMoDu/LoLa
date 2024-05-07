@@ -13,6 +13,7 @@ class LoLaCryptoAmSession final : public LoLaCryptoEncoderSession
 private:
 	enum class AmEnum
 	{
+		NoPartner,
 		CalculatingLinkingToken,
 		CalculatingMatch,
 		CalculatingExpandedKey,
@@ -32,10 +33,7 @@ private:
 	const uint8_t* SecretKey;
 	const uint8_t* LocalAddress;
 
-	uint32_t CachedStart = 0;
-
-	AmEnum AmState = AmEnum::CalculatingMatch;
-
+	AmEnum AmState = AmEnum::NoPartner;
 
 public:
 	/// <summary>
@@ -53,13 +51,13 @@ public:
 	{}
 
 protected:
-	virtual const LoLaLinkDefinition::LinkType GetLinkType() final
+	const LoLaLinkDefinition::LinkType GetLinkType() final
 	{
 		return LoLaLinkDefinition::LinkType::AddressMatch;
 	}
 
 public:
-	virtual const bool Setup() final
+	const bool Setup() final
 	{
 		return LoLaCryptoEncoderSession::Setup()
 			&& SecretKey != nullptr
@@ -67,19 +65,19 @@ public:
 	}
 
 public:
-	const bool SessionIsCached()
+	const bool HasPartner()
+	{
+		return AmState != AmEnum::NoPartner;
+	}
+
+	const bool Ready()
 	{
 		return AmState == AmEnum::AmCached;
 	}
 
-	const bool GetCacheAge(const uint32_t timestamp)
-	{
-		return timestamp - CachedStart;
-	}
-
 	void ResetAm()
 	{
-		AmState = AmEnum::CalculatingLinkingToken;
+		AmState = AmEnum::NoPartner;
 	}
 
 	void CopyLocalAddressTo(uint8_t* target)
@@ -104,6 +102,8 @@ public:
 		{
 			PartnerAddress[i] = source[i];
 		}
+
+		AmState = AmEnum::CalculatingLinkingToken;
 	}
 
 	const bool LocalAddressMatchFrom(const uint8_t* source)
@@ -119,15 +119,17 @@ public:
 		return true;
 	}
 
-
 	/// <summary>
 	/// Long operations, cannot be done in line with linking protocol.
 	/// </summary>
 	/// <returns></returns>
-	const bool Calculate(const uint32_t timestamp)
+	const bool Calculate()
 	{
 		switch (AmState)
 		{
+		case AmEnum::NoPartner:
+			return false;
+			break;
 		case AmEnum::CalculatingLinkingToken:
 			CalculateLinkingToken(LocalAddress, PartnerAddress, PUBLIC_ADDRESS_SIZE);
 			AmState = AmEnum::CalculatingMatch;
@@ -144,7 +146,6 @@ public:
 		case AmEnum::CalculatingAddressing:
 			CalculateSessionAddressing(LocalAddress, PartnerAddress, PUBLIC_ADDRESS_SIZE);
 			AmState = AmEnum::AmCached;
-			CachedStart = timestamp;
 			break;
 		case AmEnum::AmCached:
 			return true;

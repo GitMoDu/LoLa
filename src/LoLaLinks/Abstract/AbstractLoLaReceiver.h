@@ -87,7 +87,10 @@ public:
 		{
 		case LinkStageEnum::Disabled:
 			break;
-		case LinkStageEnum::AwaitingLink:
+		case LinkStageEnum::Sleeping:
+		case LinkStageEnum::Searching:
+		case LinkStageEnum::Pairing:
+		case LinkStageEnum::SwitchingToLinking:
 			// Update MAC without implicit addressing or token.
 			// Addressing must be explicit in payload.
 			if (Encoder->DecodeInPacket(RawInPacket, InData, receivingCounter, receivingDataSize))
@@ -110,7 +113,9 @@ public:
 				OnEvent(PacketEventEnum::ReceiveRejectedMac);
 			}
 			break;
-		case LinkStageEnum::Linking:
+		case LinkStageEnum::Authenticating:
+		case LinkStageEnum::ClockSyncing:
+		case LinkStageEnum::SwitchingToLinked:
 			// Update MAC with implicit addressing but without token.
 			if (Encoder->DecodeInPacket(RawInPacket, InData, 0, receivingCounter, receivingDataSize))
 			{

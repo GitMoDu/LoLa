@@ -39,8 +39,13 @@ protected:
 	{
 		Disabled,
 		Booting,
-		AwaitingLink,
-		Linking,
+		Sleeping,
+		Searching,
+		Pairing,
+		SwitchingToLinking,
+		Authenticating,
+		ClockSyncing,
+		SwitchingToLinked,
 		Linked
 	};
 

@@ -81,15 +81,16 @@ namespace LoLaLinkDefinition
 	static constexpr uint8_t LINKING_TRANSITION_DUPLEX_COUNT = 7;
 
 	/// <summary>
-	/// If linking is not complete after this time, unlink and restart.
+	/// If linking stage is not complete after this time, restart.
 	/// </summary>
-	static constexpr uint8_t LINKING_STAGE_TIMEOUT_DUPLEX_COUNT = 25;
+	static constexpr uint8_t LINKING_STAGE_TIMEOUT_DUPLEX_COUNT = 15;
+	static constexpr uint32_t LINKING_STAGE_TIMEOUT_MIN_MICROS = 25000;
 
 	/// <summary>
 	/// How long without an input message from partner before disconnect.
 	/// </summary>
-	static constexpr uint8_t LINK_STAGE_TIMEOUT_DUPLEX_COUNT = 40;
-	static constexpr uint32_t LINK_STAGE_TIMEOUT_MIN_MICROS = 500000;
+	static constexpr uint8_t LINK_STAGE_TIMEOUT_DUPLEX_COUNT = 50;
+	static constexpr uint32_t LINK_STAGE_TIMEOUT_MIN_MICROS = 750000;
 
 	/// <summary>
 	/// Duplex periods over this value are too long for LoLa to work effectively.
@@ -127,13 +128,13 @@ namespace LoLaLinkDefinition
 	}
 
 	/// <summary>
-	/// Linking timeout depends on duplex period.
+	/// Linking stages timeout depends on duplex period.
 	/// </summary>
 	/// <param name="duplexPeriod"></param>
 	/// <returns></returns>
-	static constexpr uint32_t GetLinkingTimeoutDuration(const uint16_t duplexPeriod)
+	static constexpr uint32_t GetLinkingStageTimeoutDuration(const uint16_t duplexPeriod)
 	{
-		return (uint32_t)duplexPeriod * LINKING_STAGE_TIMEOUT_DUPLEX_COUNT;
+		return LINKING_STAGE_TIMEOUT_MIN_MICROS + (uint32_t)duplexPeriod * LINKING_STAGE_TIMEOUT_DUPLEX_COUNT;
 	}
 
 	/// <summary>
