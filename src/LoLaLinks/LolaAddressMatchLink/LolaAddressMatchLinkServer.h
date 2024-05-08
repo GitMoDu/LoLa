@@ -112,7 +112,9 @@ protected:
 #endif
 					break;
 				default:
+#if defined(DEBUG_LOLA_LINK)
 					this->Skipped(F("AmSessionRequest2"));
+#endif
 					return;
 					break;
 				}

@@ -518,7 +518,9 @@ protected:
 				case LinkStageEnum::SwitchingToLinked:
 					break;
 				default:
+#if defined(DEBUG_LOLA_LINK)
 					this->Skipped(F("LinkSwitchOver2"));
+#endif
 					return;
 					break;
 				}
