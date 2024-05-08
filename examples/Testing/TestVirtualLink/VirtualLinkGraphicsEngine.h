@@ -12,8 +12,7 @@
 #include <ArduinoGraphicsEngineTask.h>
 
 #include "Testing/LinkDisplayDrawer.h"
-
-#include "ChannelDisplayDrawer.h"
+#include "Testing/ChannelDisplayDrawer.h"
 
 template<typename screenDriverType, typename frameBufferType>
 class VirtualLinkGraphicsEngine
@@ -44,15 +43,15 @@ private:
 public:
 	VirtualLinkGraphicsEngine(Scheduler* scheduler
 		, ILoLaLink* linkLeft, ILoLaLink* linkRight
-		, IVirtualTransceiver* transceiverLeft = nullptr, IVirtualTransceiver* transceiverRight = nullptr)
+		, ILoLaTransceiver* transceiverLeft = nullptr, ILoLaTransceiver* transceiverRight = nullptr)
 		: ScreenDriver()
 		, FrameBuffer(Buffer)
 		, GraphicsEngine(scheduler, &FrameBuffer, &ScreenDriver, FramePeriod)
 		, MultiDrawer()
-		, LinkDisplayLeft(&FrameBuffer, linkLeft, 0, 0, (frameBufferType::FrameWidth / 2), frameBufferType::FrameHeight/ 2)
-		, LinkDisplayRight(&FrameBuffer, linkRight, (frameBufferType::FrameWidth / 2), 0, (frameBufferType::FrameWidth / 2), frameBufferType::FrameHeight/ 2)
-		, ChannelDisplayLeft(&FrameBuffer, transceiverLeft, 1, LinkDisplayLeft.GetDrawerHeight() + 1, (frameBufferType::FrameWidth / 2) - 3, frameBufferType::FrameHeight- LinkDisplayLeft.GetDrawerHeight() - 1)
-		, ChannelDisplayRight(&FrameBuffer, transceiverRight, (frameBufferType::FrameWidth / 2) + 1, LinkDisplayLeft.GetDrawerHeight() + 1, (frameBufferType::FrameWidth / 2) - 3, frameBufferType::FrameHeight- LinkDisplayLeft.GetDrawerHeight() - 1)
+		, LinkDisplayLeft(&FrameBuffer, linkLeft, 0, 0, (frameBufferType::FrameWidth / 2), frameBufferType::FrameHeight / 2)
+		, LinkDisplayRight(&FrameBuffer, linkRight, (frameBufferType::FrameWidth / 2), 0, (frameBufferType::FrameWidth / 2), frameBufferType::FrameHeight / 2)
+		, ChannelDisplayLeft(&FrameBuffer, transceiverLeft, 1, LinkDisplayLeft.GetDrawerHeight() + 1, (frameBufferType::FrameWidth / 2) - 3, frameBufferType::FrameHeight - LinkDisplayLeft.GetDrawerHeight() - 1)
+		, ChannelDisplayRight(&FrameBuffer, transceiverRight, (frameBufferType::FrameWidth / 2) + 1, LinkDisplayLeft.GetDrawerHeight() + 1, (frameBufferType::FrameWidth / 2) - 3, frameBufferType::FrameHeight - LinkDisplayLeft.GetDrawerHeight() - 1)
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
 		, EngineLog(scheduler, &GraphicsEngine)
 #endif

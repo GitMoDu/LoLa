@@ -4,7 +4,7 @@
 #define _CHANNEL_DISPLAY_DRAWER_h
 
 #include <ArduinoGraphicsDrawer.h>
-#include <ILoLaInclude.h>
+#include "../LoLaTransceivers/ILoLaTransceiver.h"
 
 class ChannelDisplayDrawer : public ElementDrawer
 {
@@ -20,7 +20,7 @@ private:
 	};
 
 private:
-	IVirtualTransceiver* Transceiver;
+	ILoLaTransceiver* Transceiver;
 	uint8_t* Log;
 
 private:
@@ -35,8 +35,10 @@ private:
 	const uint8_t Height;
 
 public:
-	ChannelDisplayDrawer(IFrameBuffer* frame, IVirtualTransceiver* transceiver,
-		const uint8_t x, const uint8_t y, const uint8_t width, const uint8_t height)
+	ChannelDisplayDrawer(IFrameBuffer* frame
+		, ILoLaTransceiver* transceiver
+		, const uint8_t x, const uint8_t y
+		, const uint8_t width, const uint8_t height)
 		: ElementDrawer(frame, (uint8_t)DrawElementsEnum::DrawElementsCount)
 		, Transceiver(transceiver)
 		, Log(new uint8_t[height]{})
