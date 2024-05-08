@@ -143,18 +143,9 @@ public:
 	{
 	}
 
-	virtual const uint8_t GetChannelCount() final
-	{
-		return Config::ChannelCount;
-	}
-
-	virtual const uint8_t GetCurrentChannel() final
-	{
-		return CurrentChannel;
-	}
 
 public:
-	virtual bool Callback() final
+	bool Callback() final
 	{
 		// Simulate transmit delay, from request to on-air start.
 		if (OutGoing.HasPending())
@@ -172,7 +163,7 @@ public:
 					OutGoing.AirStarted = true;
 
 #if defined(ECO_CHANCE)
-					if (random(1 + UINT8_MAX) <= ECO_CHANCE)
+					if (RollDice(ECO_CHANCE))
 					{
 #if defined(DEBUG_LOLA_LINK)
 						PrintName();
@@ -183,7 +174,7 @@ public:
 #endif
 
 #if defined(DOUBLE_SEND_CHANCE)
-					if (random(1 + UINT8_MAX) <= DOUBLE_SEND_CHANCE)
+					if (RollDice(DOUBLE_SEND_CHANCE))
 					{
 #if defined(DEBUG_LOLA_LINK)
 						PrintName();
@@ -218,7 +209,7 @@ public:
 			if (Listener != nullptr)
 			{
 #if defined(DROP_CHANCE)
-				if (random(1 + UINT8_MAX) <= DROP_CHANCE)
+				if (RollDice(DROP_CHANCE))
 				{
 #if defined(DEBUG_LOLA_LINK)
 					PrintName();
@@ -231,7 +222,7 @@ public:
 					{
 #if defined(DEBUG_LOLA_LINK)
 						PrintName();
-						Serial.println(F("Rx Collision. Packet Service rejected."));
+						Serial.println(F("Rx Collision. Packet rejected."));
 #endif
 					}
 			}
@@ -269,14 +260,14 @@ public:
 	}
 
 public:
-	virtual const bool SetupListener(ILoLaTransceiverListener* listener) final
+	const bool SetupListener(ILoLaTransceiverListener* listener) final
 	{
 		Listener = listener;
 
 		return Listener != nullptr;
 	}
 
-	virtual const bool Start() final
+	const bool Start() final
 	{
 		Incoming.Clear();
 		OutGoing.Clear();
@@ -291,12 +282,12 @@ public:
 		return true;
 	}
 
-	virtual const uint32_t GetTransceiverCode() final
+	const uint32_t GetTransceiverCode() final
 	{
 		return TRANSCEIVER_ID | ((uint32_t)Config::ChannelCount << 24);
 	}
 
-	virtual const bool Stop() final
+	const bool Stop() final
 	{
 		DriverEnabled = false;
 
@@ -305,7 +296,7 @@ public:
 		return true;
 	}
 
-	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
+	const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
 		const uint32_t timestamp = micros();
 
@@ -354,17 +345,14 @@ public:
 		OutGoing.StartTimestamp = timestamp;
 
 		OutGoing.Channel = GetRawChannel(channel);
-		for (uint_fast8_t i = 0; i < packetSize; i++)
-		{
-			OutGoing.Buffer[i] = data[i];
-		}
+		memcpy(OutGoing.Buffer, data, packetSize);
 
 		Task::enable();
 
 		return true;
 	}
 
-	virtual void Rx(const uint8_t channel) final
+	void Rx(const uint8_t channel) final
 	{
 		const uint8_t rawChannel = GetRawChannel(channel);
 
@@ -378,28 +366,38 @@ public:
 		Task::enable();
 	}
 
-	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
+	const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
 		return Config::TxBaseMicros + (((uint32_t)Config::TxByteNanos * packetSize) / 1000);
 	}
 
-	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
+	const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
 		return Config::AirBaseMicros + (((uint32_t)Config::AirByteNanos * packetSize) / 1000);
 	}
 
-	virtual const bool TxAvailable() final
+	const bool TxAvailable() final
 	{
 		return DriverEnabled && !OutGoing.HasPending() && !Incoming.HasPending() && (micros() - LastOut >= PAUSE_AFTER_TX_MICROS);
 	}
 
+	const uint8_t GetChannelCount() final
+	{
+		return Config::ChannelCount;
+	}
+
+	const uint8_t GetCurrentChannel() final
+	{
+		return CurrentChannel;
+	}
+
 public:
-	virtual void SetPartner(IVirtualTransceiver* partner) final
+	void SetPartner(IVirtualTransceiver* partner) final
 	{
 		Partner = partner;
 	}
 
-	virtual void ReceivePacket(const uint8_t* data, const uint32_t txTimestamp, const uint8_t packetSize, const uint8_t channel) final
+	void ReceivePacket(const uint8_t* data, const uint32_t txTimestamp, const uint8_t packetSize, const uint8_t channel) final
 	{
 		if (HopRequest.HasPending() && ((micros() - HopRequest.StartTimestamp) < Config::HopMicros))
 		{
@@ -446,10 +444,7 @@ public:
 
 		Incoming.Size = packetSize;
 		Incoming.StartTimestamp = txTimestamp;
-		for (uint_fast8_t i = 0; i < packetSize; i++)
-		{
-			Incoming.Buffer[i] = data[i];
-		}
+		memcpy(Incoming.Buffer, data, packetSize);
 
 #if defined(CORRUPT_CHANCE)
 		if (random(1 + UINT8_MAX) <= CORRUPT_CHANCE)
@@ -482,16 +477,12 @@ private:
 		{
 			Serial.print('_');
 		}
-
-
 		Serial.print('/');
 		Serial.print('\\');
-
 		for (uint_fast8_t i = (channelScaled + 1); i < channelCount; i++)
 		{
 			Serial.print('_');
 		}
-
 		Serial.println();
 #endif
 	}
@@ -517,5 +508,10 @@ private:
 		Serial.println('|');
 	}
 #endif
+
+	const bool RollDice(const uint8_t chance)
+	{
+		return random(200) <= (long)chance;
+	}
 };
 #endif
