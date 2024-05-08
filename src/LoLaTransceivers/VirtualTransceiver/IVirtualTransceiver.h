@@ -25,10 +25,6 @@ public:
 	};
 
 public:
-	virtual const uint8_t GetChannelCount() { return 0; }
-	virtual const uint8_t GetCurrentChannel() { return 0; }
-
-public:
 	virtual void SetPartner(IVirtualTransceiver* partner) {}
 	virtual void ReceivePacket(const uint8_t* data, const uint32_t txTimestamp, const uint8_t size, const uint8_t channel) { }
 };

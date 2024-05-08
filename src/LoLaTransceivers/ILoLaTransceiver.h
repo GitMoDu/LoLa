@@ -10,7 +10,6 @@ class ILoLaTransceiverListener
 public:
 	/// <summary>
 	/// Transceiver has a received packet to deliver.
-	/// TODO: Add direct buffer variant.
 	/// </summary>
 	/// <param name="data">Raw packet data.</param>
 	/// <param name="receiveTimestamp">Accurate timestamp (micros()) of incoming packet start.</param>
@@ -122,5 +121,19 @@ public:
 	/// </summary>
 	/// <returns>32 Bit unique id.</returns>
 	virtual const uint32_t GetTransceiverCode() { return 0; }
+
+	/// <summary>
+	/// Optional interface used for debug/display purposes only.
+	/// Not required for operation.
+	/// </summary>
+	/// <returns>How many channels does the transceiver support.</returns>
+	virtual const uint8_t GetChannelCount() { return 0; }
+
+	/// <summary>
+	/// Optional interface used for debug/display purposes only.
+	/// Not required for operation.
+	/// </summary>
+	/// <returns></returns>
+	virtual const uint8_t GetCurrentChannel() { return 0; }
 };
 #endif
