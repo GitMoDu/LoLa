@@ -40,6 +40,7 @@
 #if defined(ARDUINO_ARCH_ESP8266)
 #endif
 #if defined(ARDUINO_ARCH_ESP32)
+#include "ClockSources/Esp32TimerCycles.h"
 #endif
 ///
 
