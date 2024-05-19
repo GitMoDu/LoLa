@@ -394,9 +394,6 @@ protected:
 		case PacketEventEnum::ReceiveRejectedHeader:
 			Serial.println(F("@Link Event: ReceiveRejected: Header/Counter"));
 			break;
-		case PacketEventEnum::ReceiveRejectedTransceiver:
-			Serial.println(F("@Link Event: ReceiveRejected: Transceiver"));
-			break;
 		case PacketEventEnum::ReceiveRejectedMac:
 			Serial.println(F("@Link Event: ReceiveRejectedMAC"));
 			break;

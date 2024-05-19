@@ -49,7 +49,6 @@ public:
 
 	virtual void OnDriverPacketLost(const uint32_t receiveTimestamp) final
 	{
-		Listener->OnRxLost(receiveTimestamp);
 	}
 
 	virtual void OnDriverPacketSent() final

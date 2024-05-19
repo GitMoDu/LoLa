@@ -410,10 +410,6 @@ public:
 
 		if (Incoming.HasPending())
 		{
-			if (Listener != nullptr)
-			{
-				Listener->OnRxLost(txTimestamp);
-			}
 #if defined(DEBUG_LOLA_LINK)
 			PrintName();
 			Serial.println(F("Rx Collision, Rx was pending."));

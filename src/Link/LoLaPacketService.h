@@ -169,7 +169,6 @@ public:
 		if (State != StateEnum::Done)
 		{
 			ServiceListener->OnSendComplete(SendResultEnum::SendTimeout);
-
 #if defined(DEBUG_LOLA)
 			Serial.println(F("\tPrevious Send request cancelled."));
 #endif
@@ -265,11 +264,6 @@ public:
 		Task::enable();
 
 		return true;
-	}
-
-	virtual void OnRxLost(const uint32_t receiveTimestamp) final
-	{
-		ServiceListener->OnLost(receiveTimestamp);
 	}
 
 	virtual void OnTx() final

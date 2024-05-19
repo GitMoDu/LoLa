@@ -19,12 +19,6 @@ public:
 	virtual const bool OnRx(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssi) { return false; }
 
 	/// <summary>
-	/// Transceiver was receiving a packet but couldn't read it or finish it.
-	/// </summary>
-	/// <param name="startTimestamp">Accurate timestamp (micros()) of lost packet start.</param>
-	virtual void OnRxLost(const uint32_t timestamp) {}
-
-	/// <summary>
 	/// Transceiver has finished transmitting a packet.
 	/// </summary>
 	virtual void OnTx() {}

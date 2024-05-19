@@ -6,7 +6,6 @@
 enum class PacketEventEnum : uint8_t
 {
 	SendCollisionFailed,
-	ReceiveRejectedTransceiver,
 	ReceiveRejectedMac,
 	ReceiveRejectedHeader
 };

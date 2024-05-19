@@ -60,12 +60,6 @@ public:
 	{}
 
 public:
-	// IPacketServiceListener
-	void OnLost(const uint32_t timestamp) final
-	{
-		OnEvent(PacketEventEnum::ReceiveRejectedTransceiver);
-	}
-
 	/// <summary>
 	/// RawInPacket packet is validated for:
 	/// - Data integrity.

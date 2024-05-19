@@ -420,10 +420,6 @@ private:
 		{
 			Listener->OnRx(&RxBuffer[COBS_IN_PLACE_OFFSET], RxStartTimestamp, RxSize, UINT8_MAX);
 		}
-		else
-		{
-			Listener->OnRxLost(RxStartTimestamp);
-		}
 
 		// Clear input buffer.
 		while (IO->available())

@@ -127,14 +127,12 @@ public:
 			|| count > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
 			// Invalid size.
-			Listener->OnRxLost(RxTimestamp);
 		}
 
 		for (uint_fast8_t i = 0; i < WIFIESPNOW_ALEN; i++)
 		{
 			if (mac[i] != UINT8_MAX) {
 				// Mac mismatch.
-				Listener->OnRxLost(RxTimestamp);
 				return;
 			}
 		}

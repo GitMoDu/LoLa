@@ -115,7 +115,6 @@ public:
 			|| data_len > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
 			// Invalid size.
-			Listener->OnRxLost(RxTimestamp);
 		}
 
 		// Copy to buffer.

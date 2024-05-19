@@ -35,11 +35,6 @@ public:
 	/// <param name="packetSize"></param>
 	virtual void OnReceived(const uint32_t receiveTimestamp, const uint8_t packetSize, const uint8_t rssi) { }
 
-	/// <summary>
-	/// The Physical Driver failed to receive an integral packet.
-	/// </summary>
-	/// <param name="timestamp"></param>
-	virtual void OnLost(const uint32_t timestamp) { }
 
 	/// <summary>
 	/// Optional callback.

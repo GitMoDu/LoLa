@@ -319,7 +319,6 @@ public:
 					Serial.print(F(": "));
 					Serial.println(F("Corrupt Rx."));
 #endif
-					Listener->OnRxLost(PacketEvent.Timestamp - GetRxDelay(packetSize));
 				}
 				PacketEvent.RxReady = false;
 				Task::enable();
