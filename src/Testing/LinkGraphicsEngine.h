@@ -12,6 +12,7 @@
 
 #include <ArduinoGraphicsEngineTask.h>
 #include "LinkDisplayDrawer.h"
+#include "ChannelDisplayDrawer.h"
 
 template<typename screenDriverClass, typename frameBufferType>
 class LinkGraphicsEngine
@@ -19,27 +20,33 @@ class LinkGraphicsEngine
 private:
 	const uint32_t FramePeriod = 16666;
 
-private:
-	uint8_t Buffer[frameBufferType::BufferSize]{};
 
+private:
 	screenDriverClass ScreenDriver;
 	frameBufferType FrameBuffer;
 
 private:
-	GraphicsEngineTask GraphicsEngine;
+	uint8_t Buffer[frameBufferType::BufferSize]{};
+
+	GraphicsEngineTask GraphicsEngine{};
+
+	MultiDrawerWrapper<2> MultiDrawer;
 
 	LinkDisplayDrawer LinkDrawer;
+	ChannelDisplayDrawer ChannelDrawer;
 
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
 	EngineLogTask<1000> EngineLog;
 #endif
 
+
 public:
-	LinkGraphicsEngine(Scheduler* scheduler, ILoLaLink* link)
+	LinkGraphicsEngine(Scheduler* scheduler, ILoLaLink* link, ILoLaTransceiver* transceiver = nullptr)
 		: ScreenDriver()
 		, FrameBuffer(Buffer)
 		, GraphicsEngine(scheduler, &FrameBuffer, &ScreenDriver, FramePeriod)
-		, LinkDrawer(&FrameBuffer, link, 0, 0, frameBufferType::FrameWidth, frameBufferType::FrameHeight)
+		, LinkDrawer(&FrameBuffer, link, 0, 0, frameBufferType::FrameWidth, (frameBufferType::FrameHeight / 2) - 1)
+		, ChannelDrawer(&FrameBuffer, transceiver, 1, (frameBufferType::FrameHeight / 2) + 1, frameBufferType::FrameWidth - 1, (frameBufferType::FrameHeight / 2) - 1)
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
 		, EngineLog(scheduler, &GraphicsEngine)
 #endif
@@ -47,7 +54,14 @@ public:
 
 	const bool Start()
 	{
-		GraphicsEngine.SetDrawer(&LinkDrawer);
+		if (!MultiDrawer.AddDrawer(&LinkDrawer)
+			|| !MultiDrawer.AddDrawer(&ChannelDrawer)
+			)
+		{
+			return false;
+		}
+
+		GraphicsEngine.SetDrawer(&MultiDrawer);
 
 		return GraphicsEngine.Start();
 	}

@@ -73,7 +73,8 @@ public:
 private:
 	void StepChannel(DrawState* drawState)
 	{
-		if (drawState->FrameTime - LastUpdate > ChannelUpdatePeriod)
+		if (Transceiver != nullptr
+			&& drawState->FrameTime - LastUpdate > ChannelUpdatePeriod)
 		{
 			LastUpdate = drawState->FrameTime;
 			Log[LogIndex] = ((uint16_t)Transceiver->GetCurrentChannel() * (Width - 1)) / (Transceiver->GetChannelCount() - 1);
