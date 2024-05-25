@@ -40,6 +40,7 @@ public:
 	void ResetAm()
 	{
 		AmState = AmEnum::NoPartner;
+		ClearPartnerAddress();
 	}
 
 	void SetPartnerAddressFrom(const uint8_t* source)

@@ -444,6 +444,11 @@ protected:
 		memcpy(PartnerAddress, source, LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE);
 	}
 
+	void ClearPartnerAddress()
+	{
+		memset(PartnerAddress, 0, LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE);
+	}
+
 private:
 	void GetChallengeSignature(const uint8_t* challenge, const uint8_t* password, uint8_t* signatureTarget)
 	{
