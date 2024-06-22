@@ -4,8 +4,8 @@
 #define _POLY_1305_WRAPPER_h
 
 /*
-* https://github.com/rweather/arduinolibs
-* Requires library Crypto from repository.
+* https://github.com/OperatorFoundation/Crypto
+* (Arduino fork of https://github.com/rweather/arduinolibs)
 */
 #include <Poly1305.h>
 #include <stdint.h>

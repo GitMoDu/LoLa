@@ -12,7 +12,8 @@
 
 #if defined(LOLA_USE_POLY1305)
 /*
-* https://github.com/rweather/arduinolibs
+* https://github.com/OperatorFoundation/Crypto
+* (Arduino fork of https://github.com/rweather/arduinolibs)
 */
 #include "Poly1305Wrapper.h"
 #else

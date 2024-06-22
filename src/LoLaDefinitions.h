@@ -19,16 +19,19 @@
 #error Arduino HAL is required for LoLa Library.
 #endif
 
-#include <Arduino.h>
 
-#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_RP2040)
+#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_STM32)
 #define LOLA_RTOS_PAUSE()	((void)0)
 #define LOLA_RTOS_RESUME()	((void)0)
-#elif defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_ESP32)
+#define LOLA_RTOS_INTERRUPT
+#elif defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_RP2040)
+#include <FreeRTOS.h>
+#include <task.h>
 #define LOLA_RTOS_PLATFORM
 #define _TASK_THREAD_SAFE	// Enable additional checking for thread safety
 #define LOLA_RTOS_PAUSE()	vTaskSuspendAll()
 #define LOLA_RTOS_RESUME()	xTaskResumeAll()
+#define LOLA_RTOS_INTERRUPT IRAM_ATTR
 #else
 #error Platform not suported.
 #endif

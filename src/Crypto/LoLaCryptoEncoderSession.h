@@ -8,7 +8,7 @@
 /*
 * https://github.com/rweather/arduinolibs
 *
-* Requires libraries Crypto and CryptoLW from repository.
+* Requires library CryptoLW from repository.
 */
 #include <Ascon128.h>
 

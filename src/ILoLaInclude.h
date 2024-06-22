@@ -3,6 +3,8 @@
 #ifndef _I_LOLA_INCLUDE_h
 #define _I_LOLA_INCLUDE_h
 
+#include <LoLaDefinitions.h>
+
 /// Available Link services.
 #include <ILinkServices.h>
 ///
