@@ -7,7 +7,8 @@
 #include <TaskSchedulerDeclarations.h>
 
 #include "../ILoLaTransceiver.h"
-#include "cobs\cobs.h"
+#include "CobsCodec.h"
+
 
 /// <summary>
 /// UART/Serial LoLa Transceiver.
@@ -17,7 +18,6 @@
 /// The 0x00 byte is be used to indicate packet end.
 /// Constant overhead.
 /// Detects malformed input data.
-/// https://github.com/charlesnicholson/nanocobs
 /// </summary>
 /// <typeparam name="SerialType">Type definition of HardwareSerial.</typeparam>
 /// <typeparam name="BaudRate">At least MIN_BAUD_RATE.</typeparam>
@@ -33,7 +33,7 @@ class UartTransceiver final
 	: private Task, public virtual ILoLaTransceiver
 {
 private:
-	static constexpr uint16_t TRANSCEIVER_ID = 0x0457;
+	static constexpr uint16_t TRANSCEIVER_ID = 0xC0B5;
 
 private:
 	enum class TxStateEnum : uint8_t
@@ -52,9 +52,13 @@ private:
 
 private:
 	static constexpr uint8_t EoF = 0;
-	static constexpr uint8_t MAX_COBS_SIZE = COBS_ENCODE_MAX(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
-	static constexpr uint8_t COBS_OVERHEAD = MAX_COBS_SIZE - LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE;
-	static constexpr uint8_t COBS_IN_PLACE_OFFSET = 1;
+	static constexpr uint8_t COBS_OVERHEAD = 1;
+	static constexpr uint8_t MAX_COBS_SIZE = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE + COBS_OVERHEAD;
+
+	static constexpr uint8_t GetFrameSize(const uint8_t packetSize)
+	{
+		return packetSize + COBS_OVERHEAD + 1;
+	}
 
 private:
 	static constexpr uint32_t MIN_BAUD_RATE = 80000;
@@ -85,6 +89,7 @@ private:
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
+	uint8_t CobsBuffer[MAX_COBS_SIZE]{};
 	uint8_t RxBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 	uint8_t TxBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
@@ -161,11 +166,11 @@ public:
 					&& IO->available())
 				{
 					ByteBuffer = IO->read();
-					RxBuffer[RxSize++] = ByteBuffer;
+					CobsBuffer[RxSize++] = ByteBuffer;
 
 					if (ByteBuffer == EoF)
 					{
-						RxSize = CobsDecodeInPlace();
+						RxSize = CobsCodec::Decode(CobsBuffer, RxBuffer, RxSize);
 
 						if (RxSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
 						{
@@ -300,7 +305,8 @@ public:// ILoLaTransceiver overrides.
 	{
 		return DriverEnabled
 			&& TxState == TxStateEnum::NoTx
-			&& RxState == RxStateEnum::NoRx;
+			&& RxState == RxStateEnum::NoRx
+			&& IO->availableForWrite() > GetFrameSize(LoLaPacketDefinition::MIN_PACKET_SIZE);
 	}
 
 	/// <summary>
@@ -312,9 +318,10 @@ public:// ILoLaTransceiver overrides.
 	/// <returns></returns>
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
-		if (TxAvailable())
+		if (TxAvailable()
+			&& IO->availableForWrite() >= GetFrameSize(packetSize))
 		{
-			const uint8_t txSize = CobsEncode(data, packetSize);
+			const uint8_t txSize = CobsCodec::Encode(data, TxBuffer, packetSize);
 
 			if (txSize > 0)
 			{
@@ -405,6 +412,7 @@ private:
 		{
 			IO->read();
 		}
+
 		// Force pending interrupts and enable for next.
 		RxState = RxStateEnum::RxStart;
 		RxSize = 0;
@@ -418,7 +426,7 @@ private:
 	{
 		if (rxGood)
 		{
-			Listener->OnRx(&RxBuffer[COBS_IN_PLACE_OFFSET], RxStartTimestamp, RxSize, UINT8_MAX);
+			Listener->OnRx(RxBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
 		}
 
 		// Clear input buffer.
@@ -432,71 +440,29 @@ private:
 		Task::enable();
 	}
 
-	const uint8_t CobsDecodeInPlace()
-	{
-		unsigned decodedSize = RxSize;
-		if (cobs_decode_inplace(
-			(void*)RxBuffer,
-			decodedSize) == COBS_RET_SUCCESS)
-		{
-			return decodedSize - COBS_OVERHEAD;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
-	const uint8_t CobsDecode(const uint8_t* input, const uint_fast8_t size)
-	{
-		unsigned decodedSize = 0;
-		if (cobs_decode(
-			(void const*)input,
-			(unsigned)size,
-			(void*)RxBuffer,
-			(unsigned)LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE,
-			&decodedSize) == COBS_RET_SUCCESS)
-		{
-			return decodedSize;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
-	const uint8_t CobsEncode(const uint8_t* input, const uint_fast8_t size)
-	{
-		unsigned encodedSize = 0;
-		if (cobs_encode(
-			(void const*)input,
-			(unsigned)size,
-			(void*)TxBuffer,
-			(unsigned)MAX_COBS_SIZE,
-			&encodedSize) == COBS_RET_SUCCESS)
-		{
-			return encodedSize;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
 	const bool Calibrate()
 	{
 		uint32_t start, end, duration;
-		uint8_t benchIndex = 0;
+		volatile uint8_t benchIndex = 0;
 
 #if defined(DEBUG_LOLA)
+		if (!UnitTest())
+		{
+			return false;
+		}
+
 		const uint32_t calibrationStart = micros();
 #endif
+
+		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE; i++)
+		{
+			RxBuffer[i] = i;
+		}
 
 		start = micros();
 		for (uint_fast8_t i = 0; i < CalibrationSamples; i++)
 		{
-			benchIndex = CobsEncode(RxBuffer, LoLaPacketDefinition::MIN_PACKET_SIZE);
-			RxBuffer[0] = benchIndex;
+			benchIndex = CobsCodec::Encode(RxBuffer, TxBuffer, LoLaPacketDefinition::MIN_PACKET_SIZE) & TxAvailable();
 		}
 		end = micros();
 		duration = (end - start) / CalibrationSamples;
@@ -519,8 +485,7 @@ private:
 		start = micros();
 		for (uint_fast8_t i = 0; i < CalibrationSamples; i++)
 		{
-			benchIndex = CobsEncode(RxBuffer, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
-			RxBuffer[0] = benchIndex;
+			benchIndex = CobsCodec::Encode(RxBuffer, TxBuffer, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE) & TxAvailable();
 		}
 		end = micros();
 		duration = (end - start) / CalibrationSamples;
@@ -538,6 +503,11 @@ private:
 		else
 		{
 			EncodeRangeDuration = 1;
+		}
+
+		if (benchIndex != 0)
+		{
+			return false;
 		}
 
 #if defined(DEBUG_LOLA)
@@ -558,5 +528,42 @@ private:
 
 		return true;
 	}
+
+#if defined(DEBUG_LOLA)
+private:
+	const bool UnitTest()
+	{
+		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE; i++)
+		{
+			RxBuffer[i] = i;
+		}
+
+		const uint8_t outSize = CobsCodec::Encode(RxBuffer, CobsBuffer, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+
+		if (outSize != LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE + COBS_OVERHEAD)
+		{
+			return false;
+		}
+
+		memset(RxBuffer, 0, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+
+		const uint8_t inSize = CobsCodec::Decode(CobsBuffer, RxBuffer, outSize);
+
+		if (inSize != LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+		{
+			return false;
+		}
+
+		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE; i++)
+		{
+			if (RxBuffer[i] != i)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+#endif
 };
 #endif
