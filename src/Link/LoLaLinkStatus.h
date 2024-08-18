@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include <LoLaDefinitions.h>
 
+#if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
+#include <Print.h>
+#endif
+
 struct LoLaLinkStatus
 {
 	struct QualityStruct
@@ -28,7 +32,7 @@ struct LoLaLinkStatus
 	uint16_t TxDropRate = 0;
 
 #if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
-	void Log(Stream& stream)
+	void Log(Print& stream)
 	{
 		PrintDuration(stream, DurationSeconds);
 		stream.print(F("\tRSSI <- "));
@@ -58,7 +62,7 @@ struct LoLaLinkStatus
 		stream.println();
 	}
 
-	void PrintDuration(Stream& stream, const uint32_t durationSeconds)
+	void PrintDuration(Print& stream, const uint32_t durationSeconds)
 	{
 		const uint32_t durationMinutes = durationSeconds / 60;
 		const uint32_t durationHours = durationMinutes / 60;
@@ -181,7 +185,7 @@ public:
 	}
 
 #if defined(DEBUG_LOLA) || defined(DEBUG_LOLA_LINK)
-	void LogLong(Stream& stream)
+	void LogLong(Print& stream)
 	{
 		PrintDuration(stream, DurationSeconds);
 		stream.print(F("\tRSSI <- "));
