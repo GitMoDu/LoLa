@@ -80,6 +80,7 @@ public:
 		if (RawInPacket != nullptr &&
 			RawOutPacket != nullptr &&
 			ServiceListener != nullptr &&
+			Transceiver != nullptr &&
 			Transceiver->SetupListener(this))
 		{
 			return true;
