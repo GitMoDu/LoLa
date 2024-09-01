@@ -11,13 +11,14 @@
 /// Tracks Cyclestamp overflow count.
 /// Uses task callback to smear the tune offset, 
 ///  as well as ensure cyclestamp' overflows are tracked.
+/// Task callback delays the shortest required period for each callback pass.
 /// </summary>
 class TuneClock : public TimeClock
 {
 private:
 	uint32_t LastSmear = 0;
 
-	int16_t TuneMicros = 0;
+	int8_t TuneMicros = 0;
 
 public:
 	TuneClock(Scheduler& scheduler, ICycles* cycles)
@@ -26,82 +27,80 @@ public:
 
 	/// <summary>
 	/// Start the clock.
+	/// Will use the existing clock tune.
 	/// </summary>
-	/// <param name="ppm">Starting tune in us.</param>
-	void Start(const int16_t ppm)
+	void Start()
 	{
 		LastSmear = 0;
 
 		TimeClock::Start();
-
-		Tune(ppm);
 	}
 
-	void Tune(const int16_t ppm)
+	/// <summary>
+	/// Start the clock with a set tune.
+	/// </summary>
+	/// <param name="ppm">Starting tune in microseconds/second: [INT8_MIN;INT8_MAX]</param>
+	void Start(const int8_t ppm)
+	{
+		Start();
+
+		SetTune(ppm);
+	}
+
+	/// <summary>
+	/// Set the clock tune ppm.
+	/// </summary>
+	/// <param name="ppm">Tune in microseconds/second: [INT8_MIN;INT8_MAX]</param>
+	void SetTune(const int8_t ppm)
 	{
 		if (Task::isEnabled())
 		{
-			const int_fast16_t preTune = TuneMicros;
-
-			if (ppm > LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
-			{
-				TuneMicros = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
-			}
-			else if (ppm < -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
-			{
-				TuneMicros = -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
-			}
-			else
-			{
-				TuneMicros = ppm;
-			}
-			if (preTune != TuneMicros)
-			{
-				Task::enable();
-			}
+			TuneMicros = ppm;
+			Task::enableDelayed(0);
 		}
 	}
 
-	const int16_t GetTune() const
+	const int8_t GetTune() const
 	{
 		return TuneMicros;
 	}
 
 	/// <summary>
-	/// Clock is tuneable up to +-CLOCK_TUNE_RANGE_MICROS.
+	/// Shifts the tune up and down..
 	/// </summary>
-	/// <param name="ppm"></param>
-	void ShiftTune(const int16_t offsetMicros)
+	/// <param name="ppm">Tune shift in microseconds/second: [INT8_MIN;INT8_MAX]</param>
+	void ShiftTune(const int8_t offsetMicros)
 	{
 		if (Task::isEnabled())
 		{
-			const int_fast16_t preTune = TuneMicros;
+			const int8_t preTune = TuneMicros;
+
 			if (offsetMicros > 0)
 			{
-				if ((int32_t)TuneMicros + offsetMicros < LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
+				if (TuneMicros < INT8_MAX - offsetMicros)
 				{
 					TuneMicros += offsetMicros;
 				}
 				else
 				{
-					TuneMicros = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+					TuneMicros = INT8_MAX;
 				}
 			}
 			else if (offsetMicros < 0)
 			{
-				if ((int32_t)TuneMicros + offsetMicros > -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
+				if (TuneMicros > offsetMicros)
 				{
 					TuneMicros += offsetMicros;
 				}
 				else
 				{
-					TuneMicros = -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
+					TuneMicros = INT8_MIN;
 				}
 			}
 
 			if (preTune != TuneMicros)
 			{
-				Task::enable();
+				Task::enableDelayed(0);
 			}
 		}
 	}
@@ -129,23 +128,18 @@ protected:
 	}
 
 private:
-	const uint32_t GetAdaptiveSmearPeriod() const
+	/// <summary>
+	/// </summary>
+	/// <returns>Smear period based on the current tune value</returns>
+	const uint32_t GetSmearPeriod() const
 	{
-		if (TuneMicros >= LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
+		if (TuneMicros > 0)
 		{
-			return ONE_SECOND_MILLIS / LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
-		}
-		else if (TuneMicros <= -LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE)
-		{
-			return ONE_SECOND_MILLIS / LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE;
-		}
-		else if (TuneMicros > 0)
-		{
-			return ONE_SECOND_MILLIS / TuneMicros;
+			return (int32_t)ONE_SECOND_MILLIS / TuneMicros;
 		}
 		else if (TuneMicros < 0)
 		{
-			return ONE_SECOND_MILLIS / -TuneMicros;
+			return -(int32_t)ONE_SECOND_MILLIS / TuneMicros;
 		}
 		else
 		{
@@ -154,7 +148,7 @@ private:
 	}
 
 	/// <summary>
-	/// Dynamic division up CLOCK_TUNE_RANGE_MICROS smears per second.
+	/// Dynamic division up INT8_MAX smears per second.
 	/// </summary>
 	/// <returns></returns>
 	const uint32_t CheckSmearAdaptive(const uint32_t cyclestamp)
@@ -162,7 +156,7 @@ private:
 		if (TuneMicros != 0)
 		{
 			const uint32_t elapsedSinceLastSmear = GetDurationCyclestamp(LastSmear, cyclestamp) / ONE_MILLI_MICROS;
-			const uint32_t smearPeriod = GetAdaptiveSmearPeriod();
+			const uint32_t smearPeriod = GetSmearPeriod();
 
 			if (elapsedSinceLastSmear >= smearPeriod)
 			{

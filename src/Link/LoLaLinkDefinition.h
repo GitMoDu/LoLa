@@ -59,7 +59,7 @@ namespace LoLaLinkDefinition
 	/// Link switch over will tolerate a small error at the start.
 	/// During link time, clock will be continously tuned for higher accuracy.
 	/// </summary>
-	static constexpr uint8_t LINKING_CLOCK_TOLERANCE = 25;
+	static constexpr int8_t LINKING_CLOCK_TOLERANCE = 25;
 
 	/// <summary>
 	/// Pre-link channels are spread over the pipe count.
