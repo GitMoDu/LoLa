@@ -64,7 +64,7 @@ namespace LoLaLinkDefinition
 	/// <summary>
 	/// Pre-link channels are spread over the pipe count.
 	/// </summary>
-	static constexpr uint8_t LINKING_ADVERTISING_PIPE_COUNT = 4;
+	static constexpr uint8_t LINKING_ADVERTISING_PIPE_COUNT = 3;
 
 	/// <summary>
 	/// Link state transition durations in duplex counts.
@@ -100,13 +100,11 @@ namespace LoLaLinkDefinition
 	/// </summary>
 	/// <param name="abstractChannel"></param>
 	/// <returns>Abstract Advertising Channel</returns>
-	static const uint8_t GetAdvertisingChannel(const uint8_t abstractChannel)
+	static constexpr uint8_t GetAdvertisingChannel(const uint8_t abstractChannel)
 	{
-		// Mod the channel to get the selected pipe.
-		const uint_fast16_t advertisingPipe = abstractChannel % LINKING_ADVERTISING_PIPE_COUNT;
-
-		// Scale the pipe back to an abstract channel.
-		return (advertisingPipe * UINT8_MAX) / (LINKING_ADVERTISING_PIPE_COUNT - 1);
+		// Mod the channel to get the selected pipe
+		// and scale the pipe back to an abstract channel.
+		return ((uint16_t)(abstractChannel % LINKING_ADVERTISING_PIPE_COUNT) * UINT8_MAX) / (LINKING_ADVERTISING_PIPE_COUNT - 1);
 	}
 
 	/// <summary>
