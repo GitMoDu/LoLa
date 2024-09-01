@@ -11,7 +11,7 @@ public:
 	/// <summary>
 	/// Possible results for the send request.
 	/// </summary>
-	enum SendResultEnum
+	enum class SendResultEnum : uint8_t
 	{
 		Success,
 		SendTimeout,
