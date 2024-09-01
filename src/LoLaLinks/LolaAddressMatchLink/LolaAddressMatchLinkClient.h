@@ -119,6 +119,9 @@ protected:
 					if (Session.AddressCollision())
 					{
 						Session.ResetAm();
+#if defined(DEBUG_LOLA_LINK)
+						this->Skipped(F("AmSessionAvailable Address collision"));
+#endif
 					}
 					else
 					{
@@ -129,9 +132,6 @@ protected:
 						OnLinkSyncReceived(timestamp);
 						Task::enableDelayed(0);
 					}
-#if defined(DEBUG_LOLA_LINK)
-					else { this->Skipped(F("AmSessionAvailable2")); }
-#endif
 					break;
 				default:
 					return;

@@ -598,7 +598,8 @@ private:
 				{
 #if defined(DEBUG_LOLA_LINK)
 					this->Owner();
-					Serial.println(F("Sent Search"));
+					Serial.print(F("Sent Search @ "));
+					Serial.println(LoLaLinkDefinition::GetAdvertisingChannel(ChannelHopper->GetChannel()));
 #endif
 				}
 				SearchChannelTryCount++;
