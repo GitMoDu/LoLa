@@ -116,7 +116,11 @@ protected:
 					Session.ResetAm();
 					Session.SetSessionId(&payload[Unlinked::AmSessionAvailable::PAYLOAD_SESSION_ID_INDEX]);
 					Session.SetPartnerAddressFrom(&payload[Unlinked::AmSessionAvailable::PAYLOAD_SERVER_ADDRESS_INDEX]);
-					if (!Session.AddressCollision())
+					if (Session.AddressCollision())
+					{
+						Session.ResetAm();
+					}
+					else
 					{
 #if defined(DEBUG_LOLA_LINK)
 						this->Owner();
