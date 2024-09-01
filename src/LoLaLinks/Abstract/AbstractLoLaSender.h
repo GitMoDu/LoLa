@@ -63,15 +63,11 @@ public:
 		case LinkStageEnum::ClockSyncing:
 		case LinkStageEnum::SwitchingToLinked:
 			// Encrypt packet without token.
-			Session.EncodeOutPacket(data, RawOutPacket,
-				0,
-				SendCounter, dataSize);
+			Session.EncodeOutPacket(data, RawOutPacket, 0, SendCounter, dataSize);
 			break;
 		case LinkStageEnum::Linked:
 			// Encrypt packet with token based on time.
-			Session.EncodeOutPacket(data, RawOutPacket,
-				TxTimestamp.Seconds,
-				SendCounter, dataSize);
+			Session.EncodeOutPacket(data, RawOutPacket, TxTimestamp.Seconds, SendCounter, dataSize);
 			break;
 		default:
 			break;
