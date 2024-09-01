@@ -401,6 +401,12 @@ private:
 	/// </summary>
 	const bool CalibrateSendDuration()
 	{
+#if defined(DEBUG_LOLA)
+		Serial.print(F("CPU @ "));
+		Serial.print(F_CPU / 1000000);
+		Serial.println(F(" MHz"));
+#endif
+
 		uint32_t start = 0;
 		OutPacket.SetPort(123);
 		memset(OutPacket.Payload, 123, LoLaPacketDefinition::MAX_PAYLOAD_SIZE);
@@ -446,6 +452,7 @@ private:
 		}
 
 #if defined(DEBUG_LOLA)
+		SyncClock.Start(0);
 		// Measure Timestamping time.
 		LOLA_RTOS_PAUSE();
 		start = micros();
@@ -464,6 +471,7 @@ private:
 		}
 		const uint32_t timestampingRollingDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();
+		SyncClock.Stop();
 
 		// Measure PRNG Hop calculation time.
 		volatile uint8_t dummy = 0;
@@ -471,7 +479,7 @@ private:
 		start = micros();
 		for (uint_fast16_t i = 0; i < CALIBRATION_ROUNDS; i++)
 		{
-			dummy += Session.GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
+			dummy = dummy + Session.GetPrngHopChannel(LinkTimestamp.GetRollingMicros() + i);
 		}
 		const uint32_t calculationDuration = (((uint64_t)(micros() - start)) * 1000) / CALIBRATION_ROUNDS;
 		LOLA_RTOS_RESUME();
