@@ -209,12 +209,11 @@ protected:
 			SyncClock.Stop();
 			break;
 		case LinkStageEnum::Booting:
-			RandomSource.RandomReseed();
+			SyncClock.Start();
+			SyncClock.ShiftSubSeconds(RandomSource.GetRandomLong());
 			break;
 		case LinkStageEnum::Searching:
-			RandomSource.RandomReseed();
 			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
-			SyncClock.ShiftSubSeconds(RandomSource.GetRandomLong());
 			break;
 		case LinkStageEnum::Authenticating:
 			QualityTracker.ResetRssiQuality();
@@ -281,8 +280,6 @@ protected:
 			OnServiceSleeping();
 			break;
 		case LinkStageEnum::Booting:
-			SyncClock.Start(0);
-			SyncClock.ShiftSeconds(RandomSource.GetRandomLong());
 			if (Transceiver->Start())
 			{
 				UpdateLinkStage(LinkStageEnum::Searching);
