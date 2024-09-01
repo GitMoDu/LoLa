@@ -64,16 +64,7 @@ public:
 		, RawInPacket(rawInPacket)
 		, RawOutPacket(rawOutPacket)
 		, Transceiver(transceiver)
-	{
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, LOW);
-		pinMode(RX_TEST_PIN, OUTPUT);
-#endif
-#ifdef TX_TEST_PIN
-		digitalWrite(TX_TEST_PIN, LOW);
-		pinMode(TX_TEST_PIN, OUTPUT);
-#endif
-	}
+	{}
 
 	const bool Setup()
 	{
