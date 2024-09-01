@@ -126,12 +126,10 @@ public:
 			ServiceListener->OnSendComplete(SendResultEnum::Error);
 			break;
 		case StateEnum::Done:
-			Transceiver->Rx(ServiceListener->GetRxChannel());
 			Task::disable();
+			Transceiver->Rx(ServiceListener->GetRxChannel());
 			break;
 		default:
-			Task::enable();
-			State = StateEnum::Done;
 			break;
 		}
 
