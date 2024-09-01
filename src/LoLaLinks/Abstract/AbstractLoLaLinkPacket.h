@@ -271,6 +271,8 @@ protected:
 	{
 		if (linkStage != LinkStage)
 		{
+			Task::enableDelayed(0);
+
 			switch (LinkStage)
 			{
 			case LinkStageEnum::Linked:
