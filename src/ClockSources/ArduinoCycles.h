@@ -11,7 +11,7 @@
 /// <typeparam name="TestOffset">Starting offset in us.</typeparam>
 template<const uint32_t TestOffset = 0>
 #endif
-class ArduinoCycles final : public virtual ICycles
+class ArduinoCycles final : public ICycles
 {
 public:
 	ArduinoCycles() : ICycles()
@@ -22,7 +22,7 @@ public:
 	/// Arduino micros().
 	/// </summary>
 	/// <returns>Current cycle count.</returns>
-	virtual const uint32_t GetCycles() final
+	const uint32_t GetCycles() final
 	{
 #if defined(LOLA_UNIT_TESTING)
 		return micros() + TestOffset;
@@ -34,7 +34,7 @@ public:
 	/// <summary>
 	/// </summary>
 	/// <returns>How many cycles until an overflow occurs.</returns>
-	virtual const uint32_t GetCyclesOverflow() final
+	const uint32_t GetCyclesOverflow() final
 	{
 		return UINT32_MAX;
 	}
@@ -42,7 +42,7 @@ public:
 	/// <summary>
 	/// </summary>
 	/// <returns>How many cycles in one second.</returns>
-	virtual const uint32_t GetCyclesOneSecond() final
+	const uint32_t GetCyclesOneSecond() final
 	{
 		return ONE_SECOND_MICROS;
 	}
@@ -51,14 +51,14 @@ public:
 	/// Arduino micros() is always running.
 	/// Start does nothing.
 	/// </summary>
-	virtual void StartCycles() final
+	void StartCycles() final
 	{}
 
 	/// <summary>
 	/// Arduino micros() is always running.
 	/// Stop does nothing.
 	/// </summary>
-	virtual void StopCycles() final
+	void StopCycles() final
 	{}
 };
 #endif
