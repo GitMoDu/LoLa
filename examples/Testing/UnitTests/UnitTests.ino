@@ -7,7 +7,7 @@
 #define _TASK_OO_CALLBACKS
 #define _TASK_SLEEP_ON_IDLE_RUN
 
-#include <TaskScheduler.h>
+#include <TScheduler.hpp>
 
 #include <ILoLaInclude.h>
 #include <Arduino.h>
@@ -19,10 +19,10 @@
 
 //#include "TestTask.h"
 
-static const uint32_t TestRange = (ONE_SECOND_MICROS / 5) + 1;
+static constexpr uint32_t TestRange = (ONE_SECOND_MICROS / 5) + 1;
 
 // Process scheduler.
-Scheduler SchedulerBase;
+TS::Scheduler SchedulerBase;
 //
 
 ClockTest ClockTester(SchedulerBase);

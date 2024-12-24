@@ -59,10 +59,11 @@ private:
 	uint8_t CurrentIndex = 0;
 
 public:
-	SurfaceWriter(Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
+	SurfaceWriter(TS::Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
 		: ISurfaceListener()
 		, BaseClass(scheduler, link, surface)
-	{}
+	{
+	}
 
 public:
 	virtual const bool Setup() final
@@ -80,7 +81,7 @@ public:
 	{
 		if (WriterState == WriterStateEnum::Sleeping)
 		{
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 		}
 	}
 

@@ -4,7 +4,7 @@
 #define _SI446X_RADIO_DRIVER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "Si446xSpiDriver.h"
 #include "Si446xRadioFlow.h"
@@ -108,7 +108,7 @@ protected:
 		detachInterrupt(digitalPinToInterrupt(pinInterrupt));
 		pinMode(pinInterrupt, INPUT);
 		interrupts();
-		Task::disable();
+		TS::Task::disable();
 	}
 
 	void RadioRx(const uint8_t channel)
@@ -124,7 +124,7 @@ protected:
 		{
 			HopFlow.SetPendingChannel(micros(), channel);
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	/// <summary>
@@ -156,14 +156,14 @@ protected:
 		if (!SpiDriver.SetRadioState(RadioStateEnum::READY, 100))
 		{
 			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
-			Task::enable();
+			TS::Task::enable();
 			return false;
 		}
 
 		if (!SpiDriver.SetPacketSize(packetSize, 250))
 		{
 			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
-			Task::enable();
+			TS::Task::enable();
 			return false;
 		}
 
@@ -171,7 +171,7 @@ protected:
 		if (!SpiDriver.RadioStartTx(data, packetSize, channel))
 		{
 			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
-			Task::enable();
+			TS::Task::enable();
 			HopFlow.SetPending(micros());
 
 			//digitalWrite(7, LOW);
@@ -179,7 +179,7 @@ protected:
 		}
 
 		TxFlow.SetPending(micros());
-		Task::enable();
+		TS::Task::enable();
 
 		return true;
 	}
@@ -202,13 +202,13 @@ public:
 		if (RadioTaskBusy())
 		{
 			interrupts();
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 
 			return true;
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 			interrupts();
 
 			return false;

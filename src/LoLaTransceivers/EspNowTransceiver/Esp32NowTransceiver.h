@@ -6,7 +6,7 @@
 
 #if defined(ARDUINO_ARCH_ESP32)
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "../ILoLaTransceiver.h"
 #include <esp_now.h>
@@ -22,7 +22,8 @@
 /// TODO: Remove Ack (retry count = 0).
 /// </summary>
 class EspNowTransceiver final
-	: private Task, public virtual ILoLaTransceiver
+	: public virtual ILoLaTransceiver
+	, private TS::Task
 {
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x3403;
@@ -55,9 +56,9 @@ private:
 	volatile bool TxEvent = false;
 
 public:
-	EspNowTransceiver(Scheduler& scheduler)
+	EspNowTransceiver(TS::Scheduler& scheduler)
 		: ILoLaTransceiver()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
 	}
 
@@ -82,13 +83,13 @@ public:
 
 		if (TxEvent || RxSize > 0)
 		{
-			Task::enable();
+			TS::Task::enable();
 
 			return true;
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 			return false;
 		}
 
@@ -104,7 +105,7 @@ public:
 	void OnTxInterrupt(esp_now_send_status_t status)
 	{
 		TxEvent = true;
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	void OnRxInterrupt(const uint8_t* data, int data_len)
@@ -123,7 +124,7 @@ public:
 			InBuffer[i] = data[i];
 		}
 		RxSize = data_len;
-		Task::enable();
+		TS::Task::enable();
 	}
 
 public:
@@ -199,7 +200,7 @@ public:
 		deletePeer();
 		WiFi.disconnect();
 		esp_wifi_stop();
-		Task::disable();
+		TS::Task::disable();
 
 		return true;
 	}
@@ -239,7 +240,7 @@ public:
 			{
 			case ESP_OK:
 				TxPending = true;
-				Task::enable();
+				TS::Task::enable();
 				return true;
 				break;
 			case ESP_ERR_ESPNOW_ARG:
@@ -274,7 +275,7 @@ public:
 	{
 		esp_wifi_set_channel(CHANNEL, WIFI_SECOND_CHAN_NONE);
 
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final

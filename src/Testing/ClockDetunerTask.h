@@ -4,11 +4,11 @@
 #define _CLOCK_DETUNERTASK_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "../../LoLa/src/Clock/TuneClock.h"
 
-class ClockDetunerTask : private Task
+class ClockDetunerTask : private TS::Task
 {
 private:
 	TuneClock* Clock = nullptr;
@@ -17,8 +17,8 @@ private:
 	int16_t DetuneMicros = 0;
 
 public:
-	ClockDetunerTask(Scheduler& scheduler)
-		: Task(0, TASK_FOREVER, &scheduler, false)
+	ClockDetunerTask(TS::Scheduler& scheduler)
+		: TS::Task(0, TASK_FOREVER, &scheduler, false)
 	{}
 
 	void SetClockDetune(TuneClock* clock, const int16_t detuneMicros)
@@ -28,11 +28,11 @@ public:
 
 		if (Clock != nullptr)
 		{
-			Task::enable();
+			TS::Task::enable();
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 		}
 	}
 
@@ -40,7 +40,7 @@ public:
 	{
 		const uint32_t smearDelay = CheckSmearAdaptive(micros());
 
-		Task::delay(smearDelay);
+		TS::Task::delay(smearDelay);
 
 		return true;
 	}

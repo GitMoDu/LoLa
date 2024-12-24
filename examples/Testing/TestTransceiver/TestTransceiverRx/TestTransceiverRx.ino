@@ -10,15 +10,15 @@
 #define SERIAL_BAUD_RATE 115200
 #endif
 
-#define _TASK_OO_CALLBACKS
-#define _TASK_SLEEP_ON_IDLE_RUN
-
 // Selected Transceiver for test.
 #define USE_SI446X_TRANSCEIVER
 
 #define LINK_DUPLEX_SLOT false
 
-#include <TaskScheduler.h>
+#define _TASK_OO_CALLBACKS
+#define _TASK_SLEEP_ON_IDLE_RUN
+#include <TScheduler.hpp>
+
 #include <ILoLaInclude.h>
 
 #include "Testing\ExampleTransceiverDefinitions.h"
@@ -27,7 +27,7 @@
 #include "ReceptionTester.h"
 
 // Process scheduler.
-Scheduler SchedulerBase;
+TS::Scheduler SchedulerBase{};
 //
 
 // Transceiver.

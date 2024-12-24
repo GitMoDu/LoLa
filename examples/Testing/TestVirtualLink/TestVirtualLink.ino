@@ -69,8 +69,7 @@
 //#define USE_LINK_DISPLAY
 //#define GRAPHICS_ENGINE_MEASURE
 
-
-#include <TaskScheduler.h>
+#include <TScheduler.hpp>
 #include <ILoLaInclude.h>
 
 #include "TestTask.h"
@@ -100,7 +99,7 @@
 
 
 // Process scheduler.
-Scheduler SchedulerBase;
+TS::Scheduler SchedulerBase{};
 //
 
 // Diceware created values for address and secret keys.

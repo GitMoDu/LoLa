@@ -24,7 +24,7 @@ private:
 	uint32_t OffsetSubSeconds = 0;
 
 public:
-	TimeClock(Scheduler& scheduler, ICycles* cycles)
+	TimeClock(TS::Scheduler& scheduler, ICycles* cycles)
 		: CycleClock(scheduler, cycles)
 	{}
 

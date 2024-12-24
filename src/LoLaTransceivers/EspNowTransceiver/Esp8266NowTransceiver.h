@@ -7,7 +7,7 @@
 
 #if defined(ARDUINO_ARCH_ESP8266)
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "../ILoLaTransceiver.h"
 #include <WifiEspNow.h>
@@ -22,8 +22,9 @@
 /// </summary>
 /// <typeparam name="DataRateCode"></typeparam>
 //template<const wifi_phy_rate_t DataRateCode>
-class EspNowTransceiver final
-	: private Task, public virtual ILoLaTransceiver
+class EspNowTransceiver final 
+	: public virtual ILoLaTransceiver
+	, private TS::Task
 {
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x3403;
@@ -55,9 +56,9 @@ private:
 	//volatile bool TxEvent = false;
 
 public:
-	EspNowTransceiver(Scheduler& scheduler)
+	EspNowTransceiver(TS::Scheduler& scheduler)
 		: ILoLaTransceiver()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
 	}
 
@@ -103,13 +104,13 @@ public:
 		if (TxPending
 			|| RxSize > 0)
 		{
-			Task::enable();
+			TS::Task::enable();
 
 			return true;
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 			return false;
 		}
 	}
@@ -143,7 +144,7 @@ public:
 			InBuffer[i] = buf[i];
 		}
 		RxSize = count;
-		Task::enable();
+		TS::Task::enable();
 	}
 
 public:
@@ -214,7 +215,7 @@ public:
 		WifiEspNow.removePeer(mac);
 		WifiEspNow.end();
 		WiFi.disconnect();
-		Task::disable();
+		TS::Task::disable();
 
 		return true;
 	}
@@ -249,7 +250,7 @@ public:
 			{
 				TxTimestamp = millis();
 				TxPending = true;
-				Task::enable();
+				TS::Task::enable();
 			}
 			else
 			{
@@ -268,7 +269,7 @@ public:
 	{
 		//esp_wifi_set_channel(0, WIFI_SECOND_CHAN_NONE);
 
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final

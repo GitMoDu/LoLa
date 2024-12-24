@@ -16,7 +16,7 @@ private:
 	uint32_t Overflows = 0;
 
 public:
-	CycleClock(Scheduler& scheduler, ICycles* cycles)
+	CycleClock(TS::Scheduler& scheduler, ICycles* cycles)
 		: CycleCounter(scheduler, cycles)
 	{}
 

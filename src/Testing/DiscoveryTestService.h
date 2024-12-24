@@ -15,7 +15,7 @@ private:
 	using BaseClass = AbstractDiscoveryService<Port, ServiceId>;
 
 public:
-	DiscoveryTestService(Scheduler& scheduler, ILoLaLink* link)
+	DiscoveryTestService(TS::Scheduler& scheduler, ILoLaLink* link)
 		: BaseClass(scheduler, link)
 	{}
 
@@ -35,7 +35,7 @@ private:
 protected:
 	void OnServiceStarted() final
 	{
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 #if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.println(F("Test Discovery Active."));
@@ -60,7 +60,7 @@ protected:
 
 	void OnLinkedServiceRun() final
 	{
-		Task::disable();
+		TS::Task::disable();
 	}
 
 	void OnLinkedSendRequestFail() final

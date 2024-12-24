@@ -21,9 +21,9 @@
 /// as it will handle pre-link Packet as well as use link time packets for link upkeep.
 /// As a partial abstract class, it implements ILoLaLink Listeners public register.
 /// </summary>
-class AbstractLoLa : protected TemplateLinkService<LoLaPacketDefinition::MAX_PAYLOAD_SIZE>
-	, public virtual ILoLaLink
+class AbstractLoLa : public virtual ILoLaLink
 	, public virtual IPacketServiceListener
+	, protected TemplateLinkService<LoLaPacketDefinition::MAX_PAYLOAD_SIZE>
 {
 private:
 	using BaseClass = TemplateLinkService<LoLaPacketDefinition::MAX_PAYLOAD_SIZE>;
@@ -93,7 +93,7 @@ public:
 #endif
 
 public:
-	AbstractLoLa(Scheduler& scheduler,
+	AbstractLoLa(TS::Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)

@@ -4,11 +4,11 @@
 #define _TIMED_HOPPERS_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 template<const uint32_t HopPeriodMicros,
 	const uint16_t ForwardLookMicros = 10>
-class TimedChannelHopper final : private Task, public virtual IChannelHop
+class TimedChannelHopper final : private TS::Task, public virtual IChannelHop
 {
 private:
 	enum class HopperStateEnum : uint8_t
@@ -60,9 +60,9 @@ private:
 	uint8_t FixedChannel = 0;
 
 public:
-	TimedChannelHopper(Scheduler& scheduler)
+	TimedChannelHopper(TS::Scheduler& scheduler)
 		: IChannelHop()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{}
 
 	const bool Setup(IChannelHop::IHopListener* listener, LinkClock* linkClock) final
@@ -109,14 +109,14 @@ public:
 
 		// Run task to synchronize first hop.
 		HopperState = HopperStateEnum::StartHop;
-		Task::enableDelayed(0); 
+		TS::Task::enableDelayed(0); 
 		Listener->OnChannelHopTime();
 	}
 
 	void OnLinkStopped() final
 	{
 		HopperState = HopperStateEnum::Disabled;
-		Task::disable();
+		TS::Task::disable();
 	}
 	////
 
@@ -136,7 +136,7 @@ public:
 				HopperState = HopperStateEnum::TimedHop;
 				Listener->OnChannelHopTime();
 			}
-			Task::delay(0);
+			TS::Task::delay(0);
 			break;
 		case HopperStateEnum::TimedHop:
 			// Check if it's time to hop, with forward look compensation.
@@ -147,7 +147,7 @@ public:
 			break;
 		case HopperStateEnum::Disabled:
 		default:
-			Task::disable();
+			TS::Task::disable();
 			return false;
 		}
 
@@ -184,12 +184,12 @@ private:
 				{
 					// We've just hopped index in the expected time.
 					// So, we can sleep for the estimated delay.
-					Task::delay(GetDelayPeriod());
+					TS::Task::delay(GetDelayPeriod());
 				}
 				else
 				{
 					// Out of scheduler sync, keep in spin lock.
-					Task::delay(0);
+					TS::Task::delay(0);
 				}
 
 				return true;
@@ -204,11 +204,11 @@ private:
 			Serial.println(rollingTimestamp);
 #endif
 			// Out of clock sync, keep in spin lock.
-			Task::delay(0);
+			TS::Task::delay(0);
 			return true;
 		}
 
-		Task::delay(0);
+		TS::Task::delay(0);
 
 		return false;
 	}

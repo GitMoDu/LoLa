@@ -16,9 +16,7 @@
 ///		- CanSendPacket.
 ///		- GetRxChannel.
 /// </summary>
-class AbstractLoLaLinkPacket
-	: public AbstractLoLaReceiver
-	, public virtual IChannelHop::IHopListener
+class AbstractLoLaLinkPacket : public virtual IChannelHop::IHopListener, public AbstractLoLaReceiver
 {
 private:
 	using BaseClass = AbstractLoLaReceiver;
@@ -61,7 +59,7 @@ private:
 	const bool IsLinkHopper;
 
 public:
-	AbstractLoLaLinkPacket(Scheduler& scheduler,
+	AbstractLoLaLinkPacket(TS::Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
@@ -75,7 +73,8 @@ public:
 		, ChannelHopper(hop)
 		, LinkTimestamp()
 		, IsLinkHopper(hop->GetHopPeriod() != IChannelHop::NOT_A_HOPPER)
-	{}
+	{
+	}
 
 public:
 	virtual const bool Setup()
@@ -271,7 +270,7 @@ protected:
 	{
 		if (linkStage != LinkStage)
 		{
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 
 			switch (LinkStage)
 			{
@@ -289,7 +288,7 @@ protected:
 			switch (linkStage)
 			{
 			case LinkStageEnum::Disabled:
-				Task::disable();
+				TS::Task::disable();
 				break;
 			case LinkStageEnum::Sleeping:
 			case LinkStageEnum::Pairing:
@@ -297,7 +296,7 @@ protected:
 			case LinkStageEnum::ClockSyncing:
 			case LinkStageEnum::SwitchingToLinking:
 			case LinkStageEnum::SwitchingToLinked:
-				Task::enable();
+				TS::Task::enable();
 				break;
 			case LinkStageEnum::Searching:
 				ChannelHopper->OnLinkStopped();
@@ -317,10 +316,10 @@ protected:
 
 				// Notify services that link is ready.
 				Registry->NotifyLinkListeners(true);
-				Task::enable();
+				TS::Task::enable();
 				break;
 			default:
-				Task::enable();
+				TS::Task::enable();
 				break;
 			}
 		}

@@ -52,7 +52,7 @@ protected:
 	virtual const uint8_t GetClockQuality() { return 0; }
 
 public:
-	AbstractLoLaLink(Scheduler& scheduler,
+	AbstractLoLaLink(TS::Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
@@ -274,7 +274,7 @@ protected:
 		switch (LinkStage)
 		{
 		case LinkStageEnum::Disabled:
-			Task::disable();
+			TS::Task::disable();
 			break;
 		case LinkStageEnum::Sleeping:
 			OnServiceSleeping();
@@ -366,15 +366,15 @@ protected:
 			{
 				// Report takes priority over clock, as it refers to counters and RSSI.
 				CheckForClockTuneUpdate();
-				Task::enable();
+				TS::Task::enable();
 			}
 			else if (CheckForClockTuneUpdate())
 			{
-				Task::enable();
+				TS::Task::enable();
 			}
 			else
 			{
-				Task::enableDelayed(LINK_CHECK_PERIOD);
+				TS::Task::enableDelayed(LINK_CHECK_PERIOD);
 			}
 			break;
 		default:

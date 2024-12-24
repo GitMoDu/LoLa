@@ -4,7 +4,7 @@
 #define _SI446X_ABSTRACT_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include <ILoLaTransceiver.h>
 #include "SpiDriver/Si446xRadioDriver.h"
@@ -48,7 +48,7 @@ protected:
 	virtual const uint8_t* GetConfigurationArray(size_t& configurationSize) { return nullptr; }
 
 public:
-	Si446xAbstractTransceiver(Scheduler& scheduler)
+	Si446xAbstractTransceiver(TS::Scheduler& scheduler)
 		: ILoLaTransceiver()
 		, BaseClass(scheduler)
 	{}

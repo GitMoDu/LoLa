@@ -44,7 +44,7 @@ private:
 	uint8_t SendIndex = 0;
 
 public:
-	DeliveryTestService(Scheduler& scheduler, ILoLaLink* link)
+	DeliveryTestService(TS::Scheduler& scheduler, ILoLaLink* link)
 		: BaseClass(scheduler, link)
 	{}
 
@@ -67,7 +67,7 @@ protected:
 		BaseClass::OnServiceStarted();
 
 		TestState = TestStateEnum::Sending;
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 #if defined(DEBUG_LOLA)
 		PrintName();
 		Serial.println(F("Test Delivery Started."));
@@ -100,7 +100,7 @@ protected:
 					SendTime = millis();
 
 				}
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				break;
 			case TestStateEnum::Checking:
 				if (millis() - SendTime > RETRY_PERIOD_MILLIS)
@@ -112,7 +112,7 @@ protected:
 					CancelDelivery();
 					TestState = TestStateEnum::Sending;
 				}
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				break;
 			case TestStateEnum::Pausing:
 				if (millis() - SendTime > RESTART_PERIOD_MILLIS)
@@ -121,12 +121,12 @@ protected:
 
 					TestState = TestStateEnum::Sending;
 				}
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 			default:
 				break;
 			}
 
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 		}
 	}
 

@@ -32,7 +32,7 @@ private:
 	bool SearchReplyPending = false;
 
 public:
-	AbstractLoLaLinkServer(Scheduler& scheduler,
+	AbstractLoLaLinkServer(TS::Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
@@ -99,7 +99,7 @@ protected:
 		case LinkStageEnum::SwitchingToLinked:
 			StateTransition.OnStart(micros());
 			ResetUnlinkedPacketThrottle();
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 			break;
 		case LinkStageEnum::Authenticating:
 			Session.GenerateLocalChallenge(&RandomSource);
@@ -122,7 +122,7 @@ protected:
 		Serial.println(F("Sleeping."));
 #endif
 		//TODO: Set Transceiver RxSleep.
-		Task::disable();
+		TS::Task::disable();
 	}
 
 	void OnServiceSearching() final
@@ -151,11 +151,11 @@ protected:
 				}
 			}
 			LOLA_RTOS_RESUME();
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 		}
 		else
 		{
-			Task::enableDelayed(100);
+			TS::Task::enableDelayed(1);
 		}
 	}
 
@@ -205,7 +205,7 @@ protected:
 			}
 			LOLA_RTOS_RESUME();
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnServiceAuthenticating() final
@@ -255,7 +255,7 @@ protected:
 				LOLA_RTOS_RESUME();
 			}
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnServiceClockSyncing() final
@@ -284,7 +284,7 @@ protected:
 			}
 			LOLA_RTOS_RESUME();
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnServiceSwitchingToLinked() final
@@ -331,7 +331,7 @@ protected:
 			}
 			LOLA_RTOS_RESUME();
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	const bool CheckForClockTuneUpdate() final
@@ -371,7 +371,7 @@ protected:
 #endif
 					UpdateLinkStage(LinkStageEnum::Searching);
 				}
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				SearchReplyPending = true;
 			}
 #if defined(DEBUG_LOLA_LINK)
@@ -388,7 +388,7 @@ protected:
 			{
 				SetReceiveCounter(rollingCounter);	// Save last received counter, ready for switch for next stage.
 				StateTransition.OnReceived();
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -417,7 +417,7 @@ protected:
 			{
 				ClientAuthenticated = true;
 				Session.SetPartnerChallenge(&payload[Linking::ClientChallengeReplyRequest::PAYLOAD_CHALLENGE_INDEX]);
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				ResetUnlinkedPacketThrottle();
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -463,7 +463,7 @@ protected:
 				LOLA_RTOS_RESUME();
 				ClockSyncer.OnBroadEstimateReceived(LinkTimestamp.Seconds,
 					ArrayToUInt32(&payload[Linking::ClockSyncBroadRequest::PAYLOAD_ESTIMATE_INDEX]));
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 
 			}
 #if defined(DEBUG_LOLA_LINK)
@@ -482,7 +482,7 @@ protected:
 				ClockSyncer.OnFineEstimateReceived(SyncClock.GetRollingMicros() - (micros() - timestamp),
 					ArrayToUInt32(&payload[Linking::ClockSyncFineRequest::PAYLOAD_ESTIMATE_INDEX]));
 				LOLA_RTOS_RESUME();
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 			}
 #if defined(DEBUG_LOLA_LINK)
 			else { this->Skipped(F("ClockSyncBroadRequest")); }
@@ -496,7 +496,7 @@ protected:
 				UpdateLinkStage(LinkStageEnum::SwitchingToLinked);
 				StateTransition.OnStart(micros());
 				ResetUnlinkedPacketThrottle();
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.println(F("Got Link Start Request"));
@@ -525,7 +525,7 @@ protected:
 					break;
 				}
 				StateTransition.OnReceived();
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
 				Serial.print(F("StateTransition Server got Ack: "));
@@ -556,7 +556,7 @@ protected:
 					ClockTracker.OnLinkedEstimateReceived(SyncClock.GetRollingMicros() - (int16_t)(micros() - timestamp)
 						, ArrayToUInt32(&payload[Linked::ClockTuneRequest::PAYLOAD_ROLLING_INDEX]));
 					LOLA_RTOS_RESUME();
-					Task::enableDelayed(0);
+					TS::Task::enableDelayed(0);
 				}
 #if defined(DEBUG_LOLA_LINK)
 				else { this->Skipped(F("ClockTuneRequest")); }

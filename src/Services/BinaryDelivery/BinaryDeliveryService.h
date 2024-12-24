@@ -75,7 +75,7 @@ private:
 	uint32_t CurrentSendAddress = 0;
 
 public:
-	BinaryDeliveryService(Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
+	BinaryDeliveryService(TS::Scheduler& scheduler, ILoLaLink* loLaLink, const uint32_t sendRequestTimeout = 100)
 		: BaseClass(scheduler, loLaLink, sendRequestTimeout)
 	{}
 
@@ -120,7 +120,7 @@ protected:
 		{
 		case DeliveryStateEnum::ReadyForReceive:
 			// Nothing to do, for now.
-			Task::disable();
+			TS::Task::disable();
 			break;
 		case DeliveryStateEnum::ReceiveComplete:
 			//TODO Validate CRC?
@@ -147,7 +147,7 @@ protected:
 				}
 				else
 				{
-					Task::delay(1);
+					TS::Task::delay(1);
 				}
 
 				break;
@@ -158,12 +158,12 @@ protected:
 				{
 					SendingState = SendingStateEnum::SendingEnd;
 				}
-				Task::enableIfNot();
+				TS::Task::enableIfNot();
 				break;
 			case SendingStateEnum::SendingEnd:
 				//TODO: check if ok.
 				State = DeliveryStateEnum::SendingComplete;
-				Task::enableIfNot();
+				TS::Task::enableIfNot();
 				break;
 			default:
 				break;
@@ -173,7 +173,7 @@ protected:
 			break;
 		case DeliveryStateEnum::Disabled:
 		default:
-			Task::disable();
+			TS::Task::disable();
 			break;
 		}
 	}
@@ -198,7 +198,7 @@ protected:
 					//TODO: check if ok.
 					SendingState = SendingStateEnum::SendingData;
 				CurrentSendAddress = 0;
-				Task::enableIfNot();
+				TS::Task::enableIfNot();
 				break;
 			case SendingStateEnum::SendingData:
 				//TODO: check if ok.
@@ -207,12 +207,12 @@ protected:
 				{
 					SendingState = SendingStateEnum::SendingEnd;
 				}
-				Task::enableIfNot();
+				TS::Task::enableIfNot();
 				break;
 			case SendingStateEnum::SendingEnd:
 				//TODO: check if ok.
 				State = DeliveryStateEnum::SendingComplete;
-				Task::enableIfNot();
+				TS::Task::enableIfNot();
 				break;
 			default:
 				break;

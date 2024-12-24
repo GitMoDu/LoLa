@@ -3,14 +3,14 @@
 #define _LOLA_SX1_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include <SPI.h>
 
 #include "Sx12Support.h"
 #include <SX126x.h>
 
-#include <ILoLaTransceiver.h>
+//#include <ILoLaTransceiver.h>
 
 
 /// <summary>
@@ -24,7 +24,8 @@ template<const uint8_t CsPin,
 	const uint8_t ResetPin,
 	const uint8_t InterruptPin>
 class Sx12Transceiver final
-	: private Task, public virtual ILoLaTransceiver
+	: public virtual ILoLaTransceiver
+	, private TS::Task
 {
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x5810;
@@ -69,9 +70,9 @@ private:
 	SX126x Radio;
 
 public:
-	Sx12Transceiver(Scheduler& scheduler, SPIClass* spiInstance)
+	Sx12Transceiver(TS::Scheduler& scheduler, SPIClass* spiInstance)
 		: ILoLaTransceiver()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, SpiInstance(spiInstance)
 		, Radio()
 	{
@@ -83,7 +84,7 @@ public:
 
 	void OnRadioInterrupt()
 	{
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	void SetupInterrupt(void (*onRadioInterrupt)(void))
@@ -106,7 +107,7 @@ public:
 	//			Event.Timestamp = micros();
 	//			Event.Pending = true;
 	//		}
-	//		Task::enable();
+	//		TS::Task::enable();
 	//	}
 
 public:	// ILoLaTransceiver overrides.
@@ -186,7 +187,7 @@ public:	// ILoLaTransceiver overrides.
 
 			// Set random channel to start with.
 			HopPending = true;
-			Task::enable();
+			TS::Task::enable();
 
 			// Start listening to IRQ.
 			EnableInterrupt();
@@ -206,7 +207,7 @@ public:	// ILoLaTransceiver overrides.
 	virtual const bool Stop() final
 	{
 		DisableInterrupt();
-		Task::disable();
+		TS::Task::disable();
 
 		return true;
 	}
@@ -229,12 +230,12 @@ public:
 
 		if (RxPending || TxPending)
 		{
-			Task::forceNextIteration();
+			TS::Task::forceNextIteration();
 			return true;
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 			return false;
 		}
 	}

@@ -3,9 +3,7 @@
 #ifndef _ABSTRACT_SURFACE_SERVICE_h
 #define _ABSTRACT_SURFACE_SERVICE_h
 
-/*
-* https://github.com/RobTillaart/Fletcher
-*/
+// https://github.com/RobTillaart/Fletcher
 #include <Fletcher16.h>
 
 #include "../../Services/Discovery/AbstractDiscoveryService.h"
@@ -54,7 +52,7 @@ private:
 	bool RemoteHashIsSet = false;
 
 public:
-	AbstractSurfaceService(Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
+	AbstractSurfaceService(TS::Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
 		: BaseClass(scheduler, link)
 		, Surface(surface)
 	{}
@@ -83,14 +81,14 @@ protected:
 	{
 		if (SurfaceSize > 0 && BlockData != nullptr)
 		{
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 			InvalidateRemoteHash();
 			ResetPacketThrottle();
 			Surface->SetAllBlocksPending();
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 		}
 	}
 
@@ -100,7 +98,7 @@ protected:
 		{
 			Surface->SetHot(false);
 			Surface->NotifyUpdated();
-			Task::disable();
+			TS::Task::disable();
 		}
 	}
 

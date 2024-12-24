@@ -4,7 +4,7 @@
 #define _TRASMIT_RECEIVE_TESTER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include <ILoLaInclude.h>
 #include <Arduino.h>
@@ -13,7 +13,7 @@
 
 template<const bool TxEnabled = false,
 	const uint8_t TxActivePin = UINT8_MAX>
-class TransmitReceiveTester : private Task, public virtual IPacketServiceListener
+class TransmitReceiveTester : private TS::Task, public virtual IPacketServiceListener
 {
 public:
 	static constexpr uint8_t TestChannel = 0;
@@ -39,7 +39,7 @@ private:
 public:
 	TransmitReceiveTester(Scheduler& scheduler, ILoLaTransceiver* transceiver)
 		: IPacketServiceListener()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, true)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, true)
 		, PacketService(scheduler, this, transceiver, InPacket, OutPacket)
 	{}
 
@@ -64,12 +64,12 @@ public:
 				OutPacket[i] = i;
 			}
 
-			Task::enable();
+			TS::Task::enable();
 			return true;
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 			return false;
 		}
 	}
@@ -187,7 +187,7 @@ public:
 		}
 		else
 		{
-			Task::delay(1);
+			TS::Task::delay(1);
 			return false;
 		}
 	}

@@ -4,7 +4,7 @@
 #define _TEMPLATE_LINK_SERVICE_
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "RequestPriority.h"
 
@@ -21,8 +21,8 @@
 /// </summary>
 /// <typeparam name="MaxSendPayloadSize"></typeparam>
 template<const uint8_t MaxSendPayloadSize>
-class TemplateLinkService : protected Task
-	, public virtual ILinkPacketListener
+class TemplateLinkService : public virtual ILinkPacketListener 
+	, protected TS::Task
 {
 private:
 	static constexpr uint16_t PRIORITY_NEGATIVE_SCALE = 275;
@@ -57,7 +57,7 @@ protected:
 	/// The service class can ride this task's callback, when no send is being performed.
 	/// Useful for in-line services (expected to block flow until send is complete).
 	/// </summary>
-	virtual void OnServiceRun() { Task::disable(); }
+	virtual void OnServiceRun() { TS::Task::disable(); }
 
 public:
 	/// <summary>
@@ -71,9 +71,9 @@ public:
 	virtual void OnPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint8_t payloadSize, const uint8_t port) {}
 
 public:
-	TemplateLinkService(Scheduler& scheduler, ILoLaLink* loLaLink)
+	TemplateLinkService(TS::Scheduler& scheduler, ILoLaLink* loLaLink)
 		: ILinkPacketListener()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, LoLaLink(loLaLink)
 	{}
 
@@ -91,7 +91,7 @@ public:
 	{
 		if (PayloadSize > 0)
 		{
-			Task::delay(0);
+			TS::Task::delay(0);
 			if (Priority == 0)
 			{
 				// Busy loop waiting for send availability.
@@ -231,7 +231,7 @@ protected:
 		RequestStart = micros();
 		PayloadSize = payloadSize;
 		Priority = priority;
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 
 		return true;
 	}

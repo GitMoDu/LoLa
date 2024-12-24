@@ -4,7 +4,7 @@
 #define _TESTTASK_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include <ILoLaInclude.h>
 
@@ -12,7 +12,7 @@
 /// <summary>
 /// Raw Link usage test task, no inheritance from template service.
 /// </summary>
-class TestTask : private Task
+class TestTask : private TS::Task
 	, public virtual ILinkListener
 {
 private:
@@ -36,13 +36,16 @@ private:
 
 	ILoLaLink* Server;
 	ILoLaLink* Client;
+	Print& Log;
 
 public:
-	TestTask(Scheduler& scheduler, ILoLaLink* server, ILoLaLink* client)
+	TestTask(TS::Scheduler& scheduler, Print& log,
+		ILoLaLink* server, ILoLaLink* client)
 		: ILinkListener()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, Server(server)
 		, Client(client)
+		, Log(log)
 	{
 	}
 
@@ -61,27 +64,27 @@ public:
 
 	virtual bool Callback() final
 	{
-		Task::delay(0);
+		TS::Task::delay(0);
 		Server->GetLinkStatus(ServerStatus);
 		ServerStatus.OnUpdate();
 
 #if defined(SERVER_DROP_LINK_TEST)
 		if (ServerStatus.DurationSeconds > SERVER_DROP_LINK_TEST)
 		{
-			Serial.println(F("# Server Stop Link."));
+			Log.println(F("# Server Stop Link."));
 			Server->Stop();
 			Server->Start();
-			Serial.println(F("# Server Restart Link."));
+			Log.println(F("# Server Restart Link."));
 		}
 #endif
 
 #if defined(CLIENT_DROP_LINK_TEST) 
 		if (Client->HasLink() && ServerStatus.DurationSeconds > CLIENT_DROP_LINK_TEST)
 		{
-			Serial.println(F("# Client Stop Link."));
+			Log.println(F("# Client Stop Link."));
 			Client->Stop();
 			Client->Start();
-			Serial.println(F("# Client Restart Link."));
+			Log.println(F("# Client Restart Link."));
 		}
 #endif
 
@@ -92,8 +95,8 @@ public:
 			LastRan = timestamp;
 
 #if defined(DEBUG_LOLA)
-			Serial.print(F("Server: "));
-			ServerStatus.LogLong(Serial);
+			Log.print(F("Server: "));
+			ServerStatus.LogLong(Log);
 #endif
 		}
 #endif
@@ -103,12 +106,12 @@ public:
 private:
 	void PrintTag(const char tag)
 	{
-		Serial.print('[');
-		Serial.print(tag);
-		Serial.print(']');
-		Serial.print(' ');
-		Serial.print(micros());
-		Serial.print('-');
+		Log.print('[');
+		Log.print(tag);
+		Log.print(']');
+		Log.print(' ');
+		Log.print(micros());
+		Log.print('-');
 	}
 
 public:
@@ -120,18 +123,18 @@ public:
 			ServerStatus.OnStart();
 
 #ifdef DEBUG_LOLA
-			Serial.print(millis());
-			Serial.println(F("\tLink Acquired."));
+			Log.print(millis());
+			Log.println(F("\tLink Acquired."));
 #endif
-			Task::enableDelayed(1000);
+			TS::Task::enableDelayed(1000);
 		}
 		else
 		{
 #ifdef DEBUG_LOLA
-			Serial.print(millis());
-			Serial.println(F("\tLink Lost."));
+			Log.print(millis());
+			Log.println(F("\tLink Lost."));
 #endif
-			Task::disable();
+			TS::Task::disable();
 		}
 	}
 };

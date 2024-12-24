@@ -5,7 +5,7 @@
 #define _LOLA_NRF24_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "../ILoLaTransceiver.h"
 
@@ -36,7 +36,8 @@ template<
 	const uint8_t spiChannel = 0,
 	const rf24_datarate_e DataRate = RF24_1MBPS>
 class nRF24Transceiver final
-	: private Task, public virtual ILoLaTransceiver
+	: public virtual ILoLaTransceiver
+	, private TS::Task
 {
 private:
 	static constexpr uint32_t EVENT_TIMEOUT_MILLIS = 10;
@@ -74,9 +75,9 @@ private:
 	RF24 Radio;
 
 public:
-	nRF24Transceiver(Scheduler& scheduler)
+	nRF24Transceiver(TS::Scheduler& scheduler)
 		: ILoLaTransceiver()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 #if defined(ARDUINO_ARCH_ESP32)
 		, SpiInstance(HSPI)
 #elif defined(ARDUINO_ARCH_STM32F1)
@@ -110,7 +111,7 @@ public:
 			Event.Timestamp = micros();
 			Event.Pending = true;
 		}
-		Task::enable();
+		TS::Task::enable();
 	}
 
 public:	// ILoLaTransceiver overrides.
@@ -226,7 +227,7 @@ public:	// ILoLaTransceiver overrides.
 			// Set random channel to start with.
 			CurrentChannel = 0;
 			HopPending = true;
-			Task::enable();
+			TS::Task::enable();
 
 			// Start listening to IRQ.
 			EnableInterrupt();
@@ -261,7 +262,7 @@ public:	// ILoLaTransceiver overrides.
 		pinMode(pinCE, INPUT);
 		pinMode(pinCS, INPUT);
 
-		Task::disable();
+		TS::Task::disable();
 
 		return true;
 	}
@@ -321,7 +322,7 @@ public:
 #endif
 				}
 				PacketEvent.RxReady = false;
-				Task::enable();
+				TS::Task::enable();
 
 				return true;
 			}
@@ -393,12 +394,12 @@ public:
 
 		if (TxPending || Event.Pending || HopPending || PacketEvent.Pending())
 		{
-			Task::enable();
+			TS::Task::enable();
 			return true;
 		}
 		else
 		{
-			Task::delay(1);
+			TS::Task::delay(1);
 			return false;
 		}
 	}
@@ -444,7 +445,7 @@ public:
 			if (Radio.startWrite(data, packetSize, true))
 			{
 				TxStart = millis();
-				Task::enable();
+				TS::Task::enable();
 			}
 			else
 			{
@@ -470,7 +471,7 @@ public:
 		{
 			CurrentChannel = rawChannel;
 			HopPending = true;
-			Task::enable();
+			TS::Task::enable();
 		}
 	}
 

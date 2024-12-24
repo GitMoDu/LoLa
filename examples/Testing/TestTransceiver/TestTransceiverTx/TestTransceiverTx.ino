@@ -18,7 +18,10 @@
 
 #define LINK_DUPLEX_SLOT false
 
-#include <TaskScheduler.h>
+#define _TASK_OO_CALLBACKS
+#define _TASK_SLEEP_ON_IDLE_RUN
+#include <TScheduler.hpp>
+
 #include <ILoLaInclude.h>
 
 #include "Testing\ExampleTransceiverDefinitions.h"
@@ -28,7 +31,7 @@
 
 
 // Process scheduler.
-Scheduler SchedulerBase;
+TS::Scheduler SchedulerBase{};
 //
 
 // Transceiver.

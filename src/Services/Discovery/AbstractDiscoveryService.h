@@ -60,23 +60,23 @@ protected:
 	/// <summary>
 	/// Fires when the the service has been discovered.
 	/// </summary>
-	virtual void OnServiceStarted() { Task::disable(); }
+	virtual void OnServiceStarted() { TS::Task::disable(); }
 
 	/// <summary>
 	/// Fires when the the service has been lost.
 	/// </summary>
-	virtual void OnServiceEnded() { Task::disable(); }
+	virtual void OnServiceEnded() { TS::Task::disable(); }
 
 	/// <summary>
 	/// Fires when the the service partner can't be found.
 	/// </summary>
-	virtual void OnDiscoveryFailed() { Task::disable(); }
+	virtual void OnDiscoveryFailed() { TS::Task::disable(); }
 
 	/// <summary>
 	/// The service can ride this task's callback while linked,
 	/// once the discovery has been complete.
 	/// </summary>
-	virtual void OnLinkedServiceRun() { Task::disable(); }
+	virtual void OnLinkedServiceRun() { TS::Task::disable(); }
 
 	/// <summary>
 	/// After discovery is completed, any non-discovery packets will be routed to the service.
@@ -89,7 +89,7 @@ private:
 	bool ReplyPending = false;
 
 public:
-	AbstractDiscoveryService(Scheduler& scheduler, ILoLaLink* loLaLink)
+	AbstractDiscoveryService(TS::Scheduler& scheduler, ILoLaLink* loLaLink)
 		: BaseClass(scheduler, loLaLink)
 	{}
 
@@ -113,18 +113,18 @@ public:
 		{
 			if (DiscoveryState == DiscoveryStateEnum::WaitingForLink)
 			{
-				Task::enableDelayed(1);
+				TS::Task::enableDelayed(1);
 				DiscoveryState = DiscoveryStateEnum::Discovering;
 			}
 			else
 			{
-				Task::enableIfNot();
+				TS::Task::enableIfNot();
 			}
 		}
 		else
 		{
 			RequestSendCancel();
-			Task::disable();
+			TS::Task::disable();
 			switch (DiscoveryState)
 			{
 			case DiscoveryStateEnum::Running:
@@ -165,7 +165,7 @@ public:
 					if (DiscoveryState == DiscoveryStateEnum::Running)
 					{
 						RequestSendCancel();
-						Task::disable();
+						TS::Task::disable();
 						OnServiceEnded();
 					}
 					DiscoveryState = DiscoveryStateEnum::WaitingForLink;
@@ -182,7 +182,7 @@ public:
 						DiscoveryState = DiscoveryStateEnum::MatchingSlot;
 						LocalSlot = GetStartSlot(remoteSlot);
 						ResetPacketThrottle();
-						Task::delay(0);
+						TS::Task::delay(0);
 						break;
 					case DiscoveryStateEnum::MatchingSlot:
 						if ((LoLaLink->GetLinkElapsed() + DISCOVERY_SLOT_TOLERANCE_MICROS) <= GetTurnoverTimestamp(LocalSlot)
@@ -235,12 +235,12 @@ public:
 		else if (DiscoveryState == DiscoveryStateEnum::WaitingForLink)
 		{
 			ReplyPending = true;
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 		}
 		else
 		{
 			ReplyPending = true;
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 		}
 	}
 
@@ -259,7 +259,7 @@ protected:
 			}
 			else
 			{
-				Task::disable();
+				TS::Task::disable();
 			}
 			break;
 		case DiscoveryStateEnum::Discovering:
@@ -270,13 +270,13 @@ protected:
 				{
 					RequestSendDiscovery(false, false);
 				}
-				else { Task::delay(0); }
+				else { TS::Task::delay(0); }
 			}
 			break;
 		case DiscoveryStateEnum::MatchingSlot:
 			if (!DiscoveryTimedOut())
 			{
-				Task::delay(0);
+				TS::Task::delay(0);
 				if ((LoLaLink->GetLinkElapsed()) >= GetTurnoverTimestamp(LocalSlot))
 				{
 					LocalSlot++;
@@ -297,7 +297,7 @@ protected:
 				if ((LoLaLink->GetLinkElapsed()) > GetTurnoverTimestamp(LocalSlot))
 				{
 					LocalSlot++;
-					Task::delay(0);
+					TS::Task::delay(0);
 					ResetPacketThrottle();
 				}
 
@@ -308,7 +308,7 @@ protected:
 			}
 			break;
 		case DiscoveryStateEnum::WaitingForSlotEnd:
-			Task::delay(0);
+			TS::Task::delay(0);
 			if (ReplyPending)
 			{
 				if (PacketThrottle()

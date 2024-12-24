@@ -48,7 +48,7 @@ private:
 
 
 public:
-	LoLaPkeLinkServer(Scheduler& scheduler,
+	LoLaPkeLinkServer(TS::Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
@@ -90,7 +90,7 @@ protected:
 				if (IsInSearchingLink())
 				{
 					PkeSessionRequested = true;
-					Task::enable();
+					TS::Task::enable();
 #if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("Session request received."));
@@ -104,7 +104,7 @@ protected:
 						PkeState = PkeStateEnum::NoPke;
 						StartSearching();
 						PkeSessionRequested = true;
-						Task::enable();
+						TS::Task::enable();
 #if defined(DEBUG_LOLA_LINK)
 						this->Owner();
 						Serial.println(F("Session request overrode state back to search."));
@@ -140,7 +140,7 @@ protected:
 				if (IsInSearchingLink())
 				{
 					StartSessionCreationIfNot();
-					Task::enable();
+					TS::Task::enable();
 				}
 				else if (IsInSessionCreation())
 				{
@@ -148,7 +148,7 @@ protected:
 					{
 					case PkeStateEnum::NoPke:
 					case PkeStateEnum::SessionCached:
-						Task::enable();
+						TS::Task::enable();
 						break;
 					default:
 #if defined(DEBUG_LOLA_LINK)
@@ -219,7 +219,7 @@ protected:
 				LOLA_RTOS_RESUME();
 			}
 		}
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	virtual void OnServiceSessionCreation() final
@@ -228,12 +228,12 @@ protected:
 		{
 		case PkeStateEnum::NoPke:
 		case PkeStateEnum::SessionCached:
-			Task::enable();
+			TS::Task::enable();
 			break;
 		case PkeStateEnum::DecompressingPartnerKey:
 			Session.DecompressPartnerPublicKeyFrom(PartnerCompressedKey);
 			PkeState = PkeStateEnum::ValidatingSession;
-			Task::enable();
+			TS::Task::enable();
 			break;
 		case PkeStateEnum::ValidatingSession:
 			if (Session.PublicKeyCollision())
@@ -261,7 +261,7 @@ protected:
 				Session.ResetPke();
 				PkeState = PkeStateEnum::ComputingSecretKey;
 			}
-			Task::enable();
+			TS::Task::enable();
 			break;
 		case PkeStateEnum::ComputingSecretKey:
 			if (Session.CalculatePke())
@@ -269,7 +269,7 @@ protected:
 				// PKE calculation took a lot of time, let's wait for another start request, now with cached secrets.
 				PkeState = PkeStateEnum::SessionCached;
 			}
-			Task::enable();
+			TS::Task::enable();
 			break;
 		default:
 			break;

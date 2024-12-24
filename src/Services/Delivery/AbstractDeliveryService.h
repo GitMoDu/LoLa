@@ -65,7 +65,7 @@ protected:
 	virtual void OnDeliveryReceived(const uint32_t timestamp, const uint8_t* data, const uint8_t dataSize) {}
 
 public:
-	AbstractDeliveryService(Scheduler& scheduler, ILoLaLink* loLaLink)
+	AbstractDeliveryService(TS::Scheduler& scheduler, ILoLaLink* loLaLink)
 		: BaseClass(scheduler, loLaLink)
 	{}
 
@@ -73,7 +73,7 @@ protected:
 	void CancelDelivery()
 	{
 		TxState = TxStateEnum::None;
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	const bool DeliveryTaskPending() const
@@ -115,7 +115,7 @@ protected:
 			TxDataSize = dataSize;
 			TxPriority = priority;
 
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 
 			ResetPacketThrottle();
 			TxStart = millis();
@@ -151,7 +151,7 @@ protected:
 				Serial.println(F("Delivery Id time out."));
 #endif
 			}
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 			break;
 		case TxStateEnum::AcknowledgingReply:
 			// Send Ack one time.
@@ -166,7 +166,7 @@ protected:
 					TxState = TxStateEnum::None;
 				}
 			}
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 			break;
 		case TxStateEnum::None:
 		default:
@@ -203,7 +203,7 @@ protected:
 	{
 		CancelDelivery();
 
-		Task::disable();
+		TS::Task::disable();
 		RxId = 0;
 		TxId = 0;
 		TxState = TxStateEnum::None;
@@ -239,7 +239,7 @@ protected:
 				OnDeliveryReceived(timestamp,
 					&payload[DeliveryDefinitions::DeliveryRequestDefinition::PAYLOAD_DATA_INDEX],
 					DeliveryDefinitions::GetDeliveryDataSize(payloadSize));
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				RxStart = millis();
 			}
 			break;
@@ -247,7 +247,7 @@ protected:
 			switch (TxState)
 			{
 			case TxStateEnum::WaitingForReply:
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				if (payload[DeliveryDefinitions::DeliveryReplyDefinition::PAYLOAD_REQUEST_ID_INDEX] == TxId)
 				{
 					// Expected reply after a delivery request.
@@ -271,7 +271,7 @@ protected:
 				{
 					// Sender thought it was free, but the  receiver
 					//  didn't get the Ack or sender has moved on to another request.
-					Task::enableDelayed(0);
+					TS::Task::enableDelayed(0);
 					TxState = TxStateEnum::AcknowledgingReply;
 				}
 #if defined(DEBUG_LOLA)
@@ -283,7 +283,7 @@ protected:
 				break;
 			case TxStateEnum::AcknowledgingReply:
 				// Sender was already trying to send an Ack.
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				break;
 			default:
 				break;
@@ -294,7 +294,7 @@ protected:
 				&& payload[DeliveryDefinitions::DeliveryAckDefinition::PAYLOAD_REQUEST_ID_INDEX] == RxId)
 			{
 				RxState = RxStateEnum::None;
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 			}
 			break;
 		default:

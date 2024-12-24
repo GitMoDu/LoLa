@@ -21,7 +21,7 @@ private:
 	int8_t TuneMicros = 0;
 
 public:
-	TuneClock(Scheduler& scheduler, ICycles* cycles)
+	TuneClock(TS::Scheduler& scheduler, ICycles* cycles)
 		: TimeClock(scheduler, cycles)
 	{}
 
@@ -53,10 +53,10 @@ public:
 	/// <param name="ppm">Tune in microseconds/second: [INT8_MIN;INT8_MAX]</param>
 	void SetTune(const int8_t ppm)
 	{
-		if (Task::isEnabled())
+		if (TS::Task::isEnabled())
 		{
 			TuneMicros = ppm;
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 		}
 	}
 
@@ -71,7 +71,7 @@ public:
 	/// <param name="ppm">Tune shift in microseconds/second: [INT8_MIN;INT8_MAX]</param>
 	void ShiftTune(const int8_t offsetMicros)
 	{
-		if (Task::isEnabled())
+		if (TS::Task::isEnabled())
 		{
 			const int8_t preTune = TuneMicros;
 
@@ -100,7 +100,7 @@ public:
 
 			if (preTune != TuneMicros)
 			{
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 			}
 		}
 	}

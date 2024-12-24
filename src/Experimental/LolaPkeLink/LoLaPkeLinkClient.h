@@ -41,7 +41,7 @@ private:
 	PkeStateEnum PkeState = PkeStateEnum::RequestingSession;
 
 public:
-	LoLaPkeLinkClient(Scheduler& scheduler,
+	LoLaPkeLinkClient(TS::Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
@@ -93,7 +93,7 @@ protected:
 					{
 						PartnerCompressedKey[i] = payload[Unlinked::PkeSessionAvailable::PAYLOAD_PUBLIC_KEY_INDEX + i];
 					}
-					Task::enable();
+					TS::Task::enable();
 #if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("Found a PKE Session."));
@@ -121,7 +121,7 @@ protected:
 	{
 		PkeState = PkeStateEnum::RequestingSession;
 		ResetUnlinkedPacketThrottle();
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	virtual void OnServiceSessionCreation() final
@@ -147,12 +147,12 @@ protected:
 				}
 				LOLA_RTOS_RESUME();
 			}
-			Task::enable();
+			TS::Task::enable();
 			break;
 		case PkeStateEnum::DecompressingPartnerKey:
 			PkeState = PkeStateEnum::ValidatingSession;
 			Session.DecompressPartnerPublicKeyFrom(PartnerCompressedKey);
-			Task::enable();
+			TS::Task::enable();
 			break;
 		case PkeStateEnum::ValidatingSession:
 			if (Session.PublicKeyCollision())
@@ -180,7 +180,7 @@ protected:
 				Session.ResetPke();
 				PkeState = PkeStateEnum::ComputingSecretKey;
 			}
-			Task::enable();
+			TS::Task::enable();
 			break;
 		case PkeStateEnum::ComputingSecretKey:
 			if (Session.CalculatePke())
@@ -188,7 +188,7 @@ protected:
 				// PKE calculation took a lot of time, let's reset to start now with a cached key-pair.
 				PkeState = PkeStateEnum::ValidatingSession;
 			}
-			Task::enable();
+			TS::Task::enable();
 			break;
 		case PkeStateEnum::SessionCached:
 			if (UnlinkedPacketThrottle())
@@ -215,7 +215,7 @@ protected:
 				}
 				LOLA_RTOS_RESUME();
 			}
-			Task::enable();
+			TS::Task::enable();
 			break;
 		}
 	}

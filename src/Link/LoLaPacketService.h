@@ -5,7 +5,7 @@
 
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "LoLaTransceivers/ILoLaTransceiver.h"
 #include "IPacketServiceListener.h"
@@ -18,7 +18,7 @@
 ///		Content abstract.
 ///		Pushes input packets straight to Link buffer, so transceiver is free to receive more while the service processes it.
 /// </summary>
-class LoLaPacketService : private Task, public virtual ILoLaTransceiverListener
+class LoLaPacketService : public virtual ILoLaTransceiverListener, private TS::Task
 {
 private:
 	using SendResultEnum = IPacketServiceListener::SendResultEnum;
@@ -53,7 +53,7 @@ public:
 	ILoLaTransceiver* Transceiver;
 
 public:
-	LoLaPacketService(Scheduler& scheduler,
+	LoLaPacketService(TS::Scheduler& scheduler,
 		IPacketServiceListener* serviceListener,
 		ILoLaTransceiver* transceiver,
 		uint8_t* rawInPacket,
@@ -92,7 +92,7 @@ public:
 		{
 		case StateEnum::SendingSuccess:
 			State = StateEnum::Done;
-			Task::enable();
+			TS::Task::enable();
 			ServiceListener->OnSendComplete(SendResultEnum::Success);
 			break;
 		case StateEnum::Sending:
@@ -103,21 +103,21 @@ public:
 			{
 				// Send timeout.
 				State = StateEnum::Done;
-				Task::enable();
+				TS::Task::enable();
 				ServiceListener->OnSendComplete(SendResultEnum::SendTimeout);
 			}
 			else
 			{
-				Task::delay(SEND_CHECK_PERIOD_MILLIS);
+				TS::Task::delay(SEND_CHECK_PERIOD_MILLIS);
 			}
 			break;
 		case StateEnum::SendingError:
-			Task::enable();
+			TS::Task::enable();
 			State = StateEnum::Done;
 			ServiceListener->OnSendComplete(SendResultEnum::Error);
 			break;
 		case StateEnum::Done:
-			Task::disable();
+			TS::Task::disable();
 			Transceiver->Rx(ServiceListener->GetRxChannel());
 			break;
 		default:
@@ -129,7 +129,7 @@ public:
 			ServiceListener->OnReceived(ReceiveTimestamp, PendingReceiveSize, PendingReceiveRssi);
 
 			PendingReceiveSize = 0;
-			Task::enable();
+			TS::Task::enable();
 			return true;
 		}
 
@@ -150,7 +150,7 @@ public:
 		if (State == StateEnum::Done)
 		{
 			// Just running the task in Done state will update the channel on the next task allback.
-			Task::enable();
+			TS::Task::enable();
 		}
 	}
 
@@ -162,7 +162,7 @@ public:
 #if defined(DEBUG_LOLA)
 			Serial.println(F("\tPrevious Send request cancelled."));
 #endif
-			Task::enable();
+			TS::Task::enable();
 			State = StateEnum::Done;
 		}
 	}
@@ -184,7 +184,7 @@ public:
 			SendOutTimestamp = millis();
 			SendOutSize = size;
 			State = StateEnum::Sending;
-			Task::enable();
+			TS::Task::enable();
 
 			return true;
 		}
@@ -194,7 +194,7 @@ public:
 			digitalWrite(TX_TEST_PIN, LOW);
 #endif
 			State = StateEnum::Done;
-			Task::enable();
+			TS::Task::enable();
 
 			// Turns out we can't send right now, try again later.
 			return false;
@@ -251,7 +251,7 @@ public:
 		ReceiveTimestamp = receiveTimestamp;
 		PendingReceiveRssi = rssi;
 
-		Task::enable();
+		TS::Task::enable();
 
 		return true;
 	}
@@ -265,12 +265,12 @@ public:
 		{
 		case StateEnum::Sending:
 			State = StateEnum::SendingSuccess;
-			Task::enable();
+			TS::Task::enable();
 			break;
 		default:
 			// Unexpected Sent Event.
 			State = StateEnum::SendingError;
-			Task::enable();
+			TS::Task::enable();
 			break;
 		}
 	}

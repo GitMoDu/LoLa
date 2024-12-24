@@ -49,7 +49,7 @@ private:
 	bool NotifyRequested = false;
 
 public:
-	SurfaceReader(Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
+	SurfaceReader(TS::Scheduler& scheduler, ILoLaLink* link, ISurface* surface)
 		: BaseClass(scheduler, link, surface)
 	{}
 
@@ -61,7 +61,7 @@ public:
 			ReaderState = ReaderStateEnum::Sleeping;
 			NotifyRequested = false;
 			LastReceived = millis();
-			Task::disable();
+			TS::Task::disable();
 			Surface->SetHot(false);
 			Surface->NotifyUpdated();
 		}
@@ -86,18 +86,18 @@ public:
 			if (Surface->IsHot() && HashesMatch())
 			{
 				ReaderState = ReaderStateEnum::Sleeping;
-				Task::delay(0);
+				TS::Task::delay(0);
 			}
 			else if (millis() - LastReceived > RECEIVE_FAILED_PERIOD_MILLIS)
 			{
 				ReaderState = ReaderStateEnum::Invalidating;
 				ResetPacketThrottle();
-				Task::delay(0);
+				TS::Task::delay(0);
 			}
-			else { Task::delay(1); }
+			else { TS::Task::delay(1); }
 			break;
 		case ReaderStateEnum::Validating:
-			Task::delay(0);
+			TS::Task::delay(0);
 			if (Surface->IsHot())
 			{
 				if (RequestSendMeta(ReaderValidateDefinition::HEADER))
@@ -127,12 +127,12 @@ public:
 			{
 				RequestSendMeta(ReaderInvalidateDefinition::HEADER);
 			}
-			else { Task::delay(0); }
+			else { TS::Task::delay(0); }
 			break;
 		case ReaderStateEnum::Sleeping:
 		case ReaderStateEnum::Disabled:
 		default:
-			Task::disable();
+			TS::Task::disable();
 			break;
 		}
 	}
@@ -151,7 +151,7 @@ public:
 					switch (ReaderState)
 					{
 					case ReaderStateEnum::Sleeping:
-						Task::enableDelayed(0);
+						TS::Task::enableDelayed(0);
 					case ReaderStateEnum::Updating:
 					case ReaderStateEnum::Invalidating:
 						ReaderState = ReaderStateEnum::Validating;
@@ -167,7 +167,7 @@ public:
 				if (payloadSize == WriterDefinition1x1::PAYLOAD_SIZE)
 				{
 					LastReceived = millis();
-					Task::enableDelayed(0);
+					TS::Task::enableDelayed(0);
 					ReaderState = ReaderStateEnum::Updating;
 					OnReceived1x1(payload);
 				}
@@ -176,7 +176,7 @@ public:
 				if (payloadSize == WriterDefinition2x1::PAYLOAD_SIZE)
 				{
 					LastReceived = millis();
-					Task::enableDelayed(0);
+					TS::Task::enableDelayed(0);
 					ReaderState = ReaderStateEnum::Updating;
 					OnReceived2x1(payload);
 				}
@@ -187,7 +187,7 @@ public:
 					&& header < WriterDefinition1x2::MAX_HEADER)
 				{
 					LastReceived = millis();
-					Task::enableDelayed(0);
+					TS::Task::enableDelayed(0);
 					ReaderState = ReaderStateEnum::Updating;
 					OnReceived1x2(payload, header);
 				}
@@ -196,7 +196,7 @@ public:
 					&& header < WriterDefinition1x3::MAX_HEADER)
 				{
 					LastReceived = millis();
-					Task::enableDelayed(0);
+					TS::Task::enableDelayed(0);
 					ReaderState = ReaderStateEnum::Updating;
 					OnReceived1x3(payload, header);
 				}

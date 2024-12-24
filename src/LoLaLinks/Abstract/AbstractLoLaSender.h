@@ -30,7 +30,7 @@ protected:
 	virtual const uint8_t MockGetTxChannel(const uint32_t rollingMicros) { return 0; }
 
 public:
-	AbstractLoLaSender(Scheduler& scheduler,
+	AbstractLoLaSender(TS::Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)

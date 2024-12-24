@@ -11,9 +11,6 @@
 #define SERIAL_BAUD_RATE 115200
 #endif
 
-#define _TASK_OO_CALLBACKS
-#define _TASK_SLEEP_ON_IDLE_RUN
-
 // Enable for experimental faster hash.
 //#define LOLA_USE_POLY1305
 
@@ -45,7 +42,10 @@
 
 #define LINK_DUPLEX_SLOT true
 
-#include <TaskScheduler.h>
+
+#define _TASK_OO_CALLBACKS
+#define _TASK_SLEEP_ON_IDLE_RUN
+#include <TScheduler.hpp>
 #include <ILoLaInclude.h>
 
 #include "../src/Testing/ExampleTransceiverDefinitions.h"
@@ -67,7 +67,7 @@
 #include "Testing\LinkLogTask.h"
 
 // Process scheduler.
-Scheduler SchedulerBase;
+TS::Scheduler SchedulerBase{};
 //
 
 // Transceiver.

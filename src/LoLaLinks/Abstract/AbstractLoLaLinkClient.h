@@ -54,7 +54,7 @@ private:
 #endif
 
 public:
-	AbstractLoLaLinkClient(Scheduler& scheduler,
+	AbstractLoLaLinkClient(TS::Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
@@ -211,9 +211,8 @@ protected:
 		Serial.println(F("Sleeping."));
 #endif
 		//TODO: Try to find server but sleep between long tries.
-		Task::disable();
+		TS::Task::disable();
 	}
-
 
 	void OnServiceClockSyncing() final
 	{
@@ -283,7 +282,7 @@ protected:
 			}
 		}
 
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnServiceAuthenticating() final
@@ -312,12 +311,12 @@ protected:
 				}
 				LOLA_RTOS_RESUME();
 			}
-			Task::enableDelayed(0);
+			TS::Task::enableDelayed(0);
 		}
 		else
 		{
 			// Server will be the one initiating the authentication step.
-			Task::enableDelayed(1);
+			TS::Task::enableDelayed(1);
 		}
 	}
 
@@ -346,7 +345,7 @@ protected:
 					return;
 					break;
 				}
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -365,7 +364,7 @@ protected:
 				SetReceiveCounter(rollingCounter);	// Save last received counter, ready for switch for next stage.
 				StateTransition.OnReceived(timestamp, &payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				SyncSequence = payload[Unlinked::LinkingTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				OnLinkSyncReceived(timestamp);
 				UpdateLinkStage(LinkStageEnum::SwitchingToLinking);
 #if defined(DEBUG_LOLA_LINK)
@@ -395,7 +394,7 @@ protected:
 				Session.SetPartnerChallenge(&payload[Linking::ServerChallengeRequest::PAYLOAD_CHALLENGE_INDEX]);
 				AuthenticationReplyPending = true;
 				OnLinkSyncReceived(timestamp);
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				ResetUnlinkedPacketThrottle();
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -417,7 +416,7 @@ protected:
 #endif
 
 				OnLinkSyncReceived(timestamp);
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 				ResetUnlinkedPacketThrottle();
 				UpdateLinkStage(LinkStageEnum::ClockSyncing);
 			}
@@ -512,7 +511,7 @@ protected:
 
 				StateTransition.OnReceived(timestamp, &payload[Linking::LinkTimedSwitchOver::PAYLOAD_TIME_INDEX]);
 				SyncSequence = payload[Linking::LinkTimedSwitchOver::PAYLOAD_REQUEST_ID_INDEX];
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 
 #if defined(DEBUG_LOLA_LINK)
 				this->Owner();
@@ -606,7 +605,7 @@ private:
 			}
 			LOLA_RTOS_RESUME();
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnServiceSwitchingToLinking() final
@@ -644,7 +643,7 @@ private:
 			}
 			LOLA_RTOS_RESUME();
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnServiceSwitchingToLinked() final

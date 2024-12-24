@@ -4,7 +4,7 @@
 #define _SI446X_ABSTRACT_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "../../ILoLaTransceiver.h"
 #include "../SpiDriver/Si446xRadioDriver.h"

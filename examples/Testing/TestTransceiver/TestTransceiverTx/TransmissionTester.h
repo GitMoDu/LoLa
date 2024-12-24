@@ -4,7 +4,7 @@
 #define _TRASMISSION_TESTER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include <ILoLaInclude.h>
 #include <Arduino.h>
@@ -12,7 +12,7 @@
 
 template<const uint32_t SendPeriodMillis,
 	const uint8_t TxActivePin = 0>
-class TransmissionTester : private Task, public virtual ILoLaTransceiverListener
+class TransmissionTester : private TS::Task, public virtual ILoLaTransceiverListener
 {
 public:
 	static constexpr uint8_t TestChannel = 0;
@@ -30,7 +30,7 @@ private:
 public:
 	TransmissionTester(Scheduler& scheduler, ILoLaTransceiver* transceiver)
 		: ILoLaTransceiverListener()
-		, Task(SendPeriodMillis, TASK_FOREVER, &scheduler, true)
+		, TS::Task(SendPeriodMillis, TASK_FOREVER, &scheduler, true)
 		, Transceiver(transceiver)
 	{}
 
@@ -128,7 +128,7 @@ public:
 		else
 		{
 			Serial.println(F("Tx not available"));
-			Task::delay(1000);
+			TS::Task::delay(1000);
 		}
 
 		return true;

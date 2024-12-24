@@ -12,8 +12,8 @@
 
 template<const uint8_t IdCode = 0>
 class PimTransceiver
-	: public PulsePacketTaskDriver<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE>
-	, public virtual ILoLaTransceiver
+	: public virtual ILoLaTransceiver
+	, public PulsePacketTaskDriver<LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE>
 {
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0x9114;
@@ -31,14 +31,15 @@ private:
 
 public:
 #if defined(ARDUINO_ARCH_AVR)
-	PimTransceiver(Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin)
+	PimTransceiver(TS::Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin)
 		: BaseClass(scheduler, readPin, writePin)
 #elif defined(ARDUINO_ARCH_STM32F1)
-	PimTransceiver(Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin, const uint8_t timerIndex, const uint8_t timerChannel)
+	PimTransceiver(TS::Scheduler& scheduler, const uint8_t readPin, const uint8_t writePin, const uint8_t timerIndex, const uint8_t timerChannel)
 		: BaseClass(scheduler, readPin, writePin, timerIndex, timerChannel)
 #endif
 		, ILoLaTransceiver()
-	{}
+	{
+	}
 
 public:
 	// PIM Driver overrides.

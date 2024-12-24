@@ -4,7 +4,7 @@
 #define _TASK_CYCLE_COUNTER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "../ClockSources/ICycles.h"
 
@@ -14,7 +14,7 @@
 /// Uses task callback to ensure cycles' overflows are tracked.
 /// Inheritable RunCheck for extra checks using the same task and latest cyclestamp.
 /// </summary>
-class CycleCounter : protected Task
+class CycleCounter : protected TS::Task
 {
 private:
 	static constexpr uint32_t MIN_OVERFLOW_COUNT = UINT16_MAX - 1;
@@ -44,10 +44,11 @@ protected:
 	virtual uint32_t RunCheck(const uint32_t cyclestamp) { return UINT32_MAX; }
 
 public:
-	CycleCounter(Scheduler& scheduler, ICycles* cycles)
-		: Task(0, TASK_FOREVER, &scheduler, false)
+	CycleCounter(TS::Scheduler& scheduler, ICycles* cycles)
+		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, CyclesSource(cycles)
-	{}
+	{
+	}
 
 	virtual const bool Setup()
 	{
@@ -79,7 +80,7 @@ public:
 	void Stop()
 	{
 		CyclesSource->StopCycles();
-		Task::disable();
+		TS::Task::disable();
 	}
 
 public:
@@ -99,20 +100,20 @@ public:
 		{
 			if (overflowDelay > 0)
 			{
-				Task::delay(overflowDelay);
+				TS::Task::delay(overflowDelay);
 			}
 			else
 			{
-				Task::enable();
+				TS::Task::enable();
 			}
 		}
 		else if (checkDelay > 0)
 		{
-			Task::delay(checkDelay);
+			TS::Task::delay(checkDelay);
 		}
 		else
 		{
-			Task::enable();
+			TS::Task::enable();
 		}
 
 		return true;
@@ -182,13 +183,13 @@ protected:
 	/// </summary>
 	virtual void Start()
 	{
-		if (!Task::isEnabled())
+		if (!TS::Task::isEnabled())
 		{
 			CyclesSource->StartCycles();
 			LastCycles = 0;
 
 		}
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	/// <summary>

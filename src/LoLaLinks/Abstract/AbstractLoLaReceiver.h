@@ -52,7 +52,7 @@ protected:
 	virtual void OnPacketReceivedOk(const uint8_t rssi, const uint16_t lostCount) {}
 
 public:
-	AbstractLoLaReceiver(Scheduler& scheduler,
+	AbstractLoLaReceiver(TS::Scheduler& scheduler,
 		ILinkRegistry* linkRegistry,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles)

@@ -22,7 +22,7 @@ private:
 	LinkRegistry<MaxPacketReceiveListeners, MaxLinkListeners> RegistryInstance{};
 
 public:
-	LoLaAddressMatchLinkClient(Scheduler& scheduler,
+	LoLaAddressMatchLinkClient(TS::Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
@@ -100,7 +100,7 @@ protected:
 			}
 			LOLA_RTOS_RESUME();
 		}
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) final
@@ -130,7 +130,7 @@ protected:
 						Serial.println(F("Found an Address Match Session."));
 #endif
 						OnLinkSyncReceived(timestamp);
-						Task::enableDelayed(0);
+						TS::Task::enableDelayed(0);
 					}
 					break;
 				default:

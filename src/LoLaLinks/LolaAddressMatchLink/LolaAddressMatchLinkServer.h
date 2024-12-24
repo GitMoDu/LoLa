@@ -25,7 +25,7 @@ private:
 	bool AmReplyPending = false;
 
 public:
-	LoLaAddressMatchLinkServer(Scheduler& scheduler,
+	LoLaAddressMatchLinkServer(TS::Scheduler& scheduler,
 		ILoLaTransceiver* transceiver,
 		ICycles* cycles,
 		IEntropy* entropy,
@@ -87,7 +87,7 @@ protected:
 			LOLA_RTOS_RESUME();
 		}
 
-		Task::enableDelayed(0);
+		TS::Task::enableDelayed(0);
 	}
 
 	void OnUnlinkedPacketReceived(const uint32_t timestamp, const uint8_t* payload, const uint16_t rollingCounter, const uint8_t payloadSize) final
@@ -105,7 +105,7 @@ protected:
 					UpdateLinkStage(LinkStageEnum::Pairing);
 				case LinkStageEnum::Pairing:
 					AmReplyPending = true;
-					Task::enableDelayed(0);
+					TS::Task::enableDelayed(0);
 #if defined(DEBUG_LOLA_LINK)
 					this->Owner();
 					Serial.println(F("AmSessionRequest received."));
@@ -135,7 +135,7 @@ protected:
 				Serial.println(F("AmLinkingStartRequest received"));
 #endif				
 				Session.SetPartnerAddressFrom(&payload[Unlinked::AmLinkingStartRequest::PAYLOAD_CLIENT_ADDRESS_INDEX]);
-				Task::enableDelayed(0);
+				TS::Task::enableDelayed(0);
 			}
 #if defined(DEBUG_LOLA_LINK)
 			else {

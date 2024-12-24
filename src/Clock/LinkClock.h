@@ -12,7 +12,7 @@
 class LinkClock final : public TuneClock
 {
 public:
-	LinkClock(Scheduler& scheduler, ICycles* cycles)
+	LinkClock(TS::Scheduler& scheduler, ICycles* cycles)
 		: TuneClock(scheduler, cycles)
 	{}
 };

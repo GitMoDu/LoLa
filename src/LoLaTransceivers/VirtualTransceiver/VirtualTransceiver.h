@@ -4,7 +4,7 @@
 #define _VIRTUAL_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include "../ILoLaTransceiver.h"
 #include "IVirtualTransceiver.h"
@@ -21,7 +21,7 @@ template<typename Config,
 	const char OnwerName,
 	const bool LogChannelHop = false>
 class VirtualTransceiver final
-	: private Task
+	: private TS::Task
 	, public virtual IVirtualTransceiver
 	, public virtual ILoLaTransceiver
 {
@@ -136,10 +136,10 @@ private:
 	}
 
 public:
-	VirtualTransceiver(Scheduler& scheduler)
+	VirtualTransceiver(TS::Scheduler& scheduler)
 		: IVirtualTransceiver()
 		, ILoLaTransceiver()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 	{
 	}
 
@@ -195,7 +195,7 @@ public:
 					{
 						Listener->OnTx();
 					}
-					Task::enable();
+					TS::Task::enable();
 					OutGoing.Clear();
 					LastOut = micros();
 				}
@@ -231,7 +231,7 @@ public:
 
 		if (OutGoing.HasPending())
 		{
-			Task::enable();
+			TS::Task::enable();
 
 			return true;
 		}
@@ -242,19 +242,19 @@ public:
 			{
 				HopRequest.Clear();
 			}
-			Task::enable();
+			TS::Task::enable();
 
 			return true;
 		}
 		else if (Incoming.HasPending())
 		{
-			Task::enable();
+			TS::Task::enable();
 
 			return true;
 		}
 		else
 		{
-			Task::disable();
+			TS::Task::disable();
 			return false;
 		}
 	}
@@ -277,7 +277,7 @@ public:
 		CurrentChannel = 0;
 		DriverEnabled = true;
 
-		Task::enable();
+		TS::Task::enable();
 
 		return true;
 	}
@@ -291,7 +291,7 @@ public:
 	{
 		DriverEnabled = false;
 
-		Task::disable();
+		TS::Task::disable();
 
 		return true;
 	}
@@ -347,7 +347,7 @@ public:
 		OutGoing.Channel = GetRawChannel(channel);
 		memcpy(OutGoing.Buffer, data, packetSize);
 
-		Task::enable();
+		TS::Task::enable();
 
 		return true;
 	}
@@ -363,7 +363,7 @@ public:
 			LogChannel(rawChannel);
 		}
 
-		Task::enable();
+		TS::Task::enable();
 	}
 
 	const uint16_t GetTimeToAir(const uint8_t packetSize) final
@@ -452,7 +452,7 @@ public:
 #endif
 		}
 #endif
-		Task::enable();
+		TS::Task::enable();
 	}
 
 private:
