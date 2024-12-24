@@ -94,8 +94,8 @@ private:
 class LinkClientClockTracker
 {
 private:
-	static constexpr uint32_t CLOCK_TUNE_PERIOD = 2200000;
-	static constexpr uint32_t CLOCK_TUNE_BASE_PERIOD = 400000;
+	static constexpr uint32_t CLOCK_TUNE_PERIOD = 2500000;
+	static constexpr uint32_t CLOCK_TUNE_BASE_PERIOD = 1100000;
 
 	static constexpr uint8_t ERROR_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE * 2;
 	static constexpr uint8_t DEVIATION_REFERENCE = LoLaLinkDefinition::LINKING_CLOCK_TOLERANCE / 4;
@@ -105,7 +105,7 @@ private:
 
 	static constexpr uint8_t CLOCK_FILTER_SCALE = 10;
 	static constexpr uint8_t CLOCK_TUNE_RATIO = 32;
-	static constexpr uint8_t CLOCK_REJECT_DEVIATION = 3;
+	static constexpr uint8_t CLOCK_REJECT_DEVIATION = (CLOCK_SYNC_SAMPLE_COUNT * 8) / 7;
 
 	static constexpr uint8_t QUALITY_FILTER_SCALE = 200;
 	static constexpr uint8_t QUALITY_COUNT = 8 * CLOCK_SYNC_SAMPLE_COUNT;
@@ -141,7 +141,8 @@ public:
 	LinkClientClockTracker(const uint16_t duplexPeriod)
 		: ClockTuneRetryPeriod(((uint32_t)duplexPeriod* CLOCK_TUNE_RETRY_DUPLEX_COUNT))
 		, ClockTuneMinPeriod(CLOCK_TUNE_BASE_PERIOD + (ClockTuneRetryPeriod * CLOCK_SYNC_SAMPLE_COUNT))
-	{}
+	{
+	}
 
 	void Reset()
 	{
@@ -171,7 +172,7 @@ public:
 		QualityFilter.Clear(0);
 	}
 
-	const uint8_t GetQuality()
+	const uint8_t GetQuality() const
 	{
 		if (Accumulated >= QUALITY_COUNT)
 		{
