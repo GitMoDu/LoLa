@@ -16,9 +16,19 @@
 #endif
 
 // Shared Link configuration.
-static const uint16_t DuplexPeriod = 10000;
-static const uint16_t DuplexDeadZone = 300;
-static const uint32_t ChannelHopPeriod = DuplexPeriod;
+static constexpr uint16_t DuplexPeriod = 5000;
+static constexpr uint16_t DuplexDeadZone = 300;
+static constexpr uint32_t ChannelHopPeriod = DuplexPeriod;
+
+// Diceware created access control password.
+static constexpr uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
+static constexpr uint8_t SecretKey[LoLaLinkDefinition::SECRET_KEY_SIZE] = { 0x50, 0x05, 0x60, 0x06, 0x70, 0x07, 0x80, 0x08 };
+//
+
+// Diceware created values for address and secret key.
+static constexpr uint8_t ServerAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+static constexpr uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+
 
 
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_RP2040)
@@ -33,13 +43,13 @@ static const uint32_t ChannelHopPeriod = DuplexPeriod;
 #elif defined(USE_SI446X_TRANSCEIVER)
 #define SI446X_TRANSCEIVER_SPI_CHANNEL		2
 #define SI446X_TRANSCEIVER_PIN_CS			31
-#define SI446X_TRANSCEIVER_PIN_SDN			26
-#define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	25
+#define SI446X_TRANSCEIVER_PIN_SDN			22
+#define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	21
 #elif defined(USE_SX12_TRANSCEIVER)
 #define SX12_TRANSCEIVER_SPI_CHANNEL		2
-#define SX12_TRANSCEIVER_PIN_CS				22
-#define SX12_TRANSCEIVER_PIN_SDN			21
-#define SX12_TRANSCEIVER_RX_INTERRUPT_PIN	20
+#define SX12_TRANSCEIVER_PIN_CS				31
+#define SX12_TRANSCEIVER_PIN_SDN			22
+#define SX12_TRANSCEIVER_RX_INTERRUPT_PIN	21
 #endif
 
 #else
@@ -101,6 +111,5 @@ HalfDuplex<DuplexPeriod, LINK_DUPLEX_SLOT, DuplexDeadZone> Duplex{};
 #error LINK_DUPLEX_SLOT Must be #defined to true or false.
 #endif
 #endif
-//
 
 #endif

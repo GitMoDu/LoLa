@@ -46,10 +46,10 @@
 #define _TASK_OO_CALLBACKS
 #define _TASK_SLEEP_ON_IDLE_RUN
 #include <TScheduler.hpp>
+
+#include <ILoLaTestingInclude.h>
 #include <ILoLaInclude.h>
 
-#include "../src/Testing/ExampleTransceiverDefinitions.h"
-#include "../src/Testing/ExampleLogicAnalyserDefinitions.h"
 
 #if defined(LINK_TEST_SURFACE)
 #include "../src/Testing/ExampleSurface.h"
@@ -61,7 +61,7 @@
 #endif
 
 #if defined(USE_LINK_DISPLAY)
-#include "../src/Testing/LinkGraphicsEngine.h"
+#include "../src/Display/LinkGraphicsEngine.h"
 #endif
 
 #include "Testing\LinkLogTask.h"
@@ -86,14 +86,6 @@ EspNowTransceiver Transceiver(SchedulerBase);
 #endif
 //
 
-// Diceware created access control password.
-static const uint8_t AccessPassword[LoLaLinkDefinition::ACCESS_CONTROL_PASSWORD_SIZE] = { 0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04 };
-//
-
-// Diceware created values for address and secret key.
-static const uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
-static const uint8_t SecretKey[LoLaLinkDefinition::SECRET_KEY_SIZE] = { 0x50, 0x05, 0x60, 0x06, 0x70, 0x07, 0x80, 0x08 };
-
 #if defined(LINK_USE_CHANNEL_HOP) && !defined(LINK_FULL_DUPLEX_TRANSCEIVER)
 TimedChannelHopper<ChannelHopPeriod> ChannelHop(SchedulerBase);
 #endif
@@ -103,10 +95,7 @@ LoLaAddressMatchLinkClient<> LinkClient(SchedulerBase,
 	&CyclesSource,
 	&EntropySource,
 	&Duplex,
-	&ChannelHop,
-	SecretKey,
-	AccessPassword,
-	ClientAddress);
+	&ChannelHop);
 
 #if defined(LOLA_DEBUG_LINK_STATUS)
 LinkLogTask<LOLA_DEBUG_LINK_STATUS> LogTask(&SchedulerBase, &LinkClient);
@@ -114,7 +103,7 @@ LinkLogTask<LOLA_DEBUG_LINK_STATUS> LogTask(&SchedulerBase, &LinkClient);
 
 #if defined(LINK_TEST_SURFACE)
 ExampleSurface WriteSurface{};
-SurfaceWriter<1, 23456, DuplexPeriod / 1000> ClientWriter(SchedulerBase, &Client, &WriteSurface);
+SurfaceWriter<1, 23456, DuplexPeriod / 1000> ClientWriter(SchedulerBase, &LinkClient, &WriteSurface);
 #if defined(USE_CONTROLLER)
 #if defined(USE_NUNCHUK_CONTROLLER)
 ControllerSource<5> Controller(SchedulerBase);
@@ -126,7 +115,15 @@ ControllerExampleSurfaceDispatcher ControllerDispatcher(SchedulerBase, &Controll
 #endif
 
 #if defined(USE_LINK_DISPLAY)
-LinkGraphicsEngine<ScreenDriverType, FrameBufferType>LinkDisplayEngine(&SchedulerBase, &LinkClient);
+TwoWire& DisplayWire(Wire);
+#if ARDUINO_MAPLE_MINI
+Egfx::SpiType DisplaySpi(1);
+#else
+Egfx::SpiType& DisplaySpi(SPI);
+#endif
+ScreenDriverType ScreenDriver(DisplaySpi);
+//ScreenDriverType ScreenDriver(Wire);
+LinkGraphicsEngine<FrameBufferType>LinkDisplayEngine(SchedulerBase, ScreenDriver, LinkClient, Transceiver);
 #endif
 
 void BootError()
@@ -188,7 +185,7 @@ void setup()
 #endif
 
 	// Setup Link instance.
-	if (!LinkClient.Setup())
+	if (!LinkClient.Setup(ClientAddress, AccessPassword, SecretKey))
 	{
 #ifdef DEBUG
 		Serial.println(F("LoLa Link Client Setup Failed."));
@@ -245,38 +242,20 @@ void BufferTaskCallback(void* parameter)
 #endif
 
 #if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER)
-void OnInterrupt()
+void LOLA_RTOS_INTERRUPT OnInterrupt()
 {
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, HIGH);
-#endif
 	Transceiver.OnInterrupt();
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, LOW);
-#endif
 }
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 void OnRxInterrupt(const uint8_t* mac, const uint8_t* buf, size_t count, void* arg)
 {
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, HIGH);
-#endif
 	Transceiver.OnRxInterrupt(mac, buf, count);
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, LOW);
-#endif
 }
 #else
 void OnRxInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
 {
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, HIGH);
-#endif
 	Transceiver.OnRxInterrupt(data, data_len);
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, LOW);
-#endif
 }
 void OnTxInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
 {

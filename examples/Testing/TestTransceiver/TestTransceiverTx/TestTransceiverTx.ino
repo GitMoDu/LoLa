@@ -122,36 +122,18 @@ void loop()
 #if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER)
 void OnInterrupt()
 {
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, HIGH);
-#endif
 	Transceiver.OnInterrupt();
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, LOW);
-#endif
 }
 #elif defined(USE_ESPNOW_TRANSCEIVER)
 #if defined(ARDUINO_ARCH_ESP8266)
 void OnRxInterrupt(const uint8_t* mac, const uint8_t* buf, size_t count, void* arg)
 {
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, HIGH);
-#endif
 	Transceiver.OnRxInterrupt(mac, buf, count);
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, LOW);
-#endif
 }
 #else
 void OnRxInterrupt(const uint8_t* mac_addr, const uint8_t* data, int data_len)
 {
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, HIGH);
-#endif
 	Transceiver.OnRxInterrupt(data, data_len);
-#if defined(RX_TEST_PIN)
-	digitalWrite(RX_TEST_PIN, LOW);
-#endif
 }
 void OnTxInterrupt(const uint8_t* mac_addr, esp_now_send_status_t status)
 {

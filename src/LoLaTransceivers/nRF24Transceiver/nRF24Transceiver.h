@@ -98,9 +98,6 @@ public:
 	/// </summary>
 	void OnInterrupt()
 	{
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, HIGH);
-#endif
 		if (Event.Pending)
 		{
 			// Double event detected.
@@ -387,10 +384,6 @@ public:
 				HopPending = false;
 			}
 		}
-
-#ifdef RX_TEST_PIN
-		digitalWrite(RX_TEST_PIN, LOW);
-#endif
 
 		if (TxPending || Event.Pending || HopPending || PacketEvent.Pending())
 		{

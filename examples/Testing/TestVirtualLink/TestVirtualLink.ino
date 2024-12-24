@@ -38,7 +38,7 @@
 //#define LINK_TEST_SURFACE
 
 // Test Delivery Service.
-#define LINK_TEST_DELIVERY
+//#define LINK_TEST_DELIVERY
 
 // Enable to log raw packets in transit.
 //#define PRINT_PACKETS
@@ -59,13 +59,8 @@
 // Set to true to log the current Client channel, as it hops. False to disable.
 #define PRINT_CHANNEL_HOP false
 
-// Enable to use Controller to write to ExampleSurface. 
-// Depends on https://github.com/GitMoDu/NintendoControllerReader
-//#define USE_N64_CONTROLLER
-//#define USE_GAMECUBE_CONTROLLER
-
-// Enable to use ArduinoGraphicsEngine for displaying live link info.
-// Depends on https://github.com/GitMoDu/ArduinoGraphicsEngine
+// Enable to use EmbeddedGraphics for displaying live link info.
+// Depends on https://github.com/GitMoDu/EGFX
 //#define USE_LINK_DISPLAY
 //#define GRAPHICS_ENGINE_MEASURE
 
@@ -197,12 +192,19 @@ ControllerExampleSurfaceDispatcher ControllerDispatcher(SchedulerBase, &Controll
 #endif
 #endif
 
-TestTask Tester(SchedulerBase, &LinkServer, &LinkClient);
-
-
 #if defined(USE_LINK_DISPLAY)
-VirtualLinkGraphicsEngine<ScreenDriverType, FrameBufferType>LinkDisplayEngine(&SchedulerBase, &LinkServer, &LinkClient, &ServerTransceiver, &ClientTransceiver);
+TwoWire& DisplayWire(Wire);
+#if ARDUINO_MAPLE_MINI
+Egfx::SpiType DisplaySpi(1);
+#else
+Egfx::SpiType& DisplaySpi(SPI);
 #endif
+ScreenDriverType ScreenDriver(DisplaySpi);
+//ScreenDriverType ScreenDriver(Wire);
+VirtualLinkGraphicsEngine<FrameBufferType>LinkDisplayEngine(SchedulerBase, ScreenDriver, LinkServer, LinkClient, ServerTransceiver, ClientTransceiver);
+#endif
+
+TestTask Tester(SchedulerBase, Serial, &LinkServer, &LinkClient);
 
 void BootError()
 {
@@ -231,6 +233,13 @@ void setup()
 
 #ifdef SCHEDULER_TEST_PIN
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
+#endif
+
+#if defined(USE_LINK_DISPLAY)
+	DisplaySpi.begin();
+	LinkDisplayEngine.SetBufferTaskCallback(BufferTaskCallback);
+	LinkDisplayEngine.SetInverted(false);
+	LinkDisplayEngine.Start();
 #endif
 
 	// Setup Virtual Packet Drivers.
@@ -352,7 +361,9 @@ void loop()
 {
 #ifdef SCHEDULER_TEST_PIN
 	digitalWrite(SCHEDULER_TEST_PIN, HIGH);
-	digitalWrite(SCHEDULER_TEST_PIN, LOW);
 #endif
 	SchedulerBase.execute();
+#ifdef SCHEDULER_TEST_PIN
+	digitalWrite(SCHEDULER_TEST_PIN, LOW);
+#endif
 }

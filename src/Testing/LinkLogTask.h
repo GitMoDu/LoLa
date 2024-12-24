@@ -4,23 +4,24 @@
 #define _LINK_LOG_TASK_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
 
 #include <ILoLaInclude.h>
 
 template<uint32_t PeriodMillis = 1000>
-class LinkLogTask : private Task, public virtual ILinkListener
+class LinkLogTask : private TS::Task, public virtual ILinkListener
 {
 private:
 	ILoLaLink* Link;
 	LoLaLinkExtendedStatus LinkStatus{};
 
 public:
-	LinkLogTask(Scheduler* scheduler, ILoLaLink* link)
+	LinkLogTask(TS::Scheduler* scheduler, ILoLaLink* link)
 		: ILinkListener()
-		, Task(PeriodMillis, TASK_FOREVER, scheduler, false)
+		, TS::Task(PeriodMillis, TASK_FOREVER, scheduler, false)
 		, Link(link)
-	{}
+	{
+	}
 
 	const bool Setup()
 	{
@@ -43,13 +44,13 @@ public:
 			LinkStatus.OnStart();
 			Serial.print(millis());
 			Serial.println(F("\tLink Acquired."));
-			Task::enableDelayed(1000);
+			TS::Task::enableDelayed(1000);
 		}
 		else
 		{
 			Serial.print(millis());
 			Serial.println(F("\tLink Lost."));
-			Task::disable();
+			TS::Task::disable();
 		}
 	}
 

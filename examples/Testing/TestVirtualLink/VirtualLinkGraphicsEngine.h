@@ -5,70 +5,81 @@
 
 #if defined(USE_LINK_DISPLAY)
 
+#include <Wire.h>
+#include <SPI.h>
 #include <ILoLaInclude.h>
 
 #include "../src/Testing/ExampleDisplayDefinitions.h"
 
 #include <ArduinoGraphicsEngineTask.h>
 
-#include "Testing/LinkDisplayDrawer.h"
-#include "Testing/ChannelDisplayDrawer.h"
+#include "Display/LinkDisplayDrawer.h"
+#include "Display/ChannelDisplayDrawer.h"
 
-template<typename screenDriverType, typename frameBufferType>
+template<typename frameBufferType>
 class VirtualLinkGraphicsEngine
 {
 private:
-	const uint32_t FramePeriod = 25000;
+	static constexpr uint32_t FramePeriod = 16666;
 
 private:
+	using LinkDisplayLeftLayout = LinkDisplayLayout<0, 0, (frameBufferType::FrameWidth / 2), (frameBufferType::FrameHeight / 2) - 1>;
+	using LinkDisplayRightLayout = LinkDisplayLayout<frameBufferType::FrameWidth / 2, 0, frameBufferType::FrameWidth / 2, (frameBufferType::FrameHeight / 2) - 1>;
+	using ChannelDisplayLeftLayout = LayoutElement<2, LinkDisplayLeftLayout::Height(), (frameBufferType::FrameWidth / 2) - 4, frameBufferType::FrameHeight - LinkDisplayLeftLayout::Height()>;
+	using ChannelDisplayRightLayout = LayoutElement<(frameBufferType::FrameWidth / 2) + 2, LinkDisplayRightLayout::Height(), (frameBufferType::FrameWidth / 2) - 4, frameBufferType::FrameHeight - LinkDisplayRightLayout::Height()>;
+
+	static constexpr uint8_t DrawerCount = 4;
+
+private:
+	MultiDrawerWrapper<DrawerCount> MultiDrawer{};
+
 	uint8_t Buffer[frameBufferType::BufferSize]{};
 
-	screenDriverType ScreenDriver;
+private:
 	frameBufferType FrameBuffer;
 
-private:
 	GraphicsEngineTask GraphicsEngine;
 
-	MultiDrawerWrapper<4> MultiDrawer;
+	LinkDisplayDrawer<LinkDisplayLeftLayout> LinkDisplayLeft;
+	LinkDisplayDrawer<LinkDisplayRightLayout> LinkDisplayRight;
 
-	LinkDisplayDrawer LinkDisplayLeft;
-	LinkDisplayDrawer LinkDisplayRight;
-	ChannelDisplayDrawer ChannelDisplayLeft;
-	ChannelDisplayDrawer ChannelDisplayRight;
+	ChannelDisplayDrawer<ChannelDisplayLeftLayout> ChannelDisplayLeft;
+	ChannelDisplayDrawer<ChannelDisplayRightLayout> ChannelDisplayRight;
 
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
 	EngineLogTask<1000> EngineLog;
 #endif
 
 public:
-	VirtualLinkGraphicsEngine(Scheduler* scheduler
-		, ILoLaLink* linkLeft, ILoLaLink* linkRight
-		, ILoLaTransceiver* transceiverLeft = nullptr, ILoLaTransceiver* transceiverRight = nullptr)
-		: ScreenDriver()
-		, FrameBuffer(Buffer)
-		, GraphicsEngine(scheduler, &FrameBuffer, &ScreenDriver, FramePeriod)
-		, MultiDrawer()
-		, LinkDisplayLeft(&FrameBuffer, linkLeft, 0, 0, (frameBufferType::FrameWidth / 2), frameBufferType::FrameHeight / 2)
-		, LinkDisplayRight(&FrameBuffer, linkRight, (frameBufferType::FrameWidth / 2), 0, (frameBufferType::FrameWidth / 2), frameBufferType::FrameHeight / 2)
-		, ChannelDisplayLeft(&FrameBuffer, transceiverLeft, 1, LinkDisplayLeft.GetDrawerHeight() + 1, (frameBufferType::FrameWidth / 2) - 3, frameBufferType::FrameHeight - LinkDisplayLeft.GetDrawerHeight() - 1)
-		, ChannelDisplayRight(&FrameBuffer, transceiverRight, (frameBufferType::FrameWidth / 2) + 1, LinkDisplayLeft.GetDrawerHeight() + 1, (frameBufferType::FrameWidth / 2) - 3, frameBufferType::FrameHeight - LinkDisplayLeft.GetDrawerHeight() - 1)
+	VirtualLinkGraphicsEngine(TS::Scheduler& scheduler,
+		IScreenDriver& screenDriver,
+		ILoLaLink& linkLeft, ILoLaLink& linkRight,
+		ILoLaTransceiver& transceiverLeft,
+		ILoLaTransceiver& transceiverRight)
+		: FrameBuffer(Buffer)
+		, GraphicsEngine(&scheduler, &FrameBuffer, &screenDriver, FramePeriod)
+		, LinkDisplayLeft(linkLeft)
+		, LinkDisplayRight(linkRight)
+		, ChannelDisplayLeft(transceiverLeft)
+		, ChannelDisplayRight(transceiverRight)
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
-		, EngineLog(scheduler, &GraphicsEngine)
+		, EngineLog(scheduler, GraphicsEngine)
 #endif
-	{}
+	{
+	}
 
 	const bool Start()
 	{
+		MultiDrawer.ClearDrawers();
+
 		if (!MultiDrawer.AddDrawer(&LinkDisplayLeft)
-			|| !MultiDrawer.AddDrawer(&LinkDisplayRight)
-			)
+			|| !MultiDrawer.AddDrawer(&LinkDisplayRight))
 		{
 			return false;
 		}
 
 		if (!MultiDrawer.AddDrawer(&ChannelDisplayLeft)
-			|| !MultiDrawer.AddDrawer(&ChannelDisplayRight)
-			)
+			|| !MultiDrawer.AddDrawer(&ChannelDisplayRight))
 		{
 			return false;
 		}
