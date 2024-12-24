@@ -52,8 +52,8 @@ public:
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 1] = timestamp >> 8;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 2] = timestamp >> 16;
 		Nonce[LoLaCryptoDefinition::CYPHER_TAG_TIMESTAMP_INDEX + 3] = timestamp >> 24;
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[LoLaPacketDefinition::ID_INDEX];
-		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX + 1] = inPacket[LoLaPacketDefinition::ID_INDEX + 1];
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX] = inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id];
+		Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX + 1] = inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id + 1];
 		memcpy(&Nonce[LoLaCryptoDefinition::CYPHER_TAG_SIZE], InputKey, LoLaCryptoDefinition::CYPHER_IV_SIZE - LoLaCryptoDefinition::CYPHER_TAG_SIZE);
 
 		/*****************/
@@ -69,13 +69,13 @@ public:
 #endif
 
 		// Content.
-		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
+		CryptoHasher.update(&inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Content], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 #if defined(LOLA_USE_POLY1305)
-		if (!CryptoHasher.macMatches(Nonce, &inPacket[LoLaPacketDefinition::MAC_INDEX]))
+		if (!CryptoHasher.macMatches(Nonce, &inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac]))
 #else
-		if (!CryptoHasher.macMatches(&inPacket[LoLaPacketDefinition::MAC_INDEX]))
+		if (!CryptoHasher.macMatches(&inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac]))
 #endif
 		{
 			// Packet rejected.
@@ -85,7 +85,7 @@ public:
 
 		/*****************/
 		// Write back the counter from the packet id.
-		counter = ((uint16_t)inPacket[LoLaPacketDefinition::ID_INDEX + 1] << 8) | inPacket[LoLaPacketDefinition::ID_INDEX];
+		counter = ((uint16_t)inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id + 1] << 8) | inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id];
 
 		// Reset Key entropy.
 		CryptoCypher.setKey(ExpandedKey.CypherKey, LoLaCryptoDefinition::CYPHER_KEY_SIZE);
@@ -94,7 +94,7 @@ public:
 		CryptoCypher.setIV(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
 		// Decrypt everything but the packet id.
-		CryptoCypher.decrypt(data, &inPacket[LoLaPacketDefinition::DATA_INDEX], dataSize);
+		CryptoCypher.decrypt(data, &inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Data], dataSize);
 		/*****************/
 
 		return true;
@@ -118,13 +118,13 @@ public:
 		CryptoHasher.reset();
 #endif
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
-		CryptoHasher.update(&inPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
+		CryptoHasher.update(&inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Content], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Reject if HMAC mismatches plaintext MAC from packet.
 #if defined(LOLA_USE_POLY1305)
-		if (!CryptoHasher.macMatches(Nonce, &inPacket[LoLaPacketDefinition::MAC_INDEX]))
+		if (!CryptoHasher.macMatches(Nonce, &inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac]))
 #else
-		if (!CryptoHasher.macMatches(&inPacket[LoLaPacketDefinition::MAC_INDEX]))
+		if (!CryptoHasher.macMatches(&inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac]))
 #endif
 		{
 			// Packet rejected.
@@ -132,12 +132,12 @@ public:
 		}
 
 		// Copy plaintext counter from packet id.		
-		counter = ((uint16_t)inPacket[LoLaPacketDefinition::ID_INDEX + 1] << 8) | inPacket[LoLaPacketDefinition::ID_INDEX];
+		counter = ((uint16_t)inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id + 1] << 8) | inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id];
 
 		// Copy plaintext content to in data.
 		for (uint_fast8_t i = 0; i < dataSize; i++)
 		{
-			data[i] = inPacket[i + LoLaPacketDefinition::DATA_INDEX];
+			data[i] = inPacket[i + (uint8_t)LoLaPacketDefinition::IndexEnum::Data];
 		}
 
 		return true;
@@ -153,13 +153,13 @@ public:
 	void EncodeOutPacket(const uint8_t* data, uint8_t* outPacket, const uint16_t counter, const uint8_t dataSize)
 	{
 		// Set rolling plaintext rolling counter id.
-		outPacket[LoLaPacketDefinition::ID_INDEX] = counter;
-		outPacket[LoLaPacketDefinition::ID_INDEX + 1] = counter >> 8;
+		outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id] = counter;
+		outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id + 1] = counter >> 8;
 
 		// Plaintext copy of data to output.
 		for (uint_fast8_t i = 0; i < dataSize; i++)
 		{
-			outPacket[i + LoLaPacketDefinition::DATA_INDEX] = data[i];
+			outPacket[i + (uint8_t)LoLaPacketDefinition::IndexEnum::Data] = data[i];
 		}
 
 		// Set HMAC without implicit addressing, key or token.
@@ -170,13 +170,13 @@ public:
 		CryptoHasher.reset();
 #endif
 		CryptoHasher.update(ProtocolId, LoLaLinkDefinition::PROTOCOL_ID_SIZE);
-		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
+		CryptoHasher.update(&outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Content], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 		// Only the first LoLaPacketDefinition:MAC_SIZE bytes are effectively used.
 #if defined(LOLA_USE_POLY1305)
-		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+		CryptoHasher.finalize(Nonce, &outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac], LoLaPacketDefinition::MAC_SIZE);
 #else
-		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+		CryptoHasher.finalize(&outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac], LoLaPacketDefinition::MAC_SIZE);
 #endif
 	}
 
@@ -207,11 +207,11 @@ public:
 		CryptoCypher.setIV(Nonce, LoLaCryptoDefinition::CYPHER_IV_SIZE);
 
 		// Encrypt data to packet.
-		CryptoCypher.encrypt(&outPacket[LoLaPacketDefinition::DATA_INDEX], data, dataSize);
+		CryptoCypher.encrypt(&outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Data], data, dataSize);
 
 		// Copy plaintext counter to packet id.		
-		outPacket[LoLaPacketDefinition::ID_INDEX] = Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
-		outPacket[LoLaPacketDefinition::ID_INDEX + 1] = Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX + 1];
+		outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id] = Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX];
+		outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id + 1] = Nonce[LoLaCryptoDefinition::CYPHER_TAG_ID_INDEX + 1];
 		/*****************/
 
 		/*****************/
@@ -227,14 +227,14 @@ public:
 #endif
 
 		// Content.
-		CryptoHasher.update(&outPacket[LoLaPacketDefinition::CONTENT_INDEX], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
+		CryptoHasher.update(&outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Content], LoLaPacketDefinition::GetContentSizeFromDataSize(dataSize));
 
 #if defined(LOLA_USE_POLY1305)
 		// Nonce and finalize HMAC.
-		CryptoHasher.finalize(Nonce, &outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+		CryptoHasher.finalize(Nonce, &outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac], LoLaPacketDefinition::MAC_SIZE);
 #else
 		// Finalize MAC.
-		CryptoHasher.finalize(&outPacket[LoLaPacketDefinition::MAC_INDEX], LoLaPacketDefinition::MAC_SIZE);
+		CryptoHasher.finalize(&outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Mac], LoLaPacketDefinition::MAC_SIZE);
 #endif
 		/*****************/
 	}

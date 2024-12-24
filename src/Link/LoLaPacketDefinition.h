@@ -26,20 +26,23 @@
 /// </summary>
 namespace LoLaPacketDefinition
 {
-	static constexpr uint8_t MAC_INDEX = 0;
 	static constexpr uint8_t MAC_SIZE = 4;
-	static constexpr uint8_t ID_INDEX = (MAC_INDEX + MAC_SIZE);
 	static constexpr uint8_t ID_SIZE = 2;
-	static constexpr uint8_t PORT_INDEX = ID_INDEX + ID_SIZE;
 	static constexpr uint8_t PORT_SIZE = 1;
-	static constexpr uint8_t PAYLOAD_INDEX = PORT_INDEX + PORT_SIZE;
-
-	static constexpr uint8_t CONTENT_INDEX = ID_INDEX;
 	static constexpr uint8_t CONTENT_SIZE_SIZE = 1;
 
-	static constexpr uint8_t DATA_INDEX = PORT_INDEX;
+	enum class IndexEnum : uint8_t
+	{
+		Mac = 0,
+		Id = (uint8_t)Mac + MAC_SIZE,
+		Port = (uint8_t)Id + ID_SIZE,
+		Payload = (uint8_t)Port + PORT_SIZE,
+		Content = (uint8_t)Id,
+		Data = (uint8_t)Port,
+		MinPacketSize = (uint8_t)Payload
+	};
 
-	static constexpr uint8_t MIN_PACKET_SIZE = PAYLOAD_INDEX;
+	static constexpr uint8_t MIN_PACKET_SIZE = (uint8_t)IndexEnum::MinPacketSize;
 
 	/// <summary>
 	/// Packet is limited to reduce buffer sizes,
@@ -48,31 +51,31 @@ namespace LoLaPacketDefinition
 	static constexpr uint8_t MAX_PACKET_TOTAL_SIZE = 32;
 
 
-	static constexpr uint8_t MAX_PAYLOAD_SIZE = MAX_PACKET_TOTAL_SIZE - PAYLOAD_INDEX;
+	static constexpr uint8_t MAX_PAYLOAD_SIZE = MAX_PACKET_TOTAL_SIZE - (uint8_t)IndexEnum::Payload;
 
 	static constexpr uint8_t GetContentSizeFromDataSize(const uint8_t dataSize)
 	{
-		return dataSize + (DATA_INDEX - CONTENT_INDEX);
+		return dataSize + ((uint8_t)IndexEnum::Data - (uint8_t)IndexEnum::Content);
 	}
 
 	static constexpr uint8_t GetDataSize(const uint8_t totalSize)
 	{
-		return totalSize - DATA_INDEX;
+		return totalSize - (uint8_t)IndexEnum::Data;
 	}
 
 	static constexpr uint8_t GetDataSizeFromPayloadSize(const uint8_t payloadSize)
 	{
-		return payloadSize + (PAYLOAD_INDEX - DATA_INDEX);
+		return payloadSize + ((uint8_t)IndexEnum::Payload - (uint8_t)IndexEnum::Data);
 	}
 
 	static constexpr uint8_t GetPayloadSize(const uint8_t totalSize)
 	{
-		return totalSize - PAYLOAD_INDEX;
+		return totalSize - (uint8_t)IndexEnum::Payload;
 	}
 
 	static constexpr uint8_t GetTotalSize(const uint8_t payloadSize)
 	{
-		return PAYLOAD_INDEX + payloadSize;
+		return (uint8_t)IndexEnum::Payload + payloadSize;
 	}
 };
 
@@ -129,29 +132,29 @@ public:
 
 public:
 	TemplateLoLaOutDataPacket(const uint8_t port = 0)
-		: Payload(&Data[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX])
+		: Payload(&Data[(uint8_t)LoLaPacketDefinition::IndexEnum::Payload - (uint8_t)LoLaPacketDefinition::IndexEnum::Data])
 	{
 		SetPort(port);
 	}
 
 	const uint8_t GetPort()
 	{
-		return Data[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX];
+		return Data[(uint8_t)LoLaPacketDefinition::IndexEnum::Port - (uint8_t)LoLaPacketDefinition::IndexEnum::Data];
 	}
 
 	void SetPort(const uint8_t port)
 	{
-		Data[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] = port;
+		Data[(uint8_t)LoLaPacketDefinition::IndexEnum::Port - (uint8_t)LoLaPacketDefinition::IndexEnum::Data] = port;
 	}
 
 	const uint8_t GetHeader()
 	{
-		return Data[LoLaPacketDefinition::PAYLOAD_INDEX + HeaderDefinition::HEADER_INDEX - LoLaPacketDefinition::DATA_INDEX];
+		return Data[(uint8_t)LoLaPacketDefinition::IndexEnum::Payload + HeaderDefinition::HEADER_INDEX - (uint8_t)LoLaPacketDefinition::IndexEnum::Data];
 	}
 
 	void SetHeader(const uint8_t header)
 	{
-		Data[LoLaPacketDefinition::PAYLOAD_INDEX + HeaderDefinition::HEADER_INDEX - LoLaPacketDefinition::DATA_INDEX] = header;
+		Data[(uint8_t)LoLaPacketDefinition::IndexEnum::Payload + HeaderDefinition::HEADER_INDEX - (uint8_t)LoLaPacketDefinition::IndexEnum::Data] = header;
 	}
 };
 #endif

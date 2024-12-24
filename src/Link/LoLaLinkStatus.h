@@ -20,7 +20,7 @@ struct LoLaLinkStatus
 		uint8_t TxDrop = 0;
 		uint8_t ClockSync = 0;
 		uint8_t Age = 0;
-	} Quality;
+	} Quality{};
 
 	uint32_t DurationSeconds = 0;
 

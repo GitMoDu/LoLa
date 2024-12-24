@@ -89,10 +89,10 @@ public:
 			if (Session.DecodeInPacket(RawInPacket, InData, receivingCounter, receivingDataSize))
 			{
 				// Check for valid port.
-				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT)
+				if (InData[(uint8_t)LoLaPacketDefinition::IndexEnum::Port - (uint8_t)LoLaPacketDefinition::IndexEnum::Data] == LoLaLinkDefinition::LINK_PORT)
 				{
 					OnUnlinkedPacketReceived(receiveTimestamp,
-						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+						&InData[(uint8_t)LoLaPacketDefinition::IndexEnum::Payload - (uint8_t)LoLaPacketDefinition::IndexEnum::Data],
 						receivingCounter,
 						LoLaPacketDefinition::GetPayloadSize(packetSize));
 				}
@@ -113,11 +113,11 @@ public:
 			if (Session.DecodeInPacket(RawInPacket, InData, 0, receivingCounter, receivingDataSize))
 			{
 				// Validate counter and check for valid port.
-				if (InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX] == LoLaLinkDefinition::LINK_PORT
+				if (InData[(uint8_t)LoLaPacketDefinition::IndexEnum::Port - (uint8_t)LoLaPacketDefinition::IndexEnum::Data] == LoLaLinkDefinition::LINK_PORT
 					&& ValidateCounter(receivingCounter, receivingLost))
 				{
 					OnLinkingPacketReceived(receiveTimestamp,
-						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+						&InData[(uint8_t)LoLaPacketDefinition::IndexEnum::Payload - (uint8_t)LoLaPacketDefinition::IndexEnum::Data],
 						LoLaPacketDefinition::GetPayloadSize(packetSize));
 
 					OnPacketReceivedOk(rssi, receivingLost);
@@ -143,9 +143,9 @@ public:
 				if (ValidateCounter(receivingCounter, receivingLost))
 				{
 					Registry->NotifyPacketListener(receiveTimestamp,
-						&InData[LoLaPacketDefinition::PAYLOAD_INDEX - LoLaPacketDefinition::DATA_INDEX],
+						&InData[(uint8_t)LoLaPacketDefinition::IndexEnum::Payload - (uint8_t)LoLaPacketDefinition::IndexEnum::Data],
 						LoLaPacketDefinition::GetPayloadSize(packetSize),
-						InData[LoLaPacketDefinition::PORT_INDEX - LoLaPacketDefinition::DATA_INDEX]);
+						InData[(uint8_t)LoLaPacketDefinition::IndexEnum::Port - (uint8_t)LoLaPacketDefinition::IndexEnum::Data]);
 
 					ReceivedCounter++;
 					OnPacketReceivedOk(rssi, receivingLost);

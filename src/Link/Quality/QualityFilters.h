@@ -52,7 +52,7 @@ public:
 		return output;
 	}
 
-	const uint_t Get()
+	const uint_t Get() const
 	{
 		return LastValue;
 	}

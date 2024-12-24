@@ -48,7 +48,7 @@ namespace LoLaLinkDefinition
 	/// <summary>
 	/// Random challenge to be solved by the partner,
 	/// before granting access to next Linking Step..
-	/// Uses a  hash with the Challenge and ACCESS_CONTROL_PASSWORD,
+	/// Uses a hash with the Challenge and ACCESS_CONTROL_PASSWORD,
 	/// instead of a slow (but more secure) certificate-signature.
 	/// </summary>
 	static constexpr uint8_t CHALLENGE_CODE_SIZE = 4;
@@ -75,14 +75,14 @@ namespace LoLaLinkDefinition
 	/// <summary>
 	/// If linking stage is not complete after this time, restart.
 	/// </summary>
-	static constexpr uint8_t LINKING_STAGE_TIMEOUT_DUPLEX_COUNT = 15;
-	static constexpr uint32_t LINKING_STAGE_TIMEOUT_MIN_MICROS = 25000;
+	static constexpr uint8_t LINKING_STAGE_TIMEOUT_DUPLEX_COUNT = 20;
+	static constexpr uint32_t LINKING_STAGE_TIMEOUT_MIN_MICROS = 50000;
 
 	/// <summary>
 	/// How long without an input message from partner before disconnect.
 	/// </summary>
 	static constexpr uint8_t LINK_STAGE_TIMEOUT_DUPLEX_COUNT = 50;
-	static constexpr uint32_t LINK_STAGE_TIMEOUT_MIN_MICROS = 750000;
+	static constexpr uint32_t LINK_STAGE_TIMEOUT_MIN_MICROS = 1000000;
 
 	/// <summary>
 	/// Duplex periods over this value are too long for LoLa to work effectively.
