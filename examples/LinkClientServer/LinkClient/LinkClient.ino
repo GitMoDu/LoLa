@@ -72,7 +72,7 @@ TS::Scheduler SchedulerBase{};
 
 // Transceiver.
 #if defined(USE_SERIAL_TRANSCEIVER)
-UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver(SchedulerBase, &SERIAL_TRANSCEIVER_INSTANCE);
+UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver(SchedulerBase, SERIAL_TRANSCEIVER_INSTANCE);
 #elif defined(USE_NRF24_TRANSCEIVER)
 nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_INTERRUPT_PIN, NRF24_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER)
@@ -153,6 +153,14 @@ void setup()
 	digitalWrite(SCHEDULER_TEST_PIN, LOW);
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
 #endif
+#ifdef RX_TEST_PIN
+	digitalWrite(RX_TEST_PIN, LOW);
+	pinMode(RX_TEST_PIN, OUTPUT);
+#endif
+#ifdef TX_TEST_PIN
+	digitalWrite(TX_TEST_PIN, LOW);
+	pinMode(TX_TEST_PIN, OUTPUT);
+#endif
 
 #if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
 	Transceiver.SetupInterrupt(OnInterrupt);
@@ -172,7 +180,7 @@ void setup()
 		Serial.println(F("ClientWriter setup failed."));
 #endif
 		BootError();
-	}
+}
 #if defined(USE_CONTROLLER)
 	Controller.Start();
 	ControllerDispatcher.Start();

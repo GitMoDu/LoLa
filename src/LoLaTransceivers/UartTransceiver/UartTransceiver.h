@@ -4,33 +4,30 @@
 #define _LOLA_UART_TRANSCEIVER_h
 
 #define _TASK_OO_CALLBACKS
-#include <TaskSchedulerDeclarations.h>
+#include <TSchedulerDeclarations.hpp>
+
+#include "UartAsyncReceiver.h"
+#include "CobsCodec.h"
 
 #include "../ILoLaTransceiver.h"
-#include "CobsCodec.h"
 
 
 /// <summary>
 /// UART/Serial LoLa Transceiver.
-/// Packet start detection and timestamping relies on interrupt tapping of the Rx pin.
 /// Packets are framed using Consistent Overhead Byte Stuffing (COBS).
 /// The encoded data consists only of bytes with values from 0x01 to 0xFF.
-/// The 0x00 byte is be used to indicate packet end.
-/// Constant overhead.
+/// The 0x00 byte is be used to indicate packet start/end.
 /// Detects malformed input data.
+/// Rx start detection timestamping relies on interrupt tapping of the Rx pin.
+/// This works on any Arduino core, without replacing the Serial interrupt handling.
 /// </summary>
 /// <typeparam name="SerialType">Type definition of HardwareSerial.</typeparam>
 /// <typeparam name="BaudRate">At least MIN_BAUD_RATE.</typeparam>
-/// <typeparam name="RxInterruptPin">The pin tied to UART Rx, for packet start detection and timestamping.</typeparam>
-/// <typeparam name="RxBufferSize">UART hardware buffer size.</typeparam>
-/// <typeparam name="TxBufferSize">UART hardware buffer size.</typeparam>
+/// <typeparam name="RxInterruptPin">The pin tied to UART Rx, for start detection and timestamping.</typeparam>
 template<typename SerialType,
 	const uint8_t RxInterruptPin,
-	const uint32_t BaudRate = 115200,
-	const size_t RxBufferSize = 64,
-	const size_t TxBufferSize = 64>
-class UartTransceiver final
-	: private Task, public virtual ILoLaTransceiver
+	const uint32_t BaudRate = 115200>
+class UartTransceiver final : public virtual ILoLaTransceiver, public virtual IUartListener, private TS::Task
 {
 private:
 	static constexpr uint16_t TRANSCEIVER_ID = 0xC0B5;
@@ -38,27 +35,25 @@ private:
 private:
 	enum class TxStateEnum : uint8_t
 	{
-		NoTx,
+		Disabled,
+		Clear,
+		Ready,
 		TxStart,
 		TxEnd
 	};
 
-	enum class RxStateEnum : uint8_t
-	{
-		NoRx,
-		RxStart,
-		RxEnd
-	};
-
 private:
-	static constexpr uint8_t EoF = 0;
+	static constexpr uint8_t Delimiter = 0;
+
 	static constexpr uint8_t COBS_OVERHEAD = 1;
 	static constexpr uint8_t MAX_COBS_SIZE = LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE + COBS_OVERHEAD;
 
 	static constexpr uint8_t GetFrameSize(const uint8_t packetSize)
 	{
-		return packetSize + COBS_OVERHEAD + 1;
+		return packetSize + COBS_OVERHEAD + 2;
 	}
+
+	static constexpr uint8_t MAX_FRAME_SIZE = GetFrameSize(LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 
 private:
 	static constexpr uint32_t MIN_BAUD_RATE = 80000;
@@ -73,177 +68,112 @@ private:
 
 	static constexpr uint16_t ByteDuration = (DurationLong / LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 	static constexpr uint16_t BitDuration = (DurationLong / ((uint16_t)LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE * 8));
+	static constexpr uint16_t LineDuration = BitDuration;
 
 private:
-	static constexpr uint16_t RxWaitDuration = 1500;
+	// Don't hog the loop for more than a few us at a time.
+	static constexpr uint32_t MaxHoldMicros = 100;
 
-	static constexpr uint16_t LineDuration = BitDuration;
+	// Wait for the UART driver to catch up.
+	static constexpr uint32_t RxWaitMicros = 50 + ByteDuration;
+
+	static constexpr uint32_t RxPauseMicros = 50 + (ByteDuration * 2);
+	static constexpr uint32_t TxPauseMicros = 150 + (ByteDuration * 2);
+	static constexpr uint32_t RxTimeoutMicros = DurationLong + TxPauseMicros;
 
 	static constexpr uint8_t CalibrationSamples = 50;
 
 	uint16_t EncodeBaseDuration = 1;
 	uint16_t EncodeRangeDuration = 1;
 
+	uint8_t BufferSize = 0;
+
 private:
-	SerialType* IO;
+	SerialType& IO;
+
+private:
+	UartAsyncReceiver<SerialType, RxInterruptPin, MAX_COBS_SIZE, RxTimeoutMicros, RxPauseMicros, RxWaitMicros, MaxHoldMicros> Receiver;
 
 	ILoLaTransceiverListener* Listener = nullptr;
 
-	uint8_t CobsBuffer[MAX_COBS_SIZE]{};
 	uint8_t RxBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 	uint8_t TxBuffer[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
 
-	volatile uint32_t RxStartTimestamp = 0;
 	uint32_t TxTimestamp = 0;
-
-	volatile RxStateEnum RxState = RxStateEnum::NoRx;
-	TxStateEnum TxState = TxStateEnum::NoTx;
-
-	uint8_t ByteBuffer = 0;
-	uint8_t RxSize = 0;
-	uint8_t TxSize = 0;
-
-	volatile bool DriverEnabled = false;
-
-private:
-	void (*OnRxInterrupt)(void) = nullptr;
+	TxStateEnum TxState = TxStateEnum::Disabled;
 
 public:
-	UartTransceiver(Scheduler& scheduler, SerialType* io)
+	UartTransceiver(TS::Scheduler& scheduler, SerialType& io)
 		: ILoLaTransceiver()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, IUartListener()
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, IO(io)
-	{}
-
-	void SetupInterrupt(void (*onRxInterrupt)(void))
+		, Receiver(scheduler, io, *this)
 	{
-		OnRxInterrupt = onRxInterrupt;
 	}
 
-	/// <summary>
-	/// To be called on serial receive interrupt.
-	/// </summary>
+	void SetupInterrupt(void (*rxInterrupt)(void))
+	{
+		Receiver.SetupInterrupt(rxInterrupt);
+	}
+
 	void OnInterrupt()
 	{
-		// Only one interrupt expected for each packet.
-		DisableInterrupt();
-
-		if (DriverEnabled && RxState == RxStateEnum::NoRx)
-		{
-#if defined(RX_TEST_PIN)
-			digitalWrite(RX_TEST_PIN, HIGH);
-#endif
-			RxStartTimestamp = micros();
-			RxState = RxStateEnum::RxStart;
-			Task::enable();
-		}
+		Receiver.OnRxInterrupt();
 	}
 
 public:
+	virtual void OnUartRx(const uint32_t timestamp, const uint8_t* data, const uint8_t size) final
+	{
+		const uint_fast8_t rxSize = CobsCodec::Decode(data, RxBuffer, size);
+
+		if (rxSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
+		{
+			//Serial.println(F("Rx Invalid size packet, discard."));
+		}
+		else if (rxSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
+		{
+			//Serial.println(F("Rx Overflow detected."));
+		}
+		else
+		{
+			Listener->OnRx(RxBuffer, timestamp, rxSize, UINT8_MAX);
+		}
+	}
+
 	virtual bool Callback() final
 	{
-		if (DriverEnabled)
+		switch (TxState)
 		{
-			switch (RxState)
+		case TxStateEnum::Clear:
+			if (IO.availableForWrite() >= BufferSize)
 			{
-			case RxStateEnum::NoRx:
-				break;
-			case RxStateEnum::RxStart:
-				// Wait for at least the base transmit and 1 byte period.
-				if (IO->available())
-				{
-					RxSize = 0;
-					RxState = RxStateEnum::RxEnd;
-				}
-				else if (micros() - RxStartTimestamp > ((uint32_t)LineDuration + ByteDuration + RxWaitDuration))
-				{
-					// Too much time elapsed before at least one byte is available, discard.
-					ClearRx();
-				}
-				break;
-			case RxStateEnum::RxEnd:
-				while (RxState == RxStateEnum::RxEnd
-					&& IO->available())
-				{
-					ByteBuffer = IO->read();
-					CobsBuffer[RxSize++] = ByteBuffer;
-
-					if (ByteBuffer == EoF)
-					{
-						RxSize = CobsCodec::Decode(CobsBuffer, RxBuffer, RxSize);
-
-						if (RxSize < LoLaPacketDefinition::MIN_PACKET_SIZE)
-						{
-							// Invalid size packet, discard.
-							ClearRx();
-						}
-						else if (RxSize > LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
-						{
-							// Overflow detected.
-							OnRxDone(false);
-						}
-						else
-						{
-							OnRxDone(true);
-						}
-					}
-					else if (RxSize > MAX_COBS_SIZE)
-					{
-						// Invalid COBS size, discard.
-						ClearRx();
-					}
-				}
-
-				if (RxState == RxStateEnum::RxEnd
-					&& micros() - RxStartTimestamp > ((uint32_t)LineDuration + DurationLong + RxWaitDuration))
-				{
-					// Too much time elapsed before packet EoF found, discard.
-					ClearRx();
-				}
-				break;
-			default:
-				break;
+				TxState = TxStateEnum::Ready;
+				TS::Task::disable();
 			}
-
-			switch (TxState)
+			break;
+		case TxStateEnum::TxStart:
+			if (IO.availableForWrite() >= BufferSize)
 			{
-			case TxStateEnum::NoTx:
-				break;
-			case TxStateEnum::TxStart:
-				// Wait for Tx buffer to be free after the minimum duration.
-				if ((micros() - TxTimestamp > ((uint32_t)LineDuration + ByteDuration))
-					&& ((uint8_t)IO->availableForWrite() >= (TxBufferSize - 1)))
-				{
-					IO->flush();
-					IO->clearWriteError();
-					TxState = TxStateEnum::TxEnd;
-					TxTimestamp = micros();
-					Listener->OnTx();
-				}
-				break;
-			case TxStateEnum::TxEnd:
-				if (micros() - TxTimestamp > GetDurationInAir(TxSize))
-				{
-					TxSize = 0;
-					TxState = TxStateEnum::NoTx;
-				}
-				break;
-			default:
-				break;
+				TxState = TxStateEnum::TxEnd;
+				TxTimestamp = micros();
 			}
-
-			if (TxState != TxStateEnum::NoTx || RxState != RxStateEnum::NoRx)
+			break;
+		case TxStateEnum::TxEnd:
+			// Wait for Tx buffer to be free after the minimum duration.
+			if (micros() - TxTimestamp > TxPauseMicros)
 			{
-				Task::enable();
-				return true;
+				Listener->OnTx();
+				TxState = TxStateEnum::Ready;
+				TS::Task::disable();
 			}
+			break;
+		case TxStateEnum::Disabled:
+		case TxStateEnum::Ready:
+		default:
+			TS::Task::disable();
+			break;
 		}
-
-#if defined(RX_TEST_PIN)
-		digitalWrite(RX_TEST_PIN, LOW);
-#endif
-
-		Task::disable();
 
 		return false;
 	}
@@ -258,40 +188,36 @@ public:// ILoLaTransceiver overrides.
 
 	virtual const bool Start() final
 	{
-		if (IO != nullptr
-			&& Listener != nullptr
-			&& OnRxInterrupt != nullptr
-			&& BaudRate >= MIN_BAUD_RATE
-			)
+		if (Listener != nullptr
+			&& BaudRate >= MIN_BAUD_RATE)
 		{
-			pinMode(RxInterruptPin, INPUT_PULLUP);
+			if (Receiver.Start())
+			{
+				IO.begin(BaudRate);
+				IO.clearWriteError();
+				BufferSize = IO.availableForWrite();
 
-			IO->begin(BaudRate);
-			IO->clearWriteError();
-			IO->flush();
+				if (BufferSize < MAX_FRAME_SIZE)
+				{
+					IO.end();
+					return false;
+				}
 
+				TxState = TxStateEnum::Clear;
+				TS::Task::enable();
 
-			TxState = TxStateEnum::NoTx;
-			ClearRx();
-			TxSize = 0;
-			DriverEnabled = true;
-			Task::enable();
-
-			return true;
+				return true;
+			}
 		}
-		else
-		{
-			return false;
-		}
+
+		return false;
 	}
 
 	virtual const bool Stop() final
 	{
-		DriverEnabled = false;
-		IO->end();
-		IO->clearWriteError();
-		IO->flush();
-		Task::disable();
+		Receiver.Stop();
+		TxState = TxStateEnum::Disabled;
+		TS::Task::disable();
 
 		return true;
 	}
@@ -303,10 +229,7 @@ public:// ILoLaTransceiver overrides.
 	/// <returns></returns>
 	virtual const bool TxAvailable() final
 	{
-		return DriverEnabled
-			&& TxState == TxStateEnum::NoTx
-			&& RxState == RxStateEnum::NoRx
-			&& IO->availableForWrite() > GetFrameSize(LoLaPacketDefinition::MIN_PACKET_SIZE);
+		return TxState == TxStateEnum::Ready;
 	}
 
 	/// <summary>
@@ -318,26 +241,26 @@ public:// ILoLaTransceiver overrides.
 	/// <returns></returns>
 	virtual const bool Tx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel) final
 	{
-		if (TxAvailable()
-			&& IO->availableForWrite() >= GetFrameSize(packetSize))
+		if (TxState == TxStateEnum::Ready)
 		{
 			const uint8_t txSize = CobsCodec::Encode(data, TxBuffer, packetSize);
 
 			if (txSize > 0)
 			{
-				TxTimestamp = micros();
-				if (IO->write(TxBuffer, txSize) == txSize)
+				if (IO.write(Delimiter)
+					&& IO.write(TxBuffer, txSize) == txSize
+					&& IO.write(Delimiter))
 				{
 					TxState = TxStateEnum::TxStart;
-					TxSize = packetSize;
-					Task::enable();
+					TS::Task::enable();
+					TxTimestamp = micros();
 
 					return true;
 				}
 				else
 				{
-					IO->flush();
-					TxState = TxStateEnum::NoTx;
+					TxState = TxStateEnum::Clear;
+					TS::Task::enable();
 				}
 			}
 		}
@@ -394,52 +317,6 @@ public:// ILoLaTransceiver overrides.
 	}
 
 private:
-	void EnableInterrupt()
-	{
-		attachInterrupt(digitalPinToInterrupt(RxInterruptPin), OnRxInterrupt, FALLING);
-		interrupts();
-	}
-
-	void DisableInterrupt()
-	{
-		detachInterrupt(digitalPinToInterrupt(RxInterruptPin));
-	}
-
-	void ClearRx()
-	{
-		// Clear input buffer.
-		while (IO->available())
-		{
-			IO->read();
-		}
-
-		// Force pending interrupts and enable for next.
-		RxState = RxStateEnum::RxStart;
-		RxSize = 0;
-		EnableInterrupt();
-
-		RxState = RxStateEnum::NoRx;
-		Task::enable();
-	}
-
-	void OnRxDone(const bool rxGood)
-	{
-		if (rxGood)
-		{
-			Listener->OnRx(RxBuffer, RxStartTimestamp, RxSize, UINT8_MAX);
-		}
-
-		// Clear input buffer.
-		while (IO->available())
-		{
-			IO->read();
-		}
-
-		RxState = RxStateEnum::NoRx;
-		EnableInterrupt();
-		Task::enable();
-	}
-
 	const bool Calibrate()
 	{
 		uint32_t start, end, duration;
@@ -450,9 +327,8 @@ private:
 		{
 			return false;
 		}
-
-		const uint32_t calibrationStart = micros();
 #endif
+		const uint32_t calibrationStart = micros();
 
 		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE; i++)
 		{
@@ -533,12 +409,14 @@ private:
 private:
 	const bool UnitTest()
 	{
+		uint8_t cobsBuffer[MAX_COBS_SIZE]{};
+
 		for (uint_fast8_t i = 0; i < LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE; i++)
 		{
 			RxBuffer[i] = i;
 		}
 
-		const uint8_t outSize = CobsCodec::Encode(RxBuffer, CobsBuffer, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
+		const uint8_t outSize = CobsCodec::Encode(RxBuffer, cobsBuffer, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 
 		if (outSize != LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE + COBS_OVERHEAD)
 		{
@@ -547,7 +425,7 @@ private:
 
 		memset(RxBuffer, 0, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE);
 
-		const uint8_t inSize = CobsCodec::Decode(CobsBuffer, RxBuffer, outSize);
+		const uint8_t inSize = CobsCodec::Decode(cobsBuffer, RxBuffer, outSize);
 
 		if (inSize != LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE)
 		{
@@ -566,4 +444,5 @@ private:
 	}
 #endif
 };
+
 #endif
