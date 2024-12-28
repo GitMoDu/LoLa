@@ -40,8 +40,8 @@
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_NRF52)
 //using ScreenDriverType = ScreenDriverSSD1306_128x64x1_I2C_Rtos<>;
 //using ScreenDriverType = ScreenDriverSSD1306_128x64x1_SPI_Rtos<TFT_CS, TFT_DC, TFT_RST>;
-using ScreenDriverType = ScreenDriverSSD1306_128x64x1_SPI_Dma<TFT_CS, TFT_DC, TFT_RST, F_CPU / 8>;
-using FrameBufferType = MonochromeFrameBuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, 2, MonochromeColorConverter1<30>>;
+//using ScreenDriverType = ScreenDriverSSD1306_128x64x1_SPI_Dma<TFT_CS, TFT_DC, TFT_RST, F_CPU / 8>;
+//using FrameBufferType = MonochromeFrameBuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, 2, MonochromeColorConverter1<30>>;
 #else
 //using ScreenDriverType = ScreenDriverSSD1306_128x64x1_I2C;
 //using ScreenDriverType = ScreenDriverSSD1306_128x64x1_SPI_Async<TFT_CS, TFT_DC, TFT_RST>;
@@ -49,9 +49,9 @@ using FrameBufferType = MonochromeFrameBuffer<ScreenDriverType::ScreenWidth, Scr
 //using FrameBufferType = MonochromeFrameBuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, 2, MonochromeColorConverter1<30>>;
 
 //using ScreenDriverType = ScreenDriverSSD1331_96x64x8_SPI_Dma<TFT_CS, TFT_DC, TFT_RST, F_CPU / 2, 2>;
-//using FrameBufferType = Color8FrameBuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, 5>;
+//using FrameBufferType = Color8FrameBuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, 2>;
 
-//using ScreenDriverType = ScreenDriverSSD1331_96x64x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST>;
+//using ScreenDriverType = ScreenDriverSSD1331_96x64x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST, F_CPU / 2, 5>;
 //using FrameBufferType = Color16FrameBuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, 5>;
 #endif
 #endif

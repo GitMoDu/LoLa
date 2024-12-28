@@ -13,8 +13,8 @@
 
 #include <ArduinoGraphicsEngineTask.h>
 
-#include "Display/LinkDisplayDrawer.h"
-#include "Display/ChannelDisplayDrawer.h"
+#include <LoLaDisplay.h>
+
 
 template<typename frameBufferType>
 class VirtualLinkGraphicsEngine
@@ -23,12 +23,21 @@ private:
 	static constexpr uint32_t FramePeriod = 16666;
 
 private:
-	using LinkDisplayLeftLayout = LinkDisplayLayout<0, 0, (frameBufferType::FrameWidth / 2), (frameBufferType::FrameHeight / 2) - 1>;
-	using LinkDisplayRightLayout = LinkDisplayLayout<frameBufferType::FrameWidth / 2, 0, frameBufferType::FrameWidth / 2, (frameBufferType::FrameHeight / 2) - 1>;
-	using ChannelDisplayLeftLayout = LayoutElement<2, LinkDisplayLeftLayout::Height(), (frameBufferType::FrameWidth / 2) - 4, frameBufferType::FrameHeight - LinkDisplayLeftLayout::Height()>;
-	using ChannelDisplayRightLayout = LayoutElement<(frameBufferType::FrameWidth / 2) + 2, LinkDisplayRightLayout::Height(), (frameBufferType::FrameWidth / 2) - 4, frameBufferType::FrameHeight - LinkDisplayRightLayout::Height()>;
+	struct Layout
+	{
+		//// Mock Layout to calculate effective link display height.
+		using LinkDisplay = LayoutElement<0, 0, (frameBufferType::FrameWidth / 2), frameBufferType::FrameHeight / 2>;
 
-	static constexpr uint8_t DrawerCount = 4;
+		// Font size aware display height: i.e. actual height.
+		static constexpr uint32_t LinkDisplayHeight = LoLa::Display::LinkDebug::DisplayHeight<LinkDisplay>();
+
+		using LinkDisplayLeft = LayoutElement<0, 0, (frameBufferType::FrameWidth / 2), LinkDisplayHeight>;
+		using LinkDisplayRight = LayoutElement<frameBufferType::FrameWidth / 2, 0, frameBufferType::FrameWidth / 2, LinkDisplayHeight>;
+
+		using ChannelDisplayLeft = LayoutElement<0, LinkDisplayLeft::Height() + 1, frameBufferType::FrameWidth, frameBufferType::FrameHeight - 2 - LinkDisplayLeft::Height()>;
+	};
+
+	static constexpr uint8_t DrawerCount = 3;
 
 private:
 	MultiDrawerWrapper<DrawerCount> MultiDrawer{};
@@ -40,11 +49,10 @@ private:
 
 	GraphicsEngineTask GraphicsEngine;
 
-	LinkDisplayDrawer<LinkDisplayLeftLayout> LinkDisplayLeft;
-	LinkDisplayDrawer<LinkDisplayRightLayout> LinkDisplayRight;
+	LoLa::Display::LinkDebug::DrawerWrapper<typename Layout::LinkDisplayLeft> LinkDisplayLeft;
+	LoLa::Display::LinkDebug::DrawerWrapper<typename Layout::LinkDisplayRight> LinkDisplayRight;
 
-	ChannelDisplayDrawer<ChannelDisplayLeftLayout> ChannelDisplayLeft;
-	ChannelDisplayDrawer<ChannelDisplayRightLayout> ChannelDisplayRight;
+	LoLa::Display::ChannelHistory::Drawer<typename Layout::ChannelDisplayLeft> ChannelHistoryDisplay;
 
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
 	EngineLogTask<1000> EngineLog;
@@ -60,8 +68,7 @@ public:
 		, GraphicsEngine(&scheduler, &FrameBuffer, &screenDriver, FramePeriod)
 		, LinkDisplayLeft(linkLeft)
 		, LinkDisplayRight(linkRight)
-		, ChannelDisplayLeft(transceiverLeft)
-		, ChannelDisplayRight(transceiverRight)
+		, ChannelHistoryDisplay(transceiverLeft)
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
 		, EngineLog(scheduler, GraphicsEngine)
 #endif
@@ -72,14 +79,11 @@ public:
 	{
 		MultiDrawer.ClearDrawers();
 
-		if (!MultiDrawer.AddDrawer(&LinkDisplayLeft)
-			|| !MultiDrawer.AddDrawer(&LinkDisplayRight))
-		{
-			return false;
-		}
-
-		if (!MultiDrawer.AddDrawer(&ChannelDisplayLeft)
-			|| !MultiDrawer.AddDrawer(&ChannelDisplayRight))
+		if (!LinkDisplayLeft.AddDrawers()
+			|| LinkDisplayRight.AddDrawers()
+			|| !MultiDrawer.AddDrawer(&LinkDisplayLeft)
+			|| !MultiDrawer.AddDrawer(&LinkDisplayRight)
+			|| !MultiDrawer.AddDrawer(&ChannelHistoryDisplay))
 		{
 			return false;
 		}

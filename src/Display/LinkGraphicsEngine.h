@@ -20,7 +20,7 @@ class LinkGraphicsEngine
 private:
 	const uint32_t FramePeriod = 16665;
 
-	using LinkLayout = LinkDisplayLayout<0, 0, frameBufferType::FrameWidth, frameBufferType::FrameHeight / 2>;
+	using LinkLayout = LayoutElement<0, 0, frameBufferType::FrameWidth, frameBufferType::FrameHeight / 2>;
 	using ChannelLayout = LayoutElement<1, LinkLayout::Height() + 1, frameBufferType::FrameWidth - 2, frameBufferType::FrameHeight - LinkLayout::Height() >;
 
 	static constexpr uint8_t DrawerCount = 2;
@@ -34,8 +34,8 @@ private:
 	GraphicsEngineTask GraphicsEngine;
 
 private:
-	LinkDisplayDrawer<LinkLayout> LinkDrawer;
-	ChannelDisplayDrawer<ChannelLayout> ChannelDrawer;
+	LoLa::Display::LinkDebug::DrawerWrapper<LinkLayout> LinkDrawer;
+	LoLa::Display::ChannelHistory::Drawer<ChannelLayout> ChannelDrawer;
 
 #if defined(DEBUG) && (defined(GRAPHICS_ENGINE_DEBUG) || defined(GRAPHICS_ENGINE_MEASURE))
 	EngineLogTask<1000> EngineLog;
@@ -60,7 +60,8 @@ public:
 	{
 		MultiDrawer.ClearDrawers();
 
-		if (!MultiDrawer.AddDrawer(&LinkDrawer)
+		if (!LinkDrawer.AddDrawers()
+			|| !MultiDrawer.AddDrawer(&LinkDrawer)
 			|| !MultiDrawer.AddDrawer(&ChannelDrawer))
 		{
 			return false;
