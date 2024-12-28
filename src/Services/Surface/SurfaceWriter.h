@@ -96,7 +96,7 @@ protected:
 			ThrottleStart = millis();
 			Surface->SetHot(true);
 			Surface->NotifyUpdated();
-			Task::enableDelayed(START_DELAY_PERIOD_MILLIS);
+			TS::Task::enableDelayed(START_DELAY_PERIOD_MILLIS);
 		}
 	}
 
@@ -115,12 +115,12 @@ protected:
 			if (HashesMatch())
 			{
 				Surface->ClearAllBlocksPending();
-				Task::disable();
+				TS::Task::disable();
 			}
 			else
 			{
 				WriterState = WriterStateEnum::Updating;
-				Task::delay(0);
+				TS::Task::delay(0);
 			}
 			break;
 		case WriterStateEnum::Updating:
@@ -131,17 +131,17 @@ protected:
 			{
 				if (RequestSendMeta(WriterCheckHashDefinition::HEADER))
 				{
-					Task::delay(0);
+					TS::Task::delay(0);
 				}
 			}
 			else
 			{
-				Task::delay(1);
+				TS::Task::delay(1);
 			}
 			break;
 		case WriterStateEnum::Matching:
 			WriterState = WriterStateEnum::Throttling;
-			Task::delay(0);
+			TS::Task::delay(0);
 			if (!HashesMatch())
 			{
 				// Invalidated: hashes don't match.
@@ -153,31 +153,31 @@ protected:
 			{
 				if (PacketThrottle())
 				{
-					Task::delay(0);
+					TS::Task::delay(0);
 					ThrottleStart = millis();
 					CurrentIndex = 0;
 					WriterState = WriterStateEnum::Sleeping;
 				}
 				else
 				{
-					Task::delay(1);
+					TS::Task::delay(1);
 				}
 			}
 			else
 			{
 				if (ThrottlePeriodMillis > 0)
 				{
-					Task::delay(ThrottlePeriodMillis - (timestamp - ThrottleStart));
+					TS::Task::delay(ThrottlePeriodMillis - (timestamp - ThrottleStart));
 				}
 				else
 				{
-					Task::delay(0);
+					TS::Task::delay(0);
 				}
 			}
 			break;
 		case WriterStateEnum::Disabled:
 		default:
-			Task::disable();
+			TS::Task::disable();
 			break;
 		}
 	}
@@ -195,7 +195,7 @@ protected:
 					switch (WriterState)
 					{
 					case WriterStateEnum::Sleeping:
-						Task::enableDelayed(0);
+						TS::Task::enableDelayed(0);
 					case WriterStateEnum::Validating:
 						WriterState = WriterStateEnum::Matching;
 						break;
@@ -211,7 +211,7 @@ protected:
 					switch (WriterState)
 					{
 					case WriterStateEnum::Sleeping:
-						Task::enableDelayed(0);
+						TS::Task::enableDelayed(0);
 					case WriterStateEnum::Matching:
 					case WriterStateEnum::Validating:
 					case WriterStateEnum::Throttling:
@@ -241,7 +241,7 @@ protected:
 private:
 	void OnUpdating()
 	{
-		Task::delay(0);
+		TS::Task::delay(0);
 
 		const uint8_t index = Surface->GetNextBlockPendingIndex(CurrentIndex);
 
