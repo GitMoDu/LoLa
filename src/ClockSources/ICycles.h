@@ -8,9 +8,8 @@
 /// <summary>
 /// Interface for system cycle count source.
 /// </summary>
-class ICycles
+struct ICycles
 {
-public:
 	/// <summary>
 	/// 
 	/// </summary>
