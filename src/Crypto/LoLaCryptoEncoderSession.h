@@ -135,10 +135,7 @@ public:
 		counter = ((uint16_t)inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id + 1] << 8) | inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id];
 
 		// Copy plaintext content to in data.
-		for (uint_fast8_t i = 0; i < dataSize; i++)
-		{
-			data[i] = inPacket[i + (uint8_t)LoLaPacketDefinition::IndexEnum::Data];
-		}
+		memcpy(data, &inPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Data], dataSize);
 
 		return true;
 	}
@@ -157,10 +154,7 @@ public:
 		outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Id + 1] = counter >> 8;
 
 		// Plaintext copy of data to output.
-		for (uint_fast8_t i = 0; i < dataSize; i++)
-		{
-			outPacket[i + (uint8_t)LoLaPacketDefinition::IndexEnum::Data] = data[i];
-		}
+		memcpy(&outPacket[(uint8_t)LoLaPacketDefinition::IndexEnum::Data], data, dataSize);
 
 		// Set HMAC without implicit addressing, key or token.
 #if defined(LOLA_USE_POLY1305)
