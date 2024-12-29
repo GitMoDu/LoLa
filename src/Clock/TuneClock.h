@@ -23,7 +23,8 @@ private:
 public:
 	TuneClock(TS::Scheduler& scheduler, ICycles* cycles)
 		: TimeClock(scheduler, cycles)
-	{}
+	{
+	}
 
 	/// <summary>
 	/// Start the clock.
@@ -75,27 +76,19 @@ public:
 		{
 			const int8_t preTune = TuneMicros;
 
-			if (offsetMicros > 0)
+			int16_t tune = (int16_t)TuneMicros + offsetMicros;
+
+			if (tune >= INT8_MAX)
 			{
-				if (TuneMicros < INT8_MAX - offsetMicros)
-				{
-					TuneMicros += offsetMicros;
-				}
-				else
-				{
-					TuneMicros = INT8_MAX;
-				}
+				TuneMicros = INT8_MAX;
 			}
-			else if (offsetMicros < 0)
+			else if (tune <= INT8_MIN)
 			{
-				if (TuneMicros > offsetMicros)
-				{
-					TuneMicros += offsetMicros;
-				}
-				else
-				{
-					TuneMicros = INT8_MIN;
-				}
+				TuneMicros = INT8_MIN;
+			}
+			else
+			{
+				TuneMicros = tune;
 			}
 
 			if (preTune != TuneMicros)
