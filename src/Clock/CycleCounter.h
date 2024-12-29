@@ -45,7 +45,7 @@ protected:
 
 public:
 	CycleCounter(TS::Scheduler& scheduler, ICycles* cycles)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		: TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, CyclesSource(cycles)
 	{
 	}

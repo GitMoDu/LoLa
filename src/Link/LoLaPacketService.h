@@ -59,7 +59,7 @@ public:
 		uint8_t* rawInPacket,
 		uint8_t* rawOutPacket)
 		: ILoLaTransceiverListener()
-		, Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, ServiceListener(serviceListener)
 		, RawInPacket(rawInPacket)
 		, RawOutPacket(rawOutPacket)
