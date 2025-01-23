@@ -1,31 +1,59 @@
+/* WDS Configuration extractor.
+* Prints the unfolded configuration data-array to serial.
+* Wireless Development Suite should be available at https://www.silabs.com/support/resources.ct-software.p-wireless_proprietary_ezradiopro-sub-ghz-wireless-ics_si4463
+* Instructions
+*	WDS
+*	- Export custom project for third party IDE
+*	Copy to local project
+*		- Si446x_EmptyFramework\src\application\radio_config.h
+*		- Si446x_EmptyFramework\src\drivers\radio\Si446x\si446x_patch.h
+*	Edit files, IF radio_config.h uses si446x_patch.h (Rev C2)
+*	- radio_config_local.h
+*		Replace #include "..\drivers\radio\Si446x\si446x_patch.h" with "si446x_patch.h.
+*	Run sketch and copy the result from serial output.
+*	Resulting array includes Patch and Config.
+*/
 
-#include "WdsExtractedConfiguration.h"
+
 #define SERIAL_BAUD_RATE 115200
 
-#define DEBUG_LOLA
-#define LOLA_UNIT_TESTING
-
-
-//#define LOLA_USE_POLY1305
-
-#include <ILoLaInclude.h>
 #include <Arduino.h>
 
-
-// Replace file or contents with exported configuration from WDS editor.
-// Removed/comment the generated #include "..\drivers\radio\Si446x\"
-#include "WdsExtractedConfiguration.h"
+#include "radio_config.h"
+#include "si446x_patch.h"
 
 
+static constexpr uint8_t Config[] RADIO_CONFIGURATION_DATA_ARRAY;
+static constexpr size_t ConfigSize = sizeof(Config);
 
-using namespace WdsExtractedConfiguration;
+#if defined(SI446X_PATCH_CMDS)
+static constexpr uint8_t Patch[][8]{ SI446X_PATCH_CMDS };
+static constexpr size_t PatchSize = sizeof(Patch);
+#endif
 
+void setup()
+{
+	Serial.begin(SERIAL_BAUD_RATE);
+	while (!Serial)
+		;
+	delay(1000);
 
-static constexpr size_t ConfigurationSize = WdsExtractedConfiguration::GetFullSize();
+	Serial.println(F("Si446x WDS configuration extractor."));
 
-static constexpr uint8_t FullArray[] = RADIO_CONFIGURATION_DATA_ARRAY;
-static constexpr size_t FullArraySize = sizeof(FullArray);
+	Serial.println();
+	PrintConfig();
+	Serial.println();
 
+#if defined(SI446X_PATCH_CMDS)
+	Serial.println();
+	PrintPatch();
+	Serial.println();
+#endif
+}
+
+void loop()
+{
+}
 
 void PrintHex(const uint8_t value)
 {
@@ -37,14 +65,18 @@ void PrintHex(const uint8_t value)
 	Serial.print(value, HEX);
 }
 
-
-const size_t PrintConfigItem(const uint8_t* itemArray, const size_t size, const bool isLastItem = false)
+const size_t PrintArrayItem(const uint8_t* itemArray, const bool isLastItem = false)
 {
+	const size_t size = itemArray[0];
+
 	Serial.print('\t');
 	Serial.print('\t');
 	PrintHex(size);
-	Serial.print(',');
-	Serial.print(' ');
+	if (size > 0)
+	{
+		Serial.print(',');
+		Serial.print(' ');
+	}
 
 	for (size_t i = 0; i < size; i++)
 	{
@@ -52,8 +84,8 @@ const size_t PrintConfigItem(const uint8_t* itemArray, const size_t size, const 
 		if (i < size - 1)
 		{
 			Serial.print(',');
+			Serial.print(' ');
 		}
-		Serial.print(' ');
 	}
 	if (!isLastItem)
 	{
@@ -63,151 +95,48 @@ const size_t PrintConfigItem(const uint8_t* itemArray, const size_t size, const 
 	return size;
 }
 
-
-void PrintSetupConfig()
+void PrintConfig()
 {
-	Serial.println(F("static constexpr uint8_t SetupConfig[] = {"));
+	Serial.println(F("static constexpr uint8_t SetupConfig[]\n{"));
 
-	size_t size = 0;
-
-	size += PrintConfigItem(PowerUp, sizeof(PowerUp));
-	size += PrintConfigItem(GpioPinCfg, sizeof(GpioPinCfg));
-	size += PrintConfigItem(CrystalTune, sizeof(CrystalTune));
-	size += PrintConfigItem(GlobalConfig1, sizeof(GlobalConfig1));
-	size += PrintConfigItem(PreambleConfig, sizeof(PreambleConfig));
-	size += PrintConfigItem(ModemType1, sizeof(ModemType1));
-	size += PrintConfigItem(ModemFreqDeviation, sizeof(ModemFreqDeviation));
-	size += PrintConfigItem(ModemTxRampDelay1, sizeof(ModemTxRampDelay1));
-	size += PrintConfigItem(ModemBcrNcoOffset1, sizeof(ModemBcrNcoOffset1));
-	size += PrintConfigItem(ModemAfcLimiter1, sizeof(ModemAfcLimiter1));
-	size += PrintConfigItem(ModemAgcControl1, sizeof(ModemAgcControl1));
-	size += PrintConfigItem(ModemAdcWindow1, sizeof(ModemAdcWindow1));
-	size += PrintConfigItem(ModemRawControl1, sizeof(ModemRawControl1));
-	size += PrintConfigItem(ModemRssiThreshold, sizeof(ModemRssiThreshold));
-	size += PrintConfigItem(ModemRawSearch1, sizeof(ModemRawSearch1));
-	size += PrintConfigItem(ModemSpikeDetect1, sizeof(ModemSpikeDetect1));
-	size += PrintConfigItem(ModemRssiMute1, sizeof(ModemRssiMute1));
-	size += PrintConfigItem(ModemDsaControl1, sizeof(ModemDsaControl1));
-	size += PrintConfigItem(ModemChannelFilter1, sizeof(ModemChannelFilter1));
-	size += PrintConfigItem(ModemChannelFilter2, sizeof(ModemChannelFilter2));
-	size += PrintConfigItem(ModemChannelFilter3, sizeof(ModemChannelFilter3));
-	size += PrintConfigItem(PaTuneControl, sizeof(PaTuneControl));
-	size += PrintConfigItem(SynthPowerFactor1, sizeof(SynthPowerFactor1));
-	size += PrintConfigItem(FrequencyControl1, sizeof(FrequencyControl1));
-	size += PrintConfigItem(StartRx, sizeof(StartRx));
-	size += PrintConfigItem(IrCalibration1, sizeof(IrCalibration1));
-	size += PrintConfigItem(IrCalibration2, sizeof(IrCalibration2));
-	size += PrintConfigItem(GlobalClockConfig, sizeof(GlobalClockConfig));
-	size += PrintConfigItem(GlobalConfig2, sizeof(GlobalConfig2));
-	size += PrintConfigItem(InterruptControlEnable, sizeof(InterruptControlEnable));
-	size += PrintConfigItem(FrrControl, sizeof(FrrControl));
-	size += PrintConfigItem(PreambleLength, sizeof(PreambleLength));
-	size += PrintConfigItem(SyncConfig, sizeof(SyncConfig));
-	size += PrintConfigItem(PacketCrcConfig, sizeof(PacketCrcConfig));
-	size += PrintConfigItem(PacketRxThreshold, sizeof(PacketRxThreshold));
-	size += PrintConfigItem(PacketFieldConfig1, sizeof(PacketFieldConfig1));
-	size += PrintConfigItem(PacketFieldConfig2, sizeof(PacketFieldConfig2));
-	size += PrintConfigItem(PacketFieldConfig3, sizeof(PacketFieldConfig3));
-	size += PrintConfigItem(PacketCrcSeed, sizeof(PacketCrcSeed));
-	size += PrintConfigItem(ModemModulationType, sizeof(ModemModulationType));
-	size += PrintConfigItem(ModemFrequencyDeviation, sizeof(ModemFrequencyDeviation));
-	size += PrintConfigItem(ModemTxRampDelay2, sizeof(ModemTxRampDelay2));
-	size += PrintConfigItem(ModemBcrNcoOffset2, sizeof(ModemBcrNcoOffset2));
-	size += PrintConfigItem(ModemAfcLimiter2, sizeof(ModemAfcLimiter2));
-	size += PrintConfigItem(ModemAgcControl2, sizeof(ModemAgcControl2));
-	size += PrintConfigItem(ModemAdcWindow2, sizeof(ModemAdcWindow2));
-	size += PrintConfigItem(ModemRawControl2, sizeof(ModemRawControl2));
-	size += PrintConfigItem(ModemRawSearch2, sizeof(ModemRawSearch2));
-	size += PrintConfigItem(ModemSpikeDetect2, sizeof(ModemSpikeDetect2));
-	size += PrintConfigItem(ModemRssiMute2, sizeof(ModemRssiMute2));
-	size += PrintConfigItem(ModemDsaControl2, sizeof(ModemDsaControl2));
-	size += PrintConfigItem(ModemChannelFilter4, sizeof(ModemChannelFilter4));
-	size += PrintConfigItem(ModemChannelFilter5, sizeof(ModemChannelFilter5));
-	size += PrintConfigItem(ModemChannelFilter6, sizeof(ModemChannelFilter6));
-	size += PrintConfigItem(PaMode, sizeof(PaMode));
-	size += PrintConfigItem(SynthPowerFactor2, sizeof(SynthPowerFactor2));
-	size += PrintConfigItem(MatchValue, sizeof(MatchValue));
-	size += PrintConfigItem(FrequencyControl2, sizeof(FrequencyControl2), true);
-	Serial.println(F(" }"));
-
-
-	/*bool success = false;
-	while (i < ConfigurationSize)
+	size_t i = 0;
+	while (i < ConfigSize)
 	{
-		if (GetResponse())
+		const size_t length = Config[i];
+
+		PrintArrayItem(&Config[i], i + length >= ConfigSize - 1);
+		i += 1 + length;
+	}
+
+	Serial.println();
+	Serial.println(F("};"));
+}
+
+#if defined(SI446X_PATCH_CMDS)
+void PrintPatch()
+{
+	Serial.println(F("static constexpr uint8_t RomPatch[]\n{"));
+
+	for (size_t i = 0; i < PatchSize / 8; i++)
+	{
+		Serial.print('\t');
+		Serial.print('\t');
+
+		for (size_t j = 0; j < 8; j++)
 		{
-			const size_t length = configuration[i];
-
-			CsOn();
-			SpiInstance.transfer((void*)&configuration[i + 1], length);
-			CsOff();
-
-			i += 1 + length;
-			if (!success)
+			PrintHex(Patch[i][j]);
+			if (j < 8 - 1)
 			{
-				success = i == configurationSize;
-				if (!success
-					&& i > configurationSize)
-				{
-					return false;
-				}
+				Serial.print(',');
 			}
+		}
+		if (i < (PatchSize / 8) - 1)
+		{
+			Serial.println(',');
 		}
 	}
 
-	return success;*/
-
-
-}
-
-
-void Halt()
-{
-	Serial.println("[ERROR] Critical Error");
-	delay(1000);
-
-	while (1);;
-}
-
-
-
-void setup()
-{
-	Serial.begin(SERIAL_BAUD_RATE);
-	while (!Serial)
-		;
-	delay(1000);
-
-
-	Serial.println(F("Si446x WDS configuration extractor starting:"));
-
 	Serial.println();
-
-	PrintSetupConfig();
-
-	Serial.println();
-
-	//const bool hasConfiguration = sizeof( ) > 0;
-
-
-	/*
-		Serial.println();
-		Serial.println();
-		if (allTestsOk)
-		{
-			Serial.println(F("LoLa Crypto Unit Tests completed with success."));
-		}
-		else
-		{
-			Serial.println(F("LoLa Crypto Unit Tests FAILED."));
-		}*/
-	Serial.println();
+	Serial.println(F("};"));
 }
-
-void loop()
-{
-}
-
-
-
-
+#endif

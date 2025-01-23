@@ -7,62 +7,115 @@
 #include <TSchedulerDeclarations.hpp>
 
 #include "Si446xSpiDriver.h"
-#include "Si446xRadioFlow.h"
 
 using namespace Si446x;
-using namespace Si446xRadioFlow;
-
 
 /// <summary>
-/// Handles radio interrupts and dispatches radio events.
+/// Hosts and handles SPI radio driver.
+/// Handles interrupts and dispatches radio events.
 /// </summary>
 /// <typeparam name="MaxRxSize"></typeparam>
 /// <typeparam name="pinSDN"></typeparam>
 /// <typeparam name="pinCS"></typeparam>
-/// <typeparam name="pinCLK"></typeparam>
-/// <typeparam name="pinMISO"></typeparam>
-/// <typeparam name="pinMOSI"></typeparam>
-/// <typeparam name="spiChannel"></typeparam>
-/// <typeparam name="pinInterrupt"></typeparam>
 template<const uint8_t MaxRxSize,
 	const uint8_t pinCS,
 	const uint8_t pinSDN,
-	const uint8_t pinInterrupt,
-	const uint8_t pinCLK = UINT8_MAX,
-	const uint8_t pinMISO = UINT8_MAX,
-	const uint8_t pinMOSI = UINT8_MAX,
-	const uint8_t spiChannel = 0>
-class Si446xRadioDriver : private Task
+	const uint8_t pinInterrupt>
+class Si446xRadioDriver : protected TS::Task
 {
+private:
+	static constexpr uint8_t PH_FLAG = (uint8_t)INT_CTL_PH::PACKET_SENT_EN | (uint8_t)INT_CTL_PH::PACKET_RX_EN;
+	static constexpr uint8_t MODEM_FLAG = 0;// (uint8_t)INT_CTL_MODEM::SYNC_DETECT_EN;
+	static constexpr uint8_t CHIP_FLAG = 0;
+
+	/// <summary>
+	/// Fast Read Register specification for the driver.
+	/// </summary>
+	enum class FrrEnum : uint8_t
+	{
+		LatchedRssi = (uint8_t)Command::FRR_A_READ,
+		CurrentState = (uint8_t)Command::FRR_B_READ,
+		PacketHandlerInterrupts = (uint8_t)Command::FRR_C_READ,
+		ModemState = (uint8_t)Command::FRR_D_READ,
+	};
+
+	enum class StateEnum
+	{
+		Disabled,
+		WaitingForRxInterrupt,
+		PendingRxInterrupt,
+		RxDelivery,
+		TxReady,
+		WaitingForTxInterrupt,
+		PendingTxInterrupt,
+		Hop,
+		HopStartRx,
+	};
+
+private:
+	Si446xSpiDriver<pinCS, pinSDN> SpiDriver;
+
 private:
 	void (*RadioInterrupt)(void) = nullptr;
 
-	Si446xSpiDriver<pinCS, pinSDN, pinCLK, pinMISO, pinMOSI, spiChannel> SpiDriver{};
-
+private:
 	uint8_t InBuffer[MaxRxSize]{};
 
-	AsyncReadInterruptsStruct AsyncReadInterrupts{};
+	volatile uint32_t RxTimestamp = 0;
+	uint32_t TxTimestamp = 0;
 
-	RadioEventsFlowStruct RadioEvents{};
+	volatile StateEnum State = StateEnum::Disabled;
 
-	FlowStruct TxFlow{};
-	HopFlowStruct HopFlow{};
-	RxFlowStruct RxFlow{};
+	uint8_t RxRssi = 0;
+	uint8_t RxSize = 0;
+	uint8_t HopChannel = 0;
 
 protected:
 	virtual void OnTxDone() {}
 
 	virtual void OnRxReady(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssiLatch) {}
 
+	virtual void OnRadioError(const RadioErrorCodeEnum radioFailCode) {}
+
 public:
-	Si446xRadioDriver(Scheduler& scheduler)
-		: Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
-	{}
+	Si446xRadioDriver(TS::Scheduler& scheduler, SPIClass& spiInstance)
+		: TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
+		, SpiDriver(spiInstance, PH_FLAG, MODEM_FLAG, CHIP_FLAG)
+	{
+	}
 
 	void OnRadioInterrupt(const uint32_t timestamp)
 	{
-		AsyncReadInterrupts.SetPending(timestamp);
-		Task::enableDelayed(0);
+		switch (State)
+		{
+		case StateEnum::Hop:
+		case StateEnum::HopStartRx:
+			RxTimestamp = micros();
+			State = StateEnum::PendingRxInterrupt;
+			OnRadioError(RadioErrorCodeEnum::InterruptWhileHop);
+			TS::Task::enable();
+			break;
+		case StateEnum::WaitingForRxInterrupt:
+			RxTimestamp = micros();
+			State = StateEnum::PendingRxInterrupt;
+			TS::Task::enable();
+			break;
+		case StateEnum::WaitingForTxInterrupt:
+			State = StateEnum::PendingTxInterrupt;
+			TS::Task::enable();
+			break;
+		case StateEnum::PendingRxInterrupt:
+		case StateEnum::RxDelivery:
+			OnRadioError(RadioErrorCodeEnum::InterruptWhileRx);
+			break;
+		case StateEnum::PendingTxInterrupt:
+		case StateEnum::TxReady:
+			OnRadioError(RadioErrorCodeEnum::InterruptWhileTx);
+			break;
+		case StateEnum::Disabled:
+		default:
+			break;
+		}
 	}
 
 protected:
@@ -71,60 +124,69 @@ protected:
 		RadioInterrupt = onRadioInterrupt;
 	}
 
-	const bool SetTxPower(const uint8_t txPower)
+	const bool SetTxPower(const uint8_t txPower, const uint32_t timeoutMicros = 0)
 	{
-		return SpiDriver.SetTxPower(txPower);
+		return SpiDriver.SetTxPower(txPower, timeoutMicros);
 	}
 
-	const bool RadioStart(const uint8_t* configuration, const size_t configurationSize)
+	const bool RadioStart(const uint8_t* configuration, const size_t configurationSize, const uint8_t* patch = nullptr, size_t patchSize = 0)
 	{
-		//pinMode(7, OUTPUT);
-		pinMode(pinSDN, INPUT_PULLUP);
 		RadioStop();
+		pinMode(pinInterrupt, INPUT_PULLUP);
 
 		if (RadioInterrupt == nullptr
-			|| !SpiDriver.Start(configuration, configurationSize))
+			|| !SpiDriver.Start(configuration, configurationSize, patch, patchSize))
 		{
 			return false;
 		}
 
-		AsyncReadInterrupts.Clear();
-		RadioEvents.Clear();
-		RxFlow.Clear();
-		TxFlow.Clear();
-		HopFlow.Clear();
-
 		// Start listening to IRQ.
-		interrupts();
 		attachInterrupt(digitalPinToInterrupt(pinInterrupt), RadioInterrupt, FALLING);
-		Task::enable();
 
-		return SpiDriver.SetPacketSize(MaxRxSize, 1000);
+		HopChannel = 0;
+		State = StateEnum::Hop;
+
+		TS::Task::enable();
+
+		return true;
 	}
 
 	void RadioStop()
 	{
 		SpiDriver.Stop();
 		detachInterrupt(digitalPinToInterrupt(pinInterrupt));
-		pinMode(pinInterrupt, INPUT);
-		interrupts();
-		TS::Task::disable();
+		State = StateEnum::Disabled;
 	}
 
 	void RadioRx(const uint8_t channel)
 	{
-		if (HopFlow.Pending)
+		switch (State)
 		{
-			if (HopFlow.Channel != channel)
+		case StateEnum::Hop:
+		case StateEnum::HopStartRx:
+		case StateEnum::PendingRxInterrupt:
+		case StateEnum::RxDelivery:
+			HopChannel = channel;
+			break;
+		case StateEnum::WaitingForTxInterrupt:
+			OnRadioError(RadioErrorCodeEnum::RxWhileTx);
+		case StateEnum::PendingTxInterrupt:
+		case StateEnum::TxReady:
+			State = StateEnum::Hop;
+			TS::Task::enable();
+			break;
+		case StateEnum::WaitingForRxInterrupt:
+			if (HopChannel != channel)
 			{
-				HopFlow.Channel = channel;
+				State = StateEnum::Hop;
+				HopChannel = channel;
+				TS::Task::enable();
 			}
+			break;
+		case StateEnum::Disabled:
+		default:
+			break;
 		}
-		else
-		{
-			HopFlow.SetPendingChannel(micros(), channel);
-		}
-		TS::Task::enableDelayed(0);
 	}
 
 	/// <summary>
@@ -133,12 +195,35 @@ protected:
 	/// <returns></returns>
 	const bool RadioTxAvailable(const uint32_t timeoutMicros = 50)
 	{
-		if (RadioTaskBusy())
+		switch (State)
 		{
-			return false;
+		case StateEnum::Hop:
+		case StateEnum::HopStartRx:
+		case StateEnum::WaitingForRxInterrupt:
+		case StateEnum::TxReady:
+			switch (GetRadioStateFast())
+			{
+			case RadioStateEnum::READY:
+			case RadioStateEnum::READY2:
+			case RadioStateEnum::RX:
+			case RadioStateEnum::SLEEP:
+			case RadioStateEnum::SPI_ACTIVE:
+			case RadioStateEnum::TX_TUNE:
+				return true;
+			case RadioStateEnum::TX:
+			case RadioStateEnum::RX_TUNE:
+			default:
+				break;
+			}
+			break;
+		case StateEnum::WaitingForTxInterrupt:
+		case StateEnum::PendingRxInterrupt:
+		case StateEnum::PendingTxInterrupt:
+		case StateEnum::Disabled:
+		default:
+			break;
 		}
-
-		return SpiDriver.SpinWaitForResponse(timeoutMicros);
+		return false;
 	}
 
 	/// <summary>
@@ -146,39 +231,57 @@ protected:
 	/// </summary>
 	const bool RadioTx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-		// Last chance to detect any pending RX.
-		if (RadioTaskBusy())
+		const uint32_t txStart = micros();
+
+		switch (State)
+		{
+		case StateEnum::Hop:
+		case StateEnum::HopStartRx:
+		case StateEnum::WaitingForRxInterrupt:
+		case StateEnum::TxReady:
+			break;
+		case StateEnum::WaitingForTxInterrupt:
+		case StateEnum::PendingRxInterrupt:
+		case StateEnum::PendingTxInterrupt:
+		case StateEnum::Disabled:
+		default:
+			return false;
+			break;
+		}
+
+		static constexpr RadioStateEnum txState = RadioStateEnum::TX_TUNE;
+
+		if (!SpiDriver.SetRadioState(txState, 100))
 		{
 			return false;
 		}
 
-		// Disable Rx temporarily.
-		if (!SpiDriver.SetRadioState(RadioStateEnum::READY, 100))
+		HopChannel = channel;
+		State = StateEnum::TxReady;
+
+		if (!SpiDriver.ClearInterrupts(100))
 		{
-			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
-			TS::Task::enable();
 			return false;
 		}
 
-		if (!SpiDriver.SetPacketSize(packetSize, 250))
+		if (!SpiDriver.RadioTxWrite(data, packetSize, 100))
 		{
-			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
-			TS::Task::enable();
 			return false;
 		}
 
-		// Push data to radio FIFO and start transmission.
-		if (!SpiDriver.RadioStartTx(data, packetSize, channel))
+		if (!SpiDriver.SetPacketSize(packetSize, 100))
 		{
-			TxFlow.SetPending(micros() - TX_FLOW_TIMEOUT_MICROS);
-			TS::Task::enable();
-			HopFlow.SetPending(micros());
-
-			//digitalWrite(7, LOW);
 			return false;
 		}
 
-		TxFlow.SetPending(micros());
+		State = StateEnum::WaitingForTxInterrupt;
+		if (!SpiDriver.RadioStartTx(channel, 100))
+		{
+			State = StateEnum::TxReady;
+			return false;
+		}
+
+		TxTimestamp = micros();
 		TS::Task::enable();
 
 		return true;
@@ -187,218 +290,122 @@ protected:
 public:
 	virtual bool Callback() final
 	{
-		if (AsyncReadInterrupts.Pending())
+		switch (State)
 		{
-			ProcessAsyncRead();
-		}
-		else if (RadioEvents.Pending())
-		{
-			ProcessRadioEvents();
-		}
-
-		ProcessPendingFlows();
-
-		noInterrupts();
-		if (RadioTaskBusy())
-		{
-			interrupts();
-			TS::Task::enableDelayed(0);
-
-			return true;
-		}
-		else
-		{
-			TS::Task::disable();
-			interrupts();
-
-			return false;
-		}
-	}
-
-private:
-	void ProcessAsyncRead()
-	{
-		RadioEventsFlowStruct radioEvents{};
-
-		// Event read takes too long to do synchronously.
-		switch (AsyncReadInterrupts.State)
-		{
-		case ReadStateEnum::TryPrepare:
-			if (SpiDriver.TryPrepareGetRadioEvents())
+		case StateEnum::PendingRxInterrupt:
+			if (PacketHandlerInterrupts::PacketReceived(GetPacketHandlerInterruptsFast()))
 			{
-				AsyncReadInterrupts.State = ReadStateEnum::TryRead;
+				RxRssi = GetRssiLatchFast();
+				State = StateEnum::RxDelivery;
 			}
 			break;
-		case ReadStateEnum::TryRead:
-			if (SpiDriver.TryGetRadioEvents(radioEvents))
+		case StateEnum::RxDelivery:
+			State = StateEnum::Hop; // Restore to Rx on the same channel by default.
+			if (SpiDriver.GetRxFifoCount(RxSize, 250)
+				&& RxSize > 0 && RxSize <= MaxRxSize
+				&& SpiDriver.GetRxFifo(InBuffer, RxSize, 250))
 			{
-				RadioEvents.MergeWith(radioEvents, AsyncReadInterrupts.Timestamp);
-
-				if (AsyncReadInterrupts.Double)
-				{
-					AsyncReadInterrupts.RestartFromDouble();
-#if defined(DEBUG_LOLA)
-					Serial.println(F("AsyncInterrupts overflow"));
-#endif
-				}
-				else
-				{
-					AsyncReadInterrupts.Clear();
-				}
-
-#if defined(DEBUG_LOLA)
-				if (RadioEvents.RxReady
-					&& RxFlow.Pending())
-				{
-					Serial.println(F("Rx overrun."));
-				}
-#endif
+				OnRxReady(InBuffer, RxTimestamp, RxSize, RxRssi);
+			}
+			else
+			{
+				OnRadioError(RadioErrorCodeEnum::RxReadError);
 			}
 			break;
-		default:
-			break;
-		}
-
-		if (AsyncReadInterrupts.Pending()
-			&& AsyncReadInterrupts.Elapsed(micros()) > 20000)
-		{
-			AsyncReadInterrupts.Clear();
-			HopFlow.SetPending(micros());
-#if defined(DEBUG_LOLA)
-			Serial.println(F("AsyncInterrupts timed out."));
-#endif
-		}
-	}
-
-	void ProcessRadioEvents()
-	{
-		if (RadioEvents.TxDone)
-		{
-			if (TxFlow.Pending)
+		case StateEnum::WaitingForTxInterrupt:
+			if (micros() - TxTimestamp > 20000)
 			{
-				TxFlow.Clear();
-
-				// Tipically runs on the first try.
-				if (!SpiDriver.SetPacketSize(MaxRxSize, 200)
-					&& SpiDriver.ClearTxFifo(200))
+				State = StateEnum::TxReady;
+				if (!SpiDriver.ClearInterrupts(100)
+					|| !SpiDriver.ClearTxFifo(100))
 				{
-#if defined(DEBUG_LOLA)
-					Serial.println(F("Size restore failed."));
-#endif
+					OnRadioError(RadioErrorCodeEnum::TxRestoreError);
 				}
+
+				OnRadioError(RadioErrorCodeEnum::TxTimeout);
 				OnTxDone();
 			}
-			else
+			break;
+		case StateEnum::PendingTxInterrupt:
+			State = StateEnum::TxReady;
+			if (PacketHandlerInterrupts::PacketSent(GetPacketHandlerInterruptsFast()))
 			{
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Unexpected Tx Done"));
-#endif
-			}
-		}
-
-		if (RadioEvents.RxReady)
-		{
-			if (SpiDriver.GetRxFifoCount(RxFlow.Size)
-				&& RxFlow.Size > 0 && RxFlow.Size <= MaxRxSize)
-			{
-				RxFlow.SetPending(RadioEvents.RxTimestamp, SpiDriver.GetRssiLatchFast());
-			}
-			else
-			{
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Rx invalid size."));
-#endif
-				RxFlow.Clear();
-				HopFlow.SetPending(micros());
-				if (!SpiDriver.SetPacketSize(MaxRxSize, 1000))
+				if (!SpiDriver.ClearInterrupts(100)
+					|| !SpiDriver.ClearTxFifo(100))
 				{
-#if defined(DEBUG_LOLA)
-					Serial.println(F("Size restore failed."));
-#endif
+					OnRadioError(RadioErrorCodeEnum::TxRestoreError);
 				}
 			}
-		}
-
-#if defined(DEBUG_LOLA)
-		if (RadioEvents.RxStart)
-			Serial.println(F("Rx Start"));
-		if (RadioEvents.RxFail)
-			Serial.println(F("Rx Fail"));
-		if (RadioEvents.VccWarning)
-			Serial.println(F("VccWarning"));
-		if (RadioEvents.CalibrationPending)
-			Serial.println(F("CalibrationPending."));
-		if (RadioEvents.Error)
-			Serial.println(F("RF Error."));
-#endif
-		RadioEvents.Clear();
-	}
-
-	void ProcessPendingFlows()
-	{
-		if (RxFlow.Pending())
-		{
-			if (SpiDriver.GetRxFifo(InBuffer, RxFlow.Size)
-				&& SpiDriver.ClearRxFifo(1000))
-			{
-				OnRxReady(InBuffer, RxFlow.Timestamp, RxFlow.Size, RxFlow.RssiLatch);
-			}
 			else
 			{
-				HopFlow.SetPending(micros());
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Get Rx failed."));
-#endif
-			}
-			RxFlow.Clear();
-		}
-		else if (TxFlow.Pending
-			&& ((micros() - TxFlow.Timestamp) > TX_FLOW_TIMEOUT_MICROS))
-		{
-#if defined(DEBUG_LOLA)
-			Serial.println(F("Tx timeout."));
-#endif
-			TxFlow.Clear();
-			if (!SpiDriver.SetPacketSize(MaxRxSize, 1000)
-				|| !SpiDriver.ClearTxFifo(1000))
-			{
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Tx restore failed."));
-#endif
+				if (!SpiDriver.ClearInterrupts(100)
+					|| !SpiDriver.ClearTxFifo(100))
+				{
+					OnRadioError(RadioErrorCodeEnum::TxRestoreError);
+				}
+				OnRadioError(RadioErrorCodeEnum::InterruptTxFailed);
 			}
 			OnTxDone();
-		}
-		else if (HopFlow.Pending)
-		{
-			// Only set to Rx if Radio is not busy.
-			if (!AsyncReadInterrupts.Pending())
+			break;
+		case StateEnum::Hop:
+			if (SpiDriver.SetRadioState(RadioStateEnum::READY, 100)
+				&& SpiDriver.ClearInterrupts(100))
 			{
-				//TODO: If Radio is already in RX but in a different channel, use fast hop instead.
-				if (SpiDriver.RadioStartRx(HopFlow.Channel))
+				State = StateEnum::HopStartRx;
+			}
+			else
+			{
+				SpiDriver.ClearInterrupts(200);
+				SpiDriver.ClearRxTxFifo(200);
+				SpiDriver.SetPacketSize(MaxRxSize, 200);
+				OnRadioError(RadioErrorCodeEnum::RxRestoreError);
+			}
+			break;
+		case StateEnum::HopStartRx:
+			if (SpiDriver.ClearRxFifo(100)
+				&& SpiDriver.SetPacketSize(MaxRxSize, 100)
+				&& SpiDriver.RadioStartRx(HopChannel, 100))
+			{
+				if (State == StateEnum::HopStartRx)
 				{
-					HopFlow.Clear();
-				}
-				else
-				{
-#if defined(DEBUG_LOLA)
-					Serial.println(F("Rx Hop Failed."));
-#endif
+					State = StateEnum::WaitingForRxInterrupt;
 				}
 			}
-			else if (micros() - HopFlow.Timestamp > 10000)
-			{
-				HopFlow.Clear();
-#if defined(DEBUG_LOLA)
-				Serial.println(F("Rx Hop Timed out."));
-#endif
-			}
+			break;
+		case StateEnum::TxReady:
+		case StateEnum::WaitingForRxInterrupt:
+		case StateEnum::Disabled:
+		default:
+			// Nothing to do.
+			TS::Task::disable();
+			break;
 		}
+
+		return true;
 	}
 
-	const bool RadioTaskBusy()
+/// <summary>
+/// Fast Read Registers.
+/// </summary>
+private:
+	const uint8_t GetPacketHandlerInterruptsFast()
 	{
-		return TxFlow.Pending || HopFlow.Pending || RxFlow.Pending()
-			|| RadioEvents.Pending() || AsyncReadInterrupts.Pending();
+		return SpiDriver.GetFrr((uint8_t)FrrEnum::PacketHandlerInterrupts);
+	}
+
+	const uint8_t GetModemStateFast()
+	{
+		return SpiDriver.GetFrr((uint8_t)FrrEnum::ModemState);
+	}
+
+	const uint8_t GetRssiLatchFast()
+	{
+		return SpiDriver.GetFrr((uint8_t)FrrEnum::LatchedRssi);
+	}
+
+	const RadioStateEnum GetRadioStateFast()
+	{
+		return (RadioStateEnum)SpiDriver.GetFrr((uint8_t)FrrEnum::CurrentState);
 	}
 };
 #endif

@@ -16,30 +16,50 @@ namespace Si446x
 	/// The rising edges of SCLK should be aligned with the center of the SDI/SDO data.
 	/// </summary>
 	static constexpr int SPI_MODE = SPI_MODE0;
+	static constexpr BitOrder SPI_ORDER = MSBFIRST;
+
+	//Power range.
+	//   0 = -32dBm	(<1uW)
+	//   7 =  0dBm	(1mW)
+	//  12 =  5dBm	(3.2mW)
+	//  22 =  10dBm	(10mW)
+	//  40 =  15dBm	(32mW)
+	// 100 = 20dBm	(100mW) Requires Dual Antennae
+	// 127 = ABSOLUTE_MAX
+	static constexpr uint8_t TRANSMIT_POWER_MAX = 127;
 
 	enum class PART_NUMBER : uint16_t
 	{
 		SI4463 = 17507,
-		SI4461 = 0,//TODO:
-		SI4460 = 1,//TODO:
+		SI4461 = 0,	//TODO:
+		SI4460 = 1,	//TODO:
+		SI4468 = 2	//TODO:
 	};
 
-	enum class DEVICE_ID : uint16_t
+	enum class DEVICE_ID : uint8_t
 	{
 		SI4463 = 15,
-		SI4461 = 0,//TODO:
-		SI4460 = 1,//TODO:
+		SI4461 = 0,	//TODO:
+		SI4460 = 1,	//TODO:
+		SI4468 = 2	//TODO:
+	};
+
+	enum class ROM_ID : uint8_t
+	{
+		SI4463 = 3,
+		SI4461 = 0,	//TODO:
+		SI4460 = 1,	//TODO:
+		SI4468 = 2	//TODO:
 	};
 
 	enum class RadioStateEnum : uint8_t
 	{
-		NO_CHANGE = 0x00,
-		SLEEP = 0x01, ///< This will never be returned since SPI activity will wake the radio into ::SPI_ACTIVE
+		SLEEP = 0x01, // This will never be returned since SPI activity will wake the radio into ::SPI_ACTIVE
 		SPI_ACTIVE = 0x02,
 		READY = 0x03,
-		READY2 = 0x04, ///< Will return as ::READY
-		TX_TUNE = 0x05, ///< Will return as ::TX
-		RX_TUNE = 0x06, ///< Will return as ::RX
+		READY2 = 0x04,
+		TX_TUNE = 0x05,
+		RX_TUNE = 0x06,
 		TX = 0x07,
 		RX = 0x08,
 		STATE_COUNT
@@ -239,77 +259,6 @@ namespace Si446x
 		CAL = 1 << 6
 	};
 
-	static constexpr uint8_t PH_FLAG_DEBUG = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN | (uint8_t)INT_CTL_PH::CRC_ERROR_EN;
-	static constexpr uint8_t MODEM_FLAG_DEBUG = (uint8_t)INT_CTL_MODEM::SYNC_DETECT_EN;
-	static constexpr uint8_t CHIP_FLAG_DEBUG = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN | (uint8_t)INT_CTL_CHIP::CMD_ERROR_EN | (uint8_t)INT_CTL_CHIP::FIFO_UNDERFLOW_OVERFLOW_ERROR_EN;
-
-	static constexpr uint8_t PH_FLAG = (uint8_t)INT_CTL_PH::PACKET_RX_EN | (uint8_t)INT_CTL_PH::PACKET_SENT_EN;
-	static constexpr uint8_t MODEM_FLAG = 0;
-	static constexpr uint8_t CHIP_FLAG = (uint8_t)INT_CTL_CHIP::LOW_BATT_EN;
-
-	//Power range.
-	//   0 = -32dBm	(<1uW)
-	//   7 =  0dBm	(1mW)
-	//  12 =  5dBm	(3.2mW)
-	//  22 =  10dBm	(10mW)
-	//  40 =  15dBm	(32mW)
-	// 100 = 20dBm	(100mW) Requires Dual Antennae
-	// 127 = ABSOLUTE_MAX
-	static constexpr uint8_t SI4463_TRANSMIT_POWER_MIN = 0;
-	static constexpr uint8_t SI4463_TRANSMIT_POWER_MAX = 40;
-
-	//Received RSSI range.
-	static constexpr int16_t SI4463_RSSI_MIN = -110;
-	static constexpr int16_t SI4463_RSSI_MAX = -80;
-
-	static constexpr int16_t RssiToDbM(const uint8_t rssiRegisterValue)
-	{
-		return (((int16_t)(rssiRegisterValue / 2)) - 134);
-	}
-
-	struct Si446xConfigStruct
-	{
-		uint8_t RfPowerUp[7];
-		uint8_t RfGpioPinConfig[8];
-		uint8_t Global[8];
-		uint8_t Modem0[16];
-		uint8_t Modem1[5];
-		uint8_t Modem2[16];
-		uint8_t Modem3[14];
-		uint8_t Modem4[15];
-		uint8_t Modem5[13];
-		uint8_t Modem6[6];
-		uint8_t Modem7[6];
-		uint8_t Modem8[9];
-		uint8_t ModemFlt0[16];
-		uint8_t ModemFlt1[16];
-		uint8_t ModemFlt2[15];
-		uint8_t Pa[5];
-		uint8_t FrequencyControl0[12];
-		uint8_t RfStartRx[8];
-		uint8_t RfIrCalibration0[5];
-		uint8_t RfIrCaibrationl1[5];
-		uint8_t InterruptControl[8];
-		uint8_t FastReadRegisterControl[7];
-		uint8_t Preamble[5];
-		uint8_t Sync[8];
-		uint8_t Packet0[14];
-		uint8_t Packet1[11];
-		uint8_t Modem20[14];
-		uint8_t Modem21[15];
-		uint8_t Modem22[13];
-		uint8_t Modem23[9];
-		uint8_t Modem24[12];
-		uint8_t Modem25[5];
-		uint8_t Modem26[5];
-		uint8_t Modem27[5];
-		uint8_t ModemFlt20[16];
-		uint8_t ModemFlt21[16];
-		uint8_t ModemFlt23[15];
-		uint8_t Synth[10];
-		uint8_t FrequencyControl1[8];
-	};
-
 	struct PartInfoStruct
 	{
 		uint16_t PartId = 0;
@@ -348,45 +297,127 @@ namespace Si446x
 		}
 	};
 
-	struct RadioEventsStruct
+	struct PacketHandlerInterrupts
 	{
-		bool RxStart = false;
-		bool RxReady = false;
-		bool RxFail = false;
-		bool TxDone = false;
-		bool VccWarning = false;
-		bool CalibrationPending = false;
-		bool Error = false;
-
-		void SetFrom(const uint8_t source[(uint8_t)GET_INT_STATUS_REPLY::GET_INT_STATUS_REPLY_SIZE], const bool merge = true)
+		static constexpr bool RxFifoAlmostFull(const uint8_t stateCode)
 		{
-			if (merge)
-			{
-				RxStart |= source[(uint8_t)GET_INT_STATUS_REPLY::MODEM_PEND] & (uint8_t)MODEM_PEND::SYNC_DETECT_PEND;
-				RxReady |= source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::PACKET_RX_PEND;
-				RxFail |= source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::CRC_ERROR_PEND;
-				TxDone |= source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::PACKET_SENT_PEND;
-				VccWarning |= source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::LOW_BATT_PEND;
-				CalibrationPending |= source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::CAL_PEND;
-				Error |= source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & ((uint8_t)CHIP_PEND::CMD_ERROR_PEND | (uint8_t)CHIP_PEND::FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND);
-			}
-			else
-			{
-				RxStart = source[(uint8_t)GET_INT_STATUS_REPLY::MODEM_PEND] & (uint8_t)MODEM_PEND::SYNC_DETECT_PEND;
-				RxReady = source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::PACKET_RX_PEND;
-				RxFail = source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::CRC_ERROR_PEND;
-				TxDone = source[(uint8_t)GET_INT_STATUS_REPLY::PH_PEND] & (uint8_t)PH_PEND::PACKET_SENT_PEND;
-				VccWarning = source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::LOW_BATT_PEND;
-				CalibrationPending = source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & (uint8_t)CHIP_PEND::CAL_PEND;
-				Error = source[(uint8_t)GET_INT_STATUS_REPLY::CHIP_PEND] & ((uint8_t)CHIP_PEND::CMD_ERROR_PEND | (uint8_t)CHIP_PEND::FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND);
-			}
+			return stateCode & (uint8_t)PH_STATUS::RX_FIFO_ALMOST_FULL;
+		}
 
-			// Rx Start will be set regardless of interrupt configuration.
-			if (RxReady && RxStart)
-			{
-				RxStart = false;
-			}
+		static constexpr bool TxFifoAlmostEmpty(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)PH_STATUS::TX_FIFO_ALMOST_EMPTY;
+		}
+
+		static constexpr bool CrcError(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)PH_STATUS::CRC_ERROR;
+		}
+
+		static constexpr bool PacketReceived(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)PH_STATUS::PACKET_RX;
+		}
+
+		static constexpr bool PacketSent(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)PH_STATUS::PACKET_SENT;
+		}
+
+		static constexpr bool FilterMiss(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)PH_STATUS::FILTER_MISS;
+		}
+
+		static constexpr bool FilterMatch(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)PH_STATUS::FILTER_MATCH;
 		}
 	};
+
+	struct ModemInterrupts
+	{
+		static constexpr bool SyncDetected(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)MODEM_PEND::SYNC_DETECT_PEND;
+		}
+
+		static constexpr bool InvalidPreamble(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)MODEM_PEND::INVALID_PREAMBLE_PEND;
+		}
+
+		static constexpr bool RssiUpdated(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)MODEM_PEND::RSSI_PEND;
+		}
+
+		static constexpr bool RssiJump(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)MODEM_PEND::RSSI_JUMP_PEND;
+		}
+
+		static constexpr bool InvalidSync(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)MODEM_PEND::INVALID_SYNC_PEND;
+		}
+	};
+
+	struct ChipInterrupts
+	{
+		static constexpr bool WakeUpTimer(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)CHIP_PEND::WUT_PEND;
+		}
+
+		static constexpr bool LowBattery(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)CHIP_PEND::LOW_BATT_PEND;
+		}
+
+		static constexpr bool ChipReady(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)CHIP_PEND::CHIP_READY_PEND;
+		}
+
+		static constexpr bool CommandError(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)CHIP_PEND::CMD_ERROR_PEND;
+		}
+
+		static constexpr bool StateChange(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)CHIP_PEND::STATE_CHANGE_PEND;
+		}
+
+		static constexpr bool FifoUnderOverFlowError(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)CHIP_PEND::FIFO_UNDERFLOW_OVERFLOW_ERROR_PEND;
+		}
+
+		static constexpr bool CalibrationPending(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)CHIP_PEND::CAL_PEND;
+		}
+	};
+
+	enum class RadioErrorCodeEnum : uint16_t
+	{
+		InterruptWhileTx = 1 << 0,
+		InterruptWhileRx = 1 << 1,
+		InterruptWhileHop = 1 << 2,
+		InterruptRxFailed = 1 << 3,
+		InterruptTxFailed = 1 << 4,
+		RxWhileTx = 1 << 5,
+		TxTimeout = 1 << 6,
+		RxReadError = 1 << 7,
+		TxRestoreError = 1 << 8,
+		RxRestoreError = 1 << 9
+	};
+
+	static constexpr int16_t RssiToDbM(const uint8_t rssi)
+	{
+		return (((int16_t)(rssi / 2)) - 134);
+	}
 };
 #endif

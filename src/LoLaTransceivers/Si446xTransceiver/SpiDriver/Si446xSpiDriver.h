@@ -3,18 +3,12 @@
 #ifndef _SI446X_SPI_DRIVER_h
 #define _SI446X_SPI_DRIVER_h
 
-#include "Si446x.h"
 
 #include <SPI.h>
-
-using namespace Si446x;
+#include "Si446x.h"
 
 template<const uint8_t pinCS,
-	const uint8_t pinSDN,
-	const uint8_t pinCLK = UINT8_MAX,
-	const uint8_t pinMISO = UINT8_MAX,
-	const uint8_t pinMOSI = UINT8_MAX,
-	const uint8_t spiChannel = 0>
+	const uint8_t pinSDN>
 class Si446xSpiDriver
 {
 private:
@@ -31,87 +25,60 @@ private:
 
 	const SPISettings Settings;
 
+	const uint8_t PacketHandlerInterruptFlags;
+	const uint8_t ModemInterruptFlags;
+	const uint8_t ChipInterruptFlags;
+
 
 public:
-	Si446xSpiDriver()
-#if defined(ARDUINO_ARCH_ESP32)
-		: SpiInstance(GetSpiHost())
-#elif defined(ARDUINO_ARCH_STM32F1)
-		: SpiInstance(spiChannel)
-#else
-		: SpiInstance()
-#endif
-		, Settings(SPI_CLOCK_SPEED, MSBFIRST, SPI_MODE)
-	{}
+	Si446xSpiDriver(SPIClass& spiInstance,
+		const uint8_t packetHandlerInterruptFlags = (uint8_t)Si446x::INT_CTL_PH::PACKET_SENT_EN | (uint8_t)Si446x::INT_CTL_PH::PACKET_RX_EN,
+		const uint8_t modemInterruptFlags = 0,
+		const uint8_t chipInterruptFlags = 0)
+		: SpiInstance(spiInstance)
+		, Settings(Si446x::SPI_CLOCK_SPEED, Si446x::SPI_ORDER, Si446x::SPI_MODE)
+		, PacketHandlerInterruptFlags(packetHandlerInterruptFlags)
+		, ModemInterruptFlags(modemInterruptFlags)
+		, ChipInterruptFlags(chipInterruptFlags)
+	{
+	}
 
 public:
 	void Stop()
 	{
-		SpiInstance.end();
-
 		// Disable IO pins.
-		pinMode(pinSDN, INPUT);
+		pinMode(pinSDN, OUTPUT);
+		pinMode(pinCS, OUTPUT);
 		CsOff();
-		pinMode(pinCS, INPUT);
-		digitalWrite(pinCS, HIGH);
+		digitalWrite(pinSDN, LOW);
 	}
 
-	const bool Start(const uint8_t* configuration, const size_t configurationSize)
+	const bool Start(const uint8_t* configuration, const size_t configurationSize, const uint8_t* patch = nullptr, const size_t patchSize = 0)
 	{
 		// Setup IO pins.
-		pinMode(pinSDN, INPUT);
-		CsOff();
+		pinMode(pinSDN, OUTPUT);
 		pinMode(pinCS, OUTPUT);
-		digitalWrite(pinCS, HIGH);
+		digitalWrite(pinSDN, LOW);
+		CsOff();
 
-		Reset();
+		// Reset the RF chip according to AN633.
+		digitalWrite(pinSDN, HIGH);
+		delayMicroseconds(15);
+		digitalWrite(pinSDN, LOW);
+		delay(15);
 
-#if defined(ARDUINO_ARCH_ESP32)
-		if (pinCS != UINT8_MAX
-			&& pinCLK != UINT8_MAX
-			&& pinMOSI != UINT8_MAX
-			&& pinMISO != UINT8_MAX)
+		// Push ROM Patch before Power on command.
+		if (patch != nullptr
+			&& patchSize > 0)
 		{
-			SpiInstance.begin((int8_t)pinCLK, (int8_t)pinMISO, (int8_t)pinMOSI, (int8_t)pinCS);
-		}
-		else if (pinCS != UINT8_MAX && pinCLK != UINT8_MAX)
-		{
-			SpiInstance.begin((int8_t)pinCLK, (int8_t)-1, (int8_t)-1, (int8_t)pinCS);
-		}
-		else if (pinCS != UINT8_MAX)
-		{
-			SpiInstance.begin((int8_t)-1, (int8_t)-1, (int8_t)-1, (int8_t)pinCS);
-		}
-#else
-		SpiInstance.begin();
-#endif
-
-		PartInfoStruct partInfo{};
-		if (!GetPartInfo(partInfo, 100000))
-		{
-			return false;
-		}
-
-		switch (partInfo.PartId)
-		{
-		case (uint16_t)Si446x::PART_NUMBER::SI4463:
-			if (partInfo.DeviceId != (uint16_t)Si446x::DEVICE_ID::SI4463)
-			{
+			CsOn();
+			SpiInstance.transfer((void*)patch, patchSize);
+			CsOff();
 #if defined(DEBUG_LOLA)
-				Serial.print(F("DeviceId: "));
-				Serial.println(partInfo.DeviceId);
+			Serial.print(F("Patch Applied ("));
+			Serial.print(patchSize);
+			Serial.println(F(" bytes)"));
 #endif
-				return false;
-			}
-			break;
-		default:
-#if defined(DEBUG_LOLA)
-			Serial.print(F("Si446x Unknown Part Number: "));
-			Serial.println(partInfo.PartId);
-			Serial.print(F("DeviceId: "));
-			Serial.println(partInfo.DeviceId);
-#endif
-			return false;
 		}
 
 		if (!ApplyConfiguration(configuration, configurationSize, 1000000))
@@ -119,27 +86,84 @@ public:
 			return false;
 		}
 
-		if (!SetupCallbacks(false, 10000))
+		// Wait for CTS and read part info.
+		Si446x::PartInfoStruct partInfo{};
+		if (!GetPartInfo(partInfo, 200000))
 		{
 			return false;
 		}
 
-		if (!ClearRadioEvents(10000))
+		switch (partInfo.PartId)
+		{
+		case (uint16_t)Si446x::PART_NUMBER::SI4463:
+			if (partInfo.DeviceId == (uint8_t)Si446x::DEVICE_ID::SI4463
+				&& partInfo.RomId == (uint8_t)Si446x::ROM_ID::SI4463)
+			{
+#if defined(DEBUG_LOLA)
+				Serial.print(F("PartId: "));
+				Serial.println(partInfo.PartId);
+				Serial.print(F("DeviceId: "));
+				Serial.println(partInfo.DeviceId);
+				Serial.print(F("RomId: "));
+				Serial.println(partInfo.RomId);
+				Serial.print(F("ChipRevision: "));
+				Serial.println(partInfo.ChipRevision);
+#endif
+				break;
+			}
+			else
+			{
+#if defined(DEBUG_LOLA)
+				Serial.print(F("Device mismatch "));
+				Serial.print(F("PartId: "));
+				Serial.println(partInfo.PartId);
+				Serial.print(F("DeviceId: "));
+				Serial.println(partInfo.DeviceId);
+				Serial.print(F("RomId: "));
+				Serial.println(partInfo.RomId);
+#endif
+				return false;
+			}
+			break;
+		default:
+#if defined(DEBUG_LOLA)
+			Serial.print(F("Device mismatch "));
+			Serial.print(F("PartId: "));
+			Serial.println(partInfo.PartId);
+			Serial.print(F("DeviceId: "));
+			Serial.println(partInfo.DeviceId);
+			Serial.print(F("RomId: "));
+			Serial.println(partInfo.RomId);
+#endif
+			return false;
+		}
+
+		if (!SetupCallbacks(2000))
 		{
 			return false;
 		}
 
-		if (!ClearFifo(FIFO_INFO_PROPERY::CLEAR_RX_TX, 2000))
+		if (!ClearRxTxFifo(2000))
 		{
 			return false;
 		}
 
-		if (!SetRadioState(RadioStateEnum::SLEEP, 10000))
+		if (!ClearInterrupts(2000))
 		{
 			return false;
 		}
 
-		if (!SpinWaitForResponse(10000))
+		static constexpr Si446x::RadioStateEnum startState = Si446x::RadioStateEnum::READY;
+
+		if (!SetRadioState(startState, 10000))
+		{
+			return false;
+		}
+
+		delay(1);
+		Si446x::RadioStateEnum checkState{};
+		if (GetRadioState(checkState, 10000)
+			&& startState != checkState)
 		{
 			return false;
 		}
@@ -148,182 +172,91 @@ public:
 	}
 
 public:
-	const bool ClearRxFifo(const uint32_t timeoutMicros = 500)
+	const bool ClearRxFifo(const uint32_t timeoutMicros = 0)
 	{
-		if (!SpinWaitForResponse(timeoutMicros))
-		{
-			return false;
-		}
-
-		return ClearFifo(FIFO_INFO_PROPERY::CLEAR_RX);
+		return ClearFifo(Si446x::FIFO_INFO_PROPERY::CLEAR_RX, timeoutMicros);
 	}
 
 	const bool ClearTxFifo(const uint32_t timeoutMicros)
 	{
-		return ClearFifo(FIFO_INFO_PROPERY::CLEAR_TX, timeoutMicros);
+		return ClearFifo(Si446x::FIFO_INFO_PROPERY::CLEAR_TX, timeoutMicros);
+	}
+
+	const bool ClearRxTxFifo(const uint32_t timeoutMicros)
+	{
+		return ClearFifo(Si446x::FIFO_INFO_PROPERY::CLEAR_RX_TX, timeoutMicros);
 	}
 
 	/// <summary>
 	/// </summary>
-	/// <param name="txPower">[0;127]</param>
+	/// <param name="txPower">[0;SI4463_TRANSMIT_POWER_MAX]</param>
 	/// <param name="timeoutMicros"></param>
 	/// <returns>True on success.</returns>
-	const bool SetTxPower(const uint8_t txPower, const uint32_t timeoutMicros = 500)
+	const bool SetTxPower(const uint8_t txPower, const uint32_t timeoutMicros = 0)
 	{
-		return SetProperty(Property::PA_PWR_LVL, (uint8_t)(txPower & 0x7F), timeoutMicros);
+		return SetProperty(Si446x::Property::PA_PWR_LVL, (uint8_t)(txPower & Si446x::TRANSMIT_POWER_MAX), timeoutMicros);
 	}
 
-	const bool SetPacketSize(const uint8_t packetSize, const uint32_t timeoutMicros = 500)
+	const bool SetPacketSize(const uint8_t packetSize, const uint32_t timeoutMicros = 0)
 	{
-		return SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
+		return SetProperty(Si446x::Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
 	}
 
-	const bool SetPacketSizeFull(const uint8_t packetSize, const uint32_t timeoutMicros = 500)
+	const bool SetPacketSizeFull(const uint8_t packetSize, const uint32_t timeoutMicros = 0)
 	{
-		return SetProperty(Property::PKT_FIELD_2_LENGTH_12_8, (uint8_t)0, timeoutMicros)
-			&& SetProperty(Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
+		return SetProperty(Si446x::Property::PKT_FIELD_2_LENGTH_12_8, (uint8_t)0, timeoutMicros)
+			&& SetProperty(Si446x::Property::PKT_FIELD_2_LENGTH_7_0, (uint8_t)packetSize, timeoutMicros);
 	}
 
-	const bool SetupCallbacks(const bool useDebugInterrupts = false, const uint32_t timeoutMicros = 10000)
+	const bool SetupCallbacks(const uint32_t timeoutMicros = 0)
 	{
-		if (useDebugInterrupts)
+		if (!SetProperty(Si446x::Property::INT_CTL_PH_ENABLE, PacketHandlerInterruptFlags, timeoutMicros))
 		{
-			if (!SetProperty(Property::INT_CTL_PH_ENABLE, PH_FLAG_DEBUG, timeoutMicros))
-			{
-				return false;
-			}
-
-			if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, MODEM_FLAG_DEBUG, timeoutMicros))
-			{
-				return false;
-			}
-
-			if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, CHIP_FLAG_DEBUG, timeoutMicros))
-			{
-				return false;
-			}
+			return false;
 		}
-		else
+
+		if (!SetProperty(Si446x::Property::INT_CTL_MODEM_ENABLE, ModemInterruptFlags, timeoutMicros))
 		{
-			if (!SetProperty(Property::INT_CTL_PH_ENABLE, PH_FLAG, timeoutMicros))
-			{
-				return false;
-			}
+			return false;
+		}
 
-			if (!SetProperty(Property::INT_CTL_MODEM_ENABLE, MODEM_FLAG, timeoutMicros))
-			{
-				return false;
-			}
-
-			if (!SetProperty(Property::INT_CTL_CHIP_ENABLE, CHIP_FLAG, timeoutMicros))
-			{
-				return false;
-			}
+		if (!SetProperty(Si446x::Property::INT_CTL_CHIP_ENABLE, ChipInterruptFlags, timeoutMicros))
+		{
+			return false;
 		}
 
 		return true;
 	}
 
 public:
-	const bool SetRadioState(const RadioStateEnum newState, const uint32_t timeoutMicros = 10000)
+	const bool SetRadioState(const Si446x::RadioStateEnum newState, const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::CHANGE_STATE;
+		Message[0] = (uint8_t)Si446x::Command::CHANGE_STATE;
 		Message[1] = (const uint8_t)newState;
 
 		return SendRequest(Message, 2, timeoutMicros);
 	}
 
-	const RadioStateEnum GetRadioState(const uint32_t timeoutMicros = 500)
+	const bool GetRadioState(Si446x::RadioStateEnum& radioState, const uint32_t timeoutMicros = 0)
 	{
-		if (!SendRequest(Command::REQUEST_DEVICE_STATE, timeoutMicros))
+		if (!SendRequest(Si446x::Command::REQUEST_DEVICE_STATE, timeoutMicros))
 		{
-			return RadioStateEnum::NO_CHANGE;
+			return false;
 		}
 
 		if (!SpinWaitForResponse(Message, 1, timeoutMicros))
 		{
-			return RadioStateEnum::NO_CHANGE;
-		}
-
-		return (RadioStateEnum)Message[0];
-	}
-
-	const RadioStateEnum GetRadioStateFast(const uint32_t timeoutMicros = 50)
-	{
-		return (RadioStateEnum)GetFrr((uint8_t)Command::FRR_B_READ);
-	}
-
-	const uint8_t GetRssiLatchFast()
-	{
-		return GetFrr((uint8_t)Command::FRR_A_READ);
-	}
-
-	const bool TryPrepareGetRadioEvents()
-	{
-		if (GetResponse())
-		{
-			Message[0] = (uint8_t)Command::GET_INT_STATUS;
-			Message[1] = 0;
-			Message[2] = 0;
-			Message[3] = 0;
-
-			CsOn();
-			SpiInstance.transfer(Message, 4);
-			CsOff();
-
-			return true;
-		}
-		return false;
-	}
-
-	const bool TryGetRadioEvents(RadioEventsStruct& radioEvents)
-	{
-		if (GetResponse(Message, 8))
-		{
-			radioEvents.SetFrom(Message, true);
-
-			return true;
-		}
-
-		return false;
-	}
-
-	/// <summary>
-	/// Read pending interrupts.
-	/// Reading interrupts will also clear them.
-	/// Tipically takes ~200 us of wait time after an interrupt has occurred.
-	/// </summary>
-	/// <param name="radioEvents"></param>
-	/// <returns>True on success.</returns>
-	const bool GetRadioEvents(RadioEventsStruct& radioEvents, const uint32_t timeoutMicros = 1000)
-	{
-		Message[0] = (uint8_t)Command::GET_INT_STATUS;
-		Message[1] = 0;
-		Message[2] = 0;
-		Message[3] = 0;
-
-		if (!SpinWaitForResponse(timeoutMicros))
-		{
 			return false;
 		}
 
-		CsOn();
-		SpiInstance.transfer(Message, 4);
-		CsOff();
-
-		if (!SpinWaitForResponse(Message, 8, timeoutMicros))
-		{
-			return false;
-		}
-
-		radioEvents.SetFrom(Message, false);
+		radioState = (Si446x::RadioStateEnum)Message[0];
 
 		return true;
 	}
 
-	const bool ClearRadioEvents(const uint32_t timeoutMicros = 1000)
+	const bool ClearInterrupts(const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::GET_INT_STATUS;
+		Message[0] = (uint8_t)Si446x::Command::GET_INT_STATUS;
 		Message[1] = 0;
 		Message[2] = 0;
 		Message[3] = 0;
@@ -331,16 +264,12 @@ public:
 		if (!SpinWaitForResponse(timeoutMicros))
 		{
 			return false;
+
 		}
 
 		CsOn();
 		SpiInstance.transfer(Message, 4);
 		CsOff();
-
-		if (!SpinWaitForResponse(Message, 8, timeoutMicros))
-		{
-			return false;
-		}
 
 		return true;
 	}
@@ -351,72 +280,87 @@ public:
 	/// <param name="channel"></param>
 	/// <param name="timeoutMicros"></param>
 	/// <returns></returns>
-	const bool RadioStartRx(const uint8_t channel, const uint32_t timeoutMicros = 500)
+	const bool RadioStartRx(const uint8_t channel, const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::START_RX;
+		Message[0] = (uint8_t)Si446x::Command::START_RX;
 		Message[1] = channel;
 		Message[2] = 0;
 		Message[3] = 0;
 		Message[4] = 0;
-		Message[5] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXTIMEOUT_STATE
-		Message[6] = (uint8_t)RadioStateEnum::READY; // RXVALID_STATE
-		Message[7] = (uint8_t)RadioStateEnum::NO_CHANGE; // RXINVALID_STATE
+		Message[5] = (uint8_t)Si446x::RadioStateEnum::RX; // RXTIMEOUT_STATE
+		Message[6] = (uint8_t)Si446x::RadioStateEnum::READY; // RXVALID_STATE
+		Message[7] = (uint8_t)Si446x::RadioStateEnum::RX; // RXINVALID_STATE
 
 		return SendRequest(Message, 8, timeoutMicros);
 	}
 
-	/// <summary>
-	///  ClearTxFifo is not needed, packet handler's FIFO just keeps rolling.
-	/// </summary>
-	/// <param name="data"></param>
-	/// <param name="size"></param>
-	/// <param name="channel"></param>
-	/// <param name="timeoutMicros"></param>
-	/// <returns></returns>
-	const bool RadioStartTx(const uint8_t* data, const uint8_t size, const uint8_t channel)
+	const bool RadioStartTx(const uint8_t channel, const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::START_TX;
+		Message[0] = (uint8_t)Si446x::Command::START_TX;
 		Message[1] = channel;
-		Message[2] = (uint8_t)RadioStateEnum::READY << 4;
+		Message[2] = (uint8_t)Si446x::RadioStateEnum::TX_TUNE << 4; // TXCOMPLETE_STATE
 		Message[3] = 0;
 		Message[4] = 0;
+		Message[5] = 0;
+		Message[6] = 0;
+
+		return SendRequest(Message, 7, timeoutMicros);
+	}
+
+	const bool RadioTxWrite(const uint8_t* data, const uint8_t size, const uint32_t timeoutMicros = 0)
+	{
+		if (!SpinWaitForResponse(timeoutMicros))
+		{
+			return false;
+		}
 
 		CsOn();
-		SpiInstance.transfer((uint8_t)Command::WRITE_TX_FIFO);
+		SpiInstance.transfer((uint8_t)Si446x::Command::WRITE_TX_FIFO);
 		SpiInstance.transfer((uint8_t)size);
 		SpiInstance.transfer((void*)data, (size_t)size);
 		CsOff();
 
-		return SendRequest(Message, 5, 0);
+		return true;
 	}
 
-	const bool GetRxFifoCount(uint8_t& fifoCount, const uint32_t timeoutMicros = 500)
+	const bool GetRxFifoCount(uint8_t& fifoCount, const uint32_t timeoutMicros = 0)
 	{
+		if (!SpinWaitForResponse(timeoutMicros))
+		{
+			fifoCount = 0;
+			return false;
+		}
+
 		CsOn();
-		SpiInstance.transfer((uint8_t)Command::READ_RX_FIFO);
+		SpiInstance.transfer((uint8_t)Si446x::Command::READ_RX_FIFO);
 		fifoCount = SpiInstance.transfer(0xFF);
 		CsOff();
 
 		return true;
 	}
 
-	const bool GetRxFifo(uint8_t* target, const uint8_t size)
+	const bool GetRxFifo(uint8_t* target, const uint8_t size, const uint32_t timeoutMicros = 0)
 	{
-		CsOn();
-		SpiInstance.transfer((uint8_t)Command::READ_RX_FIFO);
-		for (uint8_t i = 0; i < size; i++)
+		if (SpinWaitForResponse(timeoutMicros))
 		{
-			target[i] = SpiInstance.transfer(0xFF);
-		}
-		CsOff();
+			CsOn();
+			SpiInstance.transfer((uint8_t)Si446x::Command::READ_RX_FIFO);
+			for (uint8_t i = 0; i < size; i++)
+			{
+				target[i] = SpiInstance.transfer(0xFF);
+			}
+			CsOff();
 
-		return true;
+			return true;
+		}
+
+		return false;
 	}
 
 	const bool GetResponse()
 	{
 		CsOn();
-		SpiInstance.transfer((uint8_t)Command::READ_CMD_BUFF);
+		SpiInstance.transfer((uint8_t)Si446x::Command::READ_CMD_BUFF);
 		const bool cts = SpiInstance.transfer(0xFF) == 0xFF;
 		CsOff();
 
@@ -428,7 +372,7 @@ public:
 		bool cts = 0;
 
 		CsOn();
-		SpiInstance.transfer((uint8_t)Command::READ_CMD_BUFF);
+		SpiInstance.transfer((uint8_t)Si446x::Command::READ_CMD_BUFF);
 		cts = SpiInstance.transfer(0xFF) == 0xFF;
 		if (cts)
 		{
@@ -442,68 +386,80 @@ public:
 		return cts;
 	}
 
-	const bool SpinWaitForResponse(const uint32_t timeoutMicros = 500)
+	const bool SpinWaitForResponse(const uint32_t timeoutMicros = 0)
 	{
-		const uint32_t start = micros();
-
-		while (!GetResponse())
+		if (timeoutMicros > 0)
 		{
-			if ((micros() - start) > timeoutMicros)
+			const uint32_t start = micros();
+			while (!GetResponse())
 			{
-				return false;
+				if ((micros() - start) > timeoutMicros)
+				{
+					return false;
+				}
+				else
+				{
+					delayMicroseconds(5);
+				}
 			}
-			else
-			{
-				delayMicroseconds(1);
-			}
-		}
 
-		return true;
+			return true;
+		}
+		else
+		{
+			return GetResponse();
+		}
 	}
 
-	const bool SpinWaitForResponse(uint8_t* target, const uint8_t size, const uint32_t timeoutMicros = 500)
+	const bool SpinWaitForResponse(uint8_t* target, const uint8_t size, const uint32_t timeoutMicros = 0)
 	{
-		const uint32_t start = micros();
-
-		while (!GetResponse(target, size))
+		if (timeoutMicros > 0)
 		{
-			if ((micros() - start) > timeoutMicros)
+			const uint32_t start = micros();
+			while (!GetResponse(target, size))
 			{
-				return false;
+				if ((micros() - start) > timeoutMicros)
+				{
+					return false;
+				}
+				else
+				{
+					delayMicroseconds(5);
+				}
 			}
-			else
-			{
-				delayMicroseconds(1);
-			}
-		}
 
-		return true;
+			return true;
+		}
+		else
+		{
+			return GetResponse(target, size);
+		}
 	}
 
-private:
-	const uint8_t GetFrr(const uint8_t reg)
+	const uint8_t GetFrr(const uint8_t index)
 	{
 		uint_fast8_t frr = 0;
 
 		CsOn();
-		SpiInstance.transfer(reg);
+		SpiInstance.transfer(index);
 		frr = SpiInstance.transfer(0xFF);
 		CsOff();
 
 		return frr;
 	}
 
-	const bool ClearFifo(const FIFO_INFO_PROPERY fifoCommand, const uint32_t timeoutMicros = 500)
+private:
+	const bool ClearFifo(const Si446x::FIFO_INFO_PROPERY fifoCommand, const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::FIFO_INFO;
+		Message[0] = (uint8_t)Si446x::Command::FIFO_INFO;
 		Message[1] = (uint8_t)fifoCommand;
 
 		return SendRequest(Message, 2, timeoutMicros);
 	}
 
-	const bool SetProperty(const Property property, const uint16_t value, const uint32_t timeoutMicros = 500)
+	const bool SetProperty(const Si446x::Property property, const uint16_t value, const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::SET_PROPERTY;
+		Message[0] = (uint8_t)Si446x::Command::SET_PROPERTY;
 		Message[1] = (uint8_t)((uint16_t)property >> 8);
 		Message[2] = 2;
 		Message[3] = (uint8_t)property;
@@ -513,9 +469,9 @@ private:
 		return SendRequest(Message, 6, timeoutMicros);
 	}
 
-	const bool SetProperty(const Property property, const uint8_t value, const uint32_t timeoutMicros = 500)
+	const bool SetProperty(const Si446x::Property property, const uint8_t value, const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::SET_PROPERTY;
+		Message[0] = (uint8_t)Si446x::Command::SET_PROPERTY;
 		Message[1] = (uint8_t)((uint16_t)property >> 8);
 		Message[2] = 1;
 		Message[3] = (uint8_t)property;
@@ -524,9 +480,9 @@ private:
 		return SendRequest(Message, 5, timeoutMicros);
 	}
 
-	const bool GetProperty(const Property property, const uint32_t timeoutMicros = 500)
+	const bool GetProperty(const Si446x::Property property, const uint32_t timeoutMicros = 0)
 	{
-		Message[0] = (uint8_t)Command::GET_PROPERTY;
+		Message[0] = (uint8_t)Si446x::Command::GET_PROPERTY;
 		Message[1] = (uint8_t)((uint16_t)property >> 8);
 		Message[2] = 2;
 		Message[3] = (uint8_t)property;
@@ -539,9 +495,9 @@ private:
 		return SpinWaitForResponse(Message, 2, timeoutMicros);
 	}
 
-	const bool GetPartInfo(PartInfoStruct& partInfo, const uint32_t timeoutMicros)
+	const bool GetPartInfo(Si446x::PartInfoStruct& partInfo, const uint32_t timeoutMicros)
 	{
-		if (!SendRequest(Command::PART_INFO, timeoutMicros))
+		if (!SendRequest(Si446x::Command::PART_INFO, timeoutMicros))
 		{
 			return false;
 		}
@@ -556,9 +512,9 @@ private:
 		return true;
 	}
 
-	const bool GetFunctionInfo(FunctionInfoStruct& functionInfo, const uint32_t timeoutMicros)
+	const bool GetFunctionInfo(Si446x::FunctionInfoStruct& functionInfo, const uint32_t timeoutMicros)
 	{
-		if (!SendRequest(Command::FUNC_INFO))
+		if (!SendRequest(Si446x::Command::FUNC_INFO))
 		{
 			return false;
 		}
@@ -606,7 +562,7 @@ private:
 		return success;
 	}
 
-	const bool SendRequest(const Command requestCode, const uint8_t* source, const uint8_t size, const uint32_t timeoutMicros = 500)
+	const bool SendRequest(const Si446x::Command requestCode, const uint8_t* source, const uint8_t size, const uint32_t timeoutMicros = 500)
 	{
 		if (SpinWaitForResponse(timeoutMicros))
 		{
@@ -624,7 +580,7 @@ private:
 		return false;
 	}
 
-	const bool SendRequest(const Command requestCode, const uint32_t timeoutMicros = 500)
+	const bool SendRequest(const Si446x::Command requestCode, const uint32_t timeoutMicros = 500)
 	{
 		if (SpinWaitForResponse(timeoutMicros))
 		{
@@ -662,35 +618,5 @@ private:
 		SpiInstance.endTransaction();
 		digitalWrite(pinCS, HIGH);
 	}
-
-	/// <summary>
-	/// Reset the RF chip.
-	/// </summary>
-	void Reset()
-	{
-		pinMode(pinSDN, OUTPUT);
-		digitalWrite(pinSDN, HIGH);
-		delay(10);
-		digitalWrite(pinSDN, LOW);
-		delay(10);
-	}
-
-#if defined(ARDUINO_ARCH_ESP32)
-	static constexpr int GetSpiHost()
-	{
-		switch (spiChannel)
-		{
-		case 0:
-			return FSPI;
-			break;
-		case 1:
-			return HSPI;
-			break;
-		default:
-			return -1;
-			break;
-		}
-	}
-#endif
 };
 #endif
