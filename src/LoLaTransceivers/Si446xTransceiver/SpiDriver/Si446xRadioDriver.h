@@ -63,6 +63,7 @@ private:
 
 	volatile uint32_t RxTimestamp = 0;
 	uint32_t TxTimestamp = 0;
+	uint16_t InterruptErrors = 0;
 
 	volatile StateEnum State = StateEnum::Disabled;
 
@@ -92,7 +93,7 @@ public:
 		case StateEnum::HopStartRx:
 			RxTimestamp = micros();
 			State = StateEnum::PendingRxInterrupt;
-			OnRadioError(RadioErrorCodeEnum::InterruptWhileHop);
+			InterruptErrors |= (uint16_t)RadioErrorCodeEnum::InterruptWhileHop;
 			TS::Task::enable();
 			break;
 		case StateEnum::WaitingForRxInterrupt:
@@ -106,11 +107,11 @@ public:
 			break;
 		case StateEnum::PendingRxInterrupt:
 		case StateEnum::RxDelivery:
-			OnRadioError(RadioErrorCodeEnum::InterruptWhileRx);
+			InterruptErrors |= (uint16_t)RadioErrorCodeEnum::InterruptWhileRx;
 			break;
 		case StateEnum::PendingTxInterrupt:
 		case StateEnum::TxReady:
-			OnRadioError(RadioErrorCodeEnum::InterruptWhileTx);
+			InterruptErrors |= (uint16_t)RadioErrorCodeEnum::InterruptWhileTx;
 			break;
 		case StateEnum::Disabled:
 		default:
@@ -290,6 +291,12 @@ protected:
 public:
 	virtual bool Callback() final
 	{
+		if (InterruptErrors != 0)
+		{
+			NotifyInterruptErrors();
+			InterruptErrors = 0;
+		}
+
 		switch (State)
 		{
 		case StateEnum::PendingRxInterrupt:
@@ -406,6 +413,24 @@ private:
 	const RadioStateEnum GetRadioStateFast()
 	{
 		return (RadioStateEnum)SpiDriver.GetFrr((uint8_t)FrrEnum::CurrentState);
+	}
+
+	void NotifyInterruptErrors()
+	{
+		if (InterruptErrors & (uint16_t)RadioErrorCodeEnum::InterruptWhileHop)
+		{
+			OnRadioError(RadioErrorCodeEnum::InterruptWhileHop);
+		}
+
+		if (InterruptErrors & (uint16_t)RadioErrorCodeEnum::InterruptWhileRx)
+		{
+			OnRadioError(RadioErrorCodeEnum::InterruptWhileRx);
+		}
+
+		if (InterruptErrors & (uint16_t)RadioErrorCodeEnum::InterruptWhileTx)
+		{
+			OnRadioError(RadioErrorCodeEnum::InterruptWhileTx);
+		}
 	}
 };
 #endif
