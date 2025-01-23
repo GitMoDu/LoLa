@@ -257,9 +257,9 @@ public:
 	const bool ClearInterrupts(const uint32_t timeoutMicros = 0)
 	{
 		Message[0] = (uint8_t)Si446x::Command::GET_INT_STATUS;
-		Message[1] = 0;
-		Message[2] = 0;
-		Message[3] = 0;
+		Message[1] = 0;// Packet Handler interrupts.
+		Message[2] = 0;// Modem interrupts.
+		Message[3] = 0;// Chip interrupts.
 
 		if (!SpinWaitForResponse(timeoutMicros))
 		{

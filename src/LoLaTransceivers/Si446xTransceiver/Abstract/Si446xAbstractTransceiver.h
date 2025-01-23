@@ -84,7 +84,7 @@ protected:
 
 	virtual void OnRadioError(const RadioErrorCodeEnum radioFailCode) final
 	{
-#if defined(LOLA_DEBUG) || true
+#if defined(LOLA_DEBUG)
 		switch (radioFailCode)
 		{
 		case RadioErrorCodeEnum::InterruptRxFailed:

@@ -17,11 +17,11 @@ namespace Si4463_433_250
 		static constexpr uint8_t TxPowerMin = 5;
 		static constexpr uint8_t TxPowerMax = TxPowerMin;
 
-		static constexpr uint16_t TTA_LONG = 1845;
-		static constexpr uint16_t TTA_SHORT = 1823;
+		static constexpr uint16_t TTA_LONG = 307;
+		static constexpr uint16_t TTA_SHORT = 206;
 
-		static constexpr uint16_t DIA_LONG = 1967;
-		static constexpr uint16_t DIA_SHORT = 1153;
+		static constexpr uint16_t DIA_LONG = 1898 - TTA_LONG;
+		static constexpr uint16_t DIA_SHORT = 1886 - TTA_SHORT;
 
 		static constexpr uint8_t RSSI_MIN = 60;
 		static constexpr uint8_t RSSI_MAX = 160;

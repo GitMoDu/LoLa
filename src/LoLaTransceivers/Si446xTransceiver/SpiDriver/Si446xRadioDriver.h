@@ -25,7 +25,7 @@ class Si446xRadioDriver : protected TS::Task
 {
 private:
 	static constexpr uint8_t PH_FLAG = (uint8_t)INT_CTL_PH::PACKET_SENT_EN | (uint8_t)INT_CTL_PH::PACKET_RX_EN;
-	static constexpr uint8_t MODEM_FLAG = 0;// (uint8_t)INT_CTL_MODEM::SYNC_DETECT_EN;
+	static constexpr uint8_t MODEM_FLAG = 0;
 	static constexpr uint8_t CHIP_FLAG = 0;
 
 	/// <summary>
@@ -36,7 +36,7 @@ private:
 		LatchedRssi = (uint8_t)Command::FRR_A_READ,
 		CurrentState = (uint8_t)Command::FRR_B_READ,
 		PacketHandlerInterrupts = (uint8_t)Command::FRR_C_READ,
-		ModemState = (uint8_t)Command::FRR_D_READ,
+		ModemInterrupts = (uint8_t)Command::FRR_D_READ,
 	};
 
 	enum class StateEnum
@@ -250,7 +250,7 @@ protected:
 			break;
 		}
 
-		static constexpr RadioStateEnum txState = RadioStateEnum::TX_TUNE;
+		static constexpr RadioStateEnum txState = RadioStateEnum::READY;
 
 		if (!SpiDriver.SetRadioState(txState, 100))
 		{
@@ -308,9 +308,9 @@ public:
 			break;
 		case StateEnum::RxDelivery:
 			State = StateEnum::Hop; // Restore to Rx on the same channel by default.
-			if (SpiDriver.GetRxFifoCount(RxSize, 250)
+			if (SpiDriver.GetRxFifoCount(RxSize, 100)
 				&& RxSize > 0 && RxSize <= MaxRxSize
-				&& SpiDriver.GetRxFifo(InBuffer, RxSize, 250))
+				&& SpiDriver.GetRxFifo(InBuffer, RxSize, 100))
 			{
 				OnRxReady(InBuffer, RxTimestamp, RxSize, RxRssi);
 			}
@@ -391,18 +391,18 @@ public:
 		return true;
 	}
 
-/// <summary>
-/// Fast Read Registers.
-/// </summary>
+	/// <summary>
+	/// Fast Read Registers.
+	/// </summary>
 private:
 	const uint8_t GetPacketHandlerInterruptsFast()
 	{
 		return SpiDriver.GetFrr((uint8_t)FrrEnum::PacketHandlerInterrupts);
 	}
 
-	const uint8_t GetModemStateFast()
+	const uint8_t GetModemInterruptsFast()
 	{
-		return SpiDriver.GetFrr((uint8_t)FrrEnum::ModemState);
+		return SpiDriver.GetFrr((uint8_t)FrrEnum::ModemInterrupts);
 	}
 
 	const uint8_t GetRssiLatchFast()
