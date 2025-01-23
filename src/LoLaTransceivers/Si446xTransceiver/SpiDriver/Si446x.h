@@ -342,6 +342,11 @@ namespace Si446x
 			return stateCode & (uint8_t)MODEM_PEND::SYNC_DETECT_PEND;
 		}
 
+		static constexpr bool PreambleDetected(const uint8_t stateCode)
+		{
+			return stateCode & (uint8_t)MODEM_PEND::PREAMBLE_DETECT_PEND;
+		}
+
 		static constexpr bool InvalidPreamble(const uint8_t stateCode)
 		{
 			return stateCode & (uint8_t)MODEM_PEND::INVALID_PREAMBLE_PEND;
