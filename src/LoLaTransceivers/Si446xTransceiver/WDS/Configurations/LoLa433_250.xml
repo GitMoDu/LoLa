@@ -81,7 +81,7 @@
             <Checked>False</Checked>
           </DataItem>
           <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudRssiThreshold">
-            <Value>128</Value>
+            <Value>48</Value>
           </DataItem>
         </pnlRssiControl>
         <grbHighPerformance Type="System.Windows.Forms.GroupBox">
@@ -102,10 +102,7 @@
           <Checked>True</Checked>
         </DataItem>
         <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnablePllAFC">
-          <Checked>True</Checked>
-        </DataItem>
-        <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnableAdaptiveChannelFilterBandwidth">
-          <Checked>True</Checked>
+          <Checked>False</Checked>
         </DataItem>
       </grbRfParameters>
     </tbpRfParameters>
@@ -126,7 +123,7 @@
               <Value>2</Value>
             </DataItem>
             <DataItem Type="System.Windows.Forms.CheckBox" Name="chbResetDataWhiteningAtBeginingOfThePackets">
-              <Checked>True</Checked>
+              <Checked>False</Checked>
             </DataItem>
             <DataItem Type="System.Windows.Forms.CheckBox" Name="chbUseSyncWord">
               <Checked>True</Checked>
@@ -137,8 +134,25 @@
           </tbpGeneralPacketConfig>
           <tbpVariableLengthConfig Type="System.Windows.Forms.TabPage">
             <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnableVariablePacketLength">
-              <Checked>False</Checked>
+              <Checked>True</Checked>
             </DataItem>
+            <grbVariablePacketLen Type="System.Windows.Forms.GroupBox">
+              <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudPacketLengthAdjust">
+                <Value>0</Value>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudVariableFieldNum">
+                <Value>2</Value>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudLengthInField">
+                <Value>1</Value>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbPacketLengthInMsb">
+                <Checked>True</Checked>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbAddLengthToFifo">
+                <Checked>True</Checked>
+              </DataItem>
+            </grbVariablePacketLen>
           </tbpVariableLengthConfig>
           <tbpGeneralCrcConfig Type="System.Windows.Forms.TabPage">
             <grbCrcPolynomial Type="System.Windows.Forms.GroupBox">
@@ -206,16 +220,19 @@
                 </DataItem>
               </grbPreambleType>
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudPreambleTxLength">
-                <Value>8</Value>
+                <Value>6</Value>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbPreambleManchester1111">
+                <Checked>True</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.TrackBar" Name="trbPreambleTimeot">
                 <Value>15</Value>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbPreambleManchesterEncoded">
-                <Checked>False</Checked>
+                <Checked>True</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudPreambleRXThreshold">
-                <Value>20</Value>
+                <Value>15</Value>
               </DataItem>
             </grbPreamble>
           </tbpPreamble>
@@ -229,17 +246,43 @@
               </DataItem>
               <swcSyncWord Type="NewWDS.Applications.App_Common.PacketConfigControl.SyncWordInputControl">
                 <DataItem Type="System.Windows.Forms.MaskedTextBox" Name="mtbSyncWord">
-                  <Text>2D D4</Text>
+                  <Text>2D D2</Text>
                 </DataItem>
               </swcSyncWord>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbSyncWordManchesterEncoded">
-                <Checked>False</Checked>
+                <Checked>True</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbSkipSyncWordTimeout">
                 <Checked>False</Checked>
               </DataItem>
             </grbSyncWord>
           </tbpSyncWord>
+          <tbpField2 Type="System.Windows.Forms.TabPage">
+            <grbField2 Type="System.Windows.Forms.GroupBox">
+              <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField2Length">
+                <Value>32</Value>
+              </DataItem>
+              <haiField2Content Type="NewWDS.Applications.App_Common.PacketConfigControl.HexAsciiInputControl">
+                <DataItem Type="System.Windows.Forms.RadioButton" Name="rdbASCII">
+                  <Checked>False</Checked>
+                </DataItem>
+                <DataItem Type="System.Windows.Forms.RadioButton" Name="rdbHEX">
+                  <Checked>True</Checked>
+                </DataItem>
+                <pnlInput Type="System.Windows.Forms.Panel">
+                  <DataItem Type="System.Windows.Forms.MaskedTextBox" Name="mtbInput">
+                    <Text>C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5</Text>
+                  </DataItem>
+                </pnlInput>
+              </haiField2Content>
+              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2DataWhitening">
+                <Checked>False</Checked>
+              </DataItem>
+              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2ManchesterEncoding">
+                <Checked>True</Checked>
+              </DataItem>
+            </grbField2>
+          </tbpField2>
           <tbpField5 Type="System.Windows.Forms.TabPage">
             <grbField5 Type="System.Windows.Forms.GroupBox">
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField5Length">
@@ -279,29 +322,16 @@
               </DataItem>
             </grbField3>
           </tbpField3>
-          <tbpField2 Type="System.Windows.Forms.TabPage">
-            <grbField2 Type="System.Windows.Forms.GroupBox">
-              <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField2Length">
-                <Value>7</Value>
-              </DataItem>
-              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2DataWhitening">
-                <Checked>True</Checked>
-              </DataItem>
-              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2ManchesterEncoding">
-                <Checked>False</Checked>
-              </DataItem>
-            </grbField2>
-          </tbpField2>
           <tbpField1 Type="System.Windows.Forms.TabPage">
             <grbField1 Type="System.Windows.Forms.GroupBox">
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField1Length">
                 <Value>1</Value>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField1DataWhitening">
-                <Checked>True</Checked>
+                <Checked>False</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField1ManchesterEncoding">
-                <Checked>False</Checked>
+                <Checked>True</Checked>
               </DataItem>
             </grbField1>
           </tbpField1>
