@@ -65,7 +65,7 @@
           <Value>25</Value>
         </DataItem>
         <DataItem Type="System.Windows.Forms.CheckBox" Name="chbManualRxBandwidth">
-          <Checked>True</Checked>
+          <Checked>False</Checked>
         </DataItem>
         <DataItem Type="NewWDS.Applications.App_Common.CustomContols.NumericUpDownExtended" Name="nudBandwidth">
           <Value>70</Value>
@@ -223,19 +223,16 @@
                 </DataItem>
               </grbPreambleType>
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudPreambleTxLength">
-                <Value>6</Value>
-              </DataItem>
-              <DataItem Type="System.Windows.Forms.CheckBox" Name="chbPreambleManchester1111">
-                <Checked>True</Checked>
+                <Value>12</Value>
               </DataItem>
               <DataItem Type="System.Windows.Forms.TrackBar" Name="trbPreambleTimeot">
-                <Value>7</Value>
+                <Value>15</Value>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbPreambleManchesterEncoded">
-                <Checked>True</Checked>
+                <Checked>False</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudPreambleRXThreshold">
-                <Value>10</Value>
+                <Value>20</Value>
               </DataItem>
             </grbPreamble>
           </tbpPreamble>
@@ -253,7 +250,7 @@
                 </DataItem>
               </swcSyncWord>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbSyncWordManchesterEncoded">
-                <Checked>True</Checked>
+                <Checked>False</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbSkipSyncWordTimeout">
                 <Checked>False</Checked>
@@ -269,7 +266,7 @@
                 <Checked>False</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2ManchesterEncoding">
-                <Checked>True</Checked>
+                <Checked>False</Checked>
               </DataItem>
             </grbField2>
           </tbpField2>
@@ -321,7 +318,7 @@
                 <Checked>False</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField1ManchesterEncoding">
-                <Checked>True</Checked>
+                <Checked>False</Checked>
               </DataItem>
             </grbField1>
           </tbpField1>
@@ -344,7 +341,7 @@
         </DataItem>
         <DataItem Type="NewWDS.Applications.App_Common.ByteStatusControl.ByteStatus" Name="bstModemInterruptStatus">
           <Enabled>True</Enabled>
-          <Value>1</Value>
+          <Value>0</Value>
         </DataItem>
       </grbModemInterrupt>
       <grbPacketHandlerInterrupt Type="System.Windows.Forms.GroupBox">
@@ -353,7 +350,7 @@
         </DataItem>
         <DataItem Type="NewWDS.Applications.App_Common.ByteStatusControl.ByteStatus" Name="bstPacketHandlerInterruptStatus">
           <Enabled>True</Enabled>
-          <Value>32</Value>
+          <Value>48</Value>
         </DataItem>
       </grbPacketHandlerInterrupt>
       <grbColorDescrition Type="System.Windows.Forms.GroupBox" />
