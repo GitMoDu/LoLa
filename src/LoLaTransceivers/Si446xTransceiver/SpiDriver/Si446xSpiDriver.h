@@ -264,7 +264,6 @@ public:
 		if (!SpinWaitForResponse(timeoutMicros))
 		{
 			return false;
-
 		}
 
 		CsOn();
