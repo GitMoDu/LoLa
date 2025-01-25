@@ -14,11 +14,8 @@ namespace Si4463_433_250
 
 		static constexpr uint8_t ChannelCount = 68;
 
-		static constexpr uint8_t TxPowerMin = 5;
+		static constexpr uint8_t TxPowerMin = 7;
 		static constexpr uint8_t TxPowerMax = TxPowerMin;
-
-		static constexpr uint16_t TTA_SHORT = 285;
-		static constexpr uint16_t TTA_LONG = 307;
 
 		static constexpr uint16_t TTRX_SHORT = 1206;
 		static constexpr uint16_t TTRX_LONG = 2050;

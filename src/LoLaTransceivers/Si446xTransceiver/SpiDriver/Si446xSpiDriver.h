@@ -297,7 +297,7 @@ public:
 	{
 		Message[0] = (uint8_t)Si446x::Command::START_TX;
 		Message[1] = channel;
-		Message[2] = (uint8_t)Si446x::RadioStateEnum::TX_TUNE << 4; // TXCOMPLETE_STATE
+		Message[2] = (uint8_t)Si446x::RadioStateEnum::READY << 4; // TXCOMPLETE_STATE
 		Message[3] = 0;
 		Message[4] = 0;
 		Message[5] = 0;

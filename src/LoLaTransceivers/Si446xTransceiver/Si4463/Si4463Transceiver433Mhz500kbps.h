@@ -17,9 +17,6 @@ namespace Si4463_433_500
 		static constexpr uint8_t TxPowerMin = 7;
 		static constexpr uint8_t TxPowerMax = TxPowerMin;
 
-		static constexpr uint16_t TTA_SHORT = 285;
-		static constexpr uint16_t TTA_LONG = 307;
-
 		static constexpr uint16_t TTRX_SHORT = 1012;
 		static constexpr uint16_t TTRX_LONG = 1421;
 

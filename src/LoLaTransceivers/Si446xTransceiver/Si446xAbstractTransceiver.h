@@ -36,6 +36,9 @@ private:
 		| (uint32_t)RadioConfig::ChannelCount << 8
 		| ((uint32_t)(RadioConfig::BaseFrequency / 10000000) + (uint32_t)(RadioConfig::BitRate / 10000));
 
+	static constexpr uint8_t CalibrationSamples = 5;
+
+
 private:
 	ILoLaTransceiverListener* Listener = nullptr;
 
@@ -44,6 +47,9 @@ protected:
 	virtual const uint8_t* GetConfigurationArray(size_t& size) { return nullptr; }
 
 private:
+	uint16_t TxDurationBase = 1;
+	uint16_t TxDurationRange = 1;
+
 	/// <summary>
 	/// For debug/display purposes only.
 	/// </summary>
@@ -54,11 +60,6 @@ public:
 		: ILoLaTransceiver()
 		, BaseClass(scheduler, spiInstance)
 	{
-	}
-
-	void SetupInterrupt(void (*onRadioInterrupt)(void))
-	{
-		BaseClass::RadioSetup(onRadioInterrupt);
 	}
 
 	void OnRxInterrupt()
@@ -77,9 +78,9 @@ protected:
 		Listener->OnTx();
 	}
 
-	virtual void OnRxReady(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssiLatch) final
+	virtual void OnRxReady(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssi) final
 	{
-		Listener->OnRx(data, timestamp - GetRxShift(packetSize), packetSize, GetNormalizedRssi(rssiLatch));
+		Listener->OnRx(data, timestamp - GetDurationInAir(packetSize), packetSize, GetNormalizedRssi(rssi));
 	}
 
 	virtual void OnRadioError(const RadioErrorCodeEnum radioFailCode) final
@@ -126,33 +127,23 @@ public:
 	{
 		Listener = listener;
 
-		return Listener != nullptr;
+		return Listener != nullptr && Setup();
 	}
 
 	virtual const bool Start() final
 	{
-		const uint8_t* configuration = nullptr;
-		size_t configurationSize = 0;
-
-		const uint8_t* patch = nullptr;
-		size_t patchSize = 0;
-
-		configuration = GetConfigurationArray(configurationSize);
-		patch = GetPatchArray(patchSize);
-
-		if (Listener == nullptr
-			|| configuration == nullptr
-			|| configurationSize == 0)
+		if (Listener == nullptr)
 		{
 			return false;
 		}
 
-		if (BaseClass::RadioStart(configuration, configurationSize, patch, patchSize))
+		if (!BaseClass::SetTxPower(RadioConfig::TxPowerMax, 1000))
 		{
-			return BaseClass::SetTxPower(RadioConfig::TxPowerMax, 1000);
+			BaseClass::RadioStart();
+			return false;
 		}
 
-		return false;
+		return true;
 	}
 
 	virtual const bool Stop() final
@@ -191,12 +182,21 @@ public:
 
 	virtual const uint16_t GetTimeToAir(const uint8_t packetSize) final
 	{
-		return GetTimeToAirInternal(packetSize);
+		if (packetSize >= LoLaPacketDefinition::MIN_PACKET_SIZE)
+		{
+			return ((uint32_t)TxDurationBase)
+				+ ((((uint32_t)TxDurationRange) * (packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE))
+					/ (LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE - LoLaPacketDefinition::MIN_PACKET_SIZE));
+		}
+		else
+		{
+			return TxDurationBase;
+		}
 	}
 
 	virtual const uint16_t GetDurationInAir(const uint8_t packetSize) final
 	{
-		return GetDurationInAirInternal(packetSize);
+		return (RadioConfig::TTRX_SHORT - TxDurationBase) + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * ((RadioConfig::TTRX_LONG - RadioConfig::TTRX_SHORT) - TxDurationRange)) / (LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE - LoLaPacketDefinition::MIN_PACKET_SIZE));
 	}
 
 	const uint8_t GetChannelCount() final
@@ -207,6 +207,128 @@ public:
 	const uint8_t GetCurrentChannel() final
 	{
 		return CurrentChannel;
+	}
+
+private:
+	const bool Setup()
+	{
+		const uint8_t* configuration = nullptr;
+		size_t configurationSize = 0;
+
+		const uint8_t* patch = nullptr;
+		size_t patchSize = 0;
+
+		configuration = GetConfigurationArray(configurationSize);
+		patch = GetPatchArray(patchSize);
+
+		if (configuration == nullptr
+			|| configurationSize == 0)
+		{
+			return false;
+		}
+
+		if (!BaseClass::RadioSetup(configuration, configurationSize, patch, patchSize))
+		{
+			return false;
+		}
+
+		BaseClass::RadioStart();
+
+		if (!BaseClass::SetTxPower(0, 1000)
+			|| !Calibrate(20000))
+		{
+			return false;
+		}
+
+		if (!BaseClass::RadioSleep(200000))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	const bool Calibrate(const uint32_t timeout)
+	{
+		uint32_t sum = 0;
+
+		sum = 0;
+		for (uint_fast8_t i = 0; i < CalibrationSamples; i++)
+		{
+			const uint32_t now = micros();
+			uint16_t txDuration = 0;
+
+			if (!MeasureTx(txDuration, timeout, LoLaPacketDefinition::MIN_PACKET_SIZE))
+			{
+				return false;
+			}
+
+			sum += txDuration;
+		}
+
+		const uint32_t txShort = sum / CalibrationSamples;
+
+		sum = 0;
+		for (uint_fast8_t i = 0; i < CalibrationSamples; i++)
+		{
+			const uint32_t now = micros();
+			uint16_t txDuration = 0;
+
+			if (!MeasureTx(txDuration, timeout, LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE))
+			{
+				return false;
+			}
+			sum += txDuration;
+		}
+
+		const uint32_t txLong = sum / CalibrationSamples;
+
+
+		if (txShort >= RadioConfig::TTRX_SHORT
+			|| txLong >= RadioConfig::TTRX_LONG
+			|| txLong <= txShort)
+		{
+			return false;
+		}
+
+		TxDurationBase = txShort;
+		TxDurationRange = txLong - txShort;
+
+		return true;
+	}
+
+	const bool MeasureTx(uint16_t& txDuration, const uint32_t timeout, const uint8_t testSize)
+	{
+		uint8_t data[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE]{};
+		uint32_t start = 0;
+		uint32_t end = 0;
+
+		txDuration = 0;
+		start = micros();
+		while (!BaseClass::RadioTxAvailable(timeout))
+		{
+			if (micros() - start > timeout)
+			{
+				return false;
+			}
+			else
+			{
+				BaseClass::Callback();
+			}
+		}
+
+		start = micros();
+		const bool success = Tx(data, testSize, 0);
+		end = micros();
+
+		if (!success)
+		{
+			return false;
+		}
+
+		txDuration = end - start;
+
+		return true;
 	}
 
 private:
@@ -244,21 +366,6 @@ private:
 	static constexpr uint8_t GetRawTxPower(const uint8_t abstractTxPower)
 	{
 		return RadioConfig::TxPowerMin + (uint8_t)(((uint16_t)abstractTxPower * (RadioConfig::TxPowerMax - RadioConfig::TxPowerMin)) / UINT8_MAX);
-	}
-
-	static constexpr uint16_t GetTimeToAirInternal(const uint8_t packetSize)
-	{
-		return RadioConfig::TTA_SHORT + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * (RadioConfig::TTA_LONG - RadioConfig::TTA_SHORT)) / (LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE- LoLaPacketDefinition::MIN_PACKET_SIZE));
-	}
-
-	static constexpr uint16_t GetDurationInAirInternal(const uint8_t packetSize)
-	{
-		return (RadioConfig::TTRX_SHORT - RadioConfig::TTA_SHORT) + ((((uint32_t)(packetSize - LoLaPacketDefinition::MIN_PACKET_SIZE)) * ((RadioConfig::TTRX_LONG - RadioConfig::TTA_LONG) - (RadioConfig::TTRX_SHORT - RadioConfig::TTA_SHORT))) / (LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE - LoLaPacketDefinition::MIN_PACKET_SIZE));
-	}
-
-	static constexpr uint16_t GetRxShift(const uint8_t packetSize)
-	{
-		return GetDurationInAirInternal(packetSize);
 	}
 };
 #endif

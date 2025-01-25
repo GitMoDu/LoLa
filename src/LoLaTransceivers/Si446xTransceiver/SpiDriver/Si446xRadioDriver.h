@@ -74,7 +74,7 @@ private:
 protected:
 	virtual void OnTxDone() {}
 
-	virtual void OnRxReady(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssiLatch) {}
+	virtual void OnRxReady(const uint8_t* data, const uint32_t timestamp, const uint8_t packetSize, const uint8_t rssi) {}
 
 	virtual void OnRadioError(const RadioErrorCodeEnum radioFailCode) {}
 
@@ -83,6 +83,11 @@ public:
 		: TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		, SpiDriver(spiInstance, PH_FLAG, MODEM_FLAG, CHIP_FLAG)
 	{
+	}
+
+	void SetupInterrupt(void (*onRadioInterrupt)(void))
+	{
+		RadioInterrupt = onRadioInterrupt;
 	}
 
 	void OnRadioInterrupt(const uint32_t timestamp)
@@ -120,19 +125,10 @@ public:
 	}
 
 protected:
-	void RadioSetup(void (*onRadioInterrupt)(void))
-	{
-		RadioInterrupt = onRadioInterrupt;
-	}
-
-	const bool SetTxPower(const uint8_t txPower, const uint32_t timeoutMicros = 0)
-	{
-		return SpiDriver.SetTxPower(txPower, timeoutMicros);
-	}
-
-	const bool RadioStart(const uint8_t* configuration, const size_t configurationSize, const uint8_t* patch = nullptr, size_t patchSize = 0)
+	const bool RadioSetup(const uint8_t* configuration, const size_t configurationSize, const uint8_t* patch = nullptr, size_t patchSize = 0)
 	{
 		RadioStop();
+
 		pinMode(pinInterrupt, INPUT_PULLUP);
 
 		if (RadioInterrupt == nullptr
@@ -144,12 +140,20 @@ protected:
 		// Start listening to IRQ.
 		attachInterrupt(digitalPinToInterrupt(pinInterrupt), RadioInterrupt, FALLING);
 
+		return true;
+	}
+
+	const bool SetTxPower(const uint8_t txPower, const uint32_t timeoutMicros = 0)
+	{
+		return SpiDriver.SetTxPower(txPower, timeoutMicros);
+	}
+
+	void RadioStart()
+	{
 		HopChannel = 0;
 		State = StateEnum::Hop;
 
 		TS::Task::enable();
-
-		return true;
 	}
 
 	void RadioStop()
@@ -157,6 +161,11 @@ protected:
 		SpiDriver.Stop();
 		detachInterrupt(digitalPinToInterrupt(pinInterrupt));
 		State = StateEnum::Disabled;
+	}
+
+	const bool RadioSleep(const uint32_t timeoutMicros = 100)
+	{
+		return SpiDriver.SetRadioState(Si446x::RadioStateEnum::SLEEP, timeoutMicros);
 	}
 
 	void RadioRx(const uint8_t channel)
@@ -193,28 +202,33 @@ protected:
 	/// <summary>
 	/// Checks internal state and pings radio over SPI to ensure Tx is possible.
 	/// </summary>
-	/// <returns></returns>
-	const bool RadioTxAvailable(const uint32_t timeoutMicros = 50)
+	/// <returns>True if Tx is possible right now.</returns>
+	const bool RadioTxAvailable(const uint32_t timeoutMicros = 100)
 	{
+		Si446x::RadioStateEnum radioState{};
 		switch (State)
 		{
 		case StateEnum::Hop:
 		case StateEnum::HopStartRx:
 		case StateEnum::WaitingForRxInterrupt:
 		case StateEnum::TxReady:
-			switch (GetRadioStateFast())
+			if (SpiDriver.GetRadioState(radioState, timeoutMicros))
 			{
-			case RadioStateEnum::READY:
-			case RadioStateEnum::READY2:
-			case RadioStateEnum::RX:
-			case RadioStateEnum::SLEEP:
-			case RadioStateEnum::SPI_ACTIVE:
-			case RadioStateEnum::TX_TUNE:
-				return true;
-			case RadioStateEnum::TX:
-			case RadioStateEnum::RX_TUNE:
-			default:
-				break;
+				switch (radioState)
+				{
+				case Si446x::RadioStateEnum::READY:
+				case Si446x::RadioStateEnum::READY2:
+				case Si446x::RadioStateEnum::RX:
+				case Si446x::RadioStateEnum::SLEEP:
+				case Si446x::RadioStateEnum::SPI_ACTIVE:
+					return true;
+					break;
+				case Si446x::RadioStateEnum::RX_TUNE:
+				case Si446x::RadioStateEnum::TX_TUNE:
+				case Si446x::RadioStateEnum::TX:
+				default:
+					break;
+				}
 			}
 			break;
 		case StateEnum::WaitingForTxInterrupt:
@@ -232,8 +246,6 @@ protected:
 	/// </summary>
 	const bool RadioTx(const uint8_t* data, const uint8_t packetSize, const uint8_t channel)
 	{
-		const uint32_t txStart = micros();
-
 		switch (State)
 		{
 		case StateEnum::Hop:
@@ -252,7 +264,7 @@ protected:
 
 		static constexpr RadioStateEnum txState = RadioStateEnum::READY;
 
-		if (!SpiDriver.SetRadioState(txState, 100))
+		if (!SpiDriver.SetRadioState(txState, 50))
 		{
 			return false;
 		}
@@ -260,23 +272,23 @@ protected:
 		HopChannel = channel;
 		State = StateEnum::TxReady;
 
-		if (!SpiDriver.ClearInterrupts(100))
+		if (!SpiDriver.ClearInterrupts(50))
 		{
 			return false;
 		}
 
-		if (!SpiDriver.RadioTxWrite(data, packetSize, 100))
+		if (!SpiDriver.RadioTxWrite(data, packetSize, 50))
 		{
 			return false;
 		}
 
-		if (!SpiDriver.SetPacketSize(packetSize, 100))
+		if (!SpiDriver.SetPacketSize(packetSize, 50))
 		{
 			return false;
 		}
 
 		State = StateEnum::WaitingForTxInterrupt;
-		if (!SpiDriver.RadioStartTx(channel, 100))
+		if (!SpiDriver.RadioStartTx(channel, 50))
 		{
 			State = StateEnum::TxReady;
 			return false;
