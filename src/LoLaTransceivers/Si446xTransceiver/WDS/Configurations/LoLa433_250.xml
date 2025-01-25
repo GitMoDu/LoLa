@@ -17,6 +17,12 @@
         <DataItem Type="System.Windows.Forms.CheckBox" Name="chbUseExternalTCXO">
           <Checked>False</Checked>
         </DataItem>
+        <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudCrystalToleranceTX">
+          <Value>20</Value>
+        </DataItem>
+        <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudCrystalToleranceRX">
+          <Value>20</Value>
+        </DataItem>
         <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudCrystalFrequency">
           <Value>30</Value>
         </DataItem>
@@ -102,7 +108,10 @@
           <Checked>True</Checked>
         </DataItem>
         <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnablePllAFC">
-          <Checked>False</Checked>
+          <Checked>True</Checked>
+        </DataItem>
+        <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnableAdaptiveChannelFilterBandwidth">
+          <Checked>True</Checked>
         </DataItem>
       </grbRfParameters>
     </tbpRfParameters>
@@ -262,19 +271,6 @@
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudField2Length">
                 <Value>32</Value>
               </DataItem>
-              <haiField2Content Type="NewWDS.Applications.App_Common.PacketConfigControl.HexAsciiInputControl">
-                <DataItem Type="System.Windows.Forms.RadioButton" Name="rdbASCII">
-                  <Checked>False</Checked>
-                </DataItem>
-                <DataItem Type="System.Windows.Forms.RadioButton" Name="rdbHEX">
-                  <Checked>True</Checked>
-                </DataItem>
-                <pnlInput Type="System.Windows.Forms.Panel">
-                  <DataItem Type="System.Windows.Forms.MaskedTextBox" Name="mtbInput">
-                    <Text>C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5 C5</Text>
-                  </DataItem>
-                </pnlInput>
-              </haiField2Content>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbField2DataWhitening">
                 <Checked>False</Checked>
               </DataItem>
