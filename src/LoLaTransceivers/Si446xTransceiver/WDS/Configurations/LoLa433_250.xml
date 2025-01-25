@@ -107,12 +107,6 @@
         <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnableIqCalibration">
           <Checked>True</Checked>
         </DataItem>
-        <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnablePllAFC">
-          <Checked>True</Checked>
-        </DataItem>
-        <DataItem Type="System.Windows.Forms.CheckBox" Name="chbEnableAdaptiveChannelFilterBandwidth">
-          <Checked>True</Checked>
-        </DataItem>
       </grbRfParameters>
     </tbpRfParameters>
     <tbpPacketHandler Type="System.Windows.Forms.TabPage">
@@ -219,7 +213,7 @@
             <grbPreamble Type="System.Windows.Forms.GroupBox">
               <grbPreambleType Type="System.Windows.Forms.GroupBox">
                 <DataItem Type="System.Windows.Forms.ComboBox" Name="cbbPreamblePattern">
-                  <SelectedIndex>0</SelectedIndex>
+                  <SelectedIndex>1</SelectedIndex>
                 </DataItem>
                 <DataItem Type="System.Windows.Forms.RadioButton" Name="rdbPreambleType0101">
                   <Checked>False</Checked>
@@ -235,13 +229,13 @@
                 <Checked>True</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.TrackBar" Name="trbPreambleTimeot">
-                <Value>15</Value>
+                <Value>7</Value>
               </DataItem>
               <DataItem Type="System.Windows.Forms.CheckBox" Name="chbPreambleManchesterEncoded">
                 <Checked>True</Checked>
               </DataItem>
               <DataItem Type="System.Windows.Forms.NumericUpDown" Name="nudPreambleRXThreshold">
-                <Value>15</Value>
+                <Value>10</Value>
               </DataItem>
             </grbPreamble>
           </tbpPreamble>
