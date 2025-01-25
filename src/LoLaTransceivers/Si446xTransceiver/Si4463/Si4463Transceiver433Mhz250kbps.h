@@ -1,7 +1,7 @@
 #ifndef _SI4463_TRANSCEIVER_433_250_h
 #define _SI4463_TRANSCEIVER_433_250_h
 
-#include "Abstract/Si446xAbstractTransceiver.h"
+#include "../Si446xAbstractTransceiver.h"
 
 namespace Si4463_433_250
 {
