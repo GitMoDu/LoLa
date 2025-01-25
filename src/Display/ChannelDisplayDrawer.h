@@ -67,7 +67,7 @@ namespace LoLa::Display::ChannelHistory
 		void StepChannel()
 		{
 			Log[LogIndex] = Layout::X() +
-				(((uint16_t)Transceiver.GetCurrentChannel() * (Layout::Width())) / (Transceiver.GetChannelCount() - 1));
+				(((uint16_t)Transceiver.GetCurrentChannel() * (Layout::Width() - 1)) / (Transceiver.GetChannelCount() - 1));
 			LogIndex++;
 			if (LogIndex >= Layout::Height())
 			{
