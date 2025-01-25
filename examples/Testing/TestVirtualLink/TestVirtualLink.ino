@@ -49,7 +49,7 @@
 //#define DOUBLE_SEND_CHANCE 10
 //#define ECO_CHANCE 5
 
-// DROP_LINK_TEST period in ms. Disable for no test link drop.
+// DROP_LINK_TEST period in seconds. Disable for no test link drop.
 //#define SERVER_DROP_LINK_TEST 5
 //#define CLIENT_DROP_LINK_TEST 5
 

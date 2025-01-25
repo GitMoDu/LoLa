@@ -15,7 +15,7 @@
 #define _TASK_SLEEP_ON_IDLE_RUN
 
 // Selected Driver for test.
-#define USE_SI446X_TRANSCEIVER
+#define USE_SERIAL_TRANSCEIVER
 
 #define TEST_TX_ENABLED false
 

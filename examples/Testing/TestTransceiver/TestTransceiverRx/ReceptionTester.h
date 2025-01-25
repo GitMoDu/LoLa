@@ -9,7 +9,7 @@
 class ReceptionTester : public virtual ILoLaTransceiverListener
 {
 public:
-	static constexpr uint8_t TestChannel = 0;
+	static constexpr uint8_t TestChannel = 40;
 
 private:
 	uint8_t TestPacket[LoLaPacketDefinition::MAX_PACKET_TOTAL_SIZE];
@@ -58,7 +58,7 @@ public:
 		return true;
 	}
 
-	virtual void OnRxLost(const uint32_t receiveTimestamp) final
+	virtual void OnRxFail() final
 	{
 		Serial.println(F("OnRxLost."));
 	}

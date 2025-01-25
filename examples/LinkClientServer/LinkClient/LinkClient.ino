@@ -37,8 +37,7 @@
 //#define GRAPHICS_ENGINE_MEASURE
 
 // Selected Driver for test.
-#define USE_NRF24_TRANSCEIVER
-
+#define USE_SERIAL_TRANSCEIVER
 
 #define LINK_DUPLEX_SLOT true
 
@@ -76,7 +75,7 @@ UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver
 #elif defined(USE_NRF24_TRANSCEIVER)
 nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_INTERRUPT_PIN, NRF24_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER)
-Si4463Transceiver_433_70_250<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN, UINT8_MAX, UINT8_MAX, UINT8_MAX, SI446X_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
+Si4463Transceiver433Mhz250kbps<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver(SchedulerBase, TRANSCEIVER_SPI);
 #elif defined(USE_SX12_TRANSCEIVER)
 Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN, SX12_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase, &SpiTransceiver);
 #elif defined(USE_ESPNOW_TRANSCEIVER) && defined(ARDUINO_ARCH_ESP32)
@@ -159,6 +158,10 @@ void setup()
 	pinMode(TX_TEST_PIN, OUTPUT);
 #endif
 
+#if defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
+	TRANSCEIVER_SPI.begin();
+#endif
+
 #if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
 	Transceiver.SetupInterrupt(OnInterrupt);
 #elif defined(USE_ESPNOW_TRANSCEIVER)
@@ -177,7 +180,7 @@ void setup()
 		Serial.println(F("ClientWriter setup failed."));
 #endif
 		BootError();
-}
+	}
 #if defined(USE_CONTROLLER)
 	Controller.Start();
 	ControllerDispatcher.Start();

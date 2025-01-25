@@ -2,6 +2,8 @@
 #ifndef _EXAMPLE_TRANSCEIVER_DEFINITIONS_h
 #define _EXAMPLE_TRANSCEIVER_DEFINITIONS_h
 
+#include <SPI.h>
+
 //#define USE_SERIAL_TRANSCEIVER
 //#define USE_NRF24_TRANSCEIVER
 //#define USE_ESPNOW_TRANSCEIVER
@@ -16,8 +18,8 @@
 #endif
 
 // Shared Link configuration.
-static constexpr uint16_t DuplexPeriod = 5000;
-static constexpr uint16_t DuplexDeadZone = 300;
+static constexpr uint16_t DuplexPeriod = 10000;
+static constexpr uint16_t DuplexDeadZone = 150;
 static constexpr uint32_t ChannelHopPeriod = DuplexPeriod;
 
 // Diceware created access control password.
@@ -30,7 +32,6 @@ static constexpr uint8_t ServerAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] 
 static constexpr uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
 
 
-
 #if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_RP2040)
 #if defined(USE_SERIAL_TRANSCEIVER)
 #define SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN 8
@@ -41,10 +42,15 @@ static constexpr uint8_t ClientAddress[LoLaLinkDefinition::PUBLIC_ADDRESS_SIZE] 
 #define NRF24_TRANSCEIVER_PIN_CS			12
 #define NRF24_TRANSCEIVER_INTERRUPT_PIN		14
 #elif defined(USE_SI446X_TRANSCEIVER)
-#define SI446X_TRANSCEIVER_SPI_CHANNEL		2
 #define SI446X_TRANSCEIVER_PIN_CS			31
 #define SI446X_TRANSCEIVER_PIN_SDN			22
 #define SI446X_TRANSCEIVER_RX_INTERRUPT_PIN	21
+#if defined(ARDUINO_ARCH_STM32F1)
+SPIClass TransceiverSpi(2);
+#else
+#define TransceiverSpi SPI
+#endif
+#define TRANSCEIVER_SPI						TransceiverSpi
 #elif defined(USE_SX12_TRANSCEIVER)
 #define SX12_TRANSCEIVER_SPI_CHANNEL		2
 #define SX12_TRANSCEIVER_PIN_CS				31

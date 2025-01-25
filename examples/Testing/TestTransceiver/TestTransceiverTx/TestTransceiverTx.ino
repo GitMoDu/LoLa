@@ -22,10 +22,8 @@
 #define _TASK_SLEEP_ON_IDLE_RUN
 #include <TScheduler.hpp>
 
+#include <ILoLaTestingInclude.h>
 #include <ILoLaInclude.h>
-
-#include "Testing\ExampleTransceiverDefinitions.h"
-#include "Testing\ExampleLogicAnalyserDefinitions.h"
 
 #include "TransmissionTester.h"
 
@@ -40,7 +38,7 @@ UartTransceiver<HardwareSerial, SERIAL_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver
 #elif defined(USE_NRF24_TRANSCEIVER)
 nRF24Transceiver<NRF24_TRANSCEIVER_PIN_CE, NRF24_TRANSCEIVER_PIN_CS, NRF24_TRANSCEIVER_INTERRUPT_PIN, NRF24_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
 #elif defined(USE_SI446X_TRANSCEIVER)
-Si4463Transceiver_433_70_250<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN, UINT8_MAX, UINT8_MAX, UINT8_MAX, SI446X_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase);
+Si4463Transceiver433Mhz250kbps<SI446X_TRANSCEIVER_PIN_CS, SI446X_TRANSCEIVER_PIN_SDN, SI446X_TRANSCEIVER_RX_INTERRUPT_PIN> Transceiver(SchedulerBase, TRANSCEIVER_SPI);
 #elif defined(USE_SX12_TRANSCEIVER)
 Sx12Transceiver<SX12_TRANSCEIVER_PIN_CS, SX12_TRANSCEIVER_PIN_BUSY, SX12_TRANSCEIVER_PIN_RST, SX12_TRANSCEIVER_INTERRUPT_PIN, SX12_TRANSCEIVER_SPI_CHANNEL> Transceiver(SchedulerBase, &SpiTransceiver);
 #elif defined(USE_ESPNOW_TRANSCEIVER) && defined(ARDUINO_ARCH_ESP32)
@@ -79,12 +77,16 @@ void setup()
 		;
 	delay(1000);
 #endif
-	//Serial.disableBlockingTx
+
 	Serial.println(F("TestTransceiver Tx Booting..."));
 
 #ifdef SCHEDULER_TEST_PIN
 	digitalWrite(SCHEDULER_TEST_PIN, LOW);
 	pinMode(SCHEDULER_TEST_PIN, OUTPUT);
+#endif
+
+#if defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
+	TRANSCEIVER_SPI.begin();
 #endif
 
 #if defined(USE_SERIAL_TRANSCEIVER) || defined(USE_SI446X_TRANSCEIVER) || defined(USE_SX12_TRANSCEIVER) || defined(USE_NRF24_TRANSCEIVER)
