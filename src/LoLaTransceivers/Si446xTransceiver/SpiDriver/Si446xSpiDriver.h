@@ -96,22 +96,8 @@ public:
 		switch (partInfo.PartId)
 		{
 		case (uint16_t)Si446x::PART_NUMBER::SI4463:
-			if (partInfo.DeviceId == (uint8_t)Si446x::DEVICE_ID::SI4463
-				&& partInfo.RomId == (uint8_t)Si446x::ROM_ID::SI4463)
-			{
-#if defined(DEBUG_LOLA)
-				Serial.print(F("PartId: "));
-				Serial.println(partInfo.PartId);
-				Serial.print(F("DeviceId: "));
-				Serial.println(partInfo.DeviceId);
-				Serial.print(F("RomId: "));
-				Serial.println(partInfo.RomId);
-				Serial.print(F("ChipRevision: "));
-				Serial.println(partInfo.ChipRevision);
-#endif
-				break;
-			}
-			else
+			if (partInfo.DeviceId != (uint8_t)Si446x::DEVICE_ID::SI4463
+				|| partInfo.RomId != (uint8_t)Si446x::ROM_ID::SI4463)
 			{
 #if defined(DEBUG_LOLA)
 				Serial.print(F("Device mismatch "));
