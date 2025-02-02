@@ -36,20 +36,20 @@ namespace Si446x
 		SI4468 = 2	//TODO:
 	};
 
-	enum class DEVICE_ID : uint8_t
+	enum class DEVICE_ID : uint16_t
 	{
-		SI4463 = 15,
-		SI4461 = 0,	//TODO:
-		SI4460 = 1,	//TODO:
-		SI4468 = 2	//TODO:
+		SI4463B1 = 15,
+		SI4463C2 = 34304,
+		SI4461 = 0,
+		SI4460 = 0,	//TODO:
+		SI4468 = 0	//TODO:
 	};
 
 	enum class ROM_ID : uint8_t
 	{
-		SI4463 = 3,
-		SI4461 = 0,	//TODO:
-		SI4460 = 1,	//TODO:
-		SI4468 = 2	//TODO:
+		B0A = 1,
+		B1B = 3,
+		C2A = 6
 	};
 
 	enum class RadioStateEnum : uint8_t

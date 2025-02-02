@@ -96,31 +96,25 @@ public:
 		switch (partInfo.PartId)
 		{
 		case (uint16_t)Si446x::PART_NUMBER::SI4463:
-			if (partInfo.DeviceId != (uint8_t)Si446x::DEVICE_ID::SI4463
-				|| partInfo.RomId != (uint8_t)Si446x::ROM_ID::SI4463)
+			if (partInfo.RomId == (uint8_t)Si446x::ROM_ID::B1B)
 			{
-#if defined(DEBUG_LOLA)
-				Serial.print(F("Device mismatch "));
-				Serial.print(F("PartId: "));
-				Serial.println(partInfo.PartId);
-				Serial.print(F("DeviceId: "));
-				Serial.println(partInfo.DeviceId);
-				Serial.print(F("RomId: "));
-				Serial.println(partInfo.RomId);
-#endif
-				return false;
+				if (partInfo.DeviceId != (uint16_t)Si446x::DEVICE_ID::SI4463B1)
+				{
+					LogBadDevice(partInfo);
+					return false;
+				}
+			}
+			else if (partInfo.RomId == (uint8_t)Si446x::ROM_ID::C2A)
+			{
+				if (partInfo.DeviceId != (uint16_t)Si446x::DEVICE_ID::SI4463C2)
+				{
+					LogBadDevice(partInfo);
+					return false;
+				}
 			}
 			break;
 		default:
-#if defined(DEBUG_LOLA)
-			Serial.print(F("Device mismatch "));
-			Serial.print(F("PartId: "));
-			Serial.println(partInfo.PartId);
-			Serial.print(F("DeviceId: "));
-			Serial.println(partInfo.DeviceId);
-			Serial.print(F("RomId: "));
-			Serial.println(partInfo.RomId);
-#endif
+			LogBadDevice(partInfo);
 			return false;
 		}
 
@@ -434,6 +428,18 @@ public:
 	}
 
 private:
+	void LogBadDevice(const Si446x::PartInfoStruct& partInfo)
+	{
+#if defined(DEBUG_LOLA)
+		Serial.println(F("SI4463"));
+		Serial.print(F("\tPartId: "));
+		Serial.println(partInfo.PartId);
+		Serial.print(F("\tDeviceId: "));
+		Serial.println(partInfo.DeviceId);
+		Serial.print(F("\tRomId: "));
+		Serial.println(partInfo.RomId);
+#endif
+	}
 	const bool ClearFifo(const Si446x::FIFO_INFO_PROPERY fifoCommand, const uint32_t timeoutMicros = 0)
 	{
 		Message[0] = (uint8_t)Si446x::Command::FIFO_INFO;
